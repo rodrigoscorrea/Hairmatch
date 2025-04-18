@@ -8,7 +8,12 @@ from django.http import JsonResponse
 import jwt, datetime
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer
 
-# Create your views here.
+# In this file, there are 3 types of views:
+# 1 - authentication views
+# 2 - user accessible views - cookie managed
+# 3 - user not acessible views - for admin or internal use only
+
+# 1 - The following views are related to user authentication procedures
 class RegisterView(APIView):
     def post(self, request):    
         data = json.loads(request.body)
@@ -78,7 +83,7 @@ class LoginView(APIView):
                 }
 
                 return response
-            return JsonResponse({'error': 'Invalid credentials'}, status=501)
+            return JsonResponse({'error': 'Invalid credentials'}, status=403)
         return JsonResponse({'error': 'User does not exist'}, status=400)
     
     def get(self, request):
@@ -96,7 +101,42 @@ class LoginView(APIView):
         
         return JsonResponse({"authenticated":True}, status=200)
 
-class UserInfoView(APIView):
+class LogoutView(APIView):
+    def post(self, request):
+        response = Response()
+        response.delete_cookie('jwt')
+        response.data = {"message": "User logged out"}
+    
+        return response
+
+class ChangePasswordView(APIView):
+    
+    def put(self, request):
+        token = request.COOKIES.get('jwt')
+
+        if not token: 
+            return JsonResponse({'authenticated': False}, status=200)
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({'authenticated': False}, status=200)
+        
+        user = User.objects.filter(id=payload['id']).first()
+        if user:
+            data = json.loads(request.body)
+            raw_password = data['password'].replace(' ', '')
+            hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
+            user.password = hashed_password.decode('utf-8')
+            user.save()
+            return JsonResponse({'message': 'Password updated successfully'}, status=200)
+
+        return JsonResponse({'error': 'User not found'}, status=404)
+        
+# 2 - The following views are related to the User Info
+# Those views only works if cookies are present in the request       
+# Therefore, they can be used only if the user is logged in and are user accessible
+
+class UserInfoCookieView(APIView):
     def get(self, request):
         token = request.COOKIES.get('jwt')
 
@@ -108,17 +148,21 @@ class UserInfoView(APIView):
         except jwt.ExpiredSignatureError:
             return JsonResponse({'error': 'Token expired'}, status=403)
         
-        user = User.objects.filter(id=payload['id']).first()
+        try:
+            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'user not found'}, status=400)
+
         user_data = UserSerializer(user).data
 
         if user.role == 'customer':
             customer = Customer.objects.filter(user=user).first()
             customer_data = CustomerSerializer(customer).data
-            return JsonResponse({'user': customer_data}, status=200)
+            return JsonResponse({'customer': customer_data}, status=200)
         elif user.role == 'hairdresser':
             hairdresser = Hairdresser.objects.filter(user=user).first()
             hairdresser_data = HairdresserSerializer(hairdresser).data
-            return JsonResponse({'user': hairdresser_data}, status=200)    
+            return JsonResponse({'hairdresser': hairdresser_data}, status=200)    
         else: 
             return JsonResponse({'error': 'error retrieving user with role'}, status=500)
 
@@ -134,7 +178,7 @@ class UserInfoView(APIView):
             return JsonResponse({'error': 'Token expired'}, status=403)
         
         try:
-            user = User.objects.filter(id=payload['id']).first()  
+            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()  
             user.delete()
             response = JsonResponse({'message': 'user deleted'}, status=200)
             response.delete_cookie('jwt')
@@ -142,6 +186,7 @@ class UserInfoView(APIView):
         except User.DoesNotExist:
             return JsonResponse({'error': 'User not found'}, status=400)
 
+    #This function does not handle password update procedure
     def put(self, request):
         data = json.loads(request.body)
         token = request.COOKIES.get('jwt')
@@ -154,15 +199,68 @@ class UserInfoView(APIView):
         except jwt.ExpiredSignatureError:
             return JsonResponse({'error': 'Token expired'}, status=403)
 
-        try:
-            user = User.objects.filter(id=payload['id']).first()  
+        user = User.objects.filter(id=payload['id'], is_active=True).first()
+
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        
+        existing_email = User.objects.filter(email = data['email']).first()
+         
+        # if there is another user with the email you want to switch, you cannot proceed 
+        if existing_email and (existing_email != user): 
+            return JsonResponse({'error': 'This email is already taken'}, status=403)
+
+        allowed_fields = [
+            'first_name', 'last_name', 'phone', 'email',
+            'street', 'number', 'postal_code', 'rating'
+        ]
+
+        for field in allowed_fields:
+            if field in data:
+                setattr(user, field, data[field])
+
+        user.save()
+
+        if user.role == 'customer':
+            customer = Customer.objects.filter(user=user).first()
+            if customer and 'cpf' in data:
+                customer.cpf = data['cpf']
+                customer.save()
+        elif user.role == 'hairdresser':
+            hairdresser = Hairdresser.objects.filter(user=user).first()
+            if hairdresser:
+                if 'experience_years' in data:
+                    hairdresser.experience_years = data['experience_years']
+                if 'resume' in data:
+                    hairdresser.resume = data['resume']
+                if 'cnpj' in data:
+                    hairdresser.cnpj = data['cnpj']
+                hairdresser.save()
+
+        return JsonResponse({'message': 'User updated successfully'}, status=200)
+
+# 3 - The following views are related to the User Info
+# Those views works without the presence of cookies in the request
+# Those views should only be used by admin personal or internal functions
+
+class UserInfoView(APIView):
+    
+    def delete(self, request, id=None):
+        token = request.COOKIES.get('jwt')
+        
+        if not id:
+            return JsonResponse({'error': 'id for deletion not provided'}, status=400)
             
-            if user.is_valid():
-                return JsonResponse({'messahe': 'user valido'}, status=200)
-            #response = JsonResponse({'message': 'user deleted'}, status=200)
-            #response.delete_cookie('jwt')
-            return JsonResponse({'message': 'user invalido'}, status=300)
-        except User.DoesNotExist:
+        user = User.objects.filter(id=id).filter(is_active=True).first()  
+        if user:
+            user.delete()
+            response = JsonResponse({'message': 'user deleted'}, status=200)
+
+            if token:
+                response.delete_cookie('jwt')
+            return response
+        else:
             return JsonResponse({'error': 'User not found'}, status=400)
 class LogoutView(APIView):
     def post(self, request):
