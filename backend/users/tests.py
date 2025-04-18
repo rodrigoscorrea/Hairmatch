@@ -638,3 +638,137 @@ class ChangePasswordViewTest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.json()['authenticated'])
+
+class DeleteUserByEmailTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        
+        # Create first test user
+        self.user1_data = {
+            'first_name': 'Test',
+            'last_name': 'User1',
+            'phone': '123456789',
+            'number': '42',
+            'street': 'Test Street',
+            'postal_code': '12345',
+            'email': 'test1@example.com',
+            'password': 'test_password',
+            'role': 'customer',
+            'rating': 5,
+            'cpf': '12345678900'
+        }
+        
+        # Create second test user
+        self.user2_data = {
+            'first_name': 'Test',
+            'last_name': 'User2',
+            'phone': '987654321',
+            'number': '24',
+            'street': 'Another Street',
+            'postal_code': '54321',
+            'email': 'test2@example.com',
+            'password': 'another_password',
+            'role': 'hairdresser',
+            'rating': 4,
+            'resume': 'Professional hairdresser',
+            'cnpj': '12345678000190',
+            'experience_years': 3
+        }
+        
+        # Register users
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.user1_data),
+            content_type='application/json'
+        )
+        
+        response = self.client.post(
+            self.register_url,
+            data=json.dumps(self.user2_data),
+            content_type='application/json'
+        )
+        
+        # URLs for deletion tests
+        self.delete_user1_url = reverse('user_info', kwargs={'email': 'test1@example.com'})
+        self.delete_user2_url = reverse('user_info', kwargs={'email': 'test2@example.com'})
+        self.delete_nonexistent_url = reverse('user_info', kwargs={'email': 'nonexistent@example.com'})
+        self.delete_no_email_url = reverse('user_info', kwargs={'email': None})
+        
+        # Setup JWT token for testing cookie-based functionality
+        self.login_url = reverse('login')
+        login_payload = {
+            'email': 'test1@example.com',
+            'password': 'test_password'
+        }
+        
+        login_response = self.client.post(
+            self.login_url,
+            data=json.dumps(login_payload),
+            content_type='application/json'
+        )
+        
+        self.token = login_response.data.get('jwt')
+
+    def test_delete_user_by_email_without_token(self):
+        """Test deleting a user by email without a token (admin operation)"""
+        # Ensure no token in cookies
+        self.client.cookies.clear()
+        
+        # Before deletion
+        self.assertEqual(User.objects.filter(email='test1@example.com').count(), 1)
+        
+        response = self.client.delete(self.delete_user1_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['message'], 'user deleted')
+        
+        # After deletion
+        self.assertEqual(User.objects.filter(email='test1@example.com').count(), 0)
+        
+        # Verify the cookie wasn't set (since there was no token)
+        self.assertNotIn('jwt', response.cookies)
+
+    def test_delete_user_by_email_with_token(self):
+        """Test deleting a user by email with a token present in cookies"""
+        # Set token in cookies
+        self.client.cookies['jwt'] = self.token
+        
+        # Before deletion
+        self.assertEqual(User.objects.filter(email='test2@example.com').count(), 1)
+        
+        response = self.client.delete(self.delete_user2_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['message'], 'user deleted')
+        
+        # After deletion
+        self.assertEqual(User.objects.filter(email='test2@example.com').count(), 0)
+        
+        # Verify the cookie was deleted
+        if 'jwt' in response.cookies:
+            self.assertTrue(response.cookies['jwt'].get('max-age', 0) <= 0)
+
+    def test_delete_nonexistent_user(self):
+        """Test deleting a user that doesn't exist"""
+        response = self.client.delete(self.delete_nonexistent_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()['error'], 'User not found')
+
+    def test_delete_without_email(self):
+        """Test deleting without providing an email"""
+        response = self.client.delete(self.delete_no_email_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()['error'], 'User not found')
+
+    def test_delete_inactive_user(self):
+        """Test deleting a user that exists but is inactive"""
+        # Make user inactive
+        user = User.objects.get(email='test1@example.com')
+        user.is_active = False
+        user.save()
+        
+        response = self.client.delete(self.delete_user1_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()['error'], 'User not found')
+        
+        # Verify the user still exists (wasn't deleted)
+        self.assertEqual(User.objects.filter(email='test1@example.com').count(), 1)

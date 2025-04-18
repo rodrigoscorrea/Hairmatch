@@ -248,9 +248,6 @@ class UserInfoView(APIView):
     
     def delete(self, request, email=None):
         token = request.COOKIES.get('jwt')
-        
-        if not email:
-            return JsonResponse({'error': 'email for deletion not provided'}, status=400)
             
         user = User.objects.filter(email=email).filter(is_active=True).first()  
         if user:
