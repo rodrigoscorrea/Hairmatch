@@ -9,5 +9,5 @@ urlpatterns = [
     path('auth/logout', LogoutView.as_view(), name='logout'),
 
     path('user/authenticated', UserInfoCookieView.as_view(), name='user_info_auth'),
-    path('user/<str:id>', UserInfoView.as_view(), name='user_info'),
+    path('user/<str:email>', UserInfoView.as_view(), name='user_info'),
 ]

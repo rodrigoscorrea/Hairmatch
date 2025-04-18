@@ -54,7 +54,7 @@ class RegisterView(APIView):
                 experience_years=data['experience_years']
             )
 
-        return JsonResponse({'message': 'User registered successfully'}, status=201)
+        return JsonResponse({'message': f"{data['role']} user registered successfully"}, status=201)
 
 class LoginView(APIView):
     def post(self,request):
@@ -241,18 +241,18 @@ class UserInfoCookieView(APIView):
         return JsonResponse({'message': 'User updated successfully'}, status=200)
 
 # 3 - The following views are related to the User Info
-# Those views works without the presence of cookies in the request
+# Those views works WITHOUT the presence of cookies in the request
 # Those views should only be used by admin personal or internal functions
 
 class UserInfoView(APIView):
     
-    def delete(self, request, id=None):
+    def delete(self, request, email=None):
         token = request.COOKIES.get('jwt')
         
-        if not id:
-            return JsonResponse({'error': 'id for deletion not provided'}, status=400)
+        if not email:
+            return JsonResponse({'error': 'email for deletion not provided'}, status=400)
             
-        user = User.objects.filter(id=id).filter(is_active=True).first()  
+        user = User.objects.filter(email=email).filter(is_active=True).first()  
         if user:
             user.delete()
             response = JsonResponse({'message': 'user deleted'}, status=200)
