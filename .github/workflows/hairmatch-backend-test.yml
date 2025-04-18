@@ -3,10 +3,10 @@ name: Run Hairmatch Backend Unit Tests
 on:
   push:
     branches:
-      - subtask/create_hairdresser_customer_user_models
+      - feature/cruds_of_er_models-12
   pull_request:
     branches:
-      - subtask/create_hairdresser_customer_user_models
+      - feature/cruds_of_er_models-12
 
 jobs:
   test:
