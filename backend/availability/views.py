@@ -8,7 +8,7 @@ from django.http import JsonResponse
 import jwt, json, datetime
 # Create your views here.
 
-class RegisterAvailability(APIView):
+class CreateAvailability(APIView):
     def post(self, request):
         token = request.COOKIES.get('jwt')
 
@@ -28,7 +28,7 @@ class RegisterAvailability(APIView):
                 return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
             if not data.get('weekday') or not data.get('start_time') or not data.get('end_time'):
-                return JsonResponse({'error': 'Missing required fields: weekday, start_time, end_time'}, status=400)
+                return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
 
             availability = Availability.objects.create(
                 weekday=data['weekday'],
@@ -43,9 +43,9 @@ class RegisterAvailability(APIView):
             return JsonResponse({'error': str(e)}, status=400)
 
 class ListAvailability(APIView):
-    def get(self, request, id):
+    def get(self, request, hairdresser_id):
         try:
-            availability = Availability.objects.all().filter(hairdresser_id=id)
+            availability = Availability.objects.all().filter(hairdresser_id=hairdresser_id)
             serializer = AvailabilitySerializer(availability, many=True)
             return JsonResponse({'data': serializer.data}, status=200)
         except Exception as e:

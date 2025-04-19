@@ -9,7 +9,7 @@ from django.http import JsonResponse
 import jwt, datetime
 
 # 2 - Cookie-based views (usuário autenticado)
-class RegisterReview(APIView):
+class CreateReview(APIView):
     def post(self, request):
         token = request.COOKIES.get('jwt')
 
@@ -32,7 +32,7 @@ class RegisterReview(APIView):
                 return JsonResponse({'error': 'User is not a customer'}, status=403)
 
             if 'rating' not in data:
-                return JsonResponse({'error': 'Missing required fields: rating'}, status=400)
+                return JsonResponse({'error': 'Missing field: rating'}, status=400)
             review = Review.objects.create(
                 rating=data['rating'],
                 comment=data.get('comment', ''),
@@ -40,16 +40,15 @@ class RegisterReview(APIView):
                 customer_id=customer.id,
                 hairdresser_id=data['hairdresser']
             ) 
-            serializer = ReviewSerializer(review)
             return JsonResponse({'message': "Review registered successfully"}, status=201)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
 
 class ListReview(APIView):
-    def get(self, request, id):
+    def get(self, request, hairdresser_id):
         try:
-            reviews = Review.objects.all().filter(hairdresser_id=id)
+            reviews = Review.objects.all().filter(hairdresser_id=hairdresser_id)
             serializer = ReviewSerializer(reviews, many=True)
             return JsonResponse({'data': serializer.data}, status=200)
            
@@ -93,7 +92,7 @@ class UpdateReview(APIView):
             return JsonResponse({'error': str(e)}, status=400)
     
 class RemoveReview(APIView):
-    def delete(self, request, id):
+    def delete(self, request, id): # Id da review
         token = request.COOKIES.get('jwt')
 
         if not token:
@@ -105,7 +104,6 @@ class RemoveReview(APIView):
             return JsonResponse({'error': 'Token expired'}, status=403)
 
         try:
-            data = json.loads(request.body)
             user = User.objects.filter(id=payload['id']).first()
             if not user:
                 return JsonResponse({'error': 'User not found'}, status=404)
@@ -121,3 +119,13 @@ class RemoveReview(APIView):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
+class RemoveReviewAdmin(APIView):
+    def delete(self, request, id): # Id da review
+        try:
+            review = Review.objects.filter(id=id).first()
+            if not review:
+                return JsonResponse({'error': 'Review not found'}, status=404)
+            review.delete()
+            return JsonResponse({'message': "Review deleted successfully"}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)

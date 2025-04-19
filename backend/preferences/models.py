@@ -5,6 +5,5 @@ from users.models import User
 
 class Preferences(models.Model):
     name = models.CharField(max_length=100, blank=False, null=False)
-    picture = models.ImageField(upload_to='preferences/images/', blank=True, null=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, to_field="id", related_name='preferences')
-
+    picture = models.ImageField(upload_to='preferences_pictures/', blank=True, null=True)
+    user_id = models.ManyToManyField(User, related_name='preferences')

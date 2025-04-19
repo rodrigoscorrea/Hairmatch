@@ -4,4 +4,4 @@ from .models import Preferences
 class PreferencesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Preferences
-        fields = ['id', 'name', 'picture', 'user_id']
+        fields = ['id', 'name', 'picture']
