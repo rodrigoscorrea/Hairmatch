@@ -45,6 +45,9 @@ class CreateAvailability(APIView):
 class ListAvailability(APIView):
     def get(self, request, hairdresser_id):
         try:
+            hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
+            if not hairdresser:
+                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
             availability = Availability.objects.all().filter(hairdresser_id=hairdresser_id)
             serializer = AvailabilitySerializer(availability, many=True)
             return JsonResponse({'data': serializer.data}, status=200)

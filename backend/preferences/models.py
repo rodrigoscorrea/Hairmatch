@@ -6,4 +6,4 @@ from users.models import User
 class Preferences(models.Model):
     name = models.CharField(max_length=100, blank=False, null=False)
     picture = models.ImageField(upload_to='preferences_pictures/', blank=True, null=True)
-    user_id = models.ManyToManyField(User, related_name='preferences')
+    users = models.ManyToManyField(User, related_name='preferences')

@@ -9,7 +9,20 @@ import jwt, json
 
 # Create your views here.
 class CreatePreferences(APIView):
-    def post(self, request):
+    def post(self, request):       
+        try:
+            data = json.loads(request.body)
+
+            preferences = Preferences.objects.create(
+                name=data['name'],
+                picture=data.get('picture', ''),
+            )
+            return JsonResponse({'message': "Preferences registered successfully"}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        
+class AssignPreferenceToUser(APIView):
+    def post(self, request, preference_id):
         token = request.COOKIES.get('jwt')
 
         if not token:
@@ -19,31 +32,72 @@ class CreatePreferences(APIView):
             payload = jwt.decode(token, 'secret', algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
             return JsonResponse({'error': 'Token expired'}, status=403)
-
         try:
-            data = json.loads(request.body)
-
             user = User.objects.filter(id=payload['id']).first()
+
             if not user:
                 return JsonResponse({'error': 'User not found'}, status=404)
 
-            preferences = Preferences.objects.create(
-                name=data['name'],
-                picture=data.get('picture', ''),
-            )
-            preferences.user_id.set([user])  # Set the user for the preferences
-            return JsonResponse({'message': "Preferences registered successfully"}, status=201)
+            preference = Preferences.objects.filter(id=preference_id).first()
+            if not preference:
+                return JsonResponse({'error': 'Preference not found'}, status=404)
+
+            preference.users.add(user)
+
+            return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
+
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+        
+class UnnassignPreferenceFromUser(APIView):
+    def post(self, request, preference_id):
+        token = request.COOKIES.get('jwt')
+
+        if not token:
+            return JsonResponse({'error': 'Invalid token'}, status=403)
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({'error': 'Token expired'}, status=403)
+        try:
+            user = User.objects.filter(id=payload['id']).first()
+
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            preference = Preferences.objects.filter(id=preference_id).first()
+            if not preference:
+                return JsonResponse({'error': 'Preference not found'}, status=404)
+
+            preference.users.remove(user)
+
+            return JsonResponse({'message': 'Preference unassigned from user successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+
+
+             
+         
 
 class ListPreferences(APIView):
-    def get(self, request, user_id):
+    def get(self, request, users):
         try:
-            preferences = Preferences.objects.filter(user_id=user_id)
+            preferences = Preferences.objects.filter(users=users)
             serializer = PreferencesSerializer(preferences, many=True)
             return Response(serializer.data)
             if not preferences.exists():
                 return Response({'error': 'Preferences not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+        
+class ListAllPreferences(APIView):
+    def get(self, request):
+        try:
+            preferences = Preferences.objects.all()
+            serializer = PreferencesSerializer(preferences, many=True)
+            return Response(serializer.data)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
 
