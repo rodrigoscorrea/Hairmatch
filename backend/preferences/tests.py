@@ -14,6 +14,7 @@ class PreferencesTestCase(TestCase):
         self.client = APIClient()
         self.create_url = reverse('create_preferences')
         self.list_all_url = reverse('list_all_preferences')
+        self.list_users = reverse('list_users_per_preference', args=[1])  # Assuming preference ID 1 for testing
         self.login_url = reverse('login')
         self.register_url = reverse('register')
         
@@ -24,7 +25,11 @@ class PreferencesTestCase(TestCase):
             "last_name": "User",
             "password": "password123",
             "phone": "+5592984501111",
-            "street": "User Street",
+            "complement": "Apt 101",
+            "neighborhood": "Downtown",
+            "city": "Manaus",
+            "state": "AM",
+            "address": "User Street",
             "number": "123",
             "postal_code": "69050750",
             "role": "customer",
@@ -149,7 +154,125 @@ class ListPreferencesTest(PreferencesTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)  # Only the 2 assigned preferences
-
+class ListUsersPerPreferenceTest(PreferencesTestCase):
+    def setUp(self):
+        super().setUp()
+        # Create additional preferences and users for testing
+        self.preference2 = Preferences.objects.create(name="Curly Hair")
+        
+        # Create a second user
+        self.user2_payload = {
+            "email": "user2@example.com",
+            "first_name": "Test2",
+            "last_name": "User2",
+            "password": "password456",
+            "phone": "+5592984502222",
+            "complement": "Apt 202",
+            "neighborhood": "Uptown",
+            "city": "Manaus",
+            "state": "AM",
+            "address": "User2 Street",
+            "number": "456",
+            "postal_code": "69050760",
+            "role": "professional",
+            "cpf": "98765432109",
+            "rating": 4.8,
+        }
+        
+        # Register user2
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.user2_payload),
+            content_type='application/json'
+        )
+        
+        # Get user2 object
+        self.user2 = User.objects.get(email=self.user2_payload['email'])
+        
+        # Add users to preferences
+        self.preference.users.add(self.user)
+        self.preference.users.add(self.user2)
+        self.preference2.users.add(self.user2)
+        
+        # URL for list_users_per_preference
+        self.list_users_url1 = reverse('list_users_per_preference', args=[self.preference.id])
+        self.list_users_url2 = reverse('list_users_per_preference', args=[self.preference2.id])
+        self.list_users_nonexistent_url = reverse('list_users_per_preference', args=[999])  # Non-existent preference ID
+    
+    def test_list_users_for_valid_preference(self):
+        """Test listing users for a valid preference"""
+        response = self.client.get(self.list_users_url1)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('data', response.data)
+        self.assertEqual(len(response.data['data']), 2)  # Should return 2 users for preference1
+        
+        # Verify user data in response using fields that are actually returned
+        user_first_names = [user['first_name'] for user in response.data['data']]
+        user_last_names = [user['last_name'] for user in response.data['data']]
+        
+        # Check that both users' first and last names are in the response
+        self.assertIn(self.user_payload['first_name'], user_first_names)
+        self.assertIn(self.user2_payload['first_name'], user_first_names)
+        self.assertIn(self.user_payload['last_name'], user_last_names)
+        self.assertIn(self.user2_payload['last_name'], user_last_names)
+        
+        # Alternatively, check for user IDs if they're more reliable
+        user_ids = [user['id'] for user in response.data['data']]
+        self.assertIn(self.user.id, user_ids)
+        self.assertIn(self.user2.id, user_ids)
+    
+    def test_list_users_for_preference_with_one_user(self):
+        """Test listing users for a preference that has only one user"""
+        response = self.client.get(self.list_users_url2)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('data', response.data)
+        self.assertEqual(len(response.data['data']), 1)  # Should return 1 user for preference2
+        
+        # Verificar os campos que realmente são retornados pelo UserNameSerializer
+        user_data = response.data['data'][0]
+        self.assertEqual(user_data['id'], self.user2.id)
+        self.assertEqual(user_data['first_name'], self.user2_payload['first_name'])
+        self.assertEqual(user_data['last_name'], self.user2_payload['last_name'])
+    
+    def test_list_users_for_nonexistent_preference(self):
+        """Test listing users for a preference that doesn't exist"""
+        response = self.client.get(self.list_users_nonexistent_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        # Convert JsonResponse content to Python dict
+        response_content = json.loads(response.content.decode('utf-8'))
+        self.assertIn('error', response_content)
+        self.assertEqual(response_content['error'], 'Preference not found')
+    
+    def test_list_users_for_preference_with_no_users(self):
+        """Test listing users for a preference that has no users assigned"""
+        # Create a new preference with no users
+        empty_preference = Preferences.objects.create(name="Empty Preference")
+        empty_preference_url = reverse('list_users_per_preference', args=[empty_preference.id])
+        
+        response = self.client.get(empty_preference_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('data', response.data)
+        self.assertEqual(len(response.data['data']), 0)  # Should return empty list
+    
+    def test_list_users_with_authenticated_user(self):
+        """Test listing users with an authenticated user"""
+        # Login as user
+        login_response = self.login_user()
+        token = login_response.data['jwt']
+        
+        # Set the JWT token in the client's cookies
+        self.client.cookies['jwt'] = token
+        
+        response = self.client.get(self.list_users_url1)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('data', response.data)
+        self.assertEqual(len(response.data['data']), 2)
+    
 
 class UpdatePreferencesTest(PreferencesTestCase):
     def test_update_preferences_success(self):

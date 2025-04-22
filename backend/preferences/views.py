@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Preferences
 from users.models import User
+from users.serializers import UserNameSerializer
 from .serializers import PreferencesSerializer
 from django.http import JsonResponse
 import jwt, json
@@ -77,18 +78,14 @@ class UnnassignPreferenceFromUser(APIView):
             return JsonResponse({'error': str(e)}, status=400)
             
 
-
-             
-         
-
 class ListPreferences(APIView):
     def get(self, request, users):
         try:
             preferences = Preferences.objects.filter(users=users)
-            serializer = PreferencesSerializer(preferences, many=True)
-            return Response(serializer.data)
             if not preferences.exists():
                 return Response({'error': 'Preferences not found'}, status=404)
+            serializer = PreferencesSerializer(preferences, many=True)
+            return Response(serializer.data)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
         
@@ -100,6 +97,19 @@ class ListAllPreferences(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
+
+class ListUsersPerPreference(APIView):
+    def get(self, request, preference_id):
+        try:
+            preference = Preferences.objects.filter(id=preference_id).first()
+            if not preference:
+                return JsonResponse({'error': 'Preference not found'}, status=404)
+            users = preference.users.all()
+            serializer = UserNameSerializer(users, many=True)
+            return Response({'data':serializer.data},  status=200)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
 
 class UpdatePreferences(APIView):
     def put(self, request, id): # Preference ID

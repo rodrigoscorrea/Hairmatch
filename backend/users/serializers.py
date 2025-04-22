@@ -4,7 +4,11 @@ from .models import User, Hairdresser, Customer
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name' ,'email', 'phone', 'street', 'number', 'postal_code', 'rating', 'role']
+        fields = [
+            'id', 'first_name', 'last_name', 'email', 'phone', 
+            'address', 'number', 'postal_code', 'rating', 'role',
+            'complement', 'neighborhood', 'city', 'state'
+        ]
 
 class UserNameSerializer(serializers.ModelSerializer):
     class Meta:
