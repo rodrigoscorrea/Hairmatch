@@ -28,11 +28,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Application definition
 
 INSTALLED_APPS = [
     'users',
+    'preferences',
+    'review',
+    'availability',
     'rest_framework',
     'corsheaders',
     'django.contrib.admin',

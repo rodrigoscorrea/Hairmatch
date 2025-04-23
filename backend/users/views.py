@@ -31,8 +31,12 @@ class RegisterView(APIView):
             first_name=data['first_name'],
             last_name=data['last_name'],
             phone=data['phone'],
-            number=data['number'],
-            street=data['street'],
+            complement=data.get('complement'),
+            neighborhood=data['neighborhood'],
+            city=data['city'],
+            state=data['state'],
+            address=data['address'],
+            number=data.get('number'),
             postal_code=data['postal_code'],
             email=data['email'],
             password=hashed_password.decode('utf-8'),
@@ -55,6 +59,7 @@ class RegisterView(APIView):
             )
 
         return JsonResponse({'message': f"{data['role']} user registered successfully"}, status=201)
+
 
 class LoginView(APIView):
     def post(self,request):
@@ -205,7 +210,7 @@ class UserInfoCookieView(APIView):
             return JsonResponse({'error': 'User not found'}, status=404)
 
         
-        existing_email = User.objects.filter(email = data['email']).first()
+        existing_email = User.objects.filter(email=data['email']).first()
          
         # if there is another user with the email you want to switch, you cannot proceed 
         if existing_email and (existing_email != user): 
@@ -213,7 +218,8 @@ class UserInfoCookieView(APIView):
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',
-            'street', 'number', 'postal_code', 'rating'
+            'address', 'number', 'postal_code', 'rating',
+            'complement', 'neighborhood', 'city', 'state'
         ]
 
         for field in allowed_fields:
