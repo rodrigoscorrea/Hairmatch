@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/preferences/', include('preferences.urls')),
     path('api/review/', include('review.urls')),
     path('api/availability/', include('availability.urls')),
+    path('api/reserve/', include('reserve.urls')),
 ] 
 
 if settings.DEBUG:
