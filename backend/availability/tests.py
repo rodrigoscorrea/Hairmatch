@@ -72,6 +72,42 @@ class CreateAvailabilityTest(TestCase):
         self.assertEqual(str(availability.start_time), '09:00:00')
         self.assertEqual(str(availability.end_time), '17:00:00')
     
+    def test_create_availability_success_with_break_time(self):
+        # Register hairdresser
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.hairdresser_payload),
+            content_type='application/json'
+        )
+        
+        # Login
+        login_payload = {
+            'email': 'rodrigosc615@gmail.com',
+            'password': 'senha123'
+        }
+
+        response = self.client.post(
+            self.login_url,
+            data=json.dumps(login_payload),
+            content_type='application/json'
+        )
+        
+        # Create availability
+        response_creation = self.client.post(
+            self.create_url,
+            data=json.dumps({
+                'weekday': 'tuesday',
+                'start_time': '09:00:00',
+                'end_time': '17:00:00',
+                'break_start': '12:00:00',
+                'break_end': '13:00:00'
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response_creation.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.count(), 1)
+
     def test_create_availability_missing_fields(self):
         # Register hairdresser
         self.client.post(
