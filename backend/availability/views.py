@@ -30,14 +30,23 @@ class CreateAvailability(APIView):
             if not data.get('weekday') or not data.get('start_time') or not data.get('end_time'):
                 return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
 
-            availability = Availability.objects.create(
-                weekday=data['weekday'],
-                start_time=data['start_time'],
-                end_time=data['end_time'],
-                hairdresser=hairdresser
-            )
+            if data.get('break_start') and data.get('break_end'):
+                availability = Availability.objects.create(
+                    weekday=data['weekday'],
+                    start_time=data['start_time'],
+                    end_time=data['end_time'],
+                    break_start=data['break_start'],
+                    break_end=data['break_end'],
+                    hairdresser=hairdresser
+                )
 
-            serializer = AvailabilitySerializer(availability)
+            availability = Availability.objects.create(
+                    weekday=data['weekday'],
+                    start_time=data['start_time'],
+                    end_time=data['end_time'],
+                    hairdresser=hairdresser
+                )
+
             return JsonResponse({'message': "Availability registered successfully"}, status=201)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
