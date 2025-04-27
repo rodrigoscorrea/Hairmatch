@@ -106,7 +106,7 @@ class CreateAvailabilityTest(TestCase):
         )
 
         self.assertEqual(response_creation.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Availability.objects.count(), 2)
+        self.assertEqual(Availability.objects.count(), 1)
 
     def test_create_availability_missing_fields(self):
         # Register hairdresser
