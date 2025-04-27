@@ -39,6 +39,7 @@ class CreateAvailability(APIView):
                     break_end=data['break_end'],
                     hairdresser=hairdresser
                 )
+                return JsonResponse({'message': "Availability registered successfully"}, status=201)
 
             availability = Availability.objects.create(
                     weekday=data['weekday'],
