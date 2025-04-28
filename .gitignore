@@ -1,2 +1,4 @@
 .env
 .expo
+__pycache__
+media
