@@ -9,3 +9,5 @@ class Availability(models.Model):
     hairdresser = models.ForeignKey(Hairdresser, on_delete=models.CASCADE, related_name='availability')
     start_time = models.TimeField(blank=False, null=False)
     end_time = models.TimeField(blank=False, null=False)
+    break_start = models.TimeField(null=True, blank=True)
+    break_end = models.TimeField(null=True, blank=True)

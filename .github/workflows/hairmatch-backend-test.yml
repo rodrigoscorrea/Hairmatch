@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - feature/cruds_of_er_models-12
+      - develop
+      - main
   pull_request:
     branches:
       - feature/cruds_of_er_models-12
+      - develop
+      - main
 
 jobs:
   test:
