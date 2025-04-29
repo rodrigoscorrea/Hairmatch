@@ -13,14 +13,14 @@ import {
 } from 'react-native';
 import { Hairdresser } from './types/Hairdresser.types';
 import { Customer } from './types/Customer.types';
-
+import { RootStackParamList } from './types/RootStackParams.types';
 
 const API_URL = 'https://47cc-2804-14d-14bc-22f-4a54-ee9b-72a7-6b5.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext
 export const AuthContext = React.createContext({});
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 function App() {
 

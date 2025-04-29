@@ -1,32 +1,46 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, Alert ,TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../index';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-type RegisterRouteParams = {
-  PersonalData: {
-    first_name: string 
-    last_name: string 
-    phone: string 
-    email: string 
-    cnpj?: string 
-    cpf?: string 
-    password: string 
-    role: string
-  }
-}
+// Define your navigation param list
+type RootStackParamList = {
+  Home: undefined;
+  Login: undefined;
+  Register: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email: string;
+    cnpj?: string;
+    cpf?: string;
+    password: string;
+    role: string;
+  };
+  Address: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email: string;
+    cnpj?: string;
+    cpf?: string;
+    password: string;
+    role: string;
+  };
+};
 
-type RegisterScreenRouteProp = RouteProp<RegisterRouteParams, 'PersonalData'>
+// Define the route and navigation prop types
+type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Address'>;
+type AddressScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-type Props = {
-  route: RegisterScreenRouteProp;
-  navigation: any
-}
-
-export default function Address({route, navigation}: Props) {
-  //const navigation = useNavigation<any>();
-  //const router = useRoute();
-  const {first_name, last_name, phone, email, cnpj, cpf, password, role} = route.params;
+export default function Address() {
+  // Use the hooks to get navigation and route
+  const navigation = useNavigation<AddressScreenNavigationProp>();
+  const route = useRoute<AddressScreenRouteProp>();
+  
+  // Extract params from route
+  const { first_name, last_name, phone, email, cnpj, cpf, password, role } = route.params;
 
   const [address, setAddress] = useState('');
   const [number, setNumber] = useState('');
@@ -39,39 +53,46 @@ export default function Address({route, navigation}: Props) {
   const { signUp } = useContext<any>(AuthContext);
 
   const handleRegister = async () => {
-      if (!first_name || !email || !password) {
-        Alert.alert('Error', 'Please fill in all fields');
-        return;
-      }
-      
-      /* if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match');
-        return;
-      } */
-  
-      if (password.length < 8) {
-        Alert.alert('Error', 'Password must be at least 8 characters');
-        return;
-      }
-  
-      setIsLoading(true);
-      try {
-        // Register the 
-        await signUp(first_name, last_name,phone, email, password, 
-                    address, number, complement, postal_code, state, 
-                    city, role, cpf, cnpj);
-        Alert.alert(
-          'Success', 
-          'Registration successful! Please log in.',
-          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-        );
-      } catch (error: any) {
-        const errorMessage = error.response?.data?.error || 'Registration failed';
-        Alert.alert('Error', errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!first_name || !email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signUp(
+        first_name, 
+        last_name,
+        phone, 
+        email, 
+        password, 
+        address, 
+        number, 
+        complement, 
+        postal_code, 
+        state, 
+        city, 
+        role, 
+        cpf, 
+        cnpj
+      );
+      Alert.alert(
+        'Success', 
+        'Registration successful! Please log in.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.container}>
@@ -145,7 +166,7 @@ export default function Address({route, navigation}: Props) {
           </TouchableOpacity>
 
           {/* Botão Confirmar */}
-          <TouchableOpacity style={styles.button} onPress={() => {handleRegister()}}>
+          <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>Confirmar</Text>
           </TouchableOpacity>
         </View>
@@ -196,7 +217,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    marginTop: 80, // Ajustado para menos espaço entre os botões
+    marginTop: 80,
     width: '100%',
     justifyContent: 'space-between',
   },
