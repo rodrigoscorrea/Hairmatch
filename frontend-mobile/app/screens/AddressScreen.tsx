@@ -1,17 +1,77 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useContext } from 'react';
+import { View, Text, Alert ,TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { AuthContext } from '../index';
 
-export default function Address() {
-  const navigation = useNavigation();
+type RegisterRouteParams = {
+  PersonalData: {
+    first_name: string 
+    last_name: string 
+    phone: string 
+    email: string 
+    cnpj?: string 
+    cpf?: string 
+    password: string 
+    role: string
+  }
+}
 
-  const [endereco, setEndereco] = useState('');
-  const [numero, setNumero] = useState('');
-  const [complemento, setComplemento] = useState('');
-  const [bairro, setBairro] = useState('');
-  const [cep, setCep] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [uf, setUf] = useState('');
+type RegisterScreenRouteProp = RouteProp<RegisterRouteParams, 'PersonalData'>
+
+type Props = {
+  route: RegisterScreenRouteProp;
+  navigation: any
+}
+
+export default function Address({route, navigation}: Props) {
+  //const navigation = useNavigation<any>();
+  //const router = useRoute();
+  const {first_name, last_name, phone, email, cnpj, cpf, password, role} = route.params;
+
+  const [address, setAddress] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [postal_code, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useContext<any>(AuthContext);
+
+  const handleRegister = async () => {
+      if (!first_name || !email || !password) {
+        Alert.alert('Error', 'Please fill in all fields');
+        return;
+      }
+      
+      /* if (password !== confirmPassword) {
+        Alert.alert('Error', 'Passwords do not match');
+        return;
+      } */
+  
+      if (password.length < 8) {
+        Alert.alert('Error', 'Password must be at least 8 characters');
+        return;
+      }
+  
+      setIsLoading(true);
+      try {
+        // Register the 
+        await signUp(first_name, last_name,phone, email, password, 
+                    address, number, complement, postal_code, state, 
+                    city, role, cpf, cnpj);
+        Alert.alert(
+          'Success', 
+          'Registration successful! Please log in.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error || 'Registration failed';
+        Alert.alert('Error', errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   return (
     <KeyboardAvoidingView style={styles.container}>
@@ -27,36 +87,36 @@ export default function Address() {
           <TextInput
             placeholder="Endereço"
             style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={endereco}
-            onChangeText={setEndereco}
+            value={address}
+            onChangeText={setAddress}
           />
           <TextInput
             placeholder="Número"
             style={[styles.input, { flex: 1 }]}
-            value={numero}
-            onChangeText={setNumero}
+            value={number}
+            onChangeText={setNumber}
           />
         </View>
 
         <TextInput
           placeholder="Complemento"
           style={styles.input}
-          value={complemento}
-          onChangeText={setComplemento}
+          value={complement}
+          onChangeText={setComplement}
         />
 
         <View style={styles.row}>
           <TextInput
             placeholder="Bairro"
             style={[styles.input, { flex: 1, marginRight: 5 }]}
-            value={bairro}
-            onChangeText={setBairro}
+            value={neighborhood}
+            onChangeText={setNeighborhood}
           />
           <TextInput
             placeholder="CEP"
             style={[styles.input, { flex: 1 }]}
-            value={cep}
-            onChangeText={setCep}
+            value={postal_code}
+            onChangeText={setPostalCode}
             keyboardType="numeric"
           />
         </View>
@@ -65,14 +125,14 @@ export default function Address() {
           <TextInput
             placeholder="Cidade"
             style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={cidade}
-            onChangeText={setCidade}
+            value={city}
+            onChangeText={setCity}
           />
           <TextInput
             placeholder="UF"
             style={[styles.input, { flex: 1 }]}
-            value={uf}
-            onChangeText={setUf}
+            value={state}
+            onChangeText={setState}
             maxLength={2}
           />
         </View>
@@ -85,7 +145,7 @@ export default function Address() {
           </TouchableOpacity>
 
           {/* Botão Confirmar */}
-          <TouchableOpacity style={styles.button} onPress={() => {/* ação ao confirmar */}}>
+          <TouchableOpacity style={styles.button} onPress={() => {handleRegister()}}>
             <Text style={styles.buttonText}>Confirmar</Text>
           </TouchableOpacity>
         </View>
