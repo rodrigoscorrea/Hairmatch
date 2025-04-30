@@ -15,7 +15,7 @@ import { Hairdresser } from './types/Hairdresser.types';
 import { Customer } from './types/Customer.types';
 import { RootStackParamList } from './types/RootStackParams.types';
 
-const API_URL = 'http://localhost:8000'; // For Android emulator pointing to localhost
+const API_URL = 'https://c984-2804-214-d-18e6-bda8-e6da-43b9-e86f.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
@@ -28,11 +28,13 @@ interface AuthContextType {
     password: string,
     address: string,
     number: string,
+    neighborhood: string,
     complement: string,
     postal_code: string,
     state: string,
     city: string,
     role: string,
+    rating: number,
     cpf?: string,
     cnpj?: string
   ) => Promise<any>;
@@ -88,11 +90,13 @@ function App() {
       password: string,
       address: string,
       number: string,
+      neighborhood: string,
       complement: string,
       postal_code: string,
       state: string,
       city: string,
       role: string,
+      rating: number,
       cpf?: string,
       cnpj?: string
     ) => {
@@ -109,11 +113,13 @@ function App() {
               address,
               number,
               complement,
+              neighborhood,
               postal_code,
               state,
               city,
               role,
-              cpf
+              cpf,
+              rating
             }
           : {
               first_name,
@@ -124,11 +130,13 @@ function App() {
               address,
               number, 
               complement,
+              neighborhood,
               postal_code,
               state,
               city,
               role,
-              cnpj
+              cnpj,
+              rating
             };
 
         const response = await axios.post(`${API_URL}/api/auth/register`, userData);

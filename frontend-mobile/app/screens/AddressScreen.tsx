@@ -77,12 +77,14 @@ export default function Address() {
         email1, 
         password1, 
         address, 
-        number, 
+        number,
+        neighborhood, 
         complement, 
         postal_code, 
         state, 
         city, 
         role1, 
+        5.0,
         cpf1, 
         cnpj1
       );
