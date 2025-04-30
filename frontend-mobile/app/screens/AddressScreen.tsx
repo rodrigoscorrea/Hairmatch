@@ -11,14 +11,14 @@ type RootStackParamList = {
   Register: undefined;
   Address: {
     personalData: {
-      first_name1: string;
-      last_name1: string;
-      phone1: string;
-      email1: string;
-      cnpj1?: string;
-      cpf1?: string;
-      password1: string;
-      role1: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      email: string;
+      cnpj?: string;
+      cpf?: string;
+      password: string;
+      role: string;
     }
   };
 };
@@ -47,7 +47,6 @@ export default function Address() {
 
   // Debug log to check the received params
   useEffect(() => {
-    console.log("Received personal data:", personalData);
   }, [personalData]);
 
   const handleRegister = async () => {
@@ -56,9 +55,9 @@ export default function Address() {
       return;
     }
 
-    const { first_name1, last_name1, phone1, email1, password1, role1, cpf1, cnpj1 } = personalData;
+    const { first_name, last_name, phone, email, password, role, cpf, cnpj } = personalData;
     
-    if (!first_name1 || !email1 || !password1) {
+    if (!first_name || !email || !password) {
       Alert.alert('Error', 'Personal information is incomplete');
       return;
     }
@@ -71,11 +70,11 @@ export default function Address() {
     setIsLoading(true);
     try {
       await signUp(
-        first_name1, 
-        last_name1,
-        phone1, 
-        email1, 
-        password1, 
+        first_name, 
+        last_name,
+        phone, 
+        email, 
+        password, 
         address, 
         number,
         neighborhood, 
@@ -83,10 +82,10 @@ export default function Address() {
         postal_code, 
         state, 
         city, 
-        role1, 
+        role, 
         5.0,
-        cpf1, 
-        cnpj1
+        cpf, 
+        cnpj
       );
       Alert.alert(
         'Success', 

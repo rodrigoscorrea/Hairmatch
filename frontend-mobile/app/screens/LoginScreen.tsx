@@ -40,6 +40,7 @@ const LoginScreen = () => {
       setErrorModalVisible(true)
     } finally {
       setIsLoading(false);
+      navigation.navigate('Home')
     }
   };
 

@@ -15,7 +15,7 @@ import { Hairdresser } from './types/Hairdresser.types';
 import { Customer } from './types/Customer.types';
 import { RootStackParamList } from './types/RootStackParams.types';
 
-const API_URL = 'https://c984-2804-214-d-18e6-bda8-e6da-43b9-e86f.ngrok-free.app'; // For Android emulator pointing to localhost
+const API_URL = 'https://9345-2001-12f0-d1c-d000-afe3-66ce-3dc6-61dd.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
@@ -70,7 +70,7 @@ function App() {
           setUserToken('authenticated'); // Just need a non-null value to trigger navigation
           
           // Step 3: Fetch user info
-          const userResponse = await axios.get(`${API_URL}/api/user`);
+          const userResponse = await axios.get(`${API_URL}/api/user/authenticated`);
           setUserInfo(userResponse.data.user);
         } else {
           console.log('Authentication failed');
@@ -80,6 +80,7 @@ function App() {
         throw error;
       } finally {
         setIsLoading(false);
+        
       }
     },
     signUp: async (
@@ -118,8 +119,8 @@ function App() {
               state,
               city,
               role,
-              cpf,
-              rating
+              rating,
+              cpf
             }
           : {
               first_name,
@@ -135,10 +136,9 @@ function App() {
               state,
               city,
               role,
-              cnpj,
-              rating
+              rating,
+              cnpj
             };
-
         const response = await axios.post(`${API_URL}/api/auth/register`, userData);
         return response.data;
       } catch (error: any) {
