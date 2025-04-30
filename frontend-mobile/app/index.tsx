@@ -15,17 +15,38 @@ import { Hairdresser } from './types/Hairdresser.types';
 import { Customer } from './types/Customer.types';
 import { RootStackParamList } from './types/RootStackParams.types';
 
-const API_URL = 'https://47cc-2804-14d-14bc-22f-4a54-ee9b-72a7-6b5.ngrok-free.app'; // For Android emulator pointing to localhost
+const API_URL = 'http://localhost:8000'; // For Android emulator pointing to localhost
 
-// Create AuthContext
-export const AuthContext = React.createContext({});
+// Create AuthContext with proper types
+interface AuthContextType {
+  signIn?: (email: string, password: string) => Promise<void>;
+  signUp?: (
+    first_name: string,
+    last_name: string,
+    phone: string,
+    email: string,
+    password: string,
+    address: string,
+    number: string,
+    complement: string,
+    postal_code: string,
+    state: string,
+    city: string,
+    role: string,
+    cpf?: string,
+    cnpj?: string
+  ) => Promise<any>;
+  signOut?: () => Promise<void>;
+  userInfo?: any;
+}
+
+export const AuthContext = React.createContext<AuthContextType>({});
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 function App() {
-
-  const [isLoading, setIsLoading] = useState<any>(true);
-  const [userToken, setUserToken] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [userToken, setUserToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
 
   const authContext = React.useMemo(() => ({
@@ -60,13 +81,57 @@ function App() {
       }
     },
     signUp: async (
-      data: Hairdresser | Customer
+      first_name: string,
+      last_name: string,
+      phone: string,
+      email: string,
+      password: string,
+      address: string,
+      number: string,
+      complement: string,
+      postal_code: string,
+      state: string,
+      city: string,
+      role: string,
+      cpf?: string,
+      cnpj?: string
     ) => {
       setIsLoading(true);
       try {
-        const response = await axios.post(`${API_URL}/api/auth/register`, {
-          data
-        });
+        // Construct the data object based on role
+        const userData = role === 'customer' 
+          ? {
+              first_name,
+              last_name,
+              phone,
+              email,
+              password,
+              address,
+              number,
+              complement,
+              postal_code,
+              state,
+              city,
+              role,
+              cpf
+            }
+          : {
+              first_name,
+              last_name,
+              phone,
+              email,
+              password,
+              address,
+              number, 
+              complement,
+              postal_code,
+              state,
+              city,
+              role,
+              cnpj
+            };
+
+        const response = await axios.post(`${API_URL}/api/auth/register`, userData);
         return response.data;
       } catch (error: any) {
         console.error('Registration error:', error.response?.data || error.message);
@@ -92,12 +157,11 @@ function App() {
     userInfo
   }), [userToken, userInfo]);
 
-  const fetchUserInfo = async (token: any) => {
+  const fetchUserInfo = async (token: string) => {
     try {
       // Set the token in headers
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/api/user`, { headers });
-      console.log(response.data.user)
       setUserInfo(response.data.user);
     } catch (error) {
       console.error('Error fetching user info:', error);
@@ -108,7 +172,7 @@ function App() {
     // Check if user is logged in
     const bootstrapAsync = async () => {
       try {
-        const token: any = await AsyncStorage.getItem('userToken');
+        const token = await AsyncStorage.getItem('userToken');
         if (token) {
           setUserToken(token);
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -125,18 +189,18 @@ function App() {
   }, []);
 
   if (isLoading) {
-    return null; // You could show a splash screen or loading indicator here
+    return null; 
   }
 
   return (
-    
-      <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Address" component={AddressScreen} />
-      </Stack.Navigator>
-    
+    <AuthContext.Provider value={authContext}>
+        <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Address" component={AddressScreen} />
+        </Stack.Navigator>
+    </AuthContext.Provider>
   );
 }
 

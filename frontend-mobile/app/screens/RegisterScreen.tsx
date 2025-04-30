@@ -129,14 +129,14 @@ export default function RegisterScreen() {
 
       {/* Botão Próximo */}
       <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address', {personalData: {
-        first_name: first_name,
-        last_name: last_name,
-        phone: phone,
-        email: email,
-        cnpj: cnpj ?? '',
-        cpf: cpf ?? '',
-        password: password,
-        role: role,
+        first_name1: first_name,
+        last_name1: last_name,
+        phone1: phone,
+        email1: email,
+        cnpj1: cnpj ?? '',
+        cpf1: cpf ?? '',
+        password1: password,
+        role1: role,
       }})}>
         <Text style={styles.buttonText}>Próximo</Text>
       </TouchableOpacity>

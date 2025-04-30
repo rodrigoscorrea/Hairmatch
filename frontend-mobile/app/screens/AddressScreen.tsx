@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../index';
@@ -8,25 +8,18 @@ import { StackNavigationProp } from '@react-navigation/stack';
 type RootStackParamList = {
   Home: undefined;
   Login: undefined;
-  Register: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-    email: string;
-    cnpj?: string;
-    cpf?: string;
-    password: string;
-    role: string;
-  };
+  Register: undefined;
   Address: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-    email: string;
-    cnpj?: string;
-    cpf?: string;
-    password: string;
-    role: string;
+    personalData: {
+      first_name1: string;
+      last_name1: string;
+      phone1: string;
+      email1: string;
+      cnpj1?: string;
+      cpf1?: string;
+      password1: string;
+      role1: string;
+    }
   };
 };
 
@@ -40,7 +33,7 @@ export default function Address() {
   const route = useRoute<AddressScreenRouteProp>();
   
   // Extract params from route
-  const { first_name, last_name, phone, email, cnpj, cpf, password, role } = route.params;
+  const personalData = route.params?.personalData;
 
   const [address, setAddress] = useState('');
   const [number, setNumber] = useState('');
@@ -52,34 +45,46 @@ export default function Address() {
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useContext<any>(AuthContext);
 
+  // Debug log to check the received params
+  useEffect(() => {
+    console.log("Received personal data:", personalData);
+  }, [personalData]);
+
   const handleRegister = async () => {
-    if (!first_name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!personalData) {
+      Alert.alert('Error', 'Personal information is missing');
       return;
     }
+
+    const { first_name1, last_name1, phone1, email1, password1, role1, cpf1, cnpj1 } = personalData;
     
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    if (!first_name1 || !email1 || !password1) {
+      Alert.alert('Error', 'Personal information is incomplete');
+      return;
+    }
+
+    if (!address || !postal_code || !city || !state) {
+      Alert.alert('Error', 'Please fill in all required address fields');
       return;
     }
 
     setIsLoading(true);
     try {
       await signUp(
-        first_name, 
-        last_name,
-        phone, 
-        email, 
-        password, 
+        first_name1, 
+        last_name1,
+        phone1, 
+        email1, 
+        password1, 
         address, 
         number, 
         complement, 
         postal_code, 
         state, 
         city, 
-        role, 
-        cpf, 
-        cnpj
+        role1, 
+        cpf1, 
+        cnpj1
       );
       Alert.alert(
         'Success', 
@@ -87,6 +92,7 @@ export default function Address() {
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error: any) {
+      console.log(error)
       const errorMessage = error.response?.data?.error || 'Registration failed';
       Alert.alert('Error', errorMessage);
     } finally {
