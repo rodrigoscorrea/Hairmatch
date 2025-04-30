@@ -16,7 +16,7 @@ class RegisterViewTest(TestCase):
         self.valid_customer_payload = {
             'first_name': 'John',
             'last_name': 'Doe',
-            'phone': '123456789',
+            'phone': '123456789123',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Test Neighborhood',
@@ -33,7 +33,7 @@ class RegisterViewTest(TestCase):
         self.valid_hairdresser_payload = {
             'first_name': 'Jane',
             'last_name': 'Smith',
-            'phone': '987654321',
+            'phone': '987654321231',
             'number': '15',
             'complement': 'Apt 2',
             'neighborhood': 'Downtown',
@@ -92,8 +92,25 @@ class RegisterViewTest(TestCase):
         self.assertEqual(User.objects.count(), 1)  # No new user created
 
     def test_register_missing_role(self):
-        invalid_payload = self.valid_customer_payload.copy()
-        invalid_payload.pop('role')
+        invalid_payload = {
+            'first_name': 'Jane',
+            'last_name': 'Smith',
+            'phone': '987654321231',
+            'number': '15',
+            'complement': 'Apt 2',
+            'neighborhood': 'Downtown',
+            'city': 'Metropolis',
+            'state': 'MT',
+            'address': 'Hair Street',
+            'postal_code': '54321',
+            'email': 'jane@example.com',
+            'password': 'secure_password',
+            'role': '',
+            'rating': 4,
+            'resume': 'Experienced hairdresser',
+            'cnpj': '12345678000190',
+            'experience_years': 5
+        }
         
         response = self.client.post(
             self.register_url,
@@ -103,6 +120,92 @@ class RegisterViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 0)
 
+    def test_register_missing_password(self):
+        invalid_payload = {
+            'first_name': 'Jane',
+            'last_name': 'Smith',
+            'phone': '987654321231',
+            'number': '15',
+            'complement': 'Apt 2',
+            'neighborhood': 'Downtown',
+            'city': 'Metropolis',
+            'state': 'MT',
+            'address': 'Hair Street',
+            'postal_code': '54321',
+            'email': 'jane@example.com',
+            'password': '',  # Campo de senha vazio
+            'role': 'HAIRDRESSER',
+            'rating': 4,
+            'resume': 'Experienced hairdresser',
+            'cnpj': '12345678000190',
+            'experience_years': 5
+        }
+        
+        response = self.client.post(
+            self.register_url,
+            data=json.dumps(invalid_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_register_missing_email(self):
+        invalid_payload = {
+            'first_name': 'Jane',
+            'last_name': 'Smith',
+            'phone': '987654321231',
+            'number': '15',
+            'complement': 'Apt 2',
+            'neighborhood': 'Downtown',
+            'city': 'Metropolis',
+            'state': 'MT',
+            'address': 'Hair Street',
+            'postal_code': '54321',
+            'email': '',  # Campo de email vazio
+            'password': 'secure_password',
+            'role': 'HAIRDRESSER',
+            'rating': 4,
+            'resume': 'Experienced hairdresser',
+            'cnpj': '12345678000190',
+            'experience_years': 5
+        }
+        
+        response = self.client.post(
+            self.register_url,
+            data=json.dumps(invalid_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_register_missing_phone(self):
+        invalid_payload = {
+            'first_name': 'Jane',
+            'last_name': 'Smith',
+            'phone': '',  # Campo de telefone vazio
+            'number': '15',
+            'complement': 'Apt 2',
+            'neighborhood': 'Downtown',
+            'city': 'Metropolis',
+            'state': 'MT',
+            'address': 'Hair Street',
+            'postal_code': '54321',
+            'email': 'jane@example.com',
+            'password': 'secure_password',
+            'role': 'HAIRDRESSER',
+            'rating': 4,
+            'resume': 'Experienced hairdresser',
+            'cnpj': '12345678000190',
+            'experience_years': 5
+        }
+        
+        response = self.client.post(
+            self.register_url,
+            data=json.dumps(invalid_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 0)
 
 class LoginViewTest(TestCase):
     def setUp(self):
@@ -112,7 +215,7 @@ class LoginViewTest(TestCase):
         self.user_data = {
             'first_name': 'Test',
             'last_name': 'User',
-            'phone': '123456789',
+            'phone': '123456782319',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Test Neighborhood',
@@ -215,7 +318,7 @@ class UserInfoViewTest(TestCase):
         self.customer_data = {
             'first_name': 'Customer',
             'last_name': 'Test',
-            'phone': '123456789',
+            'phone': '1234232356789',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Test Neighborhood',
@@ -234,7 +337,7 @@ class UserInfoViewTest(TestCase):
         self.hairdresser_data = {
             'first_name': 'Hairdresser',
             'last_name': 'Test',
-            'phone': '987654321',
+            'phone': '9876542323321',
             'number': '15',
             'complement': 'Apt 2',
             'neighborhood': 'Hairdresser Neighborhood',
@@ -363,7 +466,7 @@ class UserInfoCookieViewTest(TestCase):
         self.customer_data = {
             'first_name': 'Customer',
             'last_name': 'Test',
-            'phone': '123456789',
+            'phone': '123423256789',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Test Neighborhood',
@@ -382,7 +485,7 @@ class UserInfoCookieViewTest(TestCase):
         self.hairdresser_data = {
             'first_name': 'Hairdresser',
             'last_name': 'Test',
-            'phone': '987654321',
+            'phone': '987232654321',
             'number': '15',
             'complement': 'Apt 2',
             'neighborhood': 'Hairdresser Neighborhood',
@@ -565,7 +668,7 @@ class ChangePasswordViewTest(TestCase):
         self.user_data = {
             'first_name': 'Password',
             'last_name': 'Test',
-            'phone': '123456789',
+            'phone': '123423256789',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Password Neighborhood',
@@ -680,7 +783,7 @@ class DeleteUserByEmailTest(TestCase):
         self.user1_data = {
             'first_name': 'Test',
             'last_name': 'User1',
-            'phone': '123456789',
+            'phone': '123452326789',
             'number': '42',
             'complement': 'Apt 1',
             'neighborhood': 'Test Neighborhood',
@@ -699,7 +802,7 @@ class DeleteUserByEmailTest(TestCase):
         self.user2_data = {
             'first_name': 'Test',
             'last_name': 'User2',
-            'phone': '987654321',
+            'phone': '983237654321',
             'number': '24',
             'complement': 'Apt 2',
             'neighborhood': 'Another Neighborhood',

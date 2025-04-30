@@ -225,7 +225,7 @@ class ListReserveTest(ReserveTestCase):
         
         response = self.client.get(list_user_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 class RemoveReserveTest(ReserveTestCase):

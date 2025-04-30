@@ -20,9 +20,19 @@ class RegisterView(APIView):
 
         if User.objects.filter(email=data['email']).exists():
             return JsonResponse({'error': 'User already exists'}, status=400)
+        if User.objects.filter(phone=data['phone']).exists():
+            return JsonResponse({'error': 'Phone number already exists'}, status=400)
         
-        if data.get('role') is None:
+        if data.get('role') is None or data['role'] is None or data['role'] == '':
             return JsonResponse({'error': 'No role assigned to user'}, status=400)
+        if data.get('email') is None or data['email'] is None or data['email'] == '':
+            return JsonResponse({'error': 'No email assigned to user'}, status=400)
+        if data.get('password') is None or data['password'] is None or data['password'] == '':
+            return JsonResponse({'error': 'No password assigned to user'}, status=400)
+        if data.get('phone') is None or data['phone'] is None or data['phone'] == '':
+            return JsonResponse({'error': 'No phone assigned to user'}, status=400)
+        if  len(data['phone']) < 11:
+            return JsonResponse({'error': 'Phone number is too short'}, status=400)
 
         raw_password = data['password'].replace(' ', '')
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
