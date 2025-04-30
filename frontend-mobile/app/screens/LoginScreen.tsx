@@ -34,13 +34,13 @@ const LoginScreen = () => {
     setIsLoading(true);
     try {
       await signIn(email, password);
+      navigation.navigate('Home')
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
       //Alert.alert('Error', errorMessage);
       setErrorModalVisible(true)
     } finally {
       setIsLoading(false);
-      navigation.navigate('Home')
     }
   };
 

@@ -1,7 +1,7 @@
 export type RootStackParamList = {
-    Home: undefined
-    Login: undefined
-    Register: undefined
+    Home: any
+    Login: any
+    Register: any
     Address: {
         first_name: string 
         last_name: string 

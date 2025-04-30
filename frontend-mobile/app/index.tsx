@@ -14,8 +14,9 @@ import {
 import { Hairdresser } from './types/Hairdresser.types';
 import { Customer } from './types/Customer.types';
 import { RootStackParamList } from './types/RootStackParams.types';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-const API_URL = 'https://9345-2001-12f0-d1c-d000-afe3-66ce-3dc6-61dd.ngrok-free.app'; // For Android emulator pointing to localhost
+const API_URL = 'https://819c-2804-214-d-18e6-b481-64c1-be82-5097.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
@@ -202,7 +203,7 @@ function App() {
 
   return (
     <AuthContext.Provider value={authContext}>
-        <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
