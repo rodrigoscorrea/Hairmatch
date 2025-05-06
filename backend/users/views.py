@@ -63,9 +63,7 @@ class RegisterView(APIView):
         elif data['role'] == 'hairdresser':
             Hairdresser.objects.create(
                 user=user,
-                resume=data['resume'],
-                cnpj=data['cnpj'],
-                experience_years=data['experience_years']
+                cnpj=data['cnpj']
             )
 
         return JsonResponse({'message': f"{data['role']} user registered successfully"}, status=201)
