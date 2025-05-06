@@ -23,12 +23,18 @@ class CreateAvailability(APIView):
         try:
             data = json.loads(request.body)
 
+            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+            
             hairdresser = Hairdresser.objects.filter(user_id=payload['id']).first()
             if not hairdresser:
                 return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
             if not data.get('weekday') or not data.get('start_time') or not data.get('end_time'):
                 return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
+            if data['weekday'] not in weekdays:
+                return JsonResponse({'error': 'Invalid weekday'}, status=400)
+            if Availability.objects.filter(weekday=data['weekday'], hairdresser=hairdresser).exists():
+                return JsonResponse({'error': 'Availability already exists'}, status=400)
 
             if data.get('break_start') and data.get('break_end'):
                 availability = Availability.objects.create(

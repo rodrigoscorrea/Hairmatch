@@ -19,8 +19,9 @@ class CreateReserve(APIView):
     def post(self, request):
         data = json.loads(request.body)
 
-        if Reserve.objects.filter(start_time=data['start_time']).exists():
+        if Reserve.objects.filter(start_time=data['start_time'], customer=data['customer']).exists() or Agenda.objects.filter(start_time=data['start_time'], hairdresser=data['hairdresser']).exists():
             return JsonResponse({'error': 'Start_time contains overlap'}, status=500)
+        
 
         try:
             customer_instance = Customer.objects.get(id=data['customer'])
@@ -55,15 +56,15 @@ class CreateReserve(APIView):
         return JsonResponse({'message': 'reserve created successfully'}, status=201)     
 
 class ListReserve(APIView):
-    def get(self, request, user_id=None):
-        if(user_id):
+    def get(self, request, customer_id=None):
+        if(customer_id):
             try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return JsonResponse({'error': 'User not found'}, status=404)
+                customer = Customer.objects.get(id=customer_id)
+            except customer.DoesNotExist:
+                return JsonResponse({'error': 'Customer not found'}, status=404)
             
-            reserves = Reserve.objects.filter(user=user_id)
-            result = ReserveSerializer(reserves).data
+            reserves = Reserve.objects.filter(customer=customer_id)
+            result = ReserveSerializer(reserves, many=True).data
             return JsonResponse({'data': result}, status=200)
             
         reserves = Reserve.objects.all()
@@ -81,6 +82,7 @@ class RemoveReserve(APIView):
         except Reserve.DoesNotExist:
             return JsonResponse({"error": "Result not found"}, status=404)
         
+
         reserve.delete()
         return JsonResponse({"data": "reserve deleted successfully"}, status=200)
     

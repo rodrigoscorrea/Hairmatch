@@ -6,11 +6,19 @@ from service.models import Service
 from rest_framework.views import APIView
 from django.http import JsonResponse
 import json
+from datetime import timedelta, datetime
 # Create your views here.
 
 class CreateAgenda(APIView):
     def post(self, request):
         data = json.loads(request.body)
+
+        try:
+            # Converter os horários para objetos datetime para manipulação adequada
+            start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
+        except ValueError:
+            return JsonResponse({'error': 'Invalid start_time format'}, status=400)
+        
         try:
             hairdresser_instance = Hairdresser.objects.get(id=data['hairdresser'])
         except Hairdresser.DoesNotExist:
@@ -21,11 +29,36 @@ class CreateAgenda(APIView):
         except Service.DoesNotExist:
             return JsonResponse({'error': 'Service not found'}, status=500)
         
+        # Calcular end_time se não fornecido
+        if 'end_time' not in data or not data['end_time']:
+            end_time = calculate_end_time(data['start_time'], service_instance.duration)
+        else:
+            try:
+                end_time = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
+            except ValueError:
+                return JsonResponse({'error': 'Invalid end_time format'}, status=400)
+        
+        # Verificação completa de sobreposição:
+        # Verifica se existem agendamentos que se sobrepõem ao novo agendamento
+        overlapping_agendas = Agenda.objects.filter(
+            hairdresser=data['hairdresser'],
+            # O start_time do agendamento existente é antes do end_time do novo
+            start_time__lt=end_time,
+            # E o end_time do agendamento existente é depois do start_time do novo
+            end_time__gt=start_time
+        )
+        
+        if overlapping_agendas.exists():
+            return JsonResponse({
+                'error': 'This time slot overlaps with an existing appointment'
+            }, status=400)
+        
+        # Agora é seguro criar o agendamento
         Agenda.objects.create(
             service=service_instance,
             hairdresser=hairdresser_instance,
-            start_time = data['start_time'],
-            end_time = data['end_time']
+            start_time=start_time,
+            end_time=end_time
         )
 
         return JsonResponse({'message': 'Agenda register created successfully'}, status=201)
@@ -60,3 +93,28 @@ class RemoveAgenda(APIView):
         agenda.delete()
         return JsonResponse({"data": "Agenda register deleted successfully"}, status=200)
         
+
+def calculate_end_time(start_time, duration_minutes):
+    if not isinstance(start_time, str):
+        raise TypeError("start_time must be a string")
+    
+    try:
+        # Parse the datetime string - assuming ISO format from JSON
+        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+    except ValueError:
+        # If the string doesn't match ISO format, try a more flexible approach
+        try:
+            start_time = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            raise ValueError("Invalid datetime format. Expected ISO format like '2025-04-26T14:30:00Z'")
+    
+    if not isinstance(duration_minutes, int):
+        try:
+            duration_minutes = int(duration_minutes)
+        except (ValueError, TypeError):
+            raise TypeError("duration_minutes must be an integer")
+    
+    # Calculate end time by adding the duration in minutes
+    end_time = start_time + timedelta(minutes=duration_minutes)
+    
+    return end_time
