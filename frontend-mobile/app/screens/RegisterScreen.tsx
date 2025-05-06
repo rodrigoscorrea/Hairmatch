@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
 
   // Estados para armazenar os campos
-  const [nome, setNome] = useState('');
-  const [sobrenome, setSobrenome] = useState('');
-  const [cpfCnpj, setCpfCnpj] = useState('');
+  const [first_name, setFirst_Name] = useState('');
+  const [last_name, setLast_Name] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cnpj, setCnpj] = useState('');
   const [email, setEmail] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [tipoUsuario, setTipoUsuario] = useState<'Cliente' | 'Profissional'>('Cliente');
-
-  const handleProximo = () => {
-    console.log('Dados preenchidos:');
-    console.log({ nome, sobrenome, cpfCnpj, email, telefone, senha, confirmarSenha, tipoUsuario });
-  };
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'customer' | 'hairdresser'>('customer');
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -35,11 +32,11 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            tipoUsuario === 'Cliente' && styles.toggleButtonSelected,
+            role === 'customer' && styles.toggleButtonSelected,
           ]}
-          onPress={() => setTipoUsuario('Cliente')}
+          onPress={() => setRole('customer')}
         >
-          <Text style={tipoUsuario === 'Cliente' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+          <Text style={role === 'customer' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
             Cliente
           </Text>
         </TouchableOpacity>
@@ -47,11 +44,11 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            tipoUsuario === 'Profissional' && styles.toggleButtonSelected, // Ambos ficam roxos
+            role === 'hairdresser' && styles.toggleButtonSelected, // Ambos ficam roxos
           ]}
-          onPress={() => setTipoUsuario('Profissional')}
+          onPress={() => setRole('hairdresser')}
         >
-          <Text style={tipoUsuario === 'Profissional' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+          <Text style={role === 'hairdresser' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
             Profissional
           </Text>
         </TouchableOpacity>
@@ -70,23 +67,32 @@ export default function RegisterScreen() {
         <TextInput
           placeholder="Nome"
           style={[styles.input, { flex: 1, marginRight: 5 }]}
-          value={nome}
-          onChangeText={setNome}
+          value={first_name}
+          onChangeText={setFirst_Name}
         />
         <TextInput
           placeholder="Sobrenome"
           style={[styles.input, { flex: 1, marginLeft: 5 }]}
-          value={sobrenome}
-          onChangeText={setSobrenome}
+          value={last_name}
+          onChangeText={setLast_Name}
         />
       </View>
 
-      <TextInput
-        placeholder="CPF/CNPJ"
+      {role === 'customer' ? (
+        <TextInput
+        placeholder="CPF"
         style={styles.input}
-        value={cpfCnpj}
-        onChangeText={setCpfCnpj}
+        value={cpf}
+        onChangeText={setCpf}
+        />
+      ): (
+        <TextInput
+        placeholder="CNPJ"
+        style={styles.input}
+        value={cnpj}
+        onChangeText={setCnpj}
       />
+      )}      
 
       <TextInput
         placeholder="Email"
@@ -101,28 +107,37 @@ export default function RegisterScreen() {
         placeholder="Telefone"
         style={styles.input}
         keyboardType="phone-pad"
-        value={telefone}
-        onChangeText={setTelefone}
+        value={phone}
+        onChangeText={setPhone}
       />
 
       <TextInput
         placeholder="Senha"
         style={styles.input}
         secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TextInput
         placeholder="Confirme sua senha"
         style={styles.input}
         secureTextEntry
-        value={confirmarSenha}
-        onChangeText={setConfirmarSenha}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
       />
 
       {/* Botão Próximo */}
-      <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address', {personalData: {
+        first_name: first_name,
+        last_name: last_name,
+        phone: phone,
+        email: email,
+        cnpj: cnpj ?? '',
+        cpf: cpf ?? '',
+        password: password,
+        role: role,
+      }})}>
         <Text style={styles.buttonText}>Próximo</Text>
       </TouchableOpacity>
     </View>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,11 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
+  Alert
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
-
-type RootStackParamList = {
-  Login: undefined;
-  RegisterScreen: undefined;
-};
+import { AuthContext } from '../index';
 
 
 const LoginScreen = () => {
@@ -25,13 +21,27 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Simulando falha no login
-    setErrorModalVisible(true);
+  const { signIn } = useContext<any>(AuthContext);
 
-    // Se fosse sucesso:
-    // navigation.navigate('Home');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signIn(email, password);
+      navigation.navigate('Home')
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
+      //Alert.alert('Error', errorMessage);
+      setErrorModalVisible(true)
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const closeErrorModal = () => {

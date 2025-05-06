@@ -1,17 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { AuthContext } from '../index';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+// Define your navigation param list
+type RootStackParamList = {
+  Home: undefined;
+  Login: undefined;
+  Register: undefined;
+  Address: {
+    personalData: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+      email: string;
+      cnpj?: string;
+      cpf?: string;
+      password: string;
+      role: string;
+    }
+  };
+};
+
+// Define the route and navigation prop types
+type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Address'>;
+type AddressScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export default function Address() {
-  const navigation = useNavigation();
+  // Use the hooks to get navigation and route
+  const navigation = useNavigation<AddressScreenNavigationProp>();
+  const route = useRoute<AddressScreenRouteProp>();
+  
+  // Extract params from route
+  const personalData = route.params?.personalData;
 
-  const [endereco, setEndereco] = useState('');
-  const [numero, setNumero] = useState('');
-  const [complemento, setComplemento] = useState('');
-  const [bairro, setBairro] = useState('');
-  const [cep, setCep] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [uf, setUf] = useState('');
+  const [address, setAddress] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [postal_code, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useContext<any>(AuthContext);
+
+  // Debug log to check the received params
+  useEffect(() => {
+  }, [personalData]);
+
+  const handleRegister = async () => {
+    if (!personalData) {
+      Alert.alert('Error', 'Personal information is missing');
+      return;
+    }
+
+    const { first_name, last_name, phone, email, password, role, cpf, cnpj } = personalData;
+    
+    if (!first_name || !email || !password) {
+      Alert.alert('Error', 'Personal information is incomplete');
+      return;
+    }
+
+    if (!address || !postal_code || !city || !state) {
+      Alert.alert('Error', 'Please fill in all required address fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signUp(
+        first_name, 
+        last_name,
+        phone, 
+        email, 
+        password, 
+        address, 
+        number,
+        neighborhood, 
+        complement, 
+        postal_code, 
+        state, 
+        city, 
+        role, 
+        5.0,
+        cpf, 
+        cnpj
+      );
+      Alert.alert(
+        'Success', 
+        'Registration successful! Please log in.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (error: any) {
+      console.log(error)
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.container}>
@@ -27,36 +115,36 @@ export default function Address() {
           <TextInput
             placeholder="Endereço"
             style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={endereco}
-            onChangeText={setEndereco}
+            value={address}
+            onChangeText={setAddress}
           />
           <TextInput
             placeholder="Número"
             style={[styles.input, { flex: 1 }]}
-            value={numero}
-            onChangeText={setNumero}
+            value={number}
+            onChangeText={setNumber}
           />
         </View>
 
         <TextInput
           placeholder="Complemento"
           style={styles.input}
-          value={complemento}
-          onChangeText={setComplemento}
+          value={complement}
+          onChangeText={setComplement}
         />
 
         <View style={styles.row}>
           <TextInput
             placeholder="Bairro"
             style={[styles.input, { flex: 1, marginRight: 5 }]}
-            value={bairro}
-            onChangeText={setBairro}
+            value={neighborhood}
+            onChangeText={setNeighborhood}
           />
           <TextInput
             placeholder="CEP"
             style={[styles.input, { flex: 1 }]}
-            value={cep}
-            onChangeText={setCep}
+            value={postal_code}
+            onChangeText={setPostalCode}
             keyboardType="numeric"
           />
         </View>
@@ -65,14 +153,14 @@ export default function Address() {
           <TextInput
             placeholder="Cidade"
             style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={cidade}
-            onChangeText={setCidade}
+            value={city}
+            onChangeText={setCity}
           />
           <TextInput
             placeholder="UF"
             style={[styles.input, { flex: 1 }]}
-            value={uf}
-            onChangeText={setUf}
+            value={state}
+            onChangeText={setState}
             maxLength={2}
           />
         </View>
@@ -85,7 +173,7 @@ export default function Address() {
           </TouchableOpacity>
 
           {/* Botão Confirmar */}
-          <TouchableOpacity style={styles.button} onPress={() => {/* ação ao confirmar */}}>
+          <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>Confirmar</Text>
           </TouchableOpacity>
         </View>
@@ -136,7 +224,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    marginTop: 80, // Ajustado para menos espaço entre os botões
+    marginTop: 80,
     width: '100%',
     justifyContent: 'space-between',
   },
