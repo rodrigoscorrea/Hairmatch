@@ -2,6 +2,7 @@ export type RootStackParamList = {
     Home: any
     Login: any
     Register: any
+    MockedHairdresserProfile: any
     Address: {
         first_name: string 
         last_name: string 

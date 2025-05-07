@@ -1,4 +1,12 @@
-export interface Hairdresser {
+import { User } from "./User.types"
+
+interface HairdresserBase {
+    cnpj: string,
+    experience_years: number,
+    resume: string
+}
+
+export interface Hairdresser extends HairdresserBase{
     first_name: string, 
     last_name: string, 
     email: string, 
@@ -12,7 +20,9 @@ export interface Hairdresser {
     postal_code: string,
     rating: number,
     role: string,
-    cnpj: string,
-    experience_years: number,
-    resume: string
+}
+
+export interface HairdresserResponse extends HairdresserBase{
+    id: string,
+    user: User
 }

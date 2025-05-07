@@ -11,12 +11,13 @@ import {
   View,
   Text
 } from 'react-native';
-import { Hairdresser } from './types/Hairdresser.types';
-import { Customer } from './types/Customer.types';
-import { RootStackParamList } from './types/RootStackParams.types';
+import { Hairdresser } from './models/Hairdresser.types';
+import { Customer } from './models/Customer.types';
+import { RootStackParamList } from './models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
+import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
 
-const API_URL = 'https://819c-2804-214-d-18e6-b481-64c1-be82-5097.ngrok-free.app'; // For Android emulator pointing to localhost
+export const API_URL = 'https://ce64-2804-214-d-2495-896f-d906-41ac-847d.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
@@ -208,6 +209,7 @@ function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
+          <Stack.Screen name="MockedHairdresserProfile" component={HairdresserProfileScreen} />
         </Stack.Navigator>
     </AuthContext.Provider>
   );

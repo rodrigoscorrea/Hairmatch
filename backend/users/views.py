@@ -259,6 +259,23 @@ class UserInfoCookieView(APIView):
 # Those views should only be used by admin personal or internal functions
 
 class UserInfoView(APIView):
+    def get(self,request,email=None):
+        try:
+            user = User.objects.filter(email=email).filter(is_active=True).first()
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        if (user.role == 'customer'):
+            customer = Customer.objects.get(user=user)
+            customer_serialized = CustomerSerializer(customer).data
+            return JsonResponse({'data': customer_serialized}, status=200)
+        else: 
+            hairdresser = Hairdresser.objects.get(user=user)
+            hairdresser_serialized = HairdresserSerializer(hairdresser).data
+            return JsonResponse({'data': hairdresser_serialized}, status=200)
+        
+        return JsonResponse({'error': 'Unexpected error'}, status=500)
+
     
     def delete(self, request, email=None):
         token = request.COOKIES.get('jwt')
