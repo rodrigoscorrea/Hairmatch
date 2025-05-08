@@ -46,8 +46,29 @@ class AssignPreferenceToUser(APIView):
             preference.users.add(user)
 
             return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        
+class AssignPreferenceToUserNoCookie(APIView):
+    def post(self, request, preference_id):
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
 
+            if not user_id:
+                return JsonResponse({'error': 'User ID is required'}, status=400)
 
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            preference = Preferences.objects.filter(id=preference_id).first()
+            if not preference:
+                return JsonResponse({'error': 'Preference not found'}, status=404)
+
+            preference.users.add(user)
+
+            return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
         

@@ -6,7 +6,8 @@ import axios from 'axios';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import AddressScreen from './screens/AddressScreen';
-import HomeScreen from './screens/HomeScreen'
+import PreferencesScreen from './screens/PreferencesScreen';
+import HomeScreen from './screens/HomeScreen';
 import {
   View,
   Text
@@ -17,7 +18,7 @@ import { RootStackParamList } from './models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
 
-export const API_URL = 'https://c78f-2804-214-d-2495-1131-cf70-dbe2-142.ngrok-free.app'; // For Android emulator pointing to localhost
+export const API_URL = 'https://f9c9-2804-214-d-2495-1131-cf70-dbe2-142.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
@@ -209,6 +210,7 @@ function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
+          <Stack.Screen name="Preferences" component={PreferencesScreen} />
           <Stack.Screen name="MockedHairdresserProfile" component={HairdresserProfileScreen} />
         </Stack.Navigator>
     </AuthContext.Provider>
