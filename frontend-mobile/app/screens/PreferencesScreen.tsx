@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { AuthContext } from '../index';
+import { AuthContext, API_URL } from '../index';
 import { StackNavigationProp } from '@react-navigation/stack';
 import axios from 'axios';
 
@@ -43,7 +43,6 @@ interface Preference {
 type PreferencesScreenRouteProp = RouteProp<RootStackParamList, 'Preferences'>;
 type PreferencesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-const API_URL = 'https://98e9-2804-214-d-2270-cd29-8e4-bab9-edaf.ngrok-free.app'
 
 export default function PreferencesScreen() {
   // Use the hooks to get navigation and route
@@ -124,8 +123,6 @@ export default function PreferencesScreen() {
   
     setIsLoading(true);
     try {
-      // Registrando usuario
-      console.log("Iniciando registro do usuário...");
       await signUp(
         first_name, 
         last_name,
@@ -155,7 +152,6 @@ export default function PreferencesScreen() {
               'Accept': 'application/json'
             }
           });
-          console.log("Resposta da API:", userResponse.data);
           
           // Extraindo Id do usuario baseado no role
           let userId = null;
@@ -197,15 +193,12 @@ export default function PreferencesScreen() {
           errorMessage = 'Erro de comunicação com o servidor';
         }
       } else if (error.request) {
-        // A requisição foi feita mas não houve resposta
         console.error('Sem resposta do servidor');
         errorMessage = 'Sem resposta do servidor. Verifique sua conexão.';
       } else {
-        // Algo aconteceu na configuração da requisição
         console.error('Erro de configuração:', error.message);
         errorMessage = `Erro: ${error.message}`;
       }
-      // Não tenho ideia do que foi
       Alert.alert('Erro', errorMessage);
     } finally {
       setIsLoading(false);

@@ -17,7 +17,7 @@ import { Customer } from './types/Customer.types';
 import { RootStackParamList } from './types/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-const API_URL = 'https://98e9-2804-214-d-2270-cd29-8e4-bab9-edaf.ngrok-free.app'; // For Android emulator pointing to localhost
+export const API_URL = 'https://f9c9-2804-214-d-2495-1131-cf70-dbe2-142.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {
