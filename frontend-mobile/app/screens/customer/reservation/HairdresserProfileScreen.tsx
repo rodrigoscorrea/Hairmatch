@@ -16,6 +16,7 @@ import { listAvailabilitiesByHairdresser } from '@/app/services/availability.ser
 import { AvailabilityResponse } from '@/app/models/Availability.types';
 import { listServicesByHairdresser } from '@/app/services/service.service';
 import { ServiceResponse } from '@/app/models/Service.types';
+import { formatAvailability } from '@/app/utils/availability-formater';
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
@@ -31,7 +32,7 @@ export default function HairdresserProfileScreen() {
   useEffect(() => {
     const fetchHairdresserData = async () => {
       try {
-        const hairdresserResponse = await getHairdresser('rodrigosc615@gmail.com');
+        const hairdresserResponse = await getHairdresser('rodrigosc616@gmail.com');
         setHairdresser(hairdresserResponse.data);
       } catch (err) {
         console.error("Failed to fetch hairdresser:", err);
@@ -120,12 +121,18 @@ export default function HairdresserProfileScreen() {
 
       {/* Accordions */}
       <Accordion title="Horários de funcionamento">
-        {availabilities ? availabilities.map((availability) => (
-          <Text key={availability.id}>{availability.weekday}: {availability.start_time} às {availability.end_time}</Text>
-        )) : 
+        {availabilities ? availabilities.map((availability) => {
+        const formatted = formatAvailability(availability);
+          return (
+            <View key={availability.id} style={styles.availabilityRow}>
+              <Text style={styles.weekday}>{formatted.weekday}</Text>
+              <Text style={styles.timeRange}>{formatted.timeRange}</Text>
+            </View>
+          );
+        }) : 
         (
           <>
-            <Text>Carregando Horários do Cabeleireiro ...</Text>
+            <Text>Carregando horários do cabeleireiro...</Text>
           </>
         )}
       </Accordion>
@@ -250,4 +257,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  availabilityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
+  },
+  weekday: {
+    fontWeight: 'bold'
+  },
+  timeRange: {
+    color: '#666'
+  }
 });
