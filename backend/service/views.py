@@ -43,7 +43,18 @@ class ListService(APIView):
         services = Service.objects.all()
         result = ServiceSerializer(services, many=True).data 
         return JsonResponse({'data': result}, status=200)
-    
+
+class ListServiceHairdresser(APIView):
+    def get(self, request, hairdresser_id):
+        try:
+            hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+        except Hairdresser.DoesNotExist:
+            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+        
+        services = Service.objects.filter(hairdresser=hairdresser)
+        services_serialized = ServiceSerializer(services, many=True).data
+        return JsonResponse({'data': services_serialized}, status=200)
+        
 class UpdateService(APIView):
     def put(self, request, service_id):
         data = json.loads(request.body)

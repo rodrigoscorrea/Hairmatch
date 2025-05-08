@@ -17,7 +17,7 @@ import { RootStackParamList } from './models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
 
-export const API_URL = 'https://ce64-2804-214-d-2495-896f-d906-41ac-847d.ngrok-free.app'; // For Android emulator pointing to localhost
+export const API_URL = 'https://9842-2804-214-d-2495-e90a-8ac0-830c-eec9.ngrok-free.app'; // For Android emulator pointing to localhost
 
 // Create AuthContext with proper types
 interface AuthContextType {

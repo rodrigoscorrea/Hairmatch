@@ -9,29 +9,55 @@ import {
   FlatList
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { Accordion } from '../../../components/Accordion' // You’ll create this below
+import { Accordion } from '../../../components/Accordion'
 import { getHairdresser } from '@/app/services/hairdresser.service';
 import { HairdresserResponse } from '@/app/models/Hairdresser.types';
+import { listAvailabilitiesByHairdresser } from '@/app/services/availability.service';
+import { AvailabilityResponse } from '@/app/models/Availability.types';
+import { listServicesByHairdresser } from '@/app/services/service.service';
+import { ServiceResponse } from '@/app/models/Service.types';
 
 const galleryImages = new Array(5).fill(
-  require('../../../../assets/images/react-logo.png') // Replace with your local image
+  require('../../../../assets/images/react-logo.png')
 );
 
 const techniques = ['penteado', 'crespos', 'ondas', 'cachos', 'corte', 'tratamento'];
 
 export default function HairdresserProfileScreen() {
   const [hairdresser, setHairdresser] = useState<HairdresserResponse>();
+  const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
+  const [services, setServices] = useState<ServiceResponse[]>();
 
   useEffect(() => {
     const fetchHairdresserData = async () => {
       try {
-        const response = await getHairdresser('rodrigosc615@gmail.com');
-        setHairdresser(response.data);
+        const hairdresserResponse = await getHairdresser('rodrigosc615@gmail.com');
+        setHairdresser(hairdresserResponse.data);
       } catch (err) {
         console.error("Failed to fetch hairdresser:", err);
       } 
     };
+    const fetchHairdresserAvailability = async () => {
+      try {
+        const availabilityResponse = await listAvailabilitiesByHairdresser('1')
+        setAvailabilities(availabilityResponse.data);
+      } catch (err) {
+        console.log("Failed to fetch Hairdresser Availabilities", err)
+      }
+    }
+    const fetchHairdresserService = async () => {
+      try {
+        const serviceResponse = await listServicesByHairdresser('1')
+        setServices(serviceResponse.data);
+      } catch (err) {
+        console.log("Failed to fetch Hairdresser Services", err)
+      }
+    }
+    
+
     fetchHairdresserData();
+    fetchHairdresserAvailability();
+    fetchHairdresserService();
   }, []);
   return (
     <ScrollView style={styles.container}>
@@ -94,10 +120,30 @@ export default function HairdresserProfileScreen() {
 
       {/* Accordions */}
       <Accordion title="Horários de funcionamento">
-        <Text>Seg a Sex: 09h às 18h{'\n'}Sáb: 09h às 13h</Text>
+        {availabilities ? availabilities.map((availability) => (
+          <Text key={availability.id}>{availability.weekday}: {availability.start_time} às {availability.end_time}</Text>
+        )) : 
+        (
+          <>
+            <Text>Carregando Horários do Cabeleireiro ...</Text>
+          </>
+        )}
       </Accordion>
       <Accordion title="Serviços">
-        <Text>- Corte{'\n'}- Tratamento{'\n'}- Penteado</Text>
+        {services ? services.map((service) => (
+          <TouchableOpacity style={styles.card} key={service.id}>
+            <Text style={styles.cardText}>{service.name}</Text>
+            <View style={styles.arrowButton}>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        )) : 
+        (
+          <>
+            <Text>Carregando Serviços...</Text>
+          </>
+        )}
+      
       </Accordion>
     </ScrollView>
   );
@@ -179,5 +225,29 @@ const styles = StyleSheet.create({
   techText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: '#FFA366',
+    borderRadius: 16,
+    padding: 12,
+    paddingLeft: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFEFE8',
+  },
+  cardText: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  arrowButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FF7A00',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
