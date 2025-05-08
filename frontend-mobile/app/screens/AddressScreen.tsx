@@ -21,6 +21,27 @@ type RootStackParamList = {
       role: string;
     }
   };
+  Preferences: {
+    personalData: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+      email: string;
+      cnpj?: string;
+      cpf?: string;
+      password: string;
+      role: string;
+    },
+    addressData: {
+      address: string;
+      number: string;
+      complement: string;
+      neighborhood: string;
+      postal_code: string;
+      city: string;
+      state: string;
+    }
+  };
 };
 
 // Define the route and navigation prop types
@@ -42,23 +63,14 @@ export default function Address() {
   const [postal_code, setPostalCode] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useContext<any>(AuthContext);
 
   // Debug log to check the received params
   useEffect(() => {
   }, [personalData]);
 
-  const handleRegister = async () => {
+  const handleNext = () => {
     if (!personalData) {
       Alert.alert('Error', 'Personal information is missing');
-      return;
-    }
-
-    const { first_name, last_name, phone, email, password, role, cpf, cnpj } = personalData;
-    
-    if (!first_name || !email || !password) {
-      Alert.alert('Error', 'Personal information is incomplete');
       return;
     }
 
@@ -67,38 +79,22 @@ export default function Address() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      await signUp(
-        first_name, 
-        last_name,
-        phone, 
-        email, 
-        password, 
-        address, 
-        number,
-        neighborhood, 
-        complement, 
-        postal_code, 
-        state, 
-        city, 
-        role, 
-        5.0,
-        cpf, 
-        cnpj
-      );
-      Alert.alert(
-        'Success', 
-        'Registration successful! Please log in.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
-    } catch (error: any) {
-      console.log(error)
-      const errorMessage = error.response?.data?.error || 'Registration failed';
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    // Create addressData object
+    const addressData = {
+      address,
+      number,
+      complement,
+      neighborhood,
+      postal_code,
+      city,
+      state
+    };
+
+    // Navigate to Preferences screen with all data
+    navigation.navigate('Preferences', {
+      personalData,
+      addressData
+    });
   };
 
   return (
@@ -172,9 +168,9 @@ export default function Address() {
             <Text style={styles.backButtonText}>Voltar</Text>
           </TouchableOpacity>
 
-          {/* Botão Confirmar */}
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Confirmar</Text>
+          {/* Botão Próximo (modificado de "Confirmar") */}
+          <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <Text style={styles.buttonText}>Próximo</Text>
           </TouchableOpacity>
         </View>
       </View>
