@@ -1,5 +1,5 @@
 import axios from 'axios'; 
-import { API_URL } from '../index';
+import { API_BACKEND_URL } from '../index';
 
 export const listAvailabilitiesByHairdresser = async (hairdresserId: string | undefined) => {
     if(!hairdresserId) {
@@ -8,7 +8,7 @@ export const listAvailabilitiesByHairdresser = async (hairdresserId: string | un
     }
     
     try {
-        const response = await axios.get(`${API_URL}/api/availability/list/${hairdresserId}`);
+        const response = await axios.get(`${API_BACKEND_URL}/api/availability/list/${hairdresserId}`);
         return response.data;
     } catch (error) {
         console.error("Error in list availabilities by hairdresser:", error);

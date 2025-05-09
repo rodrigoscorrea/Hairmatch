@@ -13,13 +13,14 @@ import HairdresserProfileScreen from './screens/customer/reservation/Hairdresser
 import { AuthContextType } from './models/Auth.types';
 import { UserRole } from './models/User.types';
 
-export const API_URL = 'https://7a03-2804-214-d-2495-505d-40ab-5d6a-805c.ngrok-free.app';
+export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<AuthContextType>({});
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 function App() {
+  const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -29,13 +30,13 @@ function App() {
       setIsLoading(true);
       try {
         // Step 1: Make login POST request (sets HttpOnly cookie)
-        await axios.post(`${API_URL}/api/auth/login`, {
+        await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
           email,
           password
         });
         
         // Step 2: Check authentication with GET request
-        const authResponse = await axios.get(`${API_URL}/api/auth/user`);
+        const authResponse = await axios.get(`${API_BACKEND_URL}/api/auth/user`);
         console.log('Auth check response:', authResponse.data);
         
         if (authResponse.data.authenticated) {
@@ -43,7 +44,7 @@ function App() {
           setUserToken('authenticated'); // Just need a non-null value to trigger navigation
           
           // Step 3: Fetch user info
-          const userResponse = await axios.get(`${API_URL}/api/user/authenticated`);
+          const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
           setUserInfo(userResponse.data.user);
         } else {
           console.log('Authentication failed');
@@ -112,7 +113,7 @@ function App() {
               rating,
               cnpj
             };
-        const response = await axios.post(`${API_URL}/api/auth/register`, userData);
+        const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, userData);
         return response.data;
       } catch (error: any) {
         console.error('Registration error:', error.response?.data || error.message);
@@ -124,7 +125,7 @@ function App() {
     signOut: async () => {
       setIsLoading(true);
       try {
-        await axios.post(`${API_URL}/api/auth/logout`);
+        await axios.post(`${API_BACKEND_URL}/api/auth/logout`);
         await AsyncStorage.removeItem('userToken');
         setUserToken(null);
         setUserInfo(null);
@@ -142,7 +143,7 @@ function App() {
     try {
       // Set the token in headers
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/user`, { headers });
+      const response = await axios.get(`${API_BACKEND_URL}/api/user`, { headers });
       setUserInfo(response.data.user);
     } catch (error) {
       console.error('Error fetching user info:', error);
