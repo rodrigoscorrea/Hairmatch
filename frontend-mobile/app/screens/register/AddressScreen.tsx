@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { AuthContext } from '../index';
+import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 // Define your navigation param list
@@ -56,13 +56,13 @@ export default function Address() {
   // Extract params from route
   const personalData = route.params?.personalData;
 
-  const [address, setAddress] = useState('');
-  const [number, setNumber] = useState('');
-  const [complement, setComplement] = useState('');
-  const [neighborhood, setNeighborhood] = useState('');
-  const [postal_code, setPostalCode] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [address, setAddress] = useState<string>('');
+  const [number, setNumber] = useState<string>('');
+  const [complement, setComplement] = useState<string>('');
+  const [neighborhood, setNeighborhood] = useState<string>('');
+  const [postal_code, setPostalCode] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
 
   // Debug log to check the received params
   useEffect(() => {

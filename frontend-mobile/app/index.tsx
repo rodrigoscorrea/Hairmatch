@@ -4,46 +4,16 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import AddressScreen from './screens/AddressScreen';
-import PreferencesScreen from './screens/PreferencesScreen';
+import RegisterScreen from './screens/register/RegisterScreen';
+import AddressScreen from './screens/register/AddressScreen';
+import PreferencesScreen from './screens/register/PreferencesScreen';
 import HomeScreen from './screens/HomeScreen';
-import {
-  View,
-  Text
-} from 'react-native';
-import { Hairdresser } from './models/Hairdresser.types';
-import { Customer } from './models/Customer.types';
 import { RootStackParamList } from './models/RootStackParams.types';
-import { StackNavigationProp } from '@react-navigation/stack';
 import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
+import { AuthContextType } from './models/Auth.types';
+import { UserRole } from './models/User.types';
 
-export const API_URL = 'https://f9c9-2804-214-d-2495-1131-cf70-dbe2-142.ngrok-free.app'; // For Android emulator pointing to localhost
-
-// Create AuthContext with proper types
-interface AuthContextType {
-  signIn?: (email: string, password: string) => Promise<void>;
-  signUp?: (
-    first_name: string,
-    last_name: string,
-    phone: string,
-    email: string,
-    password: string,
-    address: string,
-    number: string,
-    neighborhood: string,
-    complement: string,
-    postal_code: string,
-    state: string,
-    city: string,
-    role: string,
-    rating: number,
-    cpf?: string,
-    cnpj?: string
-  ) => Promise<any>;
-  signOut?: () => Promise<void>;
-  userInfo?: any;
-}
+export const API_URL = 'https://7a03-2804-214-d-2495-505d-40ab-5d6a-805c.ngrok-free.app';
 
 export const AuthContext = React.createContext<AuthContextType>({});
 
@@ -107,7 +77,7 @@ function App() {
       setIsLoading(true);
       try {
         // Construct the data object based on role
-        const userData = role === 'customer' 
+        const userData = role === UserRole.CUSTOMER 
           ? {
               first_name,
               last_name,

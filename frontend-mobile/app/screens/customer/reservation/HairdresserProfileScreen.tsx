@@ -17,6 +17,8 @@ import { AvailabilityResponse } from '@/app/models/Availability.types';
 import { listServicesByHairdresser } from '@/app/services/service.service';
 import { ServiceResponse } from '@/app/models/Service.types';
 import { formatAvailability } from '@/app/utils/availability-formater';
+import { getPreferencesByUser } from '@/app/services/preferences.service';
+import { PreferencesResponse } from '@/app/models/Preferences.types';
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
@@ -28,6 +30,7 @@ export default function HairdresserProfileScreen() {
   const [hairdresser, setHairdresser] = useState<HairdresserResponse>();
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
+  const [preferences, setPreferences] = useState<PreferencesResponse[]>();
 
   useEffect(() => {
     const fetchHairdresserData = async () => {
@@ -48,17 +51,25 @@ export default function HairdresserProfileScreen() {
     }
     const fetchHairdresserService = async () => {
       try {
-        const serviceResponse = await listServicesByHairdresser('1')
+        const serviceResponse = await listServicesByHairdresser('1');
         setServices(serviceResponse.data);
       } catch (err) {
-        console.log("Failed to fetch Hairdresser Services", err)
+        console.log("Failed to fetch Hairdresser Services", err);
+      }
+    }
+    const fetchHairdresserPreferences = async () => {
+      try {
+        const preferencesResponse = await getPreferencesByUser('2');
+        setPreferences(preferencesResponse);
+      } catch (err) {
+        console.log("Failed to retrieve user preferences",err);
       }
     }
     
-
     fetchHairdresserData();
     fetchHairdresserAvailability();
     fetchHairdresserService();
+    fetchHairdresserPreferences();
   }, []);
   return (
     <ScrollView style={styles.container}>
@@ -110,16 +121,20 @@ export default function HairdresserProfileScreen() {
         showsHorizontalScrollIndicator={false}
       />
 
-      {/* Techniques */}
-      <View style={styles.techniques}>
-        {techniques.map((tech) => (
-          <View key={tech} style={styles.techTag}>
-            <Text style={styles.techText}>{tech}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Accordions */}
+      {/* Techniques - Preferences */}
+      <Accordion title='Técnicas'>
+        <View style={styles.tagsContainer}>
+          {preferences ? preferences.map((preference) => (
+            <View style={styles.techCard} key={preference.id}>
+              <Text style={styles.techText}>{preference.name}</Text>
+            </View>
+          )) : (
+            <Text>Carregando técnicas do profissional...</Text>
+          )}
+        </View>
+      </Accordion>
+    
+      {/* Available times */}
       <Accordion title="Horários de funcionamento">
         {availabilities ? availabilities.map((availability) => {
         const formatted = formatAvailability(availability);
@@ -136,6 +151,8 @@ export default function HairdresserProfileScreen() {
           </>
         )}
       </Accordion>
+
+      {/* Available services */}
       <Accordion title="Serviços">
         {services ? services.map((service) => (
           <TouchableOpacity style={styles.card} key={service.id}>
@@ -232,6 +249,7 @@ const styles = StyleSheet.create({
   techText: {
     fontSize: 12,
     fontWeight: '500',
+    color: '#FFFFFF'
   },
   card: {
     borderWidth: 1,
@@ -269,5 +287,18 @@ const styles = StyleSheet.create({
   },
   timeRange: {
     color: '#666'
-  }
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8, // React Native doesn’t support `gap` natively; use margin instead if needed
+    marginTop: 8,
+  },
+  techCard: {
+    backgroundColor: '#FF8822',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    margin: 4,
+  },
 });

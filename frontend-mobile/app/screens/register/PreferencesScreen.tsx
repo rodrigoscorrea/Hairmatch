@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { AuthContext, API_URL } from '../index';
+import { AuthContext, API_URL } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
 import axios from 'axios';
 
@@ -51,12 +51,12 @@ export default function PreferencesScreen() {
   
   // Extract params from route
   const { personalData, addressData } = route.params;
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingPreferences, setIsFetchingPreferences] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isFetchingPreferences, setIsFetchingPreferences] = useState<boolean>(true);
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [selectedPreferences, setSelectedPreferences] = useState<number[]>([]);
   const { signUp, signIn } = useContext<any>(AuthContext);
-  const [showSkipModal, setShowSkipModal] = useState(false);
+  const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
 
   useEffect(() =>{
     const fetchPreferences = async () => {

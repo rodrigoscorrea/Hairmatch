@@ -1,3 +1,8 @@
+export enum UserRole {
+    CUSTOMER = 'customer',
+    HAIRDRESSER = 'hairdresser'
+}
+
 export interface User {
     id: number,
     first_name: string,

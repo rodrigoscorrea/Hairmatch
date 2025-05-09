@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { UserRole } from '@/app/models/User.types';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
 
   // Estados para armazenar os campos
-  const [first_name, setFirst_Name] = useState('');
-  const [last_name, setLast_Name] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'customer' | 'hairdresser'>('customer');
-  const [isLoading, setIsLoading] = useState(false);
+  const [first_name, setFirst_Name] = useState<string>('');
+  const [last_name, setLast_Name] = useState<string>('');
+  const [cpf, setCpf] = useState<string>('');
+  const [cnpj, setCnpj] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   return (
     <View style={styles.container}>
@@ -32,11 +33,11 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            role === 'customer' && styles.toggleButtonSelected,
+            role === UserRole.CUSTOMER && styles.toggleButtonSelected,
           ]}
-          onPress={() => setRole('customer')}
+          onPress={() => setRole(UserRole.CUSTOMER)}
         >
-          <Text style={role === 'customer' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+          <Text style={role === UserRole.CUSTOMER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
             Cliente
           </Text>
         </TouchableOpacity>
@@ -44,11 +45,11 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            role === 'hairdresser' && styles.toggleButtonSelected, // Ambos ficam roxos
+            role === UserRole.HAIRDRESSER && styles.toggleButtonSelected, // Ambos ficam roxos
           ]}
-          onPress={() => setRole('hairdresser')}
+          onPress={() => setRole(UserRole.HAIRDRESSER)}
         >
-          <Text style={role === 'hairdresser' ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+          <Text style={role === UserRole.HAIRDRESSER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
             Profissional
           </Text>
         </TouchableOpacity>
@@ -57,7 +58,7 @@ export default function RegisterScreen() {
       {/* Ícone de foto */}
       <TouchableOpacity style={styles.profilePicture}>
         <Image
-          source={require('../../imgs/Camera.png')} // Substitua pelo caminho correto da imagem
+          source={require('../../../imgs/Camera.png')} // Substitua pelo caminho correto da imagem
           style={styles.profileIcon}
         />
       </TouchableOpacity>
