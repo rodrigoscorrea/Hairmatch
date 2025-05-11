@@ -1,3 +1,5 @@
+import { ServiceResponse } from "./Service.types";
+
 export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
@@ -36,4 +38,9 @@ export type RootStackParamList = {
       state: string;
     }
   };
+  ServiceBooking: {
+    service: ServiceResponse
+    customer_id: string | number
+    non_working_days: any
+  }
 };

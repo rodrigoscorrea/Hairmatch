@@ -19,11 +19,15 @@ import { ServiceResponse } from '@/app/models/Service.types';
 import { formatAvailability } from '@/app/utils/availability-formater';
 import { getPreferencesByUser } from '@/app/services/preferences.service';
 import { PreferencesResponse } from '@/app/models/Preferences.types';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { NonWorkingDays } from '@/app/models/Availability.types';
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
 );
-
+type HairdresserProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 const techniques = ['penteado', 'crespos', 'ondas', 'cachos', 'corte', 'tratamento'];
 
 export default function HairdresserProfileScreen() {
@@ -31,7 +35,9 @@ export default function HairdresserProfileScreen() {
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
   const [preferences, setPreferences] = useState<PreferencesResponse[]>();
+  const [nonWorkingDays, setNonWorkingDays] = useState<NonWorkingDays>();
 
+  const navigation = useNavigation<HairdresserProfileScreenNavigationProp>();
   useEffect(() => {
     const fetchHairdresserData = async () => {
       try {
@@ -45,6 +51,7 @@ export default function HairdresserProfileScreen() {
       try {
         const availabilityResponse = await listAvailabilitiesByHairdresser('1')
         setAvailabilities(availabilityResponse.data);
+        setNonWorkingDays(availabilityResponse.non_working_days)
       } catch (err) {
         console.log("Failed to fetch Hairdresser Availabilities", err)
       }
@@ -155,7 +162,7 @@ export default function HairdresserProfileScreen() {
       {/* Available services */}
       <Accordion title="Serviços">
         {services ? services.map((service) => (
-          <TouchableOpacity style={styles.card} key={service.id}>
+          <TouchableOpacity style={styles.card} key={service.id} onPress={()=>navigation.navigate('ServiceBooking', {service: service, customer_id: 2, non_working_days: nonWorkingDays})}>
             <Text style={styles.cardText}>{service.name}</Text>
             <View style={styles.arrowButton}>
               <Ionicons name="arrow-forward" size={16} color="#fff" />

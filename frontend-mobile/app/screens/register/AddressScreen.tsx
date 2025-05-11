@@ -3,46 +3,7 @@ import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvo
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
-
-// Define your navigation param list
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-  Register: undefined;
-  Address: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    }
-  };
-  Preferences: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    },
-    addressData: {
-      address: string;
-      number: string;
-      complement: string;
-      neighborhood: string;
-      postal_code: string;
-      city: string;
-      state: string;
-    }
-  };
-};
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
 
 // Define the route and navigation prop types
 type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Address'>;

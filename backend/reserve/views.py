@@ -93,7 +93,7 @@ class ReserveSlot(APIView):
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
         except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=500)
+            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
         try:
             service = Service.objects.get(id=data['service'])
@@ -200,10 +200,7 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration, 
                 break
         
         if is_available:
-            slots.append({
-                'start_time': current_dt.strftime('%H:%M'),
-                'end_time': slot_end.strftime('%H:%M')
-            })
+            slots.append(current_dt.strftime('%H:%M'))
         
         # Move to next slot
         current_dt += slot_duration

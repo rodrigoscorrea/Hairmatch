@@ -33,12 +33,6 @@ export const formatAvailability = (availability: {
   
   let timeRange = `${formattedStartTime} - ${formattedEndTime}`;
   
-  if (availability.break_start && availability.break_end) {
-    const formattedBreakStart = formatTime(availability.break_start);
-    const formattedBreakEnd = formatTime(availability.break_end);
-    timeRange += ` (Pausa: ${formattedBreakStart} - ${formattedBreakEnd})`;
-  }
-  
   return {
     weekday: translatedWeekday,
     timeRange

@@ -8,6 +8,7 @@ import RegisterScreen from './screens/register/RegisterScreen';
 import AddressScreen from './screens/register/AddressScreen';
 import PreferencesScreen from './screens/register/PreferencesScreen';
 import HomeScreen from './screens/HomeScreen';
+import ServiceBookingScreen from './screens/customer/reservation/ServiceReservationScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
 import { AuthContextType } from './models/Auth.types';
@@ -182,6 +183,7 @@ function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
           <Stack.Screen name="Preferences" component={PreferencesScreen} />
+          <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
           <Stack.Screen name="MockedHairdresserProfile" component={HairdresserProfileScreen} />
         </Stack.Navigator>
     </AuthContext.Provider>
