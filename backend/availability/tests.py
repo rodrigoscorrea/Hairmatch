@@ -156,6 +156,197 @@ class CreateAvailabilityTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Availability.objects.count(), 0)
 
+class CreateMultipleAvailabilityTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        self.login_url = reverse('login')
+        
+        # Hairdresser payload similar to the previous test
+        self.hairdresser_payload = {
+            "email": "rodrigosc615@gmail.com",
+            "first_name": "Rodrigo Santos",
+            "last_name": "o 12",
+            "password": "senha123",
+            "phone": "+5592984502890",
+            "complement": "casa",
+            "neighborhood": "centro",
+            "city": "manaus",
+            "state": "AM",
+            "address": "rua francy assis",
+            "number": "2229",
+            "postal_code": "69050750",
+            "rating": 5.0,
+            "role": "hairdresser",
+            "cnpj": "12345678901212",
+            "experience_years": 4,
+            "resume": "ele é legal e joga bem"
+        }
+        
+        # Register and get hairdresser
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.hairdresser_payload),
+            content_type='application/json'
+        )
+        
+        # Login
+        login_payload = {
+            'email': 'rodrigosc615@gmail.com',
+            'password': 'senha123'
+        }
+        self.client.post(
+            self.login_url,
+            data=json.dumps(login_payload),
+            content_type='application/json'
+        )
+        
+        # Get the hairdresser object
+        self.hairdresser = Hairdresser.objects.get(user__email='rodrigosc615@gmail.com')
+        
+        # URL for creating multiple availabilities
+        self.create_multiple_url = reverse('create_multiple_availability', kwargs={'hairdresser_id': self.hairdresser.id})
+    
+    def test_create_multiple_availability_success(self):
+        # Payload with multiple availabilities
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                },
+                {
+                    'weekday': 'tuesday',
+                    'start_time': '10:00:00',
+                    'end_time': '18:00:00',
+                    'break_start': '12:00:00',
+                    'break_end': '13:00:00'
+                }
+            ]
+        }
+        
+        # Create multiple availabilities
+        response = self.client.post(
+            self.create_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.count(), 2)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
+    
+    def test_create_multiple_availability_with_duplicate_weekday(self):
+        # First create an availability for monday
+        first_payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        self.client.post(
+            self.create_multiple_url,
+            data=json.dumps(first_payload),
+            content_type='application/json'
+        )
+        
+        # Try to create another availability for the same weekday
+        second_payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '10:00:00',
+                    'end_time': '18:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.post(
+            self.create_multiple_url,
+            data=json.dumps(second_payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Availability.objects.count(), 1)
+        self.assertIn('Availability already exists', str(response.content))
+    
+    def test_create_multiple_availability_missing_fields(self):
+        # Payload with missing required fields
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    # Missing start_time and end_time
+                }
+            ]
+        }
+        
+        response = self.client.post(
+            self.create_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Availability.objects.count(), 0)
+        self.assertIn('required fields is missing', str(response.content))
+    
+    def test_create_multiple_availability_invalid_weekday(self):
+        # Payload with invalid weekday
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'invalidday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.post(
+            self.create_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Availability.objects.count(), 0)
+        self.assertIn('Invalid weekday', str(response.content))
+    
+    def test_create_multiple_availability_nonexistent_hairdresser(self):
+        # Try to create availability for a non-existent hairdresser
+        non_existent_url = reverse('create_multiple_availability', kwargs={'hairdresser_id': 9999})
+        
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.post(
+            non_existent_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Availability.objects.count(), 0)
+        self.assertIn('Hairdresser not found', str(response.content))
 
 class ListAvailabilityTest(TestCase):
     def setUp(self):
