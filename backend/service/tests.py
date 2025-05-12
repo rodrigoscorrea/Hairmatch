@@ -200,6 +200,126 @@ class ListServiceTest(ServiceTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
 
+class ListServiceHairdresserTest(TestCase):
+    def setUp(self):
+        """
+        Set up test data for the ListServiceHairdresser view tests
+        """
+        self.hairdresser_user = User.objects.create(
+            email="hairdresser@example.com",
+            password="hairdresser123",
+            first_name="Test",
+            last_name="Hairdresser",
+            phone="+5592984502222",
+            complement="Apt 102",
+            neighborhood="Downtown",
+            city="Manaus",
+            state="AM",
+            address="Hairdresser Street",
+            number="456",
+            postal_code="69050750",
+            role="hairdresser",
+            rating=4.5
+        )
+        
+        self.hairdresser = Hairdresser.objects.create(
+            user=self.hairdresser_user,
+            cnpj="12345678901212",
+            experience_years=4,
+            resume= "ele é legal e joga bem" 
+        )
+
+        self.empty_hairdresser_user = User.objects.create(
+            email="hairdresser@example2.com",
+            password="hairdresser123",
+            first_name="Test2",
+            last_name="Hairdresser2",
+            phone="+5592984502224",
+            complement="Apt 102",
+            neighborhood="Downtown",
+            city="Manaus",
+            state="AM",
+            address="Hairdresser Street",
+            number="456",
+            postal_code="69050750",
+            role="hairdresser",
+            rating=4.5
+        )
+        
+        # Create another hairdresser with no services
+        self.empty_hairdresser = Hairdresser.objects.create(
+            user=self.empty_hairdresser_user,
+            cnpj="12345678901214",
+            experience_years=1,
+            resume= "ele é um cabeleireiro" 
+        )
+        
+        # Create services for the first hairdresser
+        self.service1 = Service.objects.create(
+            name="Haircut",
+            description="Basic haircut service",
+            price=Decimal('50.00'),
+            duration=60,
+            hairdresser=self.hairdresser
+        )
+        
+        self.service2 = Service.objects.create(
+            name="Hair Coloring",
+            description="Full hair coloring service",
+            price=Decimal('100.00'),
+            duration=120,
+            hairdresser=self.hairdresser
+        )
+        
+        # URL for listing services of a specific hairdresser
+        self.list_services_url = lambda hairdresser_id: reverse('list_service_hairdresser', kwargs={'hairdresser_id': hairdresser_id})
+    
+    def test_list_services_for_hairdresser(self):
+        """
+        Test listing services for an existing hairdresser with services
+        """
+        response = self.client.get(self.list_services_url(self.hairdresser.id))
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check the number of services returned
+        services_data = response.json()['data']
+        self.assertEqual(len(services_data), 2)
+        
+        # Verify the content of the first service
+        first_service = services_data[0]
+        self.assertEqual(first_service['name'], 'Haircut')
+        self.assertEqual(first_service['description'], 'Basic haircut service')
+        self.assertEqual(Decimal(first_service['price']), Decimal('50.00'))
+        self.assertEqual(first_service['duration'], 60)
+    
+    def test_list_services_for_hairdresser_with_no_services(self):
+        """
+        Test listing services for a hairdresser with no services
+        """
+        response = self.client.get(self.list_services_url(self.empty_hairdresser.id))
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check that no services are returned
+        services_data = response.json()['data']
+        self.assertEqual(len(services_data), 0)
+    
+    def test_list_services_for_nonexistent_hairdresser(self):
+        """
+        Test listing services for a non-existent hairdresser
+        """
+        # Use a very high ID that is unlikely to exist
+        nonexistent_hairdresser_id = 99999
+        
+        response = self.client.get(self.list_services_url(nonexistent_hairdresser_id))
+        
+        # Check for 404 Not Found status
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+        # Verify the error message
+        error_response = response.json()
+        self.assertEqual(error_response['error'], 'Hairdresser not found')
 
 class UpdateServiceTest(ServiceTestCase):
     def test_update_service_success(self):
