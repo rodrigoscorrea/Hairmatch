@@ -42,5 +42,6 @@ export type RootStackParamList = {
     service: ServiceResponse
     customer_id: string | number
     non_working_days: any
-  }
+  };
+  CustomerHome: any
 };

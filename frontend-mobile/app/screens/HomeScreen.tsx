@@ -24,6 +24,10 @@ export default function HomeScreen() {
   const handleMock = async () =>{
     navigation.navigate('MockedHairdresserProfile')
   }
+
+  const handleCustomerHome = async () =>{
+    navigation.navigate('CustomerHome')
+  }
   return (
     <View>
       <Text>
@@ -39,6 +43,10 @@ export default function HomeScreen() {
 
       <TouchableOpacity onPress={handleMock}>
         <Text>MockedHairdresser</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleCustomerHome}>
+        <Text>CUSTOMER HOME TEST</Text>
       </TouchableOpacity>
     </View>
   );
