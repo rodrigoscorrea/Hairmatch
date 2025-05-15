@@ -3,36 +3,8 @@ import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext, API_URL } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import axios from 'axios';
-
-// Define your navigation param list
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-  Register: undefined;
-  Address: undefined;
-  Preferences: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    },
-    addressData: {
-      address: string;
-      number: string;
-      complement: string;
-      neighborhood: string;
-      postal_code: string;
-      city: string;
-      state: string;
-    }
-  };
-};
 
 interface Preference {
     id: number;
