@@ -14,6 +14,7 @@ import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
 import { AuthContextType } from './models/Auth.types';
 import { UserRole } from './models/User.types';
+import { Preference } from './models/Preferences.types';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
@@ -75,7 +76,8 @@ function App() {
       role: string,
       rating: number,
       cpf?: string,
-      cnpj?: string
+      cnpj?: string,
+      preferences?: Preference[]
     ) => {
       setIsLoading(true);
       try {
@@ -96,7 +98,8 @@ function App() {
               city,
               role,
               rating,
-              cpf
+              cpf,
+              preferences
             }
           : {
               first_name,
@@ -113,8 +116,9 @@ function App() {
               city,
               role,
               rating,
-              cnpj
-            };
+              cnpj,
+              preferences
+            };  
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, userData);
         return response.data;
       } catch (error: any) {
