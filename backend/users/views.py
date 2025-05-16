@@ -20,7 +20,6 @@ from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializ
 class RegisterView(APIView):
     def post(self, request):    
         data = json.loads(request.body)
-
         if User.objects.filter(email=data['email']).exists():
             return JsonResponse({'error': 'User already exists'}, status=400)
         if User.objects.filter(phone=data['phone']).exists():
@@ -39,7 +38,7 @@ class RegisterView(APIView):
 
         raw_password = data['password'].replace(' ', '')
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-
+        preferences = data['preferences']
         user = User.objects.create(
             first_name=data['first_name'],
             last_name=data['last_name'],
@@ -56,6 +55,10 @@ class RegisterView(APIView):
             role=data['role'],
             rating=data['rating']
         )
+
+        if len(preferences) > 0:
+            for preference in preferences:
+                user.preferences.add(preference)
 
         # Create profile based on user type
         if data['role'] == 'customer':

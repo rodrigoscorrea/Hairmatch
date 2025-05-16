@@ -1,5 +1,8 @@
-export interface PreferencesResponse {
+export interface Preference {
     id: number,
-    name: string,
+    name: string
+}
+
+export interface PreferencesResponse extends Preference{
     picture: string
 }

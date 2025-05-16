@@ -7,18 +7,13 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ptBR } from '@/app/utils/locale-calendar';
 import { getAvailableResearchSlots } from '@/app/services/reserve.service';
 import { createReserve } from '@/app/services/reserve.service';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 type ServiceReserveScreenRouteProp = RouteProp<RootStackParamList, 'ServiceBooking'>;
 type ServiceReserveScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 LocaleConfig.locales["pt-br"] = ptBR;
 LocaleConfig.defaultLocale = "pt-br";
-
-const hairLengths = [
-  { label: 'Curto', price: 120 },
-  { label: 'Médio', price: 125 },
-  { label: 'Longo', price: 130 },
-];
 
 export default function ServiceBookingScreen() {
   const navigation = useNavigation<ServiceReserveScreenNavigationProp>();
@@ -28,7 +23,7 @@ export default function ServiceBookingScreen() {
   const customer_id = route.params?.customer_id;
   const non_working_days = route.params?.non_working_days
 
-  const [selectedLength, setSelectedLength] = useState<string>('Curto');
+  const [selectedServiceOption, setSelectedServiceOption] = useState<any>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -94,6 +89,11 @@ export default function ServiceBookingScreen() {
     return formatedTime;
   }
 
+  const formatServiceDuration = (serviceDuration: number): string => {
+    let serviceDurationString = `${serviceDuration / 60}h`;
+    return serviceDurationString;
+  }
+
   const createReserveRequest = async (data: any) => {
     await createReserve(data);
   }
@@ -145,22 +145,31 @@ export default function ServiceBookingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{service.name}</Text>
+      <View style={styles.titleContainer}>  
+        <Text style={styles.title}>{service.name}</Text>
+        <View style={styles.clockIconContainer}>
+          <FontAwesome6 style={styles.clockIcon} name="clock" size={20} color="black" />
+          <Text style={[styles.title, {marginLeft: 5}]}>{formatServiceDuration(service.duration)}</Text>
+        </View>
+        
+      </View>
       <Text style={styles.description}>
         {service.description}
       </Text>
 
-      <Text style={styles.sectionTitle}>Valores</Text>
-      {hairLengths.map(({ label, price }) => (
-        <TouchableOpacity
-          key={label}
-          style={styles.option}
-          onPress={() => setSelectedLength(label)}
-        >
-          <Text style={styles.optionText}>{label} R${price}</Text>
-          {selectedLength === label && <Text style={styles.check}>✔️</Text>}
-        </TouchableOpacity>
-      ))}
+      <Text style={styles.sectionTitle}>Valor</Text>
+      {service && (
+        <>
+          <TouchableOpacity
+            key={service.name}
+            style={styles.option}
+            onPress={()=>{setSelectedServiceOption(service.name)}}
+          >
+            <Text style={styles.optionText}>R$ {service.price}</Text>
+            {/* {selectedServiceOption === service.name && <Text style={styles.check}>✔️</Text>} */}
+          </TouchableOpacity>
+        </>
+      )}
 
       <TouchableOpacity onPress={()=>{setShowCalendar(true)}} style={styles.button}>
         <Text style={styles.buttonText}>Selecione uma data</Text>
@@ -222,6 +231,19 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     backgroundColor: '#FFF8F2',
+  },
+  titleContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  clockIconContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignContent: 'center'
+  },
+  clockIcon:{
+    marginTop: 5
   },
   title: {
     fontSize: 22,
