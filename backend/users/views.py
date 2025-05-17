@@ -313,14 +313,14 @@ class CustomerHomeView(APIView):
     
     def get(self, request, email):
         # Get the customer user by email
-        customer_user = get_object_or_404(User, email=email, role='CUSTOMER')
+        customer_user = get_object_or_404(User, email=email, role='customer')
         
         # Get customer preferences
         customer_preferences = customer_user.preferences.all()
         
         # Get hairdressers matching customer preferences
         hairdressers_for_you = User.objects.filter(
-            role='HAIRDRESSER',
+            role='hairdresser',
             preferences__in=customer_preferences
         ).distinct()
         
@@ -345,17 +345,13 @@ class CustomerHomeView(APIView):
         preference_hairdressers = {}
         
         for pref_name in specific_preferences:
-            # Get preference object
             try:
                 preference = Preferences.objects.get(name=pref_name)
-                
-                # Get hairdressers for this preference (limit to 10)
                 hairdressers = User.objects.filter(
-                    role='HAIRDRESSER',
+                    role='hairdresser',
                     preferences=preference
                 ).distinct()[:10]
                 
-                # Prepare data for each preference
                 hairdressers_data = []
                 for hairdresser in hairdressers:
                     hairdressers_data.append({
@@ -378,6 +374,6 @@ class CustomerHomeView(APIView):
         # Prepare the final response
         response_data = {
             'for_you': for_you_data,
-            'preference_hairdressers': preference_hairdressers
+            'hairdressers_by_preferences': preference_hairdressers
         }     
         return JsonResponse(response_data, status=200)
