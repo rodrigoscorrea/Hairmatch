@@ -1,5 +1,4 @@
-// App.js
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -9,35 +8,61 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
-
-const dataParaVoce = [1, 2, 3];
-const dataCachos = [1, 2, 3, 4];
-const dataColoracao = [1, 2, 3, 4];
+import { getCustomerHomeInfo } from '@/app/services/auth-user.service';
+import { CustomerHomeInfoResponse } from '@/app/models/User.types';
 
 const CustomerHomeScreen = () => {
-  const renderParaVoceItem = () => (
+  const [customerHomeInfo, setCustomerHomeInfo] = useState<CustomerHomeInfoResponse>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCustomerHomeInfo = async () => {
+      setLoading(true);
+      try {
+        const customerHomeInfoResponse = await getCustomerHomeInfo('rodrigosc614@gmail.com');
+        setCustomerHomeInfo(customerHomeInfoResponse);
+      } catch (err) {
+        console.error("Failed to get customer info:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCustomerHomeInfo();
+  }, []);
+
+  const renderForYouItem = ({ item }: any) => (
     <View style={styles.card}>
       <Image
-        source={{ uri: 'https://via.placeholder.com/100x100?text=Img' }}
+        source={{ uri: item.image_url || 'https://via.placeholder.com/100x100?text=Img' }}
         style={styles.imageCard}
       />
-      <Text style={styles.nomeProfissional}>Nome do Profissional</Text>
+      <Text style={styles.nomeProfissional}>{item.first_name || 'Nome do Profissional'}{item.last_name || 'Nome do Profissional'}</Text>
       <Text style={styles.description}>
-        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+        {item.description || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
       </Text>
     </View>
   );
 
-  const renderCircleItem = () => (
+  const renderHairdresserItem = ({ item }: any) => (
     <View style={styles.circleItem}>
       <Image
-        source={{ uri: 'https://via.placeholder.com/60x60?text=Img' }}
+        source={{ uri: item.image_url || 'https://via.placeholder.com/60x60?text=Img' }}
         style={styles.circleImage}
       />
-      <Text style={styles.circleText}>Title</Text>
+      <Text style={styles.circleText}>{item.first_name || 'Title'} {item.last_name || 'Title'}</Text>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text>Carregando informações...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -48,49 +73,55 @@ const CustomerHomeScreen = () => {
       />
 
       {/* Seção Para Você */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Para Você</Text>
-          <Text style={styles.arrow}>›</Text>
+      {customerHomeInfo?.for_you && customerHomeInfo.for_you.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Para Você</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+          <FlatList
+            data={customerHomeInfo.for_you}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `para-voce-${index}`}
+            renderItem={renderForYouItem}
+          />
         </View>
-        <FlatList
-          data={dataParaVoce}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(_, index) => `para-voce-${index}`}
-          renderItem={renderParaVoceItem}
-        />
-      </View>
+      )}
 
       {/* Seção Cachos */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Cachos</Text>
-          <Text style={styles.arrow}>›</Text>
+      {customerHomeInfo?.hairdressers_by_preferences?.cachos && customerHomeInfo.hairdressers_by_preferences.cachos.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Cachos</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+          <FlatList
+            data={customerHomeInfo.hairdressers_by_preferences.cachos}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `cachos-${index}`}
+            renderItem={renderHairdresserItem}
+          />
         </View>
-        <FlatList
-          data={dataCachos}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(_, index) => `cachos-${index}`}
-          renderItem={renderCircleItem}
-        />
-      </View>
+      )}
 
       {/* Seção Coloração */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Coloração</Text>
-          <Text style={styles.arrow}>›</Text>
+      {customerHomeInfo?.hairdressers_by_preferences?.coloracao && customerHomeInfo.hairdressers_by_preferences.coloracao.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Coloração</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+          <FlatList
+            data={customerHomeInfo.hairdressers_by_preferences.coloracao}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `coloracao-${index}`}
+            renderItem={renderHairdresserItem}
+          />
         </View>
-        <FlatList
-          data={dataColoracao}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(_, index) => `coloracao-${index}`}
-          renderItem={renderCircleItem}
-        />
-      </View>
+      )}
     </ScrollView>
   );
 };
@@ -160,6 +191,12 @@ const styles = StyleSheet.create({
   },
   circleText: {
     fontSize: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
 });
 

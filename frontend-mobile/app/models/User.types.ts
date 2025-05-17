@@ -19,3 +19,26 @@ export interface User {
     city: string,
     state: string
 }
+
+interface customerHomeHairdresserData {
+    id: number,
+    first_name: string,
+    last_name: string,
+    email: string,
+    phone: string,
+    address: string,
+    rating: number,
+    city: string,
+    state: string,
+    neighborhood: string,
+}
+
+export interface CustomerHomeInfoResponse {
+    for_you: customerHomeHairdresserData[]
+    hairdressers_by_preferences: {
+        coloracao: customerHomeHairdresserData[]
+        cachos: customerHomeHairdresserData[]
+        barbearia: customerHomeHairdresserData[]
+        trancas: customerHomeHairdresserData[]
+    }
+}

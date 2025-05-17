@@ -342,11 +342,12 @@ class CustomerHomeView(APIView):
         
         # Get hairdressers for specific preferences
         specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças", "Chanel"]
+        formated_preferences_name=["coloracao", "cachos", "barbearia", "tranças", "chanel"]
         preference_hairdressers = {}
         
-        for pref_name in specific_preferences:
+        for i in range(len(specific_preferences)):
             try:
-                preference = Preferences.objects.get(name=pref_name)
+                preference = Preferences.objects.get(name=specific_preferences[i])
                 hairdressers = User.objects.filter(
                     role='hairdresser',
                     preferences=preference
@@ -367,9 +368,9 @@ class CustomerHomeView(APIView):
                         'neighborhood': hairdresser.neighborhood,
                     })
                 
-                preference_hairdressers[pref_name] = hairdressers_data
+                preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
             except Preferences.DoesNotExist:
-                preference_hairdressers[pref_name] = []
+                preference_hairdressers[formated_preferences_name[i]] = []
         
         # Prepare the final response
         response_data = {
