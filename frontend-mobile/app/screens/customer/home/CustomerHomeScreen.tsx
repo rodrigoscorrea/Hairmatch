@@ -17,6 +17,7 @@ import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { useNavigation } from '@react-navigation/native';
 import { Hairdresser } from '@/app/models/Hairdresser.types';
 import { AuthContext } from '../../../index';
+import { formatText } from '@/app/utils/text-formater';
 
 type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -30,14 +31,11 @@ const CustomerHomeScreen = () => {
     const fetchCustomerHomeInfo = async () => {
       setLoading(true);
       try {
-        // Check if user is logged in
-        if (!userInfo) {
-          console.log("No user is logged in. Cannot fetch customer home info.");
-          setLoading(false);
-          return;
-        }
-        // Use the logged-in user's email to fetch data
-        const customerHomeInfoResponse = await getCustomerHomeInfo(userInfo.customer.user.email);
+        const customerHomeInfoResponse = await getCustomerHomeInfo(
+          userInfo ?
+          userInfo.customer.user.email :
+          ''
+        );
         setCustomerHomeInfo(customerHomeInfoResponse);
       } catch (err) {
         console.error("Failed to get customer info:", err);
@@ -59,9 +57,12 @@ const CustomerHomeScreen = () => {
           source={{ uri: 'https://via.placeholder.com/100x100?text=Img' }}
           style={styles.imageCard}
         />
-        <Text style={styles.nomeProfissional}>{item.user.first_name || 'Nome do Profissional'}{item.user.last_name || 'Nome do Profissional'}</Text>
+        <View style={{display:'flex', flexDirection: 'row', marginBottom: 3}}>
+          <Text style={styles.nomeProfissional}>{item.user.first_name || 'Nome do Profissional'}</Text>
+          <Text style={styles.sobrenomeProfissional}>{item.user.last_name || 'Nome do Profissional'}</Text>
+        </View>
         <Text style={styles.description}>
-          {item.resume || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
+          {formatText(item.resume) || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -74,7 +75,8 @@ const CustomerHomeScreen = () => {
           source={{ uri: 'https://via.placeholder.com/60x60?text=Img' }}
           style={styles.circleImage}
         />
-        <Text style={styles.circleText}>{item.user.first_name || 'Title'} {item.user.last_name || 'Title'}</Text>
+        <Text style={styles.circleText}>{item.user.first_name || 'Title'}</Text>
+        <Text style={styles.circleText}>{item.user.last_name || 'Title'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -146,6 +148,40 @@ const CustomerHomeScreen = () => {
           />
         </View>
       )}
+
+      {/* Seção Barbearia */}
+      {customerHomeInfo?.hairdressers_by_preferences?.barbearia && customerHomeInfo.hairdressers_by_preferences.barbearia.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Barbearia</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+          <FlatList
+            data={customerHomeInfo.hairdressers_by_preferences.barbearia}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `barbearia-${index}`}
+            renderItem={renderHairdresserItem}
+          />
+        </View>
+      )}
+
+      {/* Seção Tranças */}
+      {customerHomeInfo?.hairdressers_by_preferences?.trancas && customerHomeInfo.hairdressers_by_preferences.trancas.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tranças</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+          <FlatList
+            data={customerHomeInfo.hairdressers_by_preferences.trancas}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `trancas-${index}`}
+            renderItem={renderHairdresserItem}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -154,7 +190,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
-    paddingTop: 50,
+    paddingTop: 20,
     paddingHorizontal: 16,
   },
   searchBar: {
@@ -189,6 +225,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginRight: 10,
     width: 180,
+    height: 200
   },
   imageCard: {
     width: '100%',
@@ -198,6 +235,11 @@ const styles = StyleSheet.create({
   nomeProfissional: {
     fontWeight: 'bold',
     marginTop: 5,
+  },
+  sobrenomeProfissional: {
+    fontWeight: 'bold',
+    marginTop: 5,
+    marginLeft: 6
   },
   description: {
     fontSize: 12,

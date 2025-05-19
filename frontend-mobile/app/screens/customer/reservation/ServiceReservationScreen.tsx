@@ -8,6 +8,7 @@ import { ptBR } from '@/app/utils/locale-calendar';
 import { getAvailableResearchSlots } from '@/app/services/reserve.service';
 import { createReserve } from '@/app/services/reserve.service';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
 
 type ServiceReserveScreenRouteProp = RouteProp<RootStackParamList, 'ServiceBooking'>;
 type ServiceReserveScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -89,11 +90,6 @@ export default function ServiceBookingScreen() {
     return formatedTime;
   }
 
-  const formatServiceDuration = (serviceDuration: number): string => {
-    let serviceDurationString = `${serviceDuration / 60}h`;
-    return serviceDurationString;
-  }
-
   const createReserveRequest = async (data: any) => {
     await createReserve(data);
   }
@@ -149,7 +145,7 @@ export default function ServiceBookingScreen() {
         <Text style={styles.title}>{service.name}</Text>
         <View style={styles.clockIconContainer}>
           <FontAwesome6 style={styles.clockIcon} name="clock" size={20} color="black" />
-          <Text style={[styles.title, {marginLeft: 5}]}>{formatServiceDuration(service.duration)}</Text>
+          <Text style={[styles.title, {marginLeft: 5}]}>{serviceTimeFormater(service.duration)}</Text>
         </View>
         
       </View>

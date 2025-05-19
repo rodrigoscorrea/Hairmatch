@@ -8,7 +8,8 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
@@ -52,11 +53,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          Hair<Text style={styles.logoHighlight}>M</Text>
-          <Text style={styles.scissorsText}>✂️</Text>
-          <Text style={styles.logoHighlight}>tch</Text>
-        </Text>
+        <Image source={require('../../assets/images/HairmatchLogo.png')}></Image>
       </View>
 
       <View style={styles.formContainer}>

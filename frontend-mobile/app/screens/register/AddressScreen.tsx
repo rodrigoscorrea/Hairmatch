@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Image, ScrollView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -59,10 +59,11 @@ export default function Address() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container}>
+    <ScrollView>
+      <KeyboardAvoidingView style={styles.container}>
       {/* Parte superior */}
       <View style={styles.header}>
-        <Text style={styles.title}>HairMatch</Text>
+        <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
         <Text style={styles.subtitle}>Informe seu endereço</Text>
       </View>
 
@@ -135,7 +136,9 @@ export default function Address() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScrollView>
+    
   );
 }
 

@@ -172,8 +172,6 @@ class UserInfoCookieView(APIView):
         except User.DoesNotExist:
             return JsonResponse({'error': 'user not found'}, status=400)
 
-        user_data = UserSerializer(user).data
-
         if user.role == 'customer':
             customer = Customer.objects.filter(user=user).first()
             customer_data = CustomerSerializer(customer).data
@@ -311,27 +309,29 @@ class CustomerHomeView(APIView):
     2. 10 hairdressers for each of the specified preference categories
     """
     
-    def get(self, request, email):
-        # Get the customer user by email
-        customer_user = get_object_or_404(User, email=email, role='customer')
-        
-        # Get customer preferences
-        customer_preferences = customer_user.preferences.all()
-        
-        # Get hairdressers matching customer preferences
-        hairdressers_users = User.objects.filter(
-            role='hairdresser',
-            preferences__in=customer_preferences
-        ).distinct()
+    def get(self, request, email=None):
+        for_you_data = []
+        if email:
+            try:
+                customer_user = User.objects.get(email=email, role='customer')
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            customer_preferences = customer_user.preferences.all()
+            
+            # Get hairdressers matching customer preferences
+            hairdressers_users = User.objects.filter(
+                role='hairdresser',
+                preferences__in=customer_preferences
+            ).distinct()
 
-        hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
-        
-        # Prepare data for for_you response
-        for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
+            hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
+            
+            # Prepare data for for_you response
+            for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
         
         # Get hairdressers for specific preferences
-        specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças", "Chanel"]
-        formated_preferences_name=["coloracao", "cachos", "barbearia", "tranças", "chanel"]
+        specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
+        formated_preferences_name=["coloracao", "cachos", "barbearia", "trancas"]
         preference_hairdressers = {}
         
         for i in range(len(specific_preferences)):

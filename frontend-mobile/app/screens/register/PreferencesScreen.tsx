@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal, Image } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -147,7 +147,7 @@ export default function PreferencesScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>HairMatch</Text>
+          <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
         </View>
 
         {/* Titulo e Legenda */}

@@ -182,7 +182,6 @@ function App() {
   return (
     <AuthContext.Provider value={authContext}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
@@ -190,6 +189,7 @@ function App() {
           <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
           <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
           <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
         </Stack.Navigator>
     </AuthContext.Provider>
   );

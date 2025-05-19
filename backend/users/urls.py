@@ -10,6 +10,7 @@ urlpatterns = [
 
     path('user/authenticated', UserInfoCookieView.as_view(), name='user_info_auth'),
     path('user/<str:email>', UserInfoView.as_view(), name='user_info'),
+    path('customer/home', CustomerHomeView.as_view(), name='customer_home_info'),
     path('customer/home/<str:email>', CustomerHomeView.as_view(), name='customer_home_info'),
 
 ]

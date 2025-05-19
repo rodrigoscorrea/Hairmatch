@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { UserRole } from '@/app/models/User.types';
 
@@ -19,13 +19,16 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   return (
-    <View style={styles.container}>
+    <ScrollView>
+      <View style={styles.container}>
       {/* Botão de Voltar */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>HairMatch</Text>
+      <View style={styles.title}>
+        <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
+      </View>
       <Text style={styles.subtitle}>Cadastre-se</Text>
 
       {/* Botões Cliente / Profissional */}
@@ -141,7 +144,8 @@ export default function RegisterScreen() {
       }})}>
         <Text style={styles.buttonText}>Próximo</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
