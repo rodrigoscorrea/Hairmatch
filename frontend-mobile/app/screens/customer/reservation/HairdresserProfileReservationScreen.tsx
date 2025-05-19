@@ -21,35 +21,38 @@ import { getPreferencesByUser } from '@/app/services/preferences.service';
 import { PreferencesResponse } from '@/app/models/Preferences.types';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import { NonWorkingDays } from '@/app/models/Availability.types';
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
 );
-type HairdresserProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
-const techniques = ['penteado', 'crespos', 'ondas', 'cachos', 'corte', 'tratamento'];
+type HairdresserProfileReservationScreenRouteProp = RouteProp<RootStackParamList, 'HairdresserProfileReservation'>;
+type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-export default function HairdresserProfileScreen() {
-  const [hairdresser, setHairdresser] = useState<HairdresserResponse>();
+export default function HairdresserProfileReservationScreen() {
+  //const [hairdresser, setHairdresser] = useState<HairdresserResponse>();
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
   const [preferences, setPreferences] = useState<PreferencesResponse[]>();
   const [nonWorkingDays, setNonWorkingDays] = useState<NonWorkingDays>();
 
-  const navigation = useNavigation<HairdresserProfileScreenNavigationProp>();
+  const navigation = useNavigation<HairdresserProfileReservationScreenNavigationProp>();
+  const route = useRoute<HairdresserProfileReservationScreenRouteProp>();
+  const hairdresser = route.params.hairdresser;
+  
   useEffect(() => {
-    const fetchHairdresserData = async () => {
+    /* const fetchHairdresserData = async () => {
       try {
         const hairdresserResponse = await getHairdresser('rodrigosc616@gmail.com');
         setHairdresser(hairdresserResponse.data);
       } catch (err) {
         console.error("Failed to fetch hairdresser:", err);
       } 
-    };
+    }; */
     const fetchHairdresserAvailability = async () => {
       try {
-        const availabilityResponse = await listAvailabilitiesByHairdresser('1')
+        const availabilityResponse = await listAvailabilitiesByHairdresser(hairdresser.id)
         setAvailabilities(availabilityResponse.data);
         setNonWorkingDays(availabilityResponse.non_working_days)
       } catch (err) {
@@ -58,7 +61,7 @@ export default function HairdresserProfileScreen() {
     }
     const fetchHairdresserService = async () => {
       try {
-        const serviceResponse = await listServicesByHairdresser('1');
+        const serviceResponse = await listServicesByHairdresser(hairdresser.id);
         setServices(serviceResponse.data);
       } catch (err) {
         console.log("Failed to fetch Hairdresser Services", err);
@@ -66,14 +69,14 @@ export default function HairdresserProfileScreen() {
     }
     const fetchHairdresserPreferences = async () => {
       try {
-        const preferencesResponse = await getPreferencesByUser('2');
+        const preferencesResponse = await getPreferencesByUser(hairdresser.user.id);
         setPreferences(preferencesResponse);
       } catch (err) {
         console.log("Failed to retrieve user preferences",err);
       }
     }
     
-    fetchHairdresserData();
+    //fetchHairdresserData();
     fetchHairdresserAvailability();
     fetchHairdresserService();
     fetchHairdresserPreferences();

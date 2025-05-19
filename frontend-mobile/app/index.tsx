@@ -11,14 +11,14 @@ import HomeScreen from './screens/HomeScreen';
 import ServiceBookingScreen from './screens/customer/reservation/ServiceReservationScreen';
 import CustomerHomeScreen from './screens/customer/home/CustomerHomeScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
-import HairdresserProfileScreen from './screens/customer/reservation/HairdresserProfileScreen';
+import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
 import { AuthContextType } from './models/Auth.types';
 import { UserRole } from './models/User.types';
 import { Preference } from './models/Preferences.types';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
-export const AuthContext = React.createContext<AuthContextType>({});
+export const AuthContext = React.createContext<any>({});
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -48,7 +48,7 @@ function App() {
           
           // Step 3: Fetch user info
           const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
-          setUserInfo(userResponse.data.user);
+          setUserInfo(userResponse.data);
         } else {
           console.log('Authentication failed');
         }
@@ -57,7 +57,6 @@ function App() {
         throw error;
       } finally {
         setIsLoading(false);
-        
       }
     },
     signUp: async (
@@ -190,7 +189,7 @@ function App() {
           <Stack.Screen name="Preferences" component={PreferencesScreen} />
           <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
           <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
-          <Stack.Screen name="MockedHairdresserProfile" component={HairdresserProfileScreen} />
+          <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
         </Stack.Navigator>
     </AuthContext.Provider>
   );

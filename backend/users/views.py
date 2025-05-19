@@ -319,26 +319,15 @@ class CustomerHomeView(APIView):
         customer_preferences = customer_user.preferences.all()
         
         # Get hairdressers matching customer preferences
-        hairdressers_for_you = User.objects.filter(
+        hairdressers_users = User.objects.filter(
             role='hairdresser',
             preferences__in=customer_preferences
         ).distinct()
+
+        hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
         
         # Prepare data for for_you response
-        for_you_data = []
-        for hairdresser in hairdressers_for_you:
-            for_you_data.append({
-                'id': hairdresser.id,
-                'first_name': hairdresser.first_name,
-                'last_name': hairdresser.last_name,
-                'email': hairdresser.email,
-                'phone': hairdresser.phone,
-                'address': hairdresser.address,
-                'rating': hairdresser.rating,
-                'city': hairdresser.city,
-                'state': hairdresser.state,
-                'neighborhood': hairdresser.neighborhood,
-            })
+        for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
         
         # Get hairdressers for specific preferences
         specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças", "Chanel"]
@@ -348,25 +337,13 @@ class CustomerHomeView(APIView):
         for i in range(len(specific_preferences)):
             try:
                 preference = Preferences.objects.get(name=specific_preferences[i])
-                hairdressers = User.objects.filter(
+                hairdressers_users = User.objects.filter(
                     role='hairdresser',
                     preferences=preference
                 ).distinct()[:10]
                 
-                hairdressers_data = []
-                for hairdresser in hairdressers:
-                    hairdressers_data.append({
-                        'id': hairdresser.id,
-                        'first_name': hairdresser.first_name,
-                        'last_name': hairdresser.last_name,
-                        'email': hairdresser.email,
-                        'phone': hairdresser.phone,
-                        'address': hairdresser.address,
-                        'rating': hairdresser.rating,
-                        'city': hairdresser.city,
-                        'state': hairdresser.state,
-                        'neighborhood': hairdresser.neighborhood,
-                    })
+                hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
+                hairdressers_data = HairdresserSerializer(hairdressers_per_preference, many=True).data
                 
                 preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
             except Preferences.DoesNotExist:

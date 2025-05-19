@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,17 @@ import {
 } from 'react-native';
 import { getCustomerHomeInfo } from '@/app/services/auth-user.service';
 import { CustomerHomeInfoResponse } from '@/app/models/User.types';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import { useNavigation } from '@react-navigation/native';
+import { Hairdresser } from '@/app/models/Hairdresser.types';
+import { AuthContext } from '../../../index';
+
+type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const CustomerHomeScreen = () => {
+  const navigation = useNavigation<HairdresserProfileReservationScreenNavigationProp>();
+  const { userInfo } = useContext(AuthContext);
   const [customerHomeInfo, setCustomerHomeInfo] = useState<CustomerHomeInfoResponse>();
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +30,14 @@ const CustomerHomeScreen = () => {
     const fetchCustomerHomeInfo = async () => {
       setLoading(true);
       try {
-        const customerHomeInfoResponse = await getCustomerHomeInfo('rodrigosc614@gmail.com');
+        // Check if user is logged in
+        if (!userInfo) {
+          console.log("No user is logged in. Cannot fetch customer home info.");
+          setLoading(false);
+          return;
+        }
+        // Use the logged-in user's email to fetch data
+        const customerHomeInfoResponse = await getCustomerHomeInfo(userInfo.customer.user.email);
         setCustomerHomeInfo(customerHomeInfoResponse);
       } catch (err) {
         console.error("Failed to get customer info:", err);
@@ -30,29 +46,37 @@ const CustomerHomeScreen = () => {
       }
     }
     fetchCustomerHomeInfo();
-  }, []);
+  }, [userInfo]);
 
-  const renderForYouItem = ({ item }: any) => (
-    <View style={styles.card}>
-      <Image
-        source={{ uri: item.image_url || 'https://via.placeholder.com/100x100?text=Img' }}
-        style={styles.imageCard}
-      />
-      <Text style={styles.nomeProfissional}>{item.first_name || 'Nome do Profissional'}{item.last_name || 'Nome do Profissional'}</Text>
-      <Text style={styles.description}>
-        {item.description || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
-      </Text>
-    </View>
+  const handleClickHairdresser = (hairdresser: Hairdresser) => {
+    navigation.navigate("HairdresserProfileReservation", {hairdresser: hairdresser} )
+  }
+
+  const renderForYouItem = ({item}: any) => (
+    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+        <View style={styles.card}>
+        <Image
+          source={{ uri: 'https://via.placeholder.com/100x100?text=Img' }}
+          style={styles.imageCard}
+        />
+        <Text style={styles.nomeProfissional}>{item.user.first_name || 'Nome do Profissional'}{item.user.last_name || 'Nome do Profissional'}</Text>
+        <Text style={styles.description}>
+          {item.resume || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 
-  const renderHairdresserItem = ({ item }: any) => (
-    <View style={styles.circleItem}>
-      <Image
-        source={{ uri: item.image_url || 'https://via.placeholder.com/60x60?text=Img' }}
-        style={styles.circleImage}
-      />
-      <Text style={styles.circleText}>{item.first_name || 'Title'} {item.last_name || 'Title'}</Text>
-    </View>
+  const renderHairdresserItem = ({item} : any) => (
+    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+      <View style={styles.circleItem}>
+        <Image
+          source={{ uri: 'https://via.placeholder.com/60x60?text=Img' }}
+          style={styles.circleImage}
+        />
+        <Text style={styles.circleText}>{item.user.first_name || 'Title'} {item.user.last_name || 'Title'}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   if (loading) {

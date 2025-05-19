@@ -1,10 +1,13 @@
 import { ServiceResponse } from "./Service.types";
+import { Hairdresser } from "./Hairdresser.types";
 
 export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Register: undefined;
-  MockedHairdresserProfile: any;
+  HairdresserProfileReservation: {
+    hairdresser : Hairdresser
+  } 
   Address: {
     personalData: {
       first_name: string;

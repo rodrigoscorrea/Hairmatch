@@ -1,3 +1,5 @@
+import { Preference } from "./Preferences.types";
+
 export interface AuthContextType {
   signIn?: (email: string, password: string) => Promise<void>;
   signUp?: (
@@ -16,8 +18,10 @@ export interface AuthContextType {
     role: string,
     rating: number,
     cpf?: string,
-    cnpj?: string
+    cnpj?: string,
+    preferences?: Preference[]
   ) => Promise<any>;
   signOut?: () => Promise<void>;
+  getUserInfo: () => Promise<any>; 
   userInfo?: any;
 }

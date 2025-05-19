@@ -1,3 +1,5 @@
+import { Hairdresser } from "./Hairdresser.types"
+
 export enum UserRole {
     CUSTOMER = 'customer',
     HAIRDRESSER = 'hairdresser'
@@ -20,7 +22,7 @@ export interface User {
     state: string
 }
 
-interface customerHomeHairdresserData {
+/* export interface CustomerHomeHairdresserData {
     id: number,
     first_name: string,
     last_name: string,
@@ -31,14 +33,17 @@ interface customerHomeHairdresserData {
     city: string,
     state: string,
     neighborhood: string,
-}
+    number: string,
+    postal_code: string
+    resume: string
+} */
 
 export interface CustomerHomeInfoResponse {
-    for_you: customerHomeHairdresserData[]
+    for_you: Hairdresser[]
     hairdressers_by_preferences: {
-        coloracao: customerHomeHairdresserData[]
-        cachos: customerHomeHairdresserData[]
-        barbearia: customerHomeHairdresserData[]
-        trancas: customerHomeHairdresserData[]
+        coloracao: Hairdresser[]
+        cachos: Hairdresser[]
+        barbearia: Hairdresser[]
+        trancas: Hairdresser[]
     }
 }

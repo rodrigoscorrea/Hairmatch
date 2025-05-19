@@ -1,7 +1,7 @@
 import axios from 'axios'; 
 import { API_BACKEND_URL } from '../index';
 
-export const listServicesByHairdresser = async (hairdresserId: string | undefined) => {
+export const listServicesByHairdresser = async (hairdresserId: number | undefined) => {
     if(!hairdresserId) {
         console.error("hairdresser id not provided");
         return
