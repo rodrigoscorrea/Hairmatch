@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Button } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal } from 'react-native';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -9,6 +9,7 @@ import { getAvailableResearchSlots } from '@/app/services/reserve.service';
 import { createReserve } from '@/app/services/reserve.service';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
+import { formatDate } from '@/app/utils/date-formater';
 
 type ServiceReserveScreenRouteProp = RouteProp<RootStackParamList, 'ServiceBooking'>;
 type ServiceReserveScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -31,6 +32,7 @@ export default function ServiceBookingScreen() {
   const [markedDates, setMarkedDates] = useState<any>({});
   const [availableReserveSlots, setAvailableReserveSlots] = useState<string[]>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showReserveConfirmationModal, setShowReserveConfirmationModal] = useState<boolean>(false);
   
   const getCurrentDate = () => {
     const today = new Date();
@@ -104,10 +106,9 @@ export default function ServiceBookingScreen() {
       hairdresser: 1,
       start_time: formatedTime,
     }
-    console.log(reserveData)
     try{
        createReserveRequest(reserveData);
-       navigation.navigate('Home');
+       navigation.navigate('CustomerHome');
        Alert.alert("Reserva concluida com sucesso :D");
     } catch (err) {
       Alert.alert("Aconteceu um problema, verifique os logs")
@@ -213,12 +214,48 @@ export default function ServiceBookingScreen() {
             !selectedTime && { opacity: 0.5 },
           ]}
           disabled={!selectedTime}
-          onPress={handleBooking}
+          onPress={()=>setShowReserveConfirmationModal(true)}
         >
           <Text style={styles.buttonText}>Agendar</Text>
         </TouchableOpacity>
       )}
-      
+
+    <Modal
+        visible={showReserveConfirmationModal}
+        transparent
+        animationType="fade"
+        >
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Confirmar agendamento</Text>
+            <Text style={styles.modalText}>
+                Cheque todos os dados sobre seu agendamento abaixo e clique em Confirmar Agendamento para prosseguir.
+            </Text>
+            <View style={{marginBottom: 15}}>
+              <Text style={{fontWeight: 400}}>Serviço selecionado: {service.name}</Text> 
+              <Text style={{marginTop: 5, fontWeight: 400}}>Data de realização do serviço: {formatDate(selectedDate)}</Text>
+              <Text style={{marginTop: 5, fontWeight: 400}}>Horário de realização do serviço: {selectedTime}</Text>
+            </View>
+            <View style={styles.modalButtonGroup}>
+                <TouchableOpacity
+                style={styles.modalBackButton}
+                onPress={() => setShowReserveConfirmationModal(false)}
+                >
+                <Text style={styles.modalBackButtonText}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                style={styles.modalAcceptButton}
+                onPress={() => {
+                    setShowReserveConfirmationModal(false);
+                    handleBooking();
+                }}
+                >
+                <Text style={styles.modalAcceptButtonText}>Aceitar</Text>
+                </TouchableOpacity>
+            </View>
+            </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -339,5 +376,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFECE3',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#333',
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#555',
+    marginBottom: 20,
+  },
+  modalButtonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalBackButton: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderColor: '#9B59B6',
+    borderWidth: 1,
+    marginRight: 10,
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalBackButtonText: {
+    color: '#9B59B6',
+    fontWeight: '500',
+  },
+  modalAcceptButton: {
+    backgroundColor: '#FF6B00',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalAcceptButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

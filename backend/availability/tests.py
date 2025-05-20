@@ -31,7 +31,8 @@ class CreateAvailabilityTest(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 4,
-            "resume": "ele é legal e joga bem"
+            "resume": "ele é legal e joga bem",
+            "preferences": []
         }
         
     def test_create_availability_success(self):
@@ -180,7 +181,8 @@ class CreateMultipleAvailabilityTest(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 4,
-            "resume": "ele é legal e joga bem"
+            "resume": "ele é legal e joga bem",
+            "preferences": []
         }
         
         # Register and get hairdresser
@@ -372,7 +374,8 @@ class ListAvailabilityTest(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
-            "resume": "Professional hairdresser"
+            "resume": "Professional hairdresser",
+            "preferences": []
         }
         
         # Register hairdresser
@@ -455,7 +458,8 @@ class RemoveAvailabilityTest(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
-            "resume": "Professional hairdresser"
+            "resume": "Professional hairdresser",
+            "preferences": []
         }
         
         # Register hairdresser
@@ -518,7 +522,8 @@ class UpdateAvailabilityTest(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
-            "resume": "Professional hairdresser"
+            "resume": "Professional hairdresser",
+            "preferences": []
         }
         
         # Register hairdresser
