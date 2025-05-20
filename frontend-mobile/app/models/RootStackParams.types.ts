@@ -46,5 +46,8 @@ export type RootStackParamList = {
     customer_id: string | number
     non_working_days: any
   };
-  CustomerHome: any
+  CustomerHome: any,
+  Search: any | undefined;
+  Reserves: any | undefined;
+  Profile: any | undefined;
 };

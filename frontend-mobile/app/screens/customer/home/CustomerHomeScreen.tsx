@@ -8,7 +8,8 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
 import { getCustomerHomeInfo } from '@/app/services/auth-user.service';
 import { CustomerHomeInfoResponse } from '@/app/models/User.types';
@@ -18,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Hairdresser } from '@/app/models/Hairdresser.types';
 import { AuthContext } from '../../../index';
 import { formatText } from '@/app/utils/text-formater';
+import BottomTabBar from '@/app/components/BottomBar';
 
 type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -83,15 +85,19 @@ const CustomerHomeScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text>Carregando informações...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text>Carregando informações...</Text>
+        </View>
+        <BottomTabBar activeTab="CustomerHome"></BottomTabBar>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollContainer}>
       <TextInput
         placeholder="Buscar no HairMatch"
         style={styles.searchBar}
@@ -182,7 +188,9 @@ const CustomerHomeScreen = () => {
           />
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+      <BottomTabBar activeTab="CustomerHome"></BottomTabBar>
+    </SafeAreaView>
   );
 };
 
@@ -190,6 +198,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
+    paddingTop: 20,
+    paddingHorizontal: 16,
+  },
+  scrollContainer: {
+    flex: 1,
     paddingTop: 20,
     paddingHorizontal: 16,
   },
