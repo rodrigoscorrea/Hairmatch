@@ -70,7 +70,7 @@ const LoginScreen = () => {
         <Text style={styles.inputLabel}>Insira sua senha</Text>
         <TextInput
           style={styles.input}
-          placeholder="****"
+          placeholder="******"
           value={password}
           onChangeText={setPassword}
           secureTextEntry

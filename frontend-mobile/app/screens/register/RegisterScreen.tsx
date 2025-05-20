@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { UserRole } from '@/app/models/User.types';
+import { ErrorModal } from '@/app/components/ErrorModal'; 
+
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
 
-  // Estados para armazenar os campos
   const [first_name, setFirst_Name] = useState<string>('');
   const [last_name, setLast_Name] = useState<string>('');
   const [cpf, setCpf] = useState<string>('');
@@ -17,139 +18,233 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+
+
+  const formatCPF = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11); 
+  
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+  
+  
+  const formatCNPJ = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .slice(0, 14);
+  };
+  
+  const formatPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '($1)$2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .slice(0, 14); 
+  };
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+  
+  const stripNonDigits = (value: string) => value.replace(/\D/g, '');
+
+  const validateFields = () => {
+    const newErrors: { [key: string]: boolean } = {};
+
+    if (!first_name) newErrors.first_name = true;
+    if (!last_name) newErrors.last_name = true;
+    if ((!isValidEmail(email)) || (!email) ) {
+      newErrors.email = true;
+    }
+    if (!phone) newErrors.phone = true;
+    if (!password) newErrors.password = true;
+    if (!confirmPassword) newErrors.confirmPassword = true;
+    if (password !== confirmPassword) {
+      newErrors.password = true;
+      newErrors.confirmPassword = true;
+    }
+    if (role === UserRole.CUSTOMER && !cpf) newErrors.cpf = true;
+    if (role === UserRole.HAIRDRESSER && !cnpj) newErrors.cnpj = true;
+
+    const sanitizedCpf = stripNonDigits(cpf);
+    const sanitizedCnpj = stripNonDigits(cnpj);
+    const sanitizedPhone = stripNonDigits(phone);
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegister = async () => {
+    if (!validateFields()) {
+      setErrorModalMessage('Por favor, corrija os campos destacados.');
+      setErrorModalVisible(true);
+      return;
+    }
+
+    navigation?.navigate('Address', {
+      personalData: {
+        first_name,
+        last_name,
+        phone,
+        email,
+        cnpj: cnpj ?? '',
+        cpf: cpf ?? '',
+        password,
+        role,
+      },
+    });
+  };
 
   return (
     <ScrollView>
       <View style={styles.container}>
-      {/* Botão de Voltar */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
-
-      <View style={styles.title}>
-        <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
-      </View>
-      <Text style={styles.subtitle}>Cadastre-se</Text>
-
-      {/* Botões Cliente / Profissional */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            role === UserRole.CUSTOMER && styles.toggleButtonSelected,
-          ]}
-          onPress={() => setRole(UserRole.CUSTOMER)}
-        >
-          <Text style={role === UserRole.CUSTOMER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
-            Cliente
-          </Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            role === UserRole.HAIRDRESSER && styles.toggleButtonSelected, // Ambos ficam roxos
-          ]}
-          onPress={() => setRole(UserRole.HAIRDRESSER)}
-        >
-          <Text style={role === UserRole.HAIRDRESSER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
-            Profissional
-          </Text>
+        <View style={styles.title}>
+          <Image source={require('../../../assets/images/HairmatchLogo.png')} />
+        </View>
+        <Text style={styles.subtitle}>Cadastre-se</Text>
+
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              role === UserRole.CUSTOMER && styles.toggleButtonSelected,
+            ]}
+            onPress={() => setRole(UserRole.CUSTOMER)}
+          >
+            <Text style={role === UserRole.CUSTOMER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+              Cliente
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              role === UserRole.HAIRDRESSER && styles.toggleButtonSelected,
+            ]}
+            onPress={() => setRole(UserRole.HAIRDRESSER)}
+          >
+            <Text style={role === UserRole.HAIRDRESSER ? styles.toggleButtonTextSelected : styles.toggleButtonText}>
+              Profissional
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.profilePicture}>
+          <Image
+            source={require('../../../imgs/Camera.png')}
+            style={styles.profileIcon}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.row}>
+          <TextInput
+            placeholder="Nome"
+            style={[styles.input, { flex: 1, marginRight: 5 }, errors.first_name && styles.inputError]}
+            value={first_name}
+            onChangeText={text => {
+              setFirst_Name(text);
+              setErrors(prev => ({ ...prev, first_name: false }));
+            }}
+          />
+          <TextInput
+            placeholder="Sobrenome"
+            style={[styles.input, { flex: 1, marginLeft: 5 }, errors.last_name && styles.inputError]}
+            value={last_name}
+            onChangeText={text => {
+              setLast_Name(text);
+              setErrors(prev => ({ ...prev, last_name: false }));
+            }}
+          />
+        </View>
+
+        {role === UserRole.CUSTOMER ? (
+          <TextInput
+            placeholder="CPF"
+            style={[styles.input, errors.cpf && styles.inputError]}
+            value={cpf}
+            keyboardType="numeric"
+            onChangeText={(text) => setCpf(formatCPF(text))}
+          />
+        ) : (
+          <TextInput
+            placeholder="CNPJ"
+            style={[styles.input, errors.cnpj && styles.inputError]}
+            value={cnpj}
+            keyboardType="numeric"
+            onChangeText={(text) => setCnpj(formatCNPJ(text))}
+          />
+        )}
+
+        <TextInput
+          placeholder="Email"
+          style={[styles.input, errors.email && styles.inputError]}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={text => {
+            setEmail(text);
+            setErrors(prev => ({ ...prev, email: false }));
+          }}
+        />
+
+        <TextInput
+          placeholder="Telefone"
+          style={[styles.input, errors.phone && styles.inputError]}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={(text) => setPhone(formatPhone(text))}
+        />
+
+        <TextInput
+          placeholder="Senha"
+          style={[styles.input, errors.password && styles.inputError]}
+          secureTextEntry
+          value={password}
+          onChangeText={text => {
+            setPassword(text);
+            setErrors(prev => ({ ...prev, password: false }));
+          }}
+        />
+
+        <TextInput
+          placeholder="Confirme sua senha"
+          style={[styles.input, errors.confirmPassword && styles.inputError]}
+          secureTextEntry
+          value={confirmPassword}
+          onChangeText={text => {
+            setConfirmPassword(text);
+            setErrors(prev => ({ ...prev, confirmPassword: false }));
+          }}
+        />
+
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+          <Text style={styles.buttonText}>Próximo</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Ícone de foto */}
-      <TouchableOpacity style={styles.profilePicture}>
-        <Image
-          source={require('../../../imgs/Camera.png')} // Substitua pelo caminho correto da imagem
-          style={styles.profileIcon}
-        />
-      </TouchableOpacity>
-
-      {/* Formulário */}
-      <View style={styles.row}>
-        <TextInput
-          placeholder="Nome"
-          style={[styles.input, { flex: 1, marginRight: 5 }]}
-          value={first_name}
-          onChangeText={setFirst_Name}
-        />
-        <TextInput
-          placeholder="Sobrenome"
-          style={[styles.input, { flex: 1, marginLeft: 5 }]}
-          value={last_name}
-          onChangeText={setLast_Name}
-        />
-      </View>
-
-      {role === 'customer' ? (
-        <TextInput
-        placeholder="CPF"
-        style={styles.input}
-        value={cpf}
-        onChangeText={setCpf}
-        />
-      ): (
-        <TextInput
-        placeholder="CNPJ"
-        style={styles.input}
-        value={cnpj}
-        onChangeText={setCnpj}
+      <ErrorModal
+        visible={errorModalVisible}
+        onClose={() => setErrorModalVisible(false)}
+        message={errorModalMessage}
       />
-      )}      
-
-      <TextInput
-        placeholder="Email"
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <TextInput
-        placeholder="Telefone"
-        style={styles.input}
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={setPhone}
-      />
-
-      <TextInput
-        placeholder="Senha"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <TextInput
-        placeholder="Confirme sua senha"
-        style={styles.input}
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
-
-      {/* Botão Próximo */}
-      <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address', {personalData: {
-        first_name: first_name,
-        last_name: last_name,
-        phone: phone,
-        email: email,
-        cnpj: cnpj ?? '',
-        cpf: cpf ?? '',
-        password: password,
-        role: role,
-      }})}>
-        <Text style={styles.buttonText}>Próximo</Text>
-      </TouchableOpacity>
-      </View>
     </ScrollView>
+    
   );
 }
 
-// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,7 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   toggleButtonSelected: {
-    backgroundColor: '#8e44ad',  // Roxo para ambos os botões
+    backgroundColor: '#8e44ad',
   },
   toggleButtonText: {
     color: '#555',
@@ -212,7 +307,7 @@ const styles = StyleSheet.create({
   profileIcon: {
     width: 40,
     height: 40,
-    tintColor: '#000', // Agora a câmera é preta
+    tintColor: '#000',
   },
   row: {
     flexDirection: 'row',
@@ -225,6 +320,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     marginVertical: 5,
+  },
+  inputError: {
+    borderWidth: 1.5,
+    borderColor: 'purple',
   },
   button: {
     backgroundColor: '#FF6B00',
