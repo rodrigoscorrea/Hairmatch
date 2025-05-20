@@ -24,6 +24,7 @@ export default function ServiceBookingScreen() {
   const service = route.params?.service;
   const customer_id = route.params?.customer_id;
   const non_working_days = route.params?.non_working_days
+  const hairdresser = route.params?.non_working_days
 
   const [selectedServiceOption, setSelectedServiceOption] = useState<any>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export default function ServiceBookingScreen() {
     let reserveData = {
       customer: customer_id,
       service: service.id,
-      hairdresser: 1,
+      hairdresser: hairdresser.id,
       start_time: formatedTime,
     }
     try{
@@ -231,10 +232,11 @@ export default function ServiceBookingScreen() {
             <Text style={styles.modalText}>
                 Cheque todos os dados sobre seu agendamento abaixo e clique em Confirmar Agendamento para prosseguir.
             </Text>
-            <View style={{marginBottom: 15}}>
+            <View style={{marginBottom: 25}}>
               <Text style={{fontWeight: 400}}>Serviço selecionado: {service.name}</Text> 
               <Text style={{marginTop: 5, fontWeight: 400}}>Data de realização do serviço: {formatDate(selectedDate)}</Text>
               <Text style={{marginTop: 5, fontWeight: 400}}>Horário de realização do serviço: {selectedTime}</Text>
+              <Text style={{marginTop: 5, fontWeight: 400}}>Valor do serviço: R$ {service.price}</Text>
             </View>
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity

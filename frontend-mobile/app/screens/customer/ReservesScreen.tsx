@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, StyleSheet, Text, View, SafeAreaView, TouchableOpacity } from 'react-native'
+import { ActivityIndicator, Alert, StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { getCustomerReserves } from '@/app/services/reserve.service';
 import { useBottomTab } from '../../contexts/BottomTabContext';
@@ -58,53 +58,57 @@ export default function ReservesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.headerText}>Meus Agendamentos</Text>
-        
-        {isFetchingReserves ? (
-          <ActivityIndicator size="large" color="#FF6B00" style={styles.loader} />
-        ) : reserves.length > 0 ? (
-          <View style={styles.reservesContainer}>
-            {reserves.map((reserve) => (
-              <View key={reserve.id} style={styles.reserveCard}>
-                <View style={styles.hairdresserInfoContainer}>
-                  <View style={styles.profileCircle} />
-                  <View style={styles.hairdresserDetailsContainer}>
-                    <Text style={styles.hairdresserName}>
-                      {reserve.service.hairdresser.user.first_name || 'Camilly Borgaco'}
-                    </Text>
-                    <Text style={styles.hairdresserName}>
-                      {reserve.service.hairdresser.user.last_name || 'Camilly Borgaco'}
-                    </Text>
-                    <Text style={styles.reserveDetailText}>
-                      {`Dia: ${formatDate(reserve.start_time)}`}
-                      <Text style={styles.spacer}> · </Text>
-                      {`Hora: ${formatTime(reserve.start_time)}`}
-                    </Text>
-                    <Text style={styles.reserveDetailText}>
-                      {`Serviço: ${reserve.service.name || 'SOS Cachos'}`}
-                    </Text>
-                    <View style={styles.statusContainer}>
-                      <Text style={styles.statusLabel}>Status:</Text>
-                      <Text style={[styles.statusValue, { color: getStatusColor('aguardando confirmação') }]}>
-                        { 'Aguardando confirmação' }
+      <ScrollView>
+        <View style={styles.content}>
+          <Text style={styles.headerText}>Meus Agendamentos</Text>
+          
+          {isFetchingReserves ? (
+            <ActivityIndicator size="large" color="#FF6B00" style={styles.loader} />
+          ) : reserves.length > 0 ? (
+            <View style={styles.reservesContainer}>
+              {reserves.map((reserve) => (
+                <View key={reserve.id} style={styles.reserveCard}>
+                  <View style={styles.hairdresserInfoContainer}>
+                    <View style={styles.profileCircle} />
+                    <View style={styles.hairdresserDetailsContainer}>
+                      <View style={{display: 'flex', flexDirection: 'row'}}>
+                        <Text style={styles.hairdresserFirstName}>
+                          {reserve.service.hairdresser.user.first_name || 'Camilly Borgaco'}
+                        </Text>
+                        <Text style={styles.hairdresserLastName}>
+                          {reserve.service.hairdresser.user.last_name || 'Camilly Borgaco'}
+                        </Text>
+                      </View>
+                      <Text style={styles.reserveDetailText}>
+                        {`Dia: ${formatDate(reserve.start_time)}`}
+                        <Text style={styles.spacer}> · </Text>
+                        {`Hora: ${formatTime(reserve.start_time)}`}
                       </Text>
+                      <Text style={styles.reserveDetailText}>
+                        {`Serviço: ${reserve.service.name || 'SOS Cachos'}`}
+                      </Text>
+                      <View style={styles.statusContainer}>
+                        <Text style={styles.statusLabel}>Status:</Text>
+                        <Text style={[styles.statusValue, { color: getStatusColor('aguardando confirmação') }]}>
+                          { 'Aguardando confirmação' }
+                        </Text>
+                      </View>
                     </View>
                   </View>
+                  
+                  <TouchableOpacity style={styles.moreInfoButton}>
+                    <Text style={styles.moreInfoButtonText}>Mais Informações</Text>
+                  </TouchableOpacity>
                 </View>
-                
-                <TouchableOpacity style={styles.moreInfoButton}>
-                  <Text style={styles.moreInfoButtonText}>Mais Informações</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Você não possui agendamentos</Text>
-          </View>
-        )}
-      </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Você não possui agendamentos</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
       <BottomTabBar />
     </SafeAreaView>
   );
@@ -160,11 +164,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  hairdresserName: {
+  hairdresserFirstName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
+  },
+  hairdresserLastName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+    marginLeft: 4
   },
   reserveDetailText: {
     fontSize: 14,
