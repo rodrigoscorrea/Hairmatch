@@ -24,7 +24,7 @@ export default function ServiceBookingScreen() {
   const service = route.params?.service;
   const customer_id = route.params?.customer_id;
   const non_working_days = route.params?.non_working_days
-  const hairdresser = route.params?.non_working_days
+  const hairdresser = route.params?.hairdresser
 
   const [selectedServiceOption, setSelectedServiceOption] = useState<any>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
