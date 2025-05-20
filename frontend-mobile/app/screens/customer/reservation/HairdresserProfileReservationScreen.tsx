@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,8 @@ import { PreferencesResponse } from '@/app/models/Preferences.types';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
-import { NonWorkingDays } from '@/app/models/Availability.types';
+import { NonWorkingDays } from '@/app/models/Availability.types'; 
+import { AuthContext } from '../../../index';
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
@@ -36,6 +37,7 @@ export default function HairdresserProfileReservationScreen() {
   const [services, setServices] = useState<ServiceResponse[]>();
   const [preferences, setPreferences] = useState<PreferencesResponse[]>();
   const [nonWorkingDays, setNonWorkingDays] = useState<NonWorkingDays>();
+  const {userInfo} = useContext(AuthContext)
 
   const navigation = useNavigation<HairdresserProfileReservationScreenNavigationProp>();
   const route = useRoute<HairdresserProfileReservationScreenRouteProp>();
@@ -165,7 +167,7 @@ export default function HairdresserProfileReservationScreen() {
       {/* Available services */}
       <Accordion title="Serviços">
         {services ? services.map((service) => (
-          <TouchableOpacity style={styles.card} key={service.id} onPress={()=>navigation.navigate('ServiceBooking', {service: service, customer_id: 2, non_working_days: nonWorkingDays})}>
+          <TouchableOpacity style={styles.card} key={service.id} onPress={()=>navigation.navigate('ServiceBooking', {service: service, customer_id: userInfo.customer.id, non_working_days: nonWorkingDays, hairdresser: hairdresser})}>
             <Text style={styles.cardText}>{service.name}</Text>
             <View style={styles.arrowButton}>
               <Ionicons name="arrow-forward" size={16} color="#fff" />

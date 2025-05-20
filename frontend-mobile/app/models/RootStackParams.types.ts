@@ -44,7 +44,8 @@ export type RootStackParamList = {
   ServiceBooking: {
     service: ServiceResponse
     customer_id: string | number
-    non_working_days: any
+    non_working_days: any;
+    hairdresser: any;
   };
   CustomerHome: any,
   Search: any | undefined;
