@@ -48,6 +48,8 @@ export type RootStackParamList = {
   };
   CustomerHome: any,
   Search: any | undefined;
-  Reserves: any | undefined;
+  Reserves: {
+    customer: any;
+  };
   Profile: any | undefined;
 };

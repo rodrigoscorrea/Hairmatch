@@ -20,6 +20,9 @@ import { UserRole } from './models/User.types';
 import { Preference } from './models/Preferences.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
+import { Customer } from './models/Customer.types';
+import { Hairdresser } from './models/Hairdresser.types';
+import { BottomTabProvider } from './contexts/BottomTabContext';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
@@ -33,7 +36,7 @@ function App() {
   const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<Customer | Hairdresser | null>(null);
   const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
@@ -191,27 +194,26 @@ function App() {
 
   return (
     <AuthContext.Provider value={authContext}>
+      {userToken == null ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-
-          {userToken == null ? (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Register" component={RegisterScreen} />
-              <Stack.Screen name="Address" component={AddressScreen} />
-              <Stack.Screen name="Preferences" component={PreferencesScreen} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
-              <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
-              <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="Search" component={SearchScreen} />
-              <Stack.Screen name="Reserves" component={ReservesScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-            </>
-          )}
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Address" component={AddressScreen} />
+          <Stack.Screen name="Preferences" component={PreferencesScreen} />
         </Stack.Navigator>
+      ) : (
+        <BottomTabProvider>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
+            <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+            <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Search" component={SearchScreen} />
+            <Stack.Screen name="Reserves" component={ReservesScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+          </Stack.Navigator>
+        </BottomTabProvider>
+      )}
     </AuthContext.Provider>
   );
 }

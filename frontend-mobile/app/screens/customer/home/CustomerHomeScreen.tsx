@@ -20,6 +20,7 @@ import { Hairdresser } from '@/app/models/Hairdresser.types';
 import { AuthContext } from '../../../index';
 import { formatText } from '@/app/utils/text-formater';
 import BottomTabBar from '@/app/components/BottomBar';
+import { useBottomTab } from '@/app/contexts/BottomTabContext';
 
 type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -28,6 +29,7 @@ const CustomerHomeScreen = () => {
   const { userInfo } = useContext(AuthContext);
   const [customerHomeInfo, setCustomerHomeInfo] = useState<CustomerHomeInfoResponse>();
   const [loading, setLoading] = useState(true);
+  const { setActiveTab } = useBottomTab();
 
   useEffect(() => {
     const fetchCustomerHomeInfo = async () => {
@@ -46,6 +48,7 @@ const CustomerHomeScreen = () => {
       }
     }
     fetchCustomerHomeInfo();
+    setActiveTab('CustomerHome');
   }, [userInfo]);
 
   const handleClickHairdresser = (hairdresser: Hairdresser) => {
@@ -90,7 +93,7 @@ const CustomerHomeScreen = () => {
           <ActivityIndicator size="large" color="#000" />
           <Text>Carregando informações...</Text>
         </View>
-        <BottomTabBar activeTab="CustomerHome"></BottomTabBar>
+        <BottomTabBar />
       </SafeAreaView>
     );
   }
@@ -189,7 +192,7 @@ const CustomerHomeScreen = () => {
         </View>
       )}
       </ScrollView>
-      <BottomTabBar activeTab="CustomerHome"></BottomTabBar>
+      <BottomTabBar/>
     </SafeAreaView>
   );
 };

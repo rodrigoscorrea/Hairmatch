@@ -1,11 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
-interface BottomTabBarProps {
-  activeTab?: string;
-}
+import { useBottomTab } from '../contexts/BottomTabContext';
 
 // Define tab configuration
 const tabs = [
@@ -35,12 +32,13 @@ const tabs = [
   }
 ];
 
-const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab }) => {
+const BottomTabBar: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { activeTab, setActiveTab, customer } = useBottomTab();
 
   const isActive = (tabRoute: string): boolean => {
-    // If activeTab prop is provided, use it, otherwise use the current route name
+    // If activeTab from context is provided, use it, otherwise use the current route name
     if (activeTab) {
       return activeTab === tabRoute;
     }
@@ -49,8 +47,14 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab }) => {
 
   const handleTabPress = (tabRoute: string): void => {
     if (!isActive(tabRoute)) {
-      // @ts-ignore: Navigation typing is complex, but this works
-      navigation.navigate(tabRoute);
+      setActiveTab(tabRoute);
+      if (customer) {
+        // @ts-ignore - We're ignoring the type error because navigation props vary
+        navigation.navigate(tabRoute, { customer });
+      } else {
+        // @ts-ignore
+        navigation.navigate(tabRoute);
+      }
     }
   };
 
