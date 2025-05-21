@@ -8,15 +8,19 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../models/RootStackParams.types';
 
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const LoginScreen = () => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +38,6 @@ const LoginScreen = () => {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      navigation.navigate('Home')
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
       //Alert.alert('Error', errorMessage);
@@ -52,11 +55,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          Hair<Text style={styles.logoHighlight}>M</Text>
-          <Text style={styles.scissorsText}>✂️</Text>
-          <Text style={styles.logoHighlight}>tch</Text>
-        </Text>
+        <Image source={require('../../assets/images/HairmatchLogo.png')}></Image>
       </View>
 
       <View style={styles.formContainer}>

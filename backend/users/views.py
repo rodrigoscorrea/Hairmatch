@@ -2,9 +2,12 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import User, Customer, Hairdresser
+from preferences.models import Preferences
 import json
 import bcrypt
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.db.models import Q, Count
 import jwt, datetime
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer
 
@@ -17,7 +20,6 @@ from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializ
 class RegisterView(APIView):
     def post(self, request):    
         data = json.loads(request.body)
-
         if User.objects.filter(email=data['email']).exists():
             return JsonResponse({'error': 'User already exists'}, status=400)
         if User.objects.filter(phone=data['phone']).exists():
@@ -36,7 +38,7 @@ class RegisterView(APIView):
 
         raw_password = data['password'].replace(' ', '')
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-
+        preferences = data['preferences']
         user = User.objects.create(
             first_name=data['first_name'],
             last_name=data['last_name'],
@@ -53,6 +55,10 @@ class RegisterView(APIView):
             role=data['role'],
             rating=data['rating']
         )
+
+        if len(preferences) > 0:
+            for preference in preferences:
+                user.preferences.add(preference)
 
         # Create profile based on user type
         if data['role'] == 'customer':
@@ -166,8 +172,6 @@ class UserInfoCookieView(APIView):
         except User.DoesNotExist:
             return JsonResponse({'error': 'user not found'}, status=400)
 
-        user_data = UserSerializer(user).data
-
         if user.role == 'customer':
             customer = Customer.objects.filter(user=user).first()
             customer_data = CustomerSerializer(customer).data
@@ -259,6 +263,24 @@ class UserInfoCookieView(APIView):
 # Those views should only be used by admin personal or internal functions
 
 class UserInfoView(APIView):
+    def get(self,request,email=None):
+        try:
+            user = User.objects.filter(email=email).filter(is_active=True).first()
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        if user:
+            if (user.role == 'customer'):
+                customer = Customer.objects.get(user=user)
+                customer_serialized = CustomerSerializer(customer).data
+                return JsonResponse({'data': customer_serialized}, status=200)
+            else: 
+                hairdresser = Hairdresser.objects.get(user=user)
+                hairdresser_serialized = HairdresserSerializer(hairdresser).data
+                return JsonResponse({'data': hairdresser_serialized}, status=200)
+            
+        return JsonResponse({'error': 'User not found'}, status=404)
+
     
     def delete(self, request, email=None):
         token = request.COOKIES.get('jwt')
@@ -280,3 +302,57 @@ class LogoutView(APIView):
         response.data = {"message": "User logged out"}
     
         return response
+    
+class CustomerHomeView(APIView):
+    """
+    API view for customer home page that returns:
+    1. Hairdressers matching customer preferences in 'for_you' object
+    2. 10 hairdressers for each of the specified preference categories
+    """
+    
+    def get(self, request, email=None):
+        for_you_data = []
+        if email:
+            try:
+                customer_user = User.objects.get(email=email, role='customer')
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            customer_preferences = customer_user.preferences.all()
+            
+            # Get hairdressers matching customer preferences
+            hairdressers_users = User.objects.filter(
+                role='hairdresser',
+                preferences__in=customer_preferences
+            ).distinct()
+
+            hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
+            
+            # Prepare data for for_you response
+            for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
+        
+        # Get hairdressers for specific preferences
+        specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
+        formated_preferences_name=["coloracao", "cachos", "barbearia", "trancas"]
+        preference_hairdressers = {}
+        
+        for i in range(len(specific_preferences)):
+            try:
+                preference = Preferences.objects.get(name=specific_preferences[i])
+                hairdressers_users = User.objects.filter(
+                    role='hairdresser',
+                    preferences=preference
+                ).distinct()[:10]
+                
+                hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
+                hairdressers_data = HairdresserSerializer(hairdressers_per_preference, many=True).data
+                
+                preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
+            except Preferences.DoesNotExist:
+                preference_hairdressers[formated_preferences_name[i]] = []
+        
+        # Prepare the final response
+        response_data = {
+            'for_you': for_you_data,
+            'hairdressers_by_preferences': preference_hairdressers
+        }     
+        return JsonResponse(response_data, status=200)

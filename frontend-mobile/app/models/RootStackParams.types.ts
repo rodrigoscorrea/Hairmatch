@@ -1,7 +1,13 @@
+import { ServiceResponse } from "./Service.types";
+import { Hairdresser } from "./Hairdresser.types";
+
 export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Register: undefined;
+  HairdresserProfileReservation: {
+    hairdresser : Hairdresser
+  } 
   Address: {
     personalData: {
       first_name: string;
@@ -35,4 +41,16 @@ export type RootStackParamList = {
       state: string;
     }
   };
+  ServiceBooking: {
+    service: ServiceResponse
+    customer_id: string | number
+    non_working_days: any;
+    hairdresser: any;
+  };
+  CustomerHome: any,
+  Search: any | undefined;
+  Reserves: {
+    customer: any;
+  };
+  Profile: any | undefined;
 };

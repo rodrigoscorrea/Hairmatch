@@ -58,17 +58,106 @@ class CreateAvailability(APIView):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
+class CreateMultipleAvailability(APIView):
+    def post(self, request, hairdresser_id):
+        try:
+            data = json.loads(request.body)
+            availabilities = data['availabilities']
+            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+            
+            hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
+            if not hairdresser:
+                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+
+            for availability in availabilities:
+                if not availability.get('weekday') or not availability.get('start_time') or not availability.get('end_time'):
+                    return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
+                if availability['weekday'] not in weekdays:
+                    return JsonResponse({'error': 'Invalid weekday'}, status=400)
+                if Availability.objects.filter(weekday=availability['weekday'], hairdresser=hairdresser).exists():
+                    return JsonResponse({'error': 'Availability already exists'}, status=400)
+
+                if availability.get('break_start') and availability.get('break_end'):
+                    Availability.objects.create(
+                        weekday=availability['weekday'],
+                        start_time=availability['start_time'],
+                        end_time=availability['end_time'],
+                        break_start=availability['break_start'],
+                        break_end=availability['break_end'],
+                        hairdresser=hairdresser
+                    )
+                else:
+                    Availability.objects.create(
+                        weekday=availability['weekday'],
+                        start_time=availability['start_time'],
+                        end_time=availability['end_time'],
+                        hairdresser=hairdresser
+                    )
+
+            return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
 class ListAvailability(APIView):
     def get(self, request, hairdresser_id):
+        weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        
         try:
             hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
             if not hairdresser:
                 return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+                
             availability = Availability.objects.all().filter(hairdresser_id=hairdresser_id)
             serializer = AvailabilitySerializer(availability, many=True)
-            return JsonResponse({'data': serializer.data}, status=200)
+            
+            # Get the days the hairdresser works (from serialized data)
+            working_days = []
+            for avail in serializer.data:
+                if 'weekday' in avail:
+                    working_days.append(avail['weekday'].lower())
+            
+            # Convert to numerical representation (days the hairdresser does NOT work)
+            non_working_day_numbers = self.get_non_working_days(working_days)
+            
+            response_data = {
+                'data': serializer.data,
+                'non_working_days': non_working_day_numbers
+            }
+            
+            return JsonResponse(response_data, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+    
+    def get_non_working_days(self, working_days):
+        """
+        Convert nominal weekdays to their numerical representation (0-6)
+        and return the days the hairdresser doesn't work
+        
+        Args:
+            working_days: List of weekday names that the hairdresser works
+            
+        Returns:
+            List of integers representing days the hairdresser does NOT work (0=Sunday, 1=Monday, etc.)
+        """
+        weekday_map = {
+            'sunday': 0,
+            'monday': 1,
+            'tuesday': 2,
+            'wednesday': 3,
+            'thursday': 4,
+            'friday': 5,
+            'saturday': 6
+        }
+        
+        # Get all days the hairdresser doesn't work
+        all_days = set(range(7))  # 0-6
+        working_day_numbers = set(weekday_map.get(day.lower(), -1) for day in working_days)
+        
+        # Remove invalid mappings if any
+        working_day_numbers.discard(-1)
+        
+        # Return days the hairdresser doesn't work
+        return list(all_days - working_day_numbers)
 
 class RemoveAvailability(APIView):
     def delete(self, request, id):

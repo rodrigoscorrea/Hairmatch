@@ -4,67 +4,53 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import AddressScreen from './screens/AddressScreen';
-import PreferencesScreen from './screens/PreferencesScreen';
+import RegisterScreen from './screens/register/RegisterScreen';
+import AddressScreen from './screens/register/AddressScreen';
+import PreferencesScreen from './screens/register/PreferencesScreen';
 import HomeScreen from './screens/HomeScreen';
-import {
-  View,
-  Text
-} from 'react-native';
-import { Hairdresser } from './types/Hairdresser.types';
-import { Customer } from './types/Customer.types';
-import { RootStackParamList } from './types/RootStackParams.types';
+import ServiceBookingScreen from './screens/customer/reservation/ServiceReservationScreen';
+import CustomerHomeScreen from './screens/customer/home/CustomerHomeScreen';
+import SearchScreen from './screens/customer/SearchScreen';
+import ProfileScreen from './screens/customer/ProfileScreen';
+import ReservesScreen from './screens/customer/ReservesScreen';
+import { RootStackParamList } from './models/RootStackParams.types';
+import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
+import { AuthContextType } from './models/Auth.types';
+import { UserRole } from './models/User.types';
+import { Preference } from './models/Preferences.types';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { Customer } from './models/Customer.types';
+import { Hairdresser } from './models/Hairdresser.types';
+import { BottomTabProvider } from './contexts/BottomTabContext';
 
-export const API_URL = 'https://f9c9-2804-214-d-2495-1131-cf70-dbe2-142.ngrok-free.app'; // For Android emulator pointing to localhost
+export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
-// Create AuthContext with proper types
-interface AuthContextType {
-  signIn?: (email: string, password: string) => Promise<void>;
-  signUp?: (
-    first_name: string,
-    last_name: string,
-    phone: string,
-    email: string,
-    password: string,
-    address: string,
-    number: string,
-    neighborhood: string,
-    complement: string,
-    postal_code: string,
-    state: string,
-    city: string,
-    role: string,
-    rating: number,
-    cpf?: string,
-    cnpj?: string
-  ) => Promise<any>;
-  signOut?: () => Promise<void>;
-  userInfo?: any;
-}
-
-export const AuthContext = React.createContext<AuthContextType>({});
+export const AuthContext = React.createContext<any>({});
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+type IndexNavigationProp = StackNavigationProp<RootStackParamList>;
+
 function App() {
+  const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<Customer | Hairdresser | null>(null);
+  const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
     signIn: async (email: string, password: string) => {
       setIsLoading(true);
       try {
         // Step 1: Make login POST request (sets HttpOnly cookie)
-        await axios.post(`${API_URL}/api/auth/login`, {
+        await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
           email,
           password
         });
         
         // Step 2: Check authentication with GET request
-        const authResponse = await axios.get(`${API_URL}/api/auth/user`);
+        const authResponse = await axios.get(`${API_BACKEND_URL}/api/auth/user`);
         console.log('Auth check response:', authResponse.data);
         
         if (authResponse.data.authenticated) {
@@ -72,17 +58,18 @@ function App() {
           setUserToken('authenticated'); // Just need a non-null value to trigger navigation
           
           // Step 3: Fetch user info
-          const userResponse = await axios.get(`${API_URL}/api/user/authenticated`);
-          setUserInfo(userResponse.data.user);
+          const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
+          setUserInfo(userResponse.data);
+          return true;
         } else {
           console.log('Authentication failed');
+          return false;
         }
       } catch (error: any) {
         console.error('Login error:', error.response?.data || error.message);
         throw error;
       } finally {
         setIsLoading(false);
-        
       }
     },
     signUp: async (
@@ -101,12 +88,13 @@ function App() {
       role: string,
       rating: number,
       cpf?: string,
-      cnpj?: string
+      cnpj?: string,
+      preferences?: Preference[]
     ) => {
       setIsLoading(true);
       try {
         // Construct the data object based on role
-        const userData = role === 'customer' 
+        const userData = role === UserRole.CUSTOMER 
           ? {
               first_name,
               last_name,
@@ -122,7 +110,8 @@ function App() {
               city,
               role,
               rating,
-              cpf
+              cpf,
+              preferences
             }
           : {
               first_name,
@@ -139,9 +128,10 @@ function App() {
               city,
               role,
               rating,
-              cnpj
-            };
-        const response = await axios.post(`${API_URL}/api/auth/register`, userData);
+              cnpj,
+              preferences
+            };  
+        const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, userData);
         return response.data;
       } catch (error: any) {
         console.error('Registration error:', error.response?.data || error.message);
@@ -153,7 +143,7 @@ function App() {
     signOut: async () => {
       setIsLoading(true);
       try {
-        await axios.post(`${API_URL}/api/auth/logout`);
+        await axios.post(`${API_BACKEND_URL}/api/auth/logout`);
         await AsyncStorage.removeItem('userToken');
         setUserToken(null);
         setUserInfo(null);
@@ -171,7 +161,7 @@ function App() {
     try {
       // Set the token in headers
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/user`, { headers });
+      const response = await axios.get(`${API_BACKEND_URL}/api/user`, { headers });
       setUserInfo(response.data.user);
     } catch (error) {
       console.error('Error fetching user info:', error);
@@ -204,13 +194,26 @@ function App() {
 
   return (
     <AuthContext.Provider value={authContext}>
+      {userToken == null ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
           <Stack.Screen name="Preferences" component={PreferencesScreen} />
         </Stack.Navigator>
+      ) : (
+        <BottomTabProvider>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
+            <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+            <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Search" component={SearchScreen} />
+            <Stack.Screen name="Reserves" component={ReservesScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+          </Stack.Navigator>
+        </BottomTabProvider>
+      )}
     </AuthContext.Provider>
   );
 }

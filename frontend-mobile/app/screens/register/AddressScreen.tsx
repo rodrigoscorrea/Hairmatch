@@ -1,48 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Image, ScrollView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { AuthContext } from '../index';
+import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
-
-// Define your navigation param list
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-  Register: undefined;
-  Address: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    }
-  };
-  Preferences: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    },
-    addressData: {
-      address: string;
-      number: string;
-      complement: string;
-      neighborhood: string;
-      postal_code: string;
-      city: string;
-      state: string;
-    }
-  };
-};
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
 
 // Define the route and navigation prop types
 type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Address'>;
@@ -56,13 +17,13 @@ export default function Address() {
   // Extract params from route
   const personalData = route.params?.personalData;
 
-  const [address, setAddress] = useState('');
-  const [number, setNumber] = useState('');
-  const [complement, setComplement] = useState('');
-  const [neighborhood, setNeighborhood] = useState('');
-  const [postal_code, setPostalCode] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [address, setAddress] = useState<string>('');
+  const [number, setNumber] = useState<string>('');
+  const [complement, setComplement] = useState<string>('');
+  const [neighborhood, setNeighborhood] = useState<string>('');
+  const [postal_code, setPostalCode] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
 
   // Debug log to check the received params
   useEffect(() => {
@@ -98,10 +59,11 @@ export default function Address() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container}>
+    <ScrollView>
+      <KeyboardAvoidingView style={styles.container}>
       {/* Parte superior */}
       <View style={styles.header}>
-        <Text style={styles.title}>HairMatch</Text>
+        <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
         <Text style={styles.subtitle}>Informe seu endereço</Text>
       </View>
 
@@ -174,7 +136,9 @@ export default function Address() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScrollView>
+    
   );
 }
 

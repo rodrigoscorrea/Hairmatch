@@ -2,7 +2,7 @@ import React, {useContext} from 'react';
 import { View, Text, TouchableOpacity, Alert} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index';
-import { RootStackParamList } from '../types/RootStackParams.types';
+import { RootStackParamList } from '../models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -20,6 +20,14 @@ export default function HomeScreen() {
       Alert.alert('Error', errorMessage);
     }
   };
+
+  const handleMock = async () =>{
+    navigation.navigate('MockedHairdresserProfile')
+  }
+
+  const handleCustomerHome = async () =>{
+    navigation.navigate('CustomerHome')
+  }
   return (
     <View>
       <Text>
@@ -31,6 +39,14 @@ export default function HomeScreen() {
 
       <TouchableOpacity onPress={handleLogout}>
         <Text>Logout</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleMock}>
+        <Text>MockedHairdresser</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleCustomerHome}>
+        <Text>CUSTOMER HOME TEST</Text>
       </TouchableOpacity>
     </View>
   );

@@ -4,4 +4,4 @@ from .models import Availability
 class AvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Availability
-        fields = ['id', 'weekday', 'start_time', 'end_time']
+        fields = ['id', 'weekday', 'start_time', 'end_time', 'break_start', 'break_end']

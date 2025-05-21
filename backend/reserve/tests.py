@@ -285,7 +285,7 @@ class ReserveSlotTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Hairdresser not found')
         
     def test_get_slots_invalid_service(self):

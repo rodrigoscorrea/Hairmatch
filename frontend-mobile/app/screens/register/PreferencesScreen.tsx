@@ -1,76 +1,41 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal, Image } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { AuthContext, API_URL } from '../index';
+import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
-import axios from 'axios';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import { listPreferences } from '@/app/services/preferences.service';
+import { Preference } from '@/app/models/Preferences.types';
 
-// Define your navigation param list
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-  Register: undefined;
-  Address: undefined;
-  Preferences: {
-    personalData: {
-      first_name: string;
-      last_name: string;
-      phone: string;
-      email: string;
-      cnpj?: string;
-      cpf?: string;
-      password: string;
-      role: string;
-    },
-    addressData: {
-      address: string;
-      number: string;
-      complement: string;
-      neighborhood: string;
-      postal_code: string;
-      city: string;
-      state: string;
-    }
-  };
-};
-
-interface Preference {
-    id: number;
-    name: string;
-}
-
-// Define the route and navigation prop types
 type PreferencesScreenRouteProp = RouteProp<RootStackParamList, 'Preferences'>;
 type PreferencesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-
 export default function PreferencesScreen() {
-  // Use the hooks to get navigation and route
   const navigation = useNavigation<PreferencesScreenNavigationProp>();
   const route = useRoute<PreferencesScreenRouteProp>();
   
   // Extract params from route
   const { personalData, addressData } = route.params;
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingPreferences, setIsFetchingPreferences] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isFetchingPreferences, setIsFetchingPreferences] = useState<boolean>(true);
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [selectedPreferences, setSelectedPreferences] = useState<number[]>([]);
-  const { signUp, signIn } = useContext<any>(AuthContext);
-  const [showSkipModal, setShowSkipModal] = useState(false);
+  const { signUp } = useContext<any>(AuthContext);
+  const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
 
   useEffect(() =>{
     const fetchPreferences = async () => {
         try{
             setIsFetchingPreferences(true);
-            const response = await axios.get(`${API_URL}/api/preferences/list`);
-            if(response.data && Array.isArray(response.data)) {
-                setPreferences(response.data);
+            const response = await listPreferences();
+            if(response && Array.isArray(response)) {
+                setPreferences(response);
             }
         } catch (error){
             console.error('Error fetching preferences:', error);
             Alert.alert('Erro', 'Não foi possível carregar as preferências. Tente novamente.')
-        }finally {
-            setIsFetchingPreferences(false);
+        } finally {
+          setIsFetchingPreferences(false);
         }
     };
 
@@ -85,21 +50,6 @@ export default function PreferencesScreen() {
             return [...prevSelected, id];
         }
     });
-  };
-
-  const assignPreferencesToUser = async (userId: number) => {
-    try {
-      // Para cada preferência selecionada, chamar a API de assign
-      for (const preferenceId of selectedPreferences) {
-        await axios.post(`${API_URL}/api/preferences/assign/${preferenceId}`,{
-            user_id: userId,
-        });
-      }
-      return true;
-    } catch (error) {
-      console.error('Error assigning preferences:', error);
-      return false;
-    }
   };
 
   const handleFinishRegistration = async () => {
@@ -139,38 +89,10 @@ export default function PreferencesScreen() {
         role, 
         5.0,
         cpf, 
-        cnpj
+        cnpj,
+        selectedPreferences
       );
-  
-      await signIn(email, password); // logando
-  
-      // Se tem preference vamos atribuí-las 
-      if (selectedPreferences.length > 0) {
-        try {
-          const userResponse = await axios.get(`${API_URL}/api/user/authenticated`, {
-            headers: {
-              'Accept': 'application/json'
-            }
-          });
-          
-          // Extraindo Id do usuario baseado no role
-          let userId = null;
-          if (role === 'customer' && userResponse.data.customer) {
-            userId = userResponse.data.customer.user.id;
-          } else if (role === 'hairdresser' && userResponse.data.hairdresser) {
-            userId = userResponse.data.hairdresser.user.id;
-          }
-          
-          if (userId) {
-            await assignPreferencesToUser(userId);
-          } else {
-            console.error("Não foi possível obter o ID do usuário");
-          }
-        } catch (userError) {
-          console.error("Erro ao buscar informações do usuário:", userError);
-        }
-      }
-  
+    
       Alert.alert(
         'Sucesso', 
         'Cadastro realizado com sucesso! Faça login para continuar.',
@@ -178,30 +100,6 @@ export default function PreferencesScreen() {
       );
     } catch (error: any) {
       console.error("Erro durante o processo de registro:", error);
-      
-      // Tratamento de erros
-      let errorMessage = 'Falha no registro';
-      
-      if (error.response) {
-        // O servidor respondeu com um status de erro
-        console.error('Resposta de erro do servidor:', error.response.data);
-        errorMessage = error.response.data?.error || 'Erro no servidor';
-        
-        // Se for um erro HTML, mostrar mensagem genérica
-        if (typeof error.response.data === 'string' && 
-            error.response.data.includes('<!DOCTYPE html>')) {
-          errorMessage = 'Erro de comunicação com o servidor';
-        }
-      } else if (error.request) {
-        console.error('Sem resposta do servidor');
-        errorMessage = 'Sem resposta do servidor. Verifique sua conexão.';
-      } else {
-        console.error('Erro de configuração:', error.message);
-        errorMessage = `Erro: ${error.message}`;
-      }
-      Alert.alert('Erro', errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -249,7 +147,7 @@ export default function PreferencesScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>HairMatch</Text>
+          <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
         </View>
 
         {/* Titulo e Legenda */}
