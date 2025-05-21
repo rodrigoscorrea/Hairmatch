@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
-  Alert,
   Image
 } from 'react-native';
 
@@ -16,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../models/RootStackParams.types';
+import { ErrorModal } from '@/app/components/ErrorModal';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -24,59 +24,64 @@ const LoginScreen = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   const { signIn } = useContext<any>(AuthContext);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-    }
+  const validateFields = () => {
+    const newErrors: { [key: string]: boolean } = {};
+    if (!email) newErrors.email = true;
+    if (!password) newErrors.password = true;
 
-    setIsLoading(true);
-    try {
-      await signIn(email, password);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
-      //Alert.alert('Error', errorMessage);
-      setErrorModalVisible(true)
-    } finally {
-      setIsLoading(false);
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const closeErrorModal = () => {
-    setErrorModalVisible(false);
+  const handleLogin = () => {
+    if (!validateFields()) {
+      setErrorModalMessage('Por favor, corrija os campos destacados.');
+      setErrorModalVisible(true);
+      return;
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
       <View style={styles.logoContainer}>
-        <Image source={require('../../assets/images/HairmatchLogo.png')}></Image>
+        <Image source={require('../../assets/images/HairmatchLogo.png')} />
       </View>
 
       <View style={styles.formContainer}>
         <Text style={styles.inputLabel}>Insira seu email</Text>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            errors.email && { borderColor: 'purple', borderWidth: 2 }
+          ]}
           placeholder="email@domain.com"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
         />
+        {errors.email && <Text style={styles.errorText}>Email é obrigatório</Text>}
 
         <Text style={styles.inputLabel}>Insira sua senha</Text>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            errors.password && { borderColor: 'purple', borderWidth: 2 }
+          ]}
           placeholder="******"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
+        {errors.password && <Text style={styles.errorText}>Senha é obrigatória</Text>}
 
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.loginButtonText}>Entrar</Text>
@@ -90,28 +95,11 @@ const LoginScreen = () => {
         </View>
       </View>
 
-      {/* Modal de erro de login */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <ErrorModal
         visible={errorModalVisible}
-        onRequestClose={closeErrorModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Login Incorreto</Text>
-            <Text style={styles.modalText}>
-              Opa! Parece que o usuário ou a senha estão errados. Confere aí e tenta de novo!
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={closeErrorModal}
-            >
-              <Text style={styles.modalButtonText}>Voltar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setErrorModalVisible(false)}
+        message={errorModalMessage}
+      />
     </SafeAreaView>
   );
 };
@@ -152,10 +140,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 10,
     borderWidth: 0.2,
     borderColor: '#828282',
     fontSize: 16,
+  },
+  errorText: {
+    color: 'purple',
+    fontSize: 12,
+    marginBottom: 10,
+    marginLeft: 4,
   },
   loginButton: {
     backgroundColor: '#FF7A00',

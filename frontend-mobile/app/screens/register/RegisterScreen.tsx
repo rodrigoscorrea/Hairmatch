@@ -22,6 +22,15 @@ export default function RegisterScreen() {
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
 
+  const validatePassword = (password: string): boolean => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const isValidLength = password.length >= minLength;
+
+    return hasUpperCase && hasLowerCase && hasNumber && isValidLength;
+  };
 
   const formatCPF = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11); 
@@ -31,7 +40,6 @@ export default function RegisterScreen() {
     if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   };
-  
   
   const formatCNPJ = (value: string) => {
     return value
@@ -58,35 +66,105 @@ export default function RegisterScreen() {
   
   const stripNonDigits = (value: string) => value.replace(/\D/g, '');
 
+  // Definição estática de todas as mensagens de erro
+  const ERROR_MESSAGES = {
+    first_name_required: "Nome é obrigatório",
+    last_name_required: "Sobrenome é obrigatório",
+    cpf_required: "CPF é obrigatório",
+    cpf_invalid: "CPF inválido. Deve conter 11 dígitos",
+    cnpj_required: "CNPJ é obrigatório",
+    cnpj_invalid: "CNPJ inválido. Deve conter 14 dígitos",
+    email_required: "Email é obrigatório",
+    email_invalid: "Email inválido. Por favor, digite um email válido",
+    phone_required: "Telefone é obrigatório",
+    phone_invalid: "Telefone inválido. Formato esperado: (XX)XXXXX-XXXX",
+    password_required: "Senha é obrigatória",
+    password_invalid: "Senha deve ter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula e um número",
+    confirm_password_required: "Confirmação de senha é obrigatória",
+    passwords_not_match: "As senhas não coincidem"
+  };
+
   const validateFields = () => {
     const newErrors: { [key: string]: boolean } = {};
-
-    if (!first_name) newErrors.first_name = true;
-    if (!last_name) newErrors.last_name = true;
-    if ((!isValidEmail(email)) || (!email) ) {
-      newErrors.email = true;
+    const errorList: string[] = []; // Lista para armazenar todos os erros encontrados
+    
+    // Verificar todos os campos e adicionar erros à lista
+    if (!first_name) {
+      newErrors.first_name = true;
+      errorList.push(ERROR_MESSAGES.first_name_required);
     }
-    if (!phone) newErrors.phone = true;
-    if (!password) newErrors.password = true;
-    if (!confirmPassword) newErrors.confirmPassword = true;
-    if (password !== confirmPassword) {
+    
+    if (!last_name) {
+      newErrors.last_name = true;
+      errorList.push(ERROR_MESSAGES.last_name_required);
+    }
+    
+    if (role === UserRole.CUSTOMER) {
+      const sanitizedCpf = stripNonDigits(cpf);
+      if (!cpf) {
+        newErrors.cpf = true;
+        errorList.push(ERROR_MESSAGES.cpf_required);
+      } else if (sanitizedCpf.length < 11) {
+        newErrors.cpf = true;
+        errorList.push(ERROR_MESSAGES.cpf_invalid);
+      }
+    } else {
+      const sanitizedCnpj = stripNonDigits(cnpj);
+      if (!cnpj) {
+        newErrors.cnpj = true;
+        errorList.push(ERROR_MESSAGES.cnpj_required);
+      } else if (sanitizedCnpj.length < 14) {
+        newErrors.cnpj = true;
+        errorList.push(ERROR_MESSAGES.cnpj_invalid);
+      }
+    }
+    
+    if (!email) {
+      newErrors.email = true;
+      errorList.push(ERROR_MESSAGES.email_required);
+    } else if (!isValidEmail(email)) {
+      newErrors.email = true;
+      errorList.push(ERROR_MESSAGES.email_invalid);
+    }
+    
+    if (!phone) {
+      newErrors.phone = true;
+      errorList.push(ERROR_MESSAGES.phone_required);
+    } else if (stripNonDigits(phone).length < 11) {
+      newErrors.phone = true;
+      errorList.push(ERROR_MESSAGES.phone_invalid);
+    }
+    
+    if (!password) {
+      newErrors.password = true;
+      errorList.push(ERROR_MESSAGES.password_required);
+    } else if (!validatePassword(password)) {
+      newErrors.password = true;
+      errorList.push(ERROR_MESSAGES.password_invalid);
+    }
+    
+    if (!confirmPassword) {
+      newErrors.confirmPassword = true;
+      errorList.push(ERROR_MESSAGES.confirm_password_required);
+    } else if (password !== confirmPassword) {
       newErrors.password = true;
       newErrors.confirmPassword = true;
+      errorList.push(ERROR_MESSAGES.passwords_not_match);
     }
-    if (role === UserRole.CUSTOMER && !cpf) newErrors.cpf = true;
-    if (role === UserRole.HAIRDRESSER && !cnpj) newErrors.cnpj = true;
-
-    const sanitizedCpf = stripNonDigits(cpf);
-    const sanitizedCnpj = stripNonDigits(cnpj);
-    const sanitizedPhone = stripNonDigits(phone);
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    if (errorList.length > 0) {
+      // Mostrar apenas o primeiro erro da lista
+      setErrorModalMessage(errorList[0]);
+      return false;
+    }
+    
+    return true;
   };
 
   const handleRegister = async () => {
     if (!validateFields()) {
-      setErrorModalMessage('Por favor, corrija os campos destacados.');
       setErrorModalVisible(true);
       return;
     }
@@ -177,7 +255,10 @@ export default function RegisterScreen() {
             style={[styles.input, errors.cpf && styles.inputError]}
             value={cpf}
             keyboardType="numeric"
-            onChangeText={(text) => setCpf(formatCPF(text))}
+            onChangeText={(text) => {
+              setCpf(formatCPF(text));
+              setErrors(prev => ({ ...prev, cpf: false }));
+            }}
           />
         ) : (
           <TextInput
@@ -185,7 +266,10 @@ export default function RegisterScreen() {
             style={[styles.input, errors.cnpj && styles.inputError]}
             value={cnpj}
             keyboardType="numeric"
-            onChangeText={(text) => setCnpj(formatCNPJ(text))}
+            onChangeText={(text) => {
+              setCnpj(formatCNPJ(text));
+              setErrors(prev => ({ ...prev, cnpj: false }));
+            }}
           />
         )}
 
@@ -206,7 +290,10 @@ export default function RegisterScreen() {
           style={[styles.input, errors.phone && styles.inputError]}
           keyboardType="phone-pad"
           value={phone}
-          onChangeText={(text) => setPhone(formatPhone(text))}
+          onChangeText={(text) => {
+            setPhone(formatPhone(text));
+            setErrors(prev => ({ ...prev, phone: false }));
+          }}
         />
 
         <TextInput
