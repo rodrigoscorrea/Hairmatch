@@ -10,11 +10,19 @@ import PreferencesScreen from './screens/register/PreferencesScreen';
 import HomeScreen from './screens/HomeScreen';
 import ServiceBookingScreen from './screens/customer/reservation/ServiceReservationScreen';
 import CustomerHomeScreen from './screens/customer/home/CustomerHomeScreen';
+import SearchScreen from './screens/customer/SearchScreen';
+import ProfileScreen from './screens/customer/ProfileScreen';
+import ReservesScreen from './screens/customer/ReservesScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
 import { AuthContextType } from './models/Auth.types';
 import { UserRole } from './models/User.types';
 import { Preference } from './models/Preferences.types';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { Customer } from './models/Customer.types';
+import { Hairdresser } from './models/Hairdresser.types';
+import { BottomTabProvider } from './contexts/BottomTabContext';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
@@ -22,11 +30,14 @@ export const AuthContext = React.createContext<any>({});
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+type IndexNavigationProp = StackNavigationProp<RootStackParamList>;
+
 function App() {
   const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<Customer | Hairdresser | null>(null);
+  const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
     signIn: async (email: string, password: string) => {
@@ -49,8 +60,10 @@ function App() {
           // Step 3: Fetch user info
           const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
           setUserInfo(userResponse.data);
+          return true;
         } else {
           console.log('Authentication failed');
+          return false;
         }
       } catch (error: any) {
         console.error('Login error:', error.response?.data || error.message);
@@ -181,16 +194,26 @@ function App() {
 
   return (
     <AuthContext.Provider value={authContext}>
+      {userToken == null ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
           <Stack.Screen name="Preferences" component={PreferencesScreen} />
-          <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
-          <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
-          <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
-          <Stack.Screen name="Home" component={HomeScreen} />
         </Stack.Navigator>
+      ) : (
+        <BottomTabProvider>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="CustomerHome" component={CustomerHomeScreen}/>
+            <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+            <Stack.Screen name="HairdresserProfileReservation" component={HairdresserProfileReservationScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Search" component={SearchScreen} />
+            <Stack.Screen name="Reserves" component={ReservesScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+          </Stack.Navigator>
+        </BottomTabProvider>
+      )}
     </AuthContext.Provider>
   );
 }

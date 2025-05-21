@@ -7,7 +7,7 @@ import json
 from django.http import JsonResponse
 from users.models import User, Customer, Hairdresser
 from reserve.models import Reserve
-from reserve.serializers import ReserveSerializer
+from reserve.serializers import ReserveSerializer, ReserveFullInfoSerializer
 from service.models import Service
 from agenda.models import Agenda
 from availability.models import Availability
@@ -64,7 +64,7 @@ class ListReserve(APIView):
                 return JsonResponse({'error': 'Customer not found'}, status=404)
             
             reserves = Reserve.objects.filter(customer=customer_id)
-            result = ReserveSerializer(reserves, many=True).data
+            result = ReserveFullInfoSerializer(reserves, many=True).data
             return JsonResponse({'data': result}, status=200)
             
         reserves = Reserve.objects.all()

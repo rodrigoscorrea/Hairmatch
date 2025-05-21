@@ -20,3 +20,13 @@ export const createReserve = async (reserveData: any) => {
         throw error;
     }
 }
+
+export const getCustomerReserves = async (customerId: string | number) => {
+    try {
+        const response = await axios.get(`${API_BACKEND_URL}/api/reserve/list/${customerId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error in get Reserve by customer:", error);
+        throw error;
+    }
+}

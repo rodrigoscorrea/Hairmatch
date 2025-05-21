@@ -31,6 +31,7 @@ class ReviewsTestCase(TestCase):
             "role": "customer",
             "cpf": "12345678901",
             "rating": 4.5,
+            "preferences": []
         }
         
         # Hairdresser user
@@ -51,7 +52,8 @@ class ReviewsTestCase(TestCase):
             "role": "hairdresser",
             "cnpj": "12345678901234",
             "experience_years": 5,
-            "resume": "Professional hairdresser with extensive experience"
+            "resume": "Professional hairdresser with extensive experience",
+            "preferences": []
         }
         
         # Register users
@@ -329,7 +331,8 @@ class UpdateReviewTest(ReviewsTestCase):
             "rating": 4.0,
             "number": "789",
             "postal_code": "69050750",
-            "role": "customer"
+            "role": "customer",
+            "preferences": []
         }
         
         self.client.post(

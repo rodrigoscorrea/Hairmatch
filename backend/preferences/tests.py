@@ -14,7 +14,6 @@ class PreferencesTestCase(TestCase):
         self.client = APIClient()
         self.create_url = reverse('create_preferences')
         self.list_all_url = reverse('list_all_preferences')
-        self.list_users = reverse('list_users_per_preference', args=[1])  # Assuming preference ID 1 for testing
         self.login_url = reverse('login')
         self.register_url = reverse('register')
         
@@ -35,6 +34,7 @@ class PreferencesTestCase(TestCase):
             "role": "customer",
             "cpf": "12345678901",
             "rating": 4.5,
+            "preferences": []
         }
         
         # Register user
@@ -86,7 +86,6 @@ class CreatePreferencesTest(PreferencesTestCase):
     
     def test_create_preferences_with_picture(self):
         """Test creating preference with a picture"""
-        # This is a simplified test as we can't actually upload files in test
         preference_data = {
             'name': 'Curly Hair',
             'picture': 'test_image_path.jpg'
@@ -154,6 +153,8 @@ class ListPreferencesTest(PreferencesTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)  # Only the 2 assigned preferences
+
+
 class ListUsersPerPreferenceTest(PreferencesTestCase):
     def setUp(self):
         super().setUp()
@@ -177,6 +178,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             "role": "professional",
             "cpf": "98765432109",
             "rating": 4.8,
+            "preferences": []
         }
         
         # Register user2
@@ -230,7 +232,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
         self.assertIn('data', response.data)
         self.assertEqual(len(response.data['data']), 1)  # Should return 1 user for preference2
         
-        # Verificar os campos que realmente são retornados pelo UserNameSerializer
+        # Verify fields that are actually returned by UserNameSerializer
         user_data = response.data['data'][0]
         self.assertEqual(user_data['id'], self.user2.id)
         self.assertEqual(user_data['first_name'], self.user2_payload['first_name'])
@@ -349,6 +351,8 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         response = self.client.post(assign_url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Refresh the preference from the database to get updated users
+        self.preference.refresh_from_db()
         self.assertTrue(self.user in self.preference.users.all())
     
     def test_assign_preference_no_auth(self):
@@ -376,6 +380,75 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
+class AssignPreferenceToUserNoCookieTest(PreferencesTestCase):
+    def test_assign_preference_to_user_no_cookie_success(self):
+        """Test successfully assigning a preference to a user without cookie authentication"""
+        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
+        
+        data = {
+            'user_id': self.user.id
+        }
+        
+        response = self.client.post(
+            assign_url,
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Refresh the preference from the database to get updated users
+        self.preference.refresh_from_db()
+        self.assertTrue(self.user in self.preference.users.all())
+    
+    def test_assign_preference_no_cookie_missing_user_id(self):
+        """Test assigning a preference without providing user_id"""
+        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
+        
+        data = {}  # Empty data, missing user_id
+        
+        response = self.client.post(
+            assign_url,
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(self.user in self.preference.users.all())
+    
+    def test_assign_preference_no_cookie_invalid_user_id(self):
+        """Test assigning a preference with invalid user_id"""
+        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
+        
+        data = {
+            'user_id': 999  # Non-existent user ID
+        }
+        
+        response = self.client.post(
+            assign_url,
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(self.user in self.preference.users.all())
+    
+    def test_assign_preference_no_cookie_nonexistent_preference(self):
+        """Test assigning a non-existent preference with no_cookie method"""
+        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[999])  # Non-existent preference ID
+        
+        data = {
+            'user_id': self.user.id
+        }
+        
+        response = self.client.post(
+            assign_url,
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 class UnassignPreferenceFromUserTest(PreferencesTestCase):
     def test_unassign_preference_from_user_success(self):
         """Test successfully unassigning a preference from a user"""
@@ -394,6 +467,8 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         response = self.client.post(unassign_url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Refresh the preference from the database to get updated users
+        self.preference.refresh_from_db()
         self.assertFalse(self.user in self.preference.users.all())
     
     def test_unassign_preference_no_auth(self):
@@ -406,6 +481,7 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         response = self.client.post(unassign_url)
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # The user should still be assigned to the preference
         self.assertTrue(self.user in self.preference.users.all())
     
     def test_unassign_preference_not_found(self):
@@ -422,3 +498,20 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         response = self.client.post(unassign_url)
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unassign_preference_user_not_assigned(self):
+        """Test unassigning a preference that was not assigned to the user"""
+        # Login as user (without adding the user to the preference)
+        login_response = self.login_user()
+        
+        # Set the JWT token in the client's cookies
+        token = login_response.data['jwt']
+        self.client.cookies['jwt'] = token
+        
+        unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+        
+        response = self.client.post(unassign_url)
+        
+        # Should still return 200 even though nothing changed (idempotent operation)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.user in self.preference.users.all())
