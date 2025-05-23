@@ -13,6 +13,8 @@ import CustomerHomeScreen from './screens/customer/home/CustomerHomeScreen';
 import SearchScreen from './screens/customer/SearchScreen';
 import ProfileScreen from './screens/customer/ProfileScreen';
 import ReservesScreen from './screens/customer/ReservesScreen';
+import ProfessionalStory from './screens/register/ProfessionalStory';
+import DescriptionScreen from './screens/register/DescriptionScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
 import { AuthContextType } from './models/Auth.types';
@@ -89,7 +91,10 @@ function App() {
       rating: number,
       cpf?: string,
       cnpj?: string,
-      preferences?: Preference[]
+      preferences?: Preference[],
+      experience_time?: string,
+      experiences?: string,
+      products?: string
     ) => {
       setIsLoading(true);
       try {
@@ -129,7 +134,10 @@ function App() {
               role,
               rating,
               cnpj,
-              preferences
+              preferences,
+              experience_time,
+              experiences,
+              products
             };  
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, userData);
         return response.data;
@@ -200,6 +208,8 @@ function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Address" component={AddressScreen} />
           <Stack.Screen name="Preferences" component={PreferencesScreen} />
+          <Stack.Screen name="ProfessionalStory" component={ProfessionalStory} />
+          <Stack.Screen name="Description" component={DescriptionScreen} />
         </Stack.Navigator>
       ) : (
         <BottomTabProvider>

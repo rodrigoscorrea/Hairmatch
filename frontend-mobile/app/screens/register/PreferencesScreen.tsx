@@ -6,6 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { listPreferences } from '@/app/services/preferences.service';
 import { Preference } from '@/app/models/Preferences.types';
+import { UserRole } from '@/app/models/User.types';
 
 type PreferencesScreenRouteProp = RouteProp<RootStackParamList, 'Preferences'>;
 type PreferencesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -208,7 +209,40 @@ export default function PreferencesScreen() {
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text style={styles.finishButtonText}>Finalizar</Text>
+              <>
+                {personalData.role === UserRole.CUSTOMER ? (
+                      <>
+                        <TouchableOpacity
+                        style={styles.modalAcceptButton}
+                        onPress={() => {
+                            setShowSkipModal(false);
+                            handleFinishRegistration();
+                        }}
+                        >
+                          <Text style={styles.modalAcceptButtonText}>Finalizar</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={styles.modalAcceptButton}
+                          onPress={() => {
+                              setShowSkipModal(false);
+                              navigation.navigate(
+                                'ProfessionalStory', 
+                                { 
+                                  personalData: personalData, 
+                                  addressData: addressData, 
+                                  preferences: selectedPreferences
+                                }
+                              )
+                          }}
+                        >
+                          <Text style={styles.modalAcceptButtonText}>Próximo</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+              </>
             )}
           </TouchableOpacity>
         </View>

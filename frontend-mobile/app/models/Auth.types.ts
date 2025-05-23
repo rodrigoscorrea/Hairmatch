@@ -19,7 +19,10 @@ export interface AuthContextType {
     rating: number,
     cpf?: string,
     cnpj?: string,
-    preferences?: Preference[]
+    preferences?: Preference[],
+    experience_time?: string,
+    experiences?: string,
+    products?: string
   ) => Promise<any>;
   signOut?: () => Promise<void>;
   getUserInfo: () => Promise<any>; 
