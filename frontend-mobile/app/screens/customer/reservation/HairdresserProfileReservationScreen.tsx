@@ -32,7 +32,6 @@ type HairdresserProfileReservationScreenRouteProp = RouteProp<RootStackParamList
 type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export default function HairdresserProfileReservationScreen() {
-  //const [hairdresser, setHairdresser] = useState<HairdresserResponse>();
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
   const [preferences, setPreferences] = useState<PreferencesResponse[]>();
@@ -44,14 +43,6 @@ export default function HairdresserProfileReservationScreen() {
   const hairdresser = route.params.hairdresser;
   
   useEffect(() => {
-    /* const fetchHairdresserData = async () => {
-      try {
-        const hairdresserResponse = await getHairdresser('rodrigosc616@gmail.com');
-        setHairdresser(hairdresserResponse.data);
-      } catch (err) {
-        console.error("Failed to fetch hairdresser:", err);
-      } 
-    }; */
     const fetchHairdresserAvailability = async () => {
       try {
         const availabilityResponse = await listAvailabilitiesByHairdresser(hairdresser.id)
@@ -78,7 +69,6 @@ export default function HairdresserProfileReservationScreen() {
       }
     }
     
-    //fetchHairdresserData();
     fetchHairdresserAvailability();
     fetchHairdresserService();
     fetchHairdresserPreferences();

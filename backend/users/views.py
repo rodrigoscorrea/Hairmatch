@@ -72,7 +72,8 @@ class RegisterView(APIView):
                 cnpj=data['cnpj'],
                 experience_time=data['experience_time'],
                 experiences=data['experiences'],
-                products=data['products']
+                products=data['products'],
+                resume=data['resume']
             )
 
         return JsonResponse({'message': f"{data['role']} user registered successfully"}, status=201)

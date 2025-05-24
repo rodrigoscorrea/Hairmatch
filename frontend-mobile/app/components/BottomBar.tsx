@@ -32,10 +32,19 @@ const tabs = [
   }
 ];
 
+const hairdresserTabs = [
+  {
+    name: 'HairdresserProfile',
+    icon: 'person-outline',
+    activeIcon: 'person',
+    route: 'HairdresserProfile'
+  }
+]
+
 const BottomTabBar: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { activeTab, setActiveTab, customer } = useBottomTab();
+  const { activeTab, setActiveTab, customer, hairdresser } = useBottomTab();
 
   const isActive = (tabRoute: string): boolean => {
     // If activeTab from context is provided, use it, otherwise use the current route name
@@ -51,7 +60,10 @@ const BottomTabBar: React.FC = () => {
       if (customer) {
         // @ts-ignore - We're ignoring the type error because navigation props vary
         navigation.navigate(tabRoute, { customer });
-      } else {
+      } else if (hairdresser) {
+        // @ts-ignore - We're ignoring the type error because navigation props vary
+        navigation.navigate(hairdresserTabs, { hairdresser });
+      }else {
         // @ts-ignore
         navigation.navigate(tabRoute);
       }
@@ -70,18 +82,38 @@ const BottomTabBar: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.name}
-          style={styles.tabItem}
-          onPress={() => handleTabPress(tab.route)}
-        >
-          {renderIcon(
-            isActive(tab.route) ? tab.activeIcon : tab.icon,
-            isActive(tab.route)
-          )}
-        </TouchableOpacity>
-      ))}
+      {customer ? (
+        <>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.name}
+              style={styles.tabItem}
+              onPress={() => handleTabPress(tab.route)}
+            >
+              {renderIcon(
+                isActive(tab.route) ? tab.activeIcon : tab.icon,
+                isActive(tab.route)
+              )}
+            </TouchableOpacity>
+          ))}
+        </>
+      ):(
+        <>
+          {hairdresserTabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.name}
+              style={styles.tabItem}
+              onPress={() => handleTabPress(tab.route)}
+            >
+              {renderIcon(
+                isActive(tab.route) ? tab.activeIcon : tab.icon,
+                isActive(tab.route)
+              )}
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+      
     </View>
   );
 };

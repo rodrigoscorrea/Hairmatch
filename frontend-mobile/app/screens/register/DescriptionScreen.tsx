@@ -9,7 +9,7 @@ type DescriptionScreenRouteProp = RouteProp<RootStackParamList, 'Description'>;
 type DescriptionScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const DescriptionScreen = () => {
-  const [description, setDescription] = useState('');
+  const [resume, setResume] = useState('');
   const navigation = useNavigation<DescriptionScreenNavigationProp>();
   const route = useRoute<DescriptionScreenRouteProp>();
   const { personalData, addressData, preferences, professionalStory } = route.params;
@@ -45,7 +45,8 @@ const DescriptionScreen = () => {
         preferences,
         experience_time,
         experiences,
-        products
+        products,
+        resume
       );
       Alert.alert(
         'Sucesso', 
@@ -68,8 +69,8 @@ const DescriptionScreen = () => {
         placeholder="Insira aqui a sua descrição detalhada para que atraia mais clientes"
         placeholderTextColor="#aaa"
         multiline
-        value={description}
-        onChangeText={setDescription}
+        value={resume}
+        onChangeText={setResume}
       />
 
       <View style={styles.buttonContainer}>

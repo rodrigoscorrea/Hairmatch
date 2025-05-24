@@ -22,7 +22,7 @@ export default function HomeScreen() {
   };
 
   const handleMock = async () =>{
-    navigation.navigate('MockedHairdresserProfile')
+    navigation.navigate('HairdresserProfile')
   }
 
   const handleCustomerHome = async () =>{

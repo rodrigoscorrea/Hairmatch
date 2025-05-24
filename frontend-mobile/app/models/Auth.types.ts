@@ -22,7 +22,8 @@ export interface AuthContextType {
     preferences?: Preference[],
     experience_time?: string,
     experiences?: string,
-    products?: string
+    products?: string,
+    resume?: string
   ) => Promise<any>;
   signOut?: () => Promise<void>;
   getUserInfo: () => Promise<any>; 
