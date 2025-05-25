@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
@@ -10,13 +10,19 @@ type DescriptionScreenRouteProp = RouteProp<RootStackParamList, 'Description'>;
 type DescriptionScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const DescriptionScreen = () => {
-  const [resume, setResume] = useState('');
-  const [aiDescriptionRequest, setAiDescriptionRequest] = useState<boolean>(false);
   const navigation = useNavigation<DescriptionScreenNavigationProp>();
   const route = useRoute<DescriptionScreenRouteProp>();
-  const { personalData, addressData, preferences, professionalStory } = route.params;
+
+  const [resume, setResume] = useState('');
   const { signUp } = useContext<any>(AuthContext);
-  const [showSkipModal, setShowSkipModal] = useState<boolean>();
+
+  // Modal and Load handling
+  const [aiDescriptionRequest, setAiDescriptionRequest] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showAiDescriptionModal, setShowAiDescriptionModal] = useState<boolean>();
+
+  //Data retrieval
+  const { personalData, addressData, preferences, professionalStory } = route.params;
   const { first_name, last_name, phone, email, password, role, cpf, cnpj } = personalData;
   const { address, number, complement, neighborhood, postal_code, city, state } = addressData;
   const { experience_time, experiences, products } = professionalStory
@@ -24,11 +30,13 @@ const DescriptionScreen = () => {
   useEffect(()=>{
     const requestAIDescription = async () => {
       if(aiDescriptionRequest) {
-        const responseData: any = await requestAiResume({
+        setIsLoading(true);
+        const responseData: string = await requestAiResume({
           first_name, last_name, experience_time, 
           experiences, products, preferences
         });
-        setResume(responseData.result);
+        setResume(responseData);
+        setIsLoading(false);
       }
     }
     requestAIDescription();
@@ -40,10 +48,6 @@ const DescriptionScreen = () => {
 
   const handleFinish = async () => {
     try {
-      /* const { first_name, last_name, phone, email, password, role, cpf, cnpj } = personalData;
-      const { address, number, complement, neighborhood, postal_code, city, state } = addressData;
-      const { experience_time, experiences, products } = professionalStory */
-
       await signUp(
         first_name, 
         last_name,
@@ -82,14 +86,22 @@ const DescriptionScreen = () => {
       <Text style={styles.title}>Descrição Profissional</Text>
       <Text style={styles.subtitle}>Esse texto será a descrição do seu perfil</Text>
 
-      <TextInput
-        style={styles.textArea}
-        placeholder="Insira aqui a sua descrição detalhada para que atraia mais clientes"
-        placeholderTextColor="#aaa"
-        multiline
-        value={resume}
-        onChangeText={setResume}
-      />
+      {isLoading ? (
+        <>
+          <ActivityIndicator size="large" />
+        </>
+      ):(
+        <>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Insira aqui a sua descrição detalhada para que atraia mais clientes"
+            placeholderTextColor="#aaa"
+            multiline
+            value={resume}
+            onChangeText={setResume}
+          />
+        </>
+      )}
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -100,7 +112,7 @@ const DescriptionScreen = () => {
         </TouchableOpacity>
       </View>
       <Modal
-        visible={showSkipModal}
+        visible={showAiDescriptionModal}
         transparent
         animationType="fade"
         >
@@ -114,14 +126,14 @@ const DescriptionScreen = () => {
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity
                 style={styles.modalBackButton}
-                onPress={() => setShowSkipModal(false)}
+                onPress={() => setShowAiDescriptionModal(false)}
                 >
                 <Text style={styles.modalBackButtonText}>Pular</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                 style={styles.modalAcceptButton}
                 onPress={() => {
-                    setShowSkipModal(false);
+                    setShowAiDescriptionModal(false);
                     setAiDescriptionRequest(true);
                 }}
                 >
