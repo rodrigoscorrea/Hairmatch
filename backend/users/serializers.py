@@ -29,7 +29,7 @@ class HairdresserFullInfoSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = Hairdresser
-        fields = '__all__'
+        exclude = ['cnpj']
 
 class HairdresserNameSerializer(serializers.ModelSerializer):
     user = UserNameSerializer(read_only=True)

@@ -15,3 +15,13 @@ export const getCustomerHomeInfo = async (email?: string | undefined) => {
         throw error;
     }
 }
+
+export const requestAiResume = async (data: any) => {
+    try {
+        const response: any = await axios.post(`${API_BACKEND_URL}/api/hairdresser/gemini_completion`, data)
+        return response.data
+    } catch (error) {
+        console.error("Error in request Ai resume:", error);
+        throw error;
+    }
+}

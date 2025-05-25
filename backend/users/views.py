@@ -9,7 +9,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 import jwt, datetime
-from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer
+from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
+from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -360,3 +361,9 @@ class CustomerHomeView(APIView):
             'hairdressers_by_preferences': preference_hairdressers
         }     
         return JsonResponse(response_data, status=200)
+    
+class GeminiChatView(APIView):
+    def post(self, request):
+        data = json.loads(request.body)
+        result = hairdresser_profile_ai_completion(data)
+        return result
