@@ -15,23 +15,37 @@ class UserNameSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'first_name', 'last_name']
 
+#
+# HAIRDRESSERS SERIALIZERS 
+#
+
 class HairdresserSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = Hairdresser
-        fields = '__all__'
+        exclude = ('experience_time', 'products', 'experiences', 'experience_years') 
 
-class CustomerSerializer(serializers.ModelSerializer):
+class HairdresserFullInfoSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
-        model = Customer
-        fields = '__all__'
+        model = Hairdresser
+        exclude = ['cnpj']
 
 class HairdresserNameSerializer(serializers.ModelSerializer):
     user = UserNameSerializer(read_only=True)
     class Meta:
         model = Hairdresser
         fields = ['id', 'user']
+
+#
+# CUSTOMER SERIALIZERS 
+#
+
+class CustomerSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Customer
+        fields = '__all__'
 
 class CustomerNameSerializer(serializers.ModelSerializer):
     user = UserNameSerializer(read_only=True)

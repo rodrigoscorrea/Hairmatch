@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, LoginView, LogoutView, UserInfoCookieView, UserInfoView, ChangePasswordView, CustomerHomeView
+from .views import RegisterView, LoginView, LogoutView, UserInfoCookieView, UserInfoView, ChangePasswordView, CustomerHomeView, GeminiChatView
 
 urlpatterns = [
     path('auth/register', RegisterView.as_view(), name='register'),
@@ -13,4 +13,5 @@ urlpatterns = [
     path('customer/home', CustomerHomeView.as_view(), name='customer_home_info'),
     path('customer/home/<str:email>', CustomerHomeView.as_view(), name='customer_home_info'),
 
+    path('hairdresser/gemini_completion', GeminiChatView.as_view(), name='gemini_completion'),
 ]

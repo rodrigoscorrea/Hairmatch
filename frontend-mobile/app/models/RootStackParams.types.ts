@@ -53,4 +53,54 @@ export type RootStackParamList = {
     customer: any;
   };
   Profile: any | undefined;
+  Description: {
+    personalData: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+      email: string;
+      cnpj?: string;
+      cpf?: string;
+      password: string;
+      role: string;
+    },
+    addressData: {
+      address: string;
+      number: string;
+      complement: string;
+      neighborhood: string;
+      postal_code: string;
+      city: string;
+      state: string;
+    } 
+    preferences: number[]
+    professionalStory: {
+      experience_time: string, 
+      experiences: string, 
+      products: string
+    }
+  }
+  ProfessionalStory:{ 
+    personalData: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+      email: string;
+      cnpj?: string;
+      cpf?: string;
+      password: string;
+      role: string;
+    },
+    addressData: {
+      address: string;
+      number: string;
+      complement: string;
+      neighborhood: string;
+      postal_code: string;
+      city: string;
+      state: string;
+    } 
+    preferences: number[]
+  }
+  HairdresserProfile: any | undefined
 };
