@@ -25,5 +25,11 @@ export const styles = StyleSheet.create({
       color: colors.black,
       fontWeight: 'bold',
     },
+    activeIcon:{
+      color: colors.primary,
+    },
+    inactiveIcon:{
+      color: colors.black
+    }
   });
   

@@ -64,7 +64,7 @@ const BottomTabBar: React.FC = () => {
       <Ionicons
         name={iconName as any}
         size={24}
-        color={isActive ? '#FF6600' : '#666'}
+        style={isActive ? styles.activeIcon : styles.inactiveIcon}
       />
     );
   };
