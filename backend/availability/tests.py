@@ -32,7 +32,11 @@ class CreateAvailabilityTest(TestCase):
             "cnpj": "12345678901212",
             "experience_years": 4,
             "resume": "ele é legal e joga bem",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
     def test_create_availability_success(self):
@@ -182,7 +186,11 @@ class CreateMultipleAvailabilityTest(TestCase):
             "cnpj": "12345678901212",
             "experience_years": 4,
             "resume": "ele é legal e joga bem",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register and get hairdresser
@@ -375,7 +383,11 @@ class ListAvailabilityTest(TestCase):
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register hairdresser
@@ -459,7 +471,11 @@ class RemoveAvailabilityTest(TestCase):
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register hairdresser
@@ -523,7 +539,11 @@ class UpdateAvailabilityTest(TestCase):
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register hairdresser

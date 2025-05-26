@@ -1,5 +1,6 @@
 import axios from 'axios'; 
 import { API_BACKEND_URL } from '../index';
+import { HairdresserDescriptionAIRequest } from '../models/Hairdresser.types';
 
 export const getCustomerHomeInfo = async (email?: string | undefined) => {
     try {
@@ -12,6 +13,16 @@ export const getCustomerHomeInfo = async (email?: string | undefined) => {
         return response.data;
     } catch (error) {
         console.error("Error in get customer home info:", error);
+        throw error;
+    }
+}
+
+export const requestAiResume = async (data: HairdresserDescriptionAIRequest) => {
+    try {
+        const response: any = await axios.post(`${API_BACKEND_URL}/api/hairdresser/gemini_completion`, data)
+        return response.data.result
+    } catch (error) {
+        console.error("Error in request Ai resume:", error);
         throw error;
     }
 }

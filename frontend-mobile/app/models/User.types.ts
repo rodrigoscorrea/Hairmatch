@@ -1,3 +1,4 @@
+import { Customer } from "./Customer.types"
 import { Hairdresser } from "./Hairdresser.types"
 
 export enum UserRole {
@@ -46,4 +47,9 @@ export interface CustomerHomeInfoResponse {
         barbearia: Hairdresser[]
         trancas: Hairdresser[]
     }
+}
+
+export interface UserInfo {
+    hairdresser?: Hairdresser
+    customer?: Customer
 }

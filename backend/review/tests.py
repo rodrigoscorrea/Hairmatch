@@ -53,7 +53,11 @@ class ReviewsTestCase(TestCase):
             "cnpj": "12345678901234",
             "experience_years": 5,
             "resume": "Professional hairdresser with extensive experience",
-            "preferences": []
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register users
@@ -445,11 +449,9 @@ class RemoveReviewAdminTest(ReviewsTestCase):
         """Test admin can delete any review without authentication"""
         delete_url = reverse('remove_review', args=[self.review.id])
         
-        # No login required for admin delete (according to your implementation)
         admin_delete_url = reverse('remove_review', args=[self.review.id])
         
         response = self.client.delete(admin_delete_url)
         
-        # Your implementation doesn't check for admin status, it just deletes
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Review.objects.count(), 0)

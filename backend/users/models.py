@@ -47,3 +47,6 @@ class Hairdresser(models.Model):
     experience_years = models.IntegerField(blank=True, null=True)
     resume = models.TextField(blank=True, null=True)
     cnpj = models.CharField(max_length=14, blank=False, null=False)
+    experience_time = models.CharField(max_length=255, blank=True, null=True)
+    experiences = models.CharField(max_length=255, blank=True, null=True)
+    products = models.CharField(max_length=255, blank=True, null=True)
