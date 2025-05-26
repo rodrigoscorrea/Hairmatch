@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
       paddingBottom: 40,
     },
     header: {
-      marginTop: 60,
+      marginTop: 15,
       alignItems: 'center',
     },
     title: {
@@ -23,8 +23,9 @@ export const styles = StyleSheet.create({
       color: colors.textPrimary,
     },
     titleContainer: {
-      marginTop: 30,
+      marginTop: 10,
       marginBottom: 20,
+      alignItems: 'center',
     },
     preferencesTitle: {
       fontSize: 20,
@@ -35,6 +36,7 @@ export const styles = StyleSheet.create({
       fontSize: 14,
       color: colors.textSecondary,
       marginTop: 5,
+      textAlign: 'center',
     },
     loader: {
       marginVertical: 40,
@@ -42,7 +44,7 @@ export const styles = StyleSheet.create({
     preferencesContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       marginTop: 20,
     },
     preferenceButton: {
