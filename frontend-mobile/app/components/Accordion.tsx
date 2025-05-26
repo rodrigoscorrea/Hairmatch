@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { styles } from './styles/AccordionStyle';
 
 type AccordionProps = {
   title: string;
@@ -26,23 +27,3 @@ export const Accordion: React.FC<AccordionProps> = ({ title, children }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFF2EC',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  content: {
-    marginTop: 8,
-  },
-});
