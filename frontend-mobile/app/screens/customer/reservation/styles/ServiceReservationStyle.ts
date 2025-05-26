@@ -128,6 +128,11 @@ export const styles = StyleSheet.create({
       alignItems: 'center',
       padding: 20,
     },
+    modalReserveInformations: {
+      marginBottom: 25,
+      fontWeight: 400,
+      marginTop: 5
+    },
     modalContainer: {
       backgroundColor: colors.secondary,
       borderRadius: 20,

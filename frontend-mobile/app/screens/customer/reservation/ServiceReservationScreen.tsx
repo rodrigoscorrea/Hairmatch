@@ -233,11 +233,11 @@ export default function ServiceBookingScreen() {
             <Text style={styles.modalText}>
                 Cheque todos os dados sobre seu agendamento abaixo e clique em Confirmar Agendamento para prosseguir.
             </Text>
-            <View style={{marginBottom: 25}}>
-              <Text style={{fontWeight: 400}}>Serviço selecionado: {service.name}</Text> 
-              <Text style={{marginTop: 5, fontWeight: 400}}>Data de realização do serviço: {formatDate(selectedDate)}</Text>
-              <Text style={{marginTop: 5, fontWeight: 400}}>Horário de realização do serviço: {selectedTime}</Text>
-              <Text style={{marginTop: 5, fontWeight: 400}}>Valor do serviço: R$ {service.price}</Text>
+            <View style={styles.modalReserveInformations}>
+              <Text >Serviço selecionado: {service.name}</Text> 
+              <Text >Data de realização do serviço: {formatDate(selectedDate)}</Text>
+              <Text >Horário de realização do serviço: {selectedTime}</Text>
+              <Text >Valor do serviço: R$ {service.price}</Text>
             </View>
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity
