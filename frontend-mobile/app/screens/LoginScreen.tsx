@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../models/RootStackParams.types';
+import { Ionicons } from '@expo/vector-icons';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { signIn } = useContext<any>(AuthContext);
 
@@ -50,6 +52,10 @@ const LoginScreen = () => {
     setErrorModalVisible(false);
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -67,15 +73,24 @@ const LoginScreen = () => {
           keyboardType="email-address"
           autoCapitalize="none"
         />
-
+        
         <Text style={styles.inputLabel}>Insira sua senha</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="****"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.passwordContainer}> 
+          <TextInput
+            style={styles.inputInner} 
+            placeholder="****"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIconAbsolute}>
+            <Ionicons
+              name={showPassword ? 'eye' : 'eye-off'}
+              size={24}
+              color="#888"
+            />
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.loginButtonText}>Entrar</Text>

@@ -77,6 +77,28 @@ export const styles = StyleSheet.create({
       paddingVertical: 12,
       marginVertical: 5,
     },
+    passwordContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'white',
+      borderRadius: 10,
+      width: '100%',
+      marginVertical: 5,
+      position: 'relative', 
+      paddingHorizontal: 15, 
+    },
+    inputInner: {
+      flex: 1, 
+      paddingVertical: 12, 
+      fontSize: 16,
+      color: '#333',
+      paddingRight: 40, 
+    },
+    eyeIconAbsolute: {
+      position: 'absolute',
+      right: 15,
+      paddingVertical: 5, 
+    },
     button: {
       backgroundColor: colors.primary,
       borderRadius: 10,

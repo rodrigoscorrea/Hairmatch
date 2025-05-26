@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, Alert, ScrollView } fro
 import { styles } from './styles/RegisterStyle';
 import { useNavigation } from '@react-navigation/native';
 import { UserRole } from '@/app/models/User.types';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
@@ -18,7 +19,16 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const togglePasswordConfirmVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
   return (
     <ScrollView>
       <View style={styles.container}>
@@ -116,21 +126,39 @@ export default function RegisterScreen() {
         onChangeText={setPhone}
       />
 
-      <TextInput
-        placeholder="Senha"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Senha"
+          style={styles.inputInner}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIconAbsolute}>
+            <Ionicons
+              name={showPassword ? 'eye' : 'eye-off'}
+              size={24}
+              color="#888"
+            />
+        </TouchableOpacity>
+      </View>
 
-      <TextInput
-        placeholder="Confirme sua senha"
-        style={styles.input}
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Confirme sua senha"
+          style={styles.inputInner}
+          secureTextEntry={!showConfirmPassword}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+        <TouchableOpacity onPress={togglePasswordConfirmVisibility} style={styles.eyeIconAbsolute}>
+            <Ionicons
+              name={showConfirmPassword ? 'eye' : 'eye-off'}
+              size={24}
+              color="#888"
+            />
+        </TouchableOpacity>
+      </View>
 
       {/* Botão Próximo */}
       <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address', {personalData: {
