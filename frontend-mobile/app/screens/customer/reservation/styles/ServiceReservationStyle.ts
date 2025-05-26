@@ -11,11 +11,13 @@ export const styles = StyleSheet.create({
       display: 'flex',
       flexDirection: 'row',
       justifyContent: 'space-between',
+      width: "100%"
     },
     clockIconContainer: {
       display: 'flex',
       flexDirection: 'row',
-      alignContent: 'center'
+      alignContent: 'center',
+      marginTop: 2
     },
     clockIcon:{
       marginTop: 5

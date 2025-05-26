@@ -147,8 +147,8 @@ export default function ServiceBookingScreen() {
       <View style={styles.titleContainer}>  
         <Text style={styles.title}>{service.name}</Text>
         <View style={styles.clockIconContainer}>
-          <FontAwesome6 style={styles.clockIcon} name="clock" size={20} color="black" />
-          <Text style={[styles.title, {marginLeft: 5}]}>{serviceTimeFormater(service.duration)}</Text>
+          <FontAwesome6 style={styles.clockIcon} name="clock" size={18} color="black" />
+          <Text style={[styles.title, {marginLeft: 5, fontSize:18}]}>{serviceTimeFormater(service.duration)}</Text>
         </View>
         
       </View>
