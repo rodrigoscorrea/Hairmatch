@@ -59,86 +59,74 @@ export default function Address() {
   };
 
   return (
-    <ScrollView>
-      <KeyboardAvoidingView style={styles.container}>
-      {/* Parte superior */}
-      <View style={styles.header}>
-        <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
-        <Text style={styles.subtitle}>Informe seu endereço</Text>
-      </View>
-
-      {/* Inputs centralizados */}
-      <View style={styles.form}>
-        <View style={styles.row}>
-          <TextInput
-            placeholder="Endereço"
-            style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={address}
-            onChangeText={setAddress}
-          />
-          <TextInput
-            placeholder="Número"
-            style={[styles.input, { flex: 1 }]}
-            value={number}
-            onChangeText={setNumber}
-          />
+    <KeyboardAvoidingView style={{ flex: 1 }} > 
+      <ScrollView contentContainerStyle={styles.container}> 
+        <View style={styles.header}>
+          <Image source={require('../../../assets/images/HairmatchLogo.png')} />
+          <Text style={styles.subtitle}>Informe seu endereço</Text>
         </View>
-
-        <TextInput
-          placeholder="Complemento"
-          style={styles.input}
-          value={complement}
-          onChangeText={setComplement}
-        />
-
-        <View style={styles.row}>
+        <View style={styles.form}>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Endereço"
+              style={[styles.input, { flex: 2, marginRight: 5 }]}
+              value={address}
+              onChangeText={setAddress}
+            />
+            <TextInput
+              placeholder="Número"
+              style={[styles.input, { flex: 1 }]}
+              value={number}
+              onChangeText={setNumber}
+            />
+          </View>
           <TextInput
-            placeholder="Bairro"
-            style={[styles.input, { flex: 1, marginRight: 5 }]}
-            value={neighborhood}
-            onChangeText={setNeighborhood}
+            placeholder="Complemento"
+            style={styles.input}
+            value={complement}
+            onChangeText={setComplement}
           />
-          <TextInput
-            placeholder="CEP"
-            style={[styles.input, { flex: 1 }]}
-            value={postal_code}
-            onChangeText={setPostalCode}
-            keyboardType="numeric"
-          />
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Bairro"
+              style={[styles.input, { flex: 1, marginRight: 5 }]}
+              value={neighborhood}
+              onChangeText={setNeighborhood}
+            />
+            <TextInput
+              placeholder="CEP"
+              style={[styles.input, { flex: 1 }]}
+              value={postal_code}
+              onChangeText={setPostalCode}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Cidade"
+              style={[styles.input, { flex: 2, marginRight: 5 }]}
+              value={city}
+              onChangeText={setCity}
+            />
+            <TextInput
+              placeholder="UF"
+              style={[styles.input, { flex: 1 }]}
+              value={state}
+              onChangeText={setState}
+              maxLength={2}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.backButtonText}>Voltar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleNext}>
+              <Text style={styles.buttonText}>Próximo</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.row}>
-          <TextInput
-            placeholder="Cidade"
-            style={[styles.input, { flex: 2, marginRight: 5 }]}
-            value={city}
-            onChangeText={setCity}
-          />
-          <TextInput
-            placeholder="UF"
-            style={[styles.input, { flex: 1 }]}
-            value={state}
-            onChangeText={setState}
-            maxLength={2}
-          />
-        </View>
-
-        {/* Botões */}
-        <View style={styles.buttonContainer}>
-          {/* Botão Voltar */}
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-
-          {/* Botão Próximo (modificado de "Confirmar") */}
-          <TouchableOpacity style={styles.button} onPress={handleNext}>
-            <Text style={styles.buttonText}>Próximo</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      </KeyboardAvoidingView>
-    </ScrollView>
-    
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
