@@ -1,0 +1,186 @@
+import { StyleSheet } from "react-native";
+import { colors } from "@/assets/colors";
+
+export const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    header: {
+      marginTop: 60,
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.textPrimary,
+    },
+    titleContainer: {
+      marginTop: 30,
+      marginBottom: 20,
+    },
+    preferencesTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    preferencesSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 5,
+    },
+    loader: {
+      marginVertical: 40,
+    },
+    preferencesContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-start',
+      marginTop: 20,
+    },
+    preferenceButton: {
+      backgroundColor: '#fff',
+      borderRadius: 20,
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      margin: 5,
+      borderWidth: 1,
+      borderColor: '#ddd',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    preferenceButtonSelected: {
+      backgroundColor: colors.background,
+      borderColor: colors.primary,
+    },
+    preferenceButtonText: {
+      color: colors.textPrimary,
+      fontSize: 14,
+    },
+    preferenceButtonTextSelected: {
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    checkIcon: {
+      marginRight: 5,
+    },
+    checkIconText: {
+      color: colors.primary,
+      fontWeight: 'bold',
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 40,
+      paddingHorizontal: 10,
+    },
+    skipButton: {
+      backgroundColor: '#FFF',
+      borderRadius: 10,
+      paddingVertical: 15,
+      paddingHorizontal: 30,
+      flex: 1,
+      marginRight: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderColor: colors.details_purple,
+      borderWidth: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 3,
+    },
+    skipButtonText: {
+      color: colors.details_purple,
+      fontWeight: '500',
+      fontSize: 16,
+    },
+    finishButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      paddingVertical: 15,
+      paddingHorizontal: 30,
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 3,
+    },
+    finishButtonText: {
+      color: colors.white,
+      fontWeight: '700',
+      fontSize: 16,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContainer: {
+      backgroundColor: colors.secondary,
+      borderRadius: 20,
+      padding: 20,
+      width: '100%',
+      maxWidth: 320,
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: 10,
+      color: colors.textPrimary,
+    },
+    modalText: {
+      fontSize: 14,
+      textAlign: 'center',
+      color: colors.textSecondary,
+      marginBottom: 20,
+    },
+    modalButtonGroup: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    modalBackButton: {
+      backgroundColor: '#fff',
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderColor: colors.details_purple,
+      borderWidth: 1,
+      marginRight: 10,
+      flex: 1,
+      alignItems: 'center',
+    },
+    modalBackButtonText: {
+      color: colors.details_purple,
+      fontWeight: '500',
+    },
+    modalAcceptButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      flex: 1,
+      alignItems: 'center',
+    },
+    modalAcceptButtonText: {
+      color: colors.white,
+      fontWeight: '600',
+    },
+  
+  });

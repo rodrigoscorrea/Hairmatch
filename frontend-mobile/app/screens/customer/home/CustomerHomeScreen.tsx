@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   FlatList,
   Image,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
+import { styles } from './styles/CustomerHomeStyle';
 import { getCustomerHomeInfo } from '@/app/services/auth-user.service';
 import { CustomerHomeInfoResponse } from '@/app/models/User.types';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -196,90 +196,5 @@ const CustomerHomeScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  searchBar: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 16,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  arrow: {
-    fontSize: 22,
-    color: '#FF6600',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 10,
-    width: 180,
-    height: 200
-  },
-  imageCard: {
-    width: '100%',
-    height: 100,
-    borderRadius: 10,
-  },
-  nomeProfissional: {
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  sobrenomeProfissional: {
-    fontWeight: 'bold',
-    marginTop: 5,
-    marginLeft: 6
-  },
-  description: {
-    fontSize: 12,
-    color: '#555',
-  },
-  circleItem: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  circleImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 5,
-  },
-  circleText: {
-    fontSize: 12,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-});
 
 export default CustomerHomeScreen;

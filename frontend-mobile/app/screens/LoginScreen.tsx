@@ -4,14 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   SafeAreaView,
   StatusBar,
   Modal,
   Alert,
   Image
 } from 'react-native';
-
+import { styles } from './styles/LoginStyle';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -53,7 +52,7 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.logoContainer}>
         <Image source={require('../../assets/images/HairmatchLogo.png')}></Image>
       </View>
@@ -82,13 +81,13 @@ const LoginScreen = () => {
           <Text style={styles.loginButtonText}>Entrar</Text>
         </TouchableOpacity>
 
-        <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Não possui uma conta? </Text>
-          <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Não possui uma conta? </Text>
             <Text style={styles.signupLink}>Cadastre-se</Text>
+          </View>
           </TouchableOpacity>
         </View>
-      </View>
 
       {/* Modal de erro de login */}
       <Modal
@@ -115,115 +114,5 @@ const LoginScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF8F0',
-    padding: 20,
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FF7A00',
-  },
-  logoHighlight: {
-    color: '#FF7A00',
-  },
-  scissorsText: {
-    fontSize: 24,
-  },
-  formContainer: {
-    width: '80%',
-    maxWidth: 350,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    borderWidth: 0.2,
-    borderColor: '#828282',
-    fontSize: 16,
-  },
-  loginButton: {
-    backgroundColor: '#FF7A00',
-    borderRadius: 8,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 10,
-    width: '70%',
-    alignSelf: 'center',
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  signupText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  signupLink: {
-    color: '#FF7A00',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 25,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#333',
-    textDecorationLine: 'underline',
-  },
-  modalText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButton: {
-    backgroundColor: '#FF7A00',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  modalButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
 
 export default LoginScreen;
