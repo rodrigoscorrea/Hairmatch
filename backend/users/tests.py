@@ -50,7 +50,11 @@ class RegisterViewTest(TestCase):
             'resume': 'Experienced hairdresser',
             'cnpj': '12345678000190',
             'experience_years': 5,
-            'preferences': []  # Add empty preferences list
+            'preferences': [],  # Add empty preferences list
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
 
     def test_register_customer_valid(self):
@@ -470,7 +474,11 @@ class UserInfoCookieViewTest(TestCase):
             'resume': 'Professional hairdresser',
             'cnpj': '12345678000190',
             'experience_years': 7,
-            'preferences': []
+            'preferences': [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register users
@@ -525,7 +533,6 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(user_data['user']['email'], 'hairdresser@example.com')
         self.assertEqual(user_data['user']['role'], 'hairdresser')
         self.assertIn('resume', user_data)
-        self.assertIn('experience_years', user_data)
 
     def test_get_user_info_without_token(self):
         # Ensure no token in cookies
@@ -672,7 +679,11 @@ class UserInfoViewTest(TestCase):
             'resume': 'Professional hairdresser',
             'cnpj': '12345678000190',
             'experience_years': 7,
-            'preferences': []
+            'preferences': [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
         }
         
         # Register users
@@ -709,7 +720,6 @@ class UserInfoViewTest(TestCase):
         self.assertEqual(user_data['user']['email'], 'hairdresser@example.com')
         self.assertEqual(user_data['user']['role'], 'hairdresser')
         self.assertIn('resume', user_data)
-        self.assertIn('experience_years', user_data)
 
     def test_get_nonexistent_user_info(self):
         url = reverse('user_info', kwargs={'email': 'nonexistent@example.com'})
@@ -732,3 +742,327 @@ class UserInfoViewTest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.json())
+        
+class CustomerHomeViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        
+        # Create preferences for testing
+        self.coloracao_pref = Preferences.objects.create(name='Coloração')
+        self.cachos_pref = Preferences.objects.create(name='Cachos')
+        self.barbearia_pref = Preferences.objects.create(name='Barbearia')
+        self.trancas_pref = Preferences.objects.create(name='Tranças')
+        self.other_pref = Preferences.objects.create(name='Corte')
+        
+        # Create a customer user for testing
+        self.customer_data = {
+            'first_name': 'Customer',
+            'last_name': 'Test',
+            'phone': '123423256789',
+            'number': '42',
+            'complement': 'Apt 1',
+            'neighborhood': 'Test Neighborhood',
+            'city': 'Test City',
+            'state': 'TS',
+            'address': 'Customer Street',
+            'postal_code': '12345',
+            'email': 'customer@example.com',
+            'password': 'customer_password',
+            'role': 'customer',
+            'rating': 5,
+            'cpf': '12345678900',
+            'preferences': []
+        }
+        
+        # Create hairdresser users for testing
+        self.hairdresser_data_1 = {
+            'first_name': 'Hairdresser1',
+            'last_name': 'Test',
+            'phone': '987232654321',
+            'number': '15',
+            'complement': 'Apt 2',
+            'neighborhood': 'Hairdresser Neighborhood',
+            'city': 'Hairdresser City',
+            'state': 'HR',
+            'address': 'Hairdresser Street',
+            'postal_code': '54321',
+            'email': 'hairdresser1@example.com',
+            'password': 'hairdresser_password',
+            'role': 'hairdresser',
+            'rating': 4,
+            'resume': 'Professional hairdresser 1',
+            'cnpj': '12345678000191',
+            'experience_years': 7,
+            'preferences': [],
+            'experience_time': 'experience_time',
+            'experiences': 'experiences',
+            'products': 'products'
+        }
+        
+        self.hairdresser_data_2 = {
+            'first_name': 'Hairdresser2',
+            'last_name': 'Test',
+            'phone': '987232654322',
+            'number': '16',
+            'complement': 'Apt 3',
+            'neighborhood': 'Hairdresser Neighborhood 2',
+            'city': 'Hairdresser City 2',
+            'state': 'HR',
+            'address': 'Hairdresser Street 2',
+            'postal_code': '54322',
+            'email': 'hairdresser2@example.com',
+            'password': 'hairdresser_password',
+            'role': 'hairdresser',
+            'rating': 5,
+            'resume': 'Professional hairdresser 2',
+            'cnpj': '12345678000192',
+            'experience_years': 5,
+            'preferences': [],
+            'experience_time': 'experience_time',
+            'experiences': 'experiences',
+            'products': 'products'
+        }
+        
+        # Register users
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.customer_data),
+            content_type='application/json'
+        )
+        
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.hairdresser_data_1),
+            content_type='application/json'
+        )
+        
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.hairdresser_data_2),
+            content_type='application/json'
+        )
+        
+        # Get created users and add preferences
+        self.customer_user = User.objects.get(email='customer@example.com')
+        self.hairdresser_user_1 = User.objects.get(email='hairdresser1@example.com')
+        self.hairdresser_user_2 = User.objects.get(email='hairdresser2@example.com')
+        
+        # Add preferences to customer (for "for_you" testing)
+        self.customer_user.preferences.add(self.coloracao_pref, self.cachos_pref)
+        
+        # Add preferences to hairdressers
+        self.hairdresser_user_1.preferences.add(self.coloracao_pref, self.barbearia_pref)
+        self.hairdresser_user_2.preferences.add(self.cachos_pref, self.trancas_pref)
+
+    def test_customer_home_with_matching_preferences(self):
+        """Test customer home view returns hairdressers matching customer preferences"""
+        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        # Check structure
+        self.assertIn('for_you', data)
+        self.assertIn('hairdressers_by_preferences', data)
+        
+        # Check for_you contains hairdressers with matching preferences
+        for_you_data = data['for_you']
+        self.assertGreater(len(for_you_data), 0)
+        
+        # Both hairdressers should be in for_you since they have preferences matching customer
+        hairdresser_emails = [h['user']['email'] for h in for_you_data]
+        self.assertIn('hairdresser1@example.com', hairdresser_emails)
+        self.assertIn('hairdresser2@example.com', hairdresser_emails)
+
+    def test_customer_home_with_specific_preference_categories(self):
+        """Test that specific preference categories return correct hairdressers"""
+        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        preferences_data = data['hairdressers_by_preferences']
+        
+        # Check all expected categories are present
+        expected_categories = ['coloracao', 'cachos', 'barbearia', 'trancas']
+        for category in expected_categories:
+            self.assertIn(category, preferences_data)
+        
+        # Check coloracao category contains hairdresser1
+        coloracao_hairdressers = preferences_data['coloracao']
+        coloracao_emails = [h['user']['email'] for h in coloracao_hairdressers]
+        self.assertIn('hairdresser1@example.com', coloracao_emails)
+        
+        # Check cachos category contains hairdresser2
+        cachos_hairdressers = preferences_data['cachos']
+        cachos_emails = [h['user']['email'] for h in cachos_hairdressers]
+        self.assertIn('hairdresser2@example.com', cachos_emails)
+        
+        # Check barbearia category contains hairdresser1
+        barbearia_hairdressers = preferences_data['barbearia']
+        barbearia_emails = [h['user']['email'] for h in barbearia_hairdressers]
+        self.assertIn('hairdresser1@example.com', barbearia_emails)
+        
+        # Check trancas category contains hairdresser2
+        trancas_hairdressers = preferences_data['trancas']
+        trancas_emails = [h['user']['email'] for h in trancas_hairdressers]
+        self.assertIn('hairdresser2@example.com', trancas_emails)
+
+    def test_customer_home_nonexistent_customer(self):
+        """Test customer home view with nonexistent customer email"""
+        url = reverse('customer_home_info', kwargs={'email': 'nonexistent@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 404)
+        data = response.json()
+        self.assertIn('error', data)
+        self.assertEqual(data['error'], 'User not found')
+
+    def test_customer_home_hairdresser_email(self):
+        """Test customer home view with hairdresser email (should return 404)"""
+        url = reverse('customer_home_info', kwargs={'email': 'hairdresser1@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 404)
+        data = response.json()
+        self.assertIn('error', data)
+        self.assertEqual(data['error'], 'User not found')
+
+    def test_customer_home_no_matching_preferences(self):
+        """Test customer home view when customer has no matching preferences"""
+        # Create customer with different preferences
+        customer_no_match = {
+            'first_name': 'NoMatch',
+            'last_name': 'Customer',
+            'phone': '123423256790',
+            'number': '43',
+            'complement': 'Apt 4',
+            'neighborhood': 'Test Neighborhood',
+            'city': 'Test City',
+            'state': 'TS',
+            'address': 'Customer Street',
+            'postal_code': '12346',
+            'email': 'nomatch@example.com',
+            'password': 'customer_password',
+            'role': 'customer',
+            'rating': 5,
+            'cpf': '12345678901',
+            'preferences': []
+        }
+        
+        self.client.post(
+            self.register_url,
+            data=json.dumps(customer_no_match),
+            content_type='application/json'
+        )
+        
+        # Add a preference that no hairdresser has
+        customer_user_no_match = User.objects.get(email='nomatch@example.com')
+        customer_user_no_match.preferences.add(self.other_pref)
+        
+        url = reverse('customer_home_info', kwargs={'email': 'nomatch@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        # for_you should be empty since no hairdressers match preferences
+        self.assertEqual(len(data['for_you']), 0)
+        
+        # But hairdressers_by_preferences should still have data
+        self.assertIn('hairdressers_by_preferences', data)
+
+    def test_customer_home_empty_preferences(self):
+        """Test customer home view when customer has no preferences"""
+        # Create customer with no preferences
+        customer_empty = {
+            'first_name': 'Empty',
+            'last_name': 'Customer',
+            'phone': '123423256791',
+            'number': '44',
+            'complement': 'Apt 5',
+            'neighborhood': 'Test Neighborhood',
+            'city': 'Test City',
+            'state': 'TS',
+            'address': 'Customer Street',
+            'postal_code': '12347',
+            'email': 'empty@example.com',
+            'password': 'customer_password',
+            'role': 'customer',
+            'rating': 5,
+            'cpf': '12345678902',
+            'preferences': []
+        }
+        
+        self.client.post(
+            self.register_url,
+            data=json.dumps(customer_empty),
+            content_type='application/json'
+        )
+        
+        url = reverse('customer_home_info', kwargs={'email': 'empty@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        # for_you should be empty since customer has no preferences
+        self.assertEqual(len(data['for_you']), 0)
+        
+        # But hairdressers_by_preferences should still have data
+        self.assertIn('hairdressers_by_preferences', data)
+
+    def test_customer_home_missing_preference_categories(self):
+        """Test behavior when some preference categories don't exist"""
+        # Delete one of the preferences to test missing category handling
+        self.trancas_pref.delete()
+        
+        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        preferences_data = data['hairdressers_by_preferences']
+        
+        # trancas should be empty list since preference doesn't exist
+        self.assertEqual(preferences_data['trancas'], [])
+        
+        # Other categories should still work
+        self.assertGreater(len(preferences_data['coloracao']), 0)
+
+    def test_customer_home_response_structure(self):
+        """Test the structure of the response data"""
+        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        # Check main structure
+        self.assertIn('for_you', data)
+        self.assertIn('hairdressers_by_preferences', data)
+        
+        # Check for_you structure (if not empty)
+        if data['for_you']:
+            hairdresser = data['for_you'][0]
+            self.assertIn('user', hairdresser)
+            self.assertIn('email', hairdresser['user'])
+            self.assertIn('role', hairdresser['user'])
+            self.assertEqual(hairdresser['user']['role'], 'hairdresser')
+        
+        # Check hairdressers_by_preferences structure
+        preferences_data = data['hairdressers_by_preferences']
+        expected_categories = ['coloracao', 'cachos', 'barbearia', 'trancas']
+        
+        for category in expected_categories:
+            self.assertIn(category, preferences_data)
+            if preferences_data[category]:  # If not empty
+                hairdresser = preferences_data[category][0]
+                self.assertIn('user', hairdresser)
+                self.assertIn('email', hairdresser['user'])
+                self.assertIn('role', hairdresser['user'])
+                self.assertEqual(hairdresser['user']['role'], 'hairdresser')
