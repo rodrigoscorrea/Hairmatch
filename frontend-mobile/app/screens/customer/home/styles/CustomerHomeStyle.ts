@@ -6,12 +6,12 @@ export const styles = StyleSheet.create({
       flex: 1,
       backgroundColor: colors.background,
       paddingTop: 20,
-      paddingHorizontal: 16,
+      paddingHorizontal: 5,
     },
     scrollContainer: {
       flex: 1,
       paddingTop: 20,
-      paddingHorizontal: 16,
+      paddingHorizontal: 5,
     },
     searchBar: {
       backgroundColor: colors.white,
