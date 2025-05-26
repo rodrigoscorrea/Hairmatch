@@ -25,9 +25,13 @@ import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import { NonWorkingDays } from '@/app/models/Availability.types'; 
 import { AuthContext } from '../../../index';
 
-const galleryImages = new Array(5).fill(
-  require('../../../../assets/images/react-logo.png')
-);
+const galleryImages = [
+  require('../../../../assets/hairdressers/gallery/galery1.jpg'),
+  require('../../../../assets/hairdressers/gallery/galery2.jpg'),
+  require('../../../../assets/hairdressers/gallery/galery3.jpg'),
+  require('../../../../assets/hairdressers/gallery/galery4.jpg'),
+  require('../../../../assets/hairdressers/gallery/galery5.jpg')
+];
 type HairdresserProfileReservationScreenRouteProp = RouteProp<RootStackParamList, 'HairdresserProfileReservation'>;
 type HairdresserProfileReservationScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -42,6 +46,7 @@ export default function HairdresserProfileReservationScreen() {
   const navigation = useNavigation<HairdresserProfileReservationScreenNavigationProp>();
   const route = useRoute<HairdresserProfileReservationScreenRouteProp>();
   const hairdresser = route.params.hairdresser;
+  const avatar = route.params.avatar;
   
   useEffect(() => {
     /* const fetchHairdresserData = async () => {
@@ -98,7 +103,7 @@ export default function HairdresserProfileReservationScreen() {
       {/* Profile */}
       <View style={styles.profile}>
         <Image
-          source={require('../../../../assets/images/react-logo.png')} // Replace with actual image
+          source={avatar} // Replace with actual image
           style={styles.profileImage}
         />
         <View style={styles.profileText}>

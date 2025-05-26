@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Register: undefined;
   HairdresserProfileReservation: {
     hairdresser : Hairdresser
+    avatar: any //remover depois
   } 
   Address: {
     personalData: {

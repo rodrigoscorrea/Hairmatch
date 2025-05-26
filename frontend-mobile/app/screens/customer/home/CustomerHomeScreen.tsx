@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext} from 'react';
+import React, {useState, useEffect, useContext, useMemo} from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,59 @@ const CustomerHomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const { setActiveTab } = useBottomTab();
 
+  //apenas para demonstração do MVP
+  const maleNames = ["Luis Felipe", "Murilo", "Nicolas", "João Vitor", "Thomas", "Gustavo Henrique", "Thiago", "Igor", "Otávio", "Vitor Gabriel", "Bruno", "João Guilherme", "Cauã", "Guilherme", "Leonardo", "Breno", "Lucca"];
+  const femaleNames = ["Luna", "Luiza", "Sarah", "Nicole", "Bárbara", "Beatriz", "Larissa", "Isabella", "Helena", "Luisa", "Maria Flor", "Ana Sophia", "Heloisa", "Isabel", "Isabel", "Daniela", "Ana Clara", "Maria Cecília", "Maria Julia", "Yasmin", "Lara", "Luana"];
+
+  const maleAvatar = [
+    require("../../../../assets/hairdressers/male/male1.jpg"),
+    require("../../../../assets/hairdressers/male/male2.jpg"),
+    require("../../../../assets/hairdressers/male/male3.jpg"),
+    require("../../../../assets/hairdressers/male/male4.jpg"),
+    require("../../../../assets/hairdressers/male/male5.jpg")
+  ];
+
+  const femaleAvatar = [
+    require("../../../../assets/hairdressers/female/female1.jpg"),
+    require("../../../../assets/hairdressers/female/female2.jpg"),
+    require("../../../../assets/hairdressers/female/female3.jpg"),
+    require("../../../../assets/hairdressers/female/female4.jpg"),
+    require("../../../../assets/hairdressers/female/female5.jpg")
+  ];
+
+  const defaultAvatar  = require("../../../../assets/hairdressers/male/default.jpg");
+
+  const inferGenderFromName = (firstName: string): 'male' | 'female' | 'unknown' => {
+    if (maleNames.includes(firstName)) {
+      return 'male';
+    }
+    if (femaleNames.includes(firstName)) {
+      return 'female';
+    }
+    return 'unknown'; // Caso o nome não esteja em nenhuma lista
+  };
+
+  const getRandomAvatarByInferredGender = (firstName: string) => {
+    const gender = inferGenderFromName(firstName);
+  
+    let selectedAvatars;
+    if (gender === 'male') {
+      selectedAvatars = maleAvatar;
+    } else if (gender === 'female') {
+      selectedAvatars = femaleAvatar;
+    } else {
+      return defaultAvatar;
+    }
+  
+    if (selectedAvatars.length === 0) {
+        return defaultAvatar; 
+    }
+  
+    const randomIndex = Math.floor(Math.random() * selectedAvatars.length);
+    return selectedAvatars[randomIndex];
+  };
+  //aqui acaba as funções somente de demonstração pro MVP
+
   useEffect(() => {
     const fetchCustomerHomeInfo = async () => {
       setLoading(true);
@@ -51,15 +104,18 @@ const CustomerHomeScreen = () => {
     setActiveTab('CustomerHome');
   }, [userInfo]);
 
-  const handleClickHairdresser = (hairdresser: Hairdresser) => {
-    navigation.navigate("HairdresserProfileReservation", {hairdresser: hairdresser} )
+  const handleClickHairdresser = (hairdresser: Hairdresser, avatar: any) => {
+    navigation.navigate("HairdresserProfileReservation", {hairdresser: hairdresser, avatar:avatar} ) //ajustar o RootStackParamList 
   }
 
-  const renderForYouItem = ({item}: any) => (
-    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+  const renderForYouItem = ({item}: any) => {
+    //somente para demonstração do MVP
+    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
+    return(
+      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
         <View style={styles.card}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/100x100?text=Img' }}
+          source={avatarSource}
           style={styles.imageCard}
         />
         <View style={{display:'flex', flexDirection: 'row', marginBottom: 3}}>
@@ -71,20 +127,25 @@ const CustomerHomeScreen = () => {
         </Text>
       </View>
     </TouchableOpacity>
-  );
+    )
+  };
 
-  const renderHairdresserItem = ({item} : any) => (
-    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+  const renderHairdresserItem = ({item} : any) => { //mudei de ( para {
+    //somente para teste
+    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
+    return(
+      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
       <View style={styles.circleItem}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/60x60?text=Img' }}
+          source={avatarSource}
           style={styles.circleImage}
         />
         <Text style={styles.circleText}>{item.user.first_name || 'Title'}</Text>
         <Text style={styles.circleText}>{item.user.last_name || 'Title'}</Text>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   if (loading) {
     return (
