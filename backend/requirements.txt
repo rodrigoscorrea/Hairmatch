@@ -7,3 +7,4 @@ PyJWT
 Pillow
 Faker
 google.generativeai
+coverage
