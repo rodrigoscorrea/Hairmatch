@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Alert, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal, Image } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal, Image } from 'react-native';
+import { styles } from './styles/PreferencesStyle';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../../index';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -161,7 +162,7 @@ export default function PreferencesScreen() {
 
         {/* Preferences */}
         {isFetchingPreferences ? (
-          <ActivityIndicator size="large" color="#FF6B00" style={styles.loader} />
+          <ActivityIndicator size="large"  style={styles.loader} />
         ) : (
           <View style={styles.preferencesContainer}>
             {preferences.map((preference) => (
@@ -207,7 +208,7 @@ export default function PreferencesScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color="#FFF" />
+              <ActivityIndicator size="small" />
             ) : (
               <>
                 {personalData.role === UserRole.CUSTOMER ? (
@@ -251,184 +252,3 @@ export default function PreferencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFECE3',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginTop: 60,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-  },
-  titleContainer: {
-    marginTop: 30,
-    marginBottom: 20,
-  },
-  preferencesTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-  },
-  preferencesSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  loader: {
-    marginVertical: 40,
-  },
-  preferencesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    marginTop: 20,
-  },
-  preferenceButton: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    margin: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  preferenceButtonSelected: {
-    backgroundColor: '#FFF0E6',
-    borderColor: '#FF6B00',
-  },
-  preferenceButtonText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  preferenceButtonTextSelected: {
-    color: '#FF6B00',
-    fontWeight: '500',
-  },
-  checkIcon: {
-    marginRight: 5,
-  },
-  checkIconText: {
-    color: '#FF6B00',
-    fontWeight: 'bold',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
-    paddingHorizontal: 10,
-  },
-  skipButton: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  skipButtonText: {
-    color: '#9B59B6',
-    fontWeight: '500',
-    fontSize: 16,
-  },
-  finishButton: {
-    backgroundColor: '#FF6B00',
-    borderRadius: 10,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  finishButtonText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#FFECE3',
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#333',
-  },
-  modalText: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#555',
-    marginBottom: 20,
-  },
-  modalButtonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalBackButton: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderColor: '#9B59B6',
-    borderWidth: 1,
-    marginRight: 10,
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalBackButtonText: {
-    color: '#9B59B6',
-    fontWeight: '500',
-  },
-  modalAcceptButton: {
-    backgroundColor: '#FF6B00',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalAcceptButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-});

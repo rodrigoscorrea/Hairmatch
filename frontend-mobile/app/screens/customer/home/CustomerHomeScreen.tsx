@@ -1,9 +1,8 @@
-import React, {useState, useEffect, useContext} from 'react';
+import React, {useState, useEffect, useContext, useMemo} from 'react';
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   FlatList,
   Image,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
+import { styles } from './styles/CustomerHomeStyle';
 import { getCustomerHomeInfo } from '@/app/services/auth-user.service';
 import { CustomerHomeInfoResponse } from '@/app/models/User.types';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -30,6 +30,59 @@ const CustomerHomeScreen = () => {
   const [customerHomeInfo, setCustomerHomeInfo] = useState<CustomerHomeInfoResponse>();
   const [loading, setLoading] = useState(true);
   const { setActiveTab } = useBottomTab();
+
+  //apenas para demonstração do MVP
+  const maleNames = ["Luis Felipe", "Murilo", "Nicolas", "João Vitor", "Thomas", "Gustavo Henrique", "Thiago", "Igor", "Otávio", "Vitor Gabriel", "Bruno", "João Guilherme", "Cauã", "Guilherme", "Leonardo", "Breno", "Lucca"];
+  const femaleNames = ["Luna", "Luiza", "Sarah", "Nicole", "Bárbara", "Beatriz", "Larissa", "Isabella", "Helena", "Luisa", "Maria Flor", "Ana Sophia", "Heloisa", "Isabel", "Isabel", "Daniela", "Ana Clara", "Maria Cecília", "Maria Julia", "Yasmin", "Lara", "Luana"];
+
+  const maleAvatar = [
+    require("../../../../assets/hairdressers/male/male1.jpg"),
+    require("../../../../assets/hairdressers/male/male2.jpg"),
+    require("../../../../assets/hairdressers/male/male3.jpg"),
+    require("../../../../assets/hairdressers/male/male4.jpg"),
+    require("../../../../assets/hairdressers/male/male5.jpg")
+  ];
+
+  const femaleAvatar = [
+    require("../../../../assets/hairdressers/female/female1.jpg"),
+    require("../../../../assets/hairdressers/female/female2.jpg"),
+    require("../../../../assets/hairdressers/female/female3.jpg"),
+    require("../../../../assets/hairdressers/female/female4.jpg"),
+    require("../../../../assets/hairdressers/female/female5.jpg")
+  ];
+
+  const defaultAvatar  = require("../../../../assets/hairdressers/male/default.jpg");
+
+  const inferGenderFromName = (firstName: string): 'male' | 'female' | 'unknown' => {
+    if (maleNames.includes(firstName)) {
+      return 'male';
+    }
+    if (femaleNames.includes(firstName)) {
+      return 'female';
+    }
+    return 'unknown'; // Caso o nome não esteja em nenhuma lista
+  };
+
+  const getRandomAvatarByInferredGender = (firstName: string) => {
+    const gender = inferGenderFromName(firstName);
+  
+    let selectedAvatars;
+    if (gender === 'male') {
+      selectedAvatars = maleAvatar;
+    } else if (gender === 'female') {
+      selectedAvatars = femaleAvatar;
+    } else {
+      return defaultAvatar;
+    }
+  
+    if (selectedAvatars.length === 0) {
+        return defaultAvatar; 
+    }
+  
+    const randomIndex = Math.floor(Math.random() * selectedAvatars.length);
+    return selectedAvatars[randomIndex];
+  };
+  //aqui acaba as funções somente de demonstração pro MVP
 
   useEffect(() => {
     const fetchCustomerHomeInfo = async () => {
@@ -51,15 +104,18 @@ const CustomerHomeScreen = () => {
     setActiveTab('CustomerHome');
   }, [userInfo]);
 
-  const handleClickHairdresser = (hairdresser: Hairdresser) => {
-    navigation.navigate("HairdresserProfileReservation", {hairdresser: hairdresser} )
+  const handleClickHairdresser = (hairdresser: Hairdresser, avatar: any) => {
+    navigation.navigate("HairdresserProfileReservation", {hairdresser: hairdresser, avatar:avatar} ) //ajustar o RootStackParamList 
   }
 
-  const renderForYouItem = ({item}: any) => (
-    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+  const renderForYouItem = ({item}: any) => {
+    //somente para demonstração do MVP
+    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
+    return(
+      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
         <View style={styles.card}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/100x100?text=Img' }}
+          source={avatarSource}
           style={styles.imageCard}
         />
         <View style={{display:'flex', flexDirection: 'row', marginBottom: 3}}>
@@ -71,20 +127,25 @@ const CustomerHomeScreen = () => {
         </Text>
       </View>
     </TouchableOpacity>
-  );
+    )
+  };
 
-  const renderHairdresserItem = ({item} : any) => (
-    <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
+  const renderHairdresserItem = ({item} : any) => { //mudei de ( para {
+    //somente para teste
+    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
+    return(
+      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
       <View style={styles.circleItem}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/60x60?text=Img' }}
+          source={avatarSource}
           style={styles.circleImage}
         />
         <Text style={styles.circleText}>{item.user.first_name || 'Title'}</Text>
         <Text style={styles.circleText}>{item.user.last_name || 'Title'}</Text>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -196,90 +257,5 @@ const CustomerHomeScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  searchBar: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 16,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  arrow: {
-    fontSize: 22,
-    color: '#FF6600',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 10,
-    width: 180,
-    height: 200
-  },
-  imageCard: {
-    width: '100%',
-    height: 100,
-    borderRadius: 10,
-  },
-  nomeProfissional: {
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  sobrenomeProfissional: {
-    fontWeight: 'bold',
-    marginTop: 5,
-    marginLeft: 6
-  },
-  description: {
-    fontSize: 12,
-    color: '#555',
-  },
-  circleItem: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  circleImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 5,
-  },
-  circleText: {
-    fontSize: 12,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-});
 
 export default CustomerHomeScreen;

@@ -3,12 +3,12 @@ name: Run Hairmatch Backend Unit Tests
 on:
   push:
     branches:
-      - feature/cruds_of_er_models-12
+      - improvement/frontend_style_adjustments
       - develop
       - main
   pull_request:
     branches:
-      - feature/cruds_of_er_models-12
+      - improvement/frontend_style_adjustments
       - develop
       - main
 
@@ -58,4 +58,8 @@ jobs:
 
       - name: Run tests
         working-directory: ./backend
-        run: python manage.py test
+        run: coverage run manage.py test
+      
+      - name: Run tests coverage report
+        working-directory: ./backend
+        run: coverage report -m

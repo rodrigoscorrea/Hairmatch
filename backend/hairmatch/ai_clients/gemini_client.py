@@ -4,7 +4,7 @@ from users.models import Hairdresser
 from django.http import JsonResponse
 from django.conf import settings
 from preferences.models import Preferences
-from preferences.serializers import PreferencesSerializer
+from preferences.serializers import PreferencesNameSerializer
 
 def setup_environment():
     gemini_api_key = settings.GEMINI_API_KEY 
@@ -82,8 +82,12 @@ def hairdresser_profile_ai_completion(data):
         
         hairdresser_raw_preferences = hairdresser_data_raw.get('preferences')
         hairdresser_filtered_preferences = Preferences.objects.filter(id__in=hairdresser_raw_preferences)
+        serialized_hairdressed_preferences = PreferencesNameSerializer(
+                                                hairdresser_filtered_preferences,
+                                                many=True).data
+         
         hairdresser_data = hairdresser_data_raw
-        hairdresser_data['preferences'] = hairdresser_filtered_preferences
+        hairdresser_data['preferences'] = serialized_hairdressed_preferences
 
         
         generated_description = process_hairdresser_profile(hairdresser_data)

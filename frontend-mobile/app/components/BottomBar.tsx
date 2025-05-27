@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { styles } from './styles/BottomBarStyle';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTab } from '../contexts/BottomTabContext';
@@ -75,7 +76,7 @@ const BottomTabBar: React.FC = () => {
       <Ionicons
         name={iconName as any}
         size={24}
-        color={isActive ? '#FF6600' : '#666'}
+        style={isActive ? styles.activeIcon : styles.inactiveIcon}
       />
     );
   };
@@ -117,31 +118,5 @@ const BottomTabBar: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: '#FDF0E7',
-    height: 60,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabText: {
-    fontSize: 10,
-    marginTop: 3,
-    color: '#666',
-  },
-  activeTabText: {
-    color: '#FF6600',
-    fontWeight: 'bold',
-  },
-});
 
 export default BottomTabBar;

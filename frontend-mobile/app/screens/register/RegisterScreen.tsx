@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
+import { styles } from './styles/RegisterStyle';
 import { useNavigation } from '@react-navigation/native';
 import { UserRole } from '@/app/models/User.types';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
@@ -17,7 +19,16 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const togglePasswordConfirmVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
   return (
     <ScrollView>
       <View style={styles.container}>
@@ -115,21 +126,39 @@ export default function RegisterScreen() {
         onChangeText={setPhone}
       />
 
-      <TextInput
-        placeholder="Senha"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Senha"
+          style={styles.inputInner}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIconAbsolute}>
+            <Ionicons
+              name={showPassword ? 'eye' : 'eye-off'}
+              size={24}
+              color="#888"
+            />
+        </TouchableOpacity>
+      </View>
 
-      <TextInput
-        placeholder="Confirme sua senha"
-        style={styles.input}
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Confirme sua senha"
+          style={styles.inputInner}
+          secureTextEntry={!showConfirmPassword}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+        <TouchableOpacity onPress={togglePasswordConfirmVisibility} style={styles.eyeIconAbsolute}>
+            <Ionicons
+              name={showConfirmPassword ? 'eye' : 'eye-off'}
+              size={24}
+              color="#888"
+            />
+        </TouchableOpacity>
+      </View>
 
       {/* Botão Próximo */}
       <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Address', {personalData: {
@@ -148,95 +177,3 @@ export default function RegisterScreen() {
     </ScrollView>
   );
 }
-
-// Estilos
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFECE3',
-    alignItems: 'center',
-    padding: 20,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    zIndex: 1,
-  },
-  backButtonText: {
-    fontSize: 32,
-    color: '#000',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FF6B00',
-    marginTop: 40,
-  },
-  subtitle: {
-    fontSize: 20,
-    marginVertical: 10,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F8DFF2',
-    borderRadius: 20,
-    marginVertical: 15,
-  },
-  toggleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  toggleButtonSelected: {
-    backgroundColor: '#8e44ad',  // Roxo para ambos os botões
-  },
-  toggleButtonText: {
-    color: '#555',
-    fontWeight: '600',
-  },
-  toggleButtonTextSelected: {
-    color: 'white',
-    fontWeight: '700',
-  },
-  profilePicture: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  profileIcon: {
-    width: 40,
-    height: 40,
-    tintColor: '#000', // Agora a câmera é preta
-  },
-  row: {
-    flexDirection: 'row',
-    width: '100%',
-  },
-  input: {
-    backgroundColor: 'white',
-    width: '100%',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginVertical: 5,
-  },
-  button: {
-    backgroundColor: '#FF6B00',
-    borderRadius: 10,
-    marginTop: 20,
-    width: '100%',
-    padding: 15,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-});
