@@ -3,12 +3,12 @@ name: Run Hairmatch Backend Unit Tests
 on:
   push:
     branches:
-      - feature/cruds_of_er_models-12
+      - improvement/frontend_style_adjustments
       - develop
       - main
   pull_request:
     branches:
-      - feature/cruds_of_er_models-12
+      - improvement/frontend_style_adjustments
       - develop
       - main
 
