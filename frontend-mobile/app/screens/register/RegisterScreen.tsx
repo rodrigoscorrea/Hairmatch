@@ -98,6 +98,7 @@ export default function RegisterScreen() {
         placeholder="CPF"
         style={styles.input}
         value={cpf}
+        maxLength={11}
         onChangeText={setCpf}
         />
       ): (
@@ -105,6 +106,7 @@ export default function RegisterScreen() {
         placeholder="CNPJ"
         style={styles.input}
         value={cnpj}
+        maxLength={14}
         onChangeText={setCnpj}
       />
       )}      
