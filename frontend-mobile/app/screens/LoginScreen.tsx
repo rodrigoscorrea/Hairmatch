@@ -40,11 +40,19 @@ const LoginScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validateFields()) {
       setErrorModalMessage('Por favor, corrija os campos destacados.');
       setErrorModalVisible(true);
       return;
+    }
+    else{
+      try {
+        await signIn(email, password);
+        navigation.navigate('Home')
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
+      }
     }
   };
 

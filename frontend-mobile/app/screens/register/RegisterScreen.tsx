@@ -42,13 +42,13 @@ export default function RegisterScreen() {
   };
   
   const formatCNPJ = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/^(\d{2})(\d)/, '$1.$2')
-      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/\.(\d{3})(\d)/, '.$1/$2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
-      .slice(0, 14);
+    const digits = value.replace(/\D/g, '').slice(0, 14); // Limit to 14 digits
+    
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+    if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
   };
   
   const formatPhone = (value: string) => {
@@ -108,6 +108,9 @@ export default function RegisterScreen() {
         newErrors.cpf = true;
         errorList.push(ERROR_MESSAGES.cpf_invalid);
       }
+      else{
+        setCpf(sanitizedCpf)
+      }
     } else {
       const sanitizedCnpj = stripNonDigits(cnpj);
       if (!cnpj) {
@@ -116,6 +119,9 @@ export default function RegisterScreen() {
       } else if (sanitizedCnpj.length < 14) {
         newErrors.cnpj = true;
         errorList.push(ERROR_MESSAGES.cnpj_invalid);
+      }
+      else{
+        setCnpj(sanitizedCnpj)
       }
     }
     
