@@ -104,4 +104,5 @@ export type RootStackParamList = {
     preferences: number[]
   }
   HairdresserProfile: any | undefined
+  HairdresserServiceManager: any | undefined
 };

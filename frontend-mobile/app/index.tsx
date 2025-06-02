@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -17,15 +16,13 @@ import ProfessionalStory from './screens/register/ProfessionalStory';
 import DescriptionScreen from './screens/register/DescriptionScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
-import { AuthContextType } from './models/Auth.types';
 import { UserInfo, UserRole } from './models/User.types';
 import { Preference } from './models/Preferences.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
-import { Customer } from './models/Customer.types';
-import { Hairdresser } from './models/Hairdresser.types';
 import { BottomTabProvider } from './contexts/BottomTabContext';
-import HairdresserProfileScreen from './screens/hairdresser/HairdresserProfileScreen';
+import HairdresserProfileScreen from './screens/hairdresser/profile/HairdresserProfileScreen';
+import HairdresserServiceManageScreen from './screens/hairdresser/service/HaidresserServiceManager';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
@@ -234,6 +231,7 @@ function App() {
                 <Stack.Screen name="HairdresserProfile" component={HairdresserProfileScreen} />
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen name="Search" component={SearchScreen} />
+                <Stack.Screen name="HairdresserServiceManager" component={HairdresserServiceManageScreen} />
               </Stack.Navigator>
             </>
           )}

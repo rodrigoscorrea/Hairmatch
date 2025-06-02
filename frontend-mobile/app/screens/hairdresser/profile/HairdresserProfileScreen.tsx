@@ -23,7 +23,7 @@ import { formatAvailability } from '@/app/utils/availability-formater';
 import BottomTabBar from '@/app/components/BottomBar';
 
 const galleryImages = new Array(5).fill(
-  require('../../../assets/images/react-logo.png')
+  require('../../../../assets/images/react-logo.png')
 );
 
 export default function HairdresserProfileScreen() {
@@ -80,7 +80,7 @@ export default function HairdresserProfileScreen() {
         {/* Profile */}
         <View style={styles.profile}>
           <Image
-            source={require('../../../assets/images/react-logo.png')} // Replace with actual image
+            source={require('../../../../assets/images/react-logo.png')} // Replace with actual image
             style={styles.profileImage}
           />
           <View style={styles.profileText}>
