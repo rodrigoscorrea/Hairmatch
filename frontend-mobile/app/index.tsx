@@ -24,6 +24,7 @@ import { BottomTabProvider } from './contexts/BottomTabContext';
 import HairdresserProfileScreen from './screens/hairdresser/profile/HairdresserProfileScreen';
 import HairdresserServiceManageScreen from './screens/hairdresser/service/HaidresserServiceManager';
 import HairdresserServiceCreationScreen from './screens/hairdresser/service/HaidresserServiceCreationScreen';
+import HairdresserServiceEditScreen from './screens/hairdresser/service/HairdresserServiceEditScreen';
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});
@@ -233,6 +234,7 @@ function App() {
                 <Stack.Screen name="Search" component={SearchScreen} />
                 <Stack.Screen name="HairdresserServiceManager" component={HairdresserServiceManageScreen} />
                 <Stack.Screen name="HairdresserServiceCreation" component={HairdresserServiceCreationScreen} />
+                <Stack.Screen name="HairdresserServiceEdit" component={HairdresserServiceEditScreen} />
               </Stack.Navigator>
             </>
           )}

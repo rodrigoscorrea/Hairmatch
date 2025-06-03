@@ -9,14 +9,14 @@ import { deleteService, listServicesByHairdresser } from '@/app/services/service
 import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import BottomTabBar from '@/app/components/BottomBar';
 import ConfirmationModal from '@/app/components/modals/confirmationModal/ConfirmationModal';
 
 type HairdresserServiceManagerScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const HairdresserServiceManageScreen = () => {
-  const navigation = useNavigation<HairdresserServiceManagerScreenNavigationProp>();
+  const navigation = useNavigation<HairdresserServiceManagerScreenNavigationProp>();  
   const [services, setServices] = useState<ServiceResponse[]>(); 
   const { hairdresser, setActiveTab } = useBottomTab();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -25,7 +25,11 @@ const HairdresserServiceManageScreen = () => {
 
 
   useEffect(()=>{
-    const fetchHairdresserService = async () => {
+    setActiveTab('HairdresserServiceManager');
+    fetchHairdresserService();
+  }, []);
+
+  const fetchHairdresserService = async () => {
         try {
             setIsLoading(true);
             const serviceResponse = await listServicesByHairdresser(hairdresser?.id);
@@ -36,14 +40,12 @@ const HairdresserServiceManageScreen = () => {
             setIsLoading(false);
         }
     }
-    setActiveTab('HairdresserServiceManager');
-    fetchHairdresserService();
-  }, []);
 
   const proceedServiceDeletion = async (serviceId: number) => {
     try {
         setIsLoading(true);
         await deleteService(serviceId);
+        await fetchHairdresserService();
     } catch (error) {
         console.log('Erro while deleting selected service', error);
     } finally {
@@ -55,6 +57,10 @@ const HairdresserServiceManageScreen = () => {
     setSelectedServiceId(serviceId);
     setIsModalVisible(true);
   };
+
+  const handleEditionService = (service: ServiceResponse) => {
+    navigation.navigate('HairdresserServiceEdit', {service})
+  }
  
   return (
     <View style={{ flex: 1 }}>
@@ -78,7 +84,7 @@ const HairdresserServiceManageScreen = () => {
                         <TouchableOpacity onPress={()=>handleServiceDeletion(service.id)}>
                             <Ionicons name="trash-outline" size={18} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ marginLeft: 10 }}>
+                        <TouchableOpacity style={{ marginLeft: 10 }} onPress={()=>handleEditionService(service)}>
                             <Ionicons name="pencil-outline" size={18} color="#000" />
                         </TouchableOpacity>
                         </View>

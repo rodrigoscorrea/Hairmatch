@@ -21,12 +21,18 @@ import { listAvailabilitiesByHairdresser } from '@/app/services/availability.ser
 import { listServicesByHairdresser } from '@/app/services/service.service';
 import { formatAvailability } from '@/app/utils/availability-formater';
 import BottomTabBar from '@/app/components/BottomBar';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type HairdresserProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const galleryImages = new Array(5).fill(
   require('../../../../assets/images/react-logo.png')
 );
 
 export default function HairdresserProfileScreen() {
+  const navigation = useNavigation<HairdresserProfileScreenNavigationProp>();
   const { hairdresser, setActiveTab } = useBottomTab();
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
@@ -147,21 +153,20 @@ export default function HairdresserProfileScreen() {
         </Accordion>
 
         {/* Available services */}
-        <Accordion title="Meus Serviços">
-          {services ? services.map((service) => (
-            <TouchableOpacity style={styles.card} key={service.id} onPress={()=>{}}>
-              <Text style={styles.cardText}>{service.name}</Text>
+        {services ? (
+            <TouchableOpacity style={styles.card} onPress={()=>{navigation.navigate('HairdresserServiceManager')}}>
+              <Text style={styles.cardText}>Meus serviços</Text>
               <View style={styles.arrowButton}>
                 <Ionicons name="arrow-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>
-          )) : 
-          (
-            <>
-              <Text>Carregando Serviços...</Text>
-            </>
-          )}
-        </Accordion>
+        ):(
+          <>
+            <View>
+              <Text>Não há serviços cadastrados</Text>
+            </View>
+          </>
+        )}
       </ScrollView>
       <BottomTabBar/>
     </SafeAreaView>
