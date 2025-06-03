@@ -105,4 +105,5 @@ export type RootStackParamList = {
   }
   HairdresserProfile: any | undefined
   HairdresserServiceManager: any | undefined
+  HairdresserServiceCreation: any | undefined
 };

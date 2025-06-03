@@ -15,3 +15,16 @@ export const listServicesByHairdresser = async (hairdresserId: number | undefine
         throw error;
     }
 }
+
+export const createService = async (data: any) => {
+    if(!data) {
+        console.error("no data provided for service creation");
+        return;
+    }
+    try {
+        await axios.post(`${API_BACKEND_URL}/api/service/create`, data);
+    } catch (error) {
+        console.error("Error create service:", error);
+        throw error;
+    }
+}

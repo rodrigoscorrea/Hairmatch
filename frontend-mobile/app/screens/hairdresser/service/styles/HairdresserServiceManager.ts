@@ -48,8 +48,8 @@ export const styles = StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
+    bottom: 80,
+    right: 30,
     backgroundColor: '#FFEFE6',
     borderColor: '#000',
     borderRadius: 50,

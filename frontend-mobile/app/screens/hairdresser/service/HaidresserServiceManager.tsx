@@ -7,9 +7,15 @@ import { ServiceResponse } from '@/app/models/Service.types';
 import { useBottomTab } from '@/app/contexts/BottomTabContext';
 import { listServicesByHairdresser } from '@/app/services/service.service';
 import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import BottomTabBar from '@/app/components/BottomBar';
+
+type HairdresserServiceManagerScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const HairdresserServiceManageScreen = () => {
-  
+  const navigation = useNavigation<HairdresserServiceManagerScreenNavigationProp>();
   const [services, setServices] = useState<ServiceResponse[]>(); 
   const { hairdresser, setActiveTab } = useBottomTab();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -81,9 +87,10 @@ const HairdresserServiceManageScreen = () => {
         )}
         </ScrollView>
 
-        <TouchableOpacity style={styles.addButton}>
-        <Ionicons name="add" size={28} color="#000" />
+        <TouchableOpacity style={styles.addButton} onPress={()=>navigation.navigate('HairdresserServiceCreation')}>
+            <Ionicons name="add" size={28} color="#000" />
         </TouchableOpacity>
+        <BottomTabBar/>
     </View>
     );
 };
