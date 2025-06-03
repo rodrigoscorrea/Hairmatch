@@ -28,3 +28,16 @@ export const createService = async (data: any) => {
         throw error;
     }
 }
+
+export const deleteService = async (serviceId: number) => {
+    if(!serviceId) {
+        console.error("no service id provided for deletion");
+        return;
+    }
+    try {
+        await axios.delete(`${API_BACKEND_URL}/api/service/delete`);
+    } catch (error) {
+        console.error("Error to delete service:", error);
+        throw error;
+    }
+}

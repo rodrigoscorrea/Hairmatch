@@ -5,12 +5,13 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { styles } from './styles/HairdresserServiceManager';
 import { ServiceResponse } from '@/app/models/Service.types';
 import { useBottomTab } from '@/app/contexts/BottomTabContext';
-import { listServicesByHairdresser } from '@/app/services/service.service';
+import { deleteService, listServicesByHairdresser } from '@/app/services/service.service';
 import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 import BottomTabBar from '@/app/components/BottomBar';
+import ConfirmationModal from '@/app/components/modals/confirmationModal/ConfirmationModal';
 
 type HairdresserServiceManagerScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -19,6 +20,9 @@ const HairdresserServiceManageScreen = () => {
   const [services, setServices] = useState<ServiceResponse[]>(); 
   const { hairdresser, setActiveTab } = useBottomTab();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+
 
   useEffect(()=>{
     const fetchHairdresserService = async () => {
@@ -36,6 +40,22 @@ const HairdresserServiceManageScreen = () => {
     fetchHairdresserService();
   }, []);
 
+  const proceedServiceDeletion = async (serviceId: number) => {
+    try {
+        setIsLoading(true);
+        await deleteService(serviceId);
+    } catch (error) {
+        console.log('Erro while deleting selected service', error);
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+  const handleServiceDeletion = (serviceId: number) => {
+    setSelectedServiceId(serviceId);
+    setIsModalVisible(true);
+  };
+ 
   return (
     <View style={{ flex: 1 }}>
         <ScrollView style={styles.container}>
@@ -55,7 +75,7 @@ const HairdresserServiceManageScreen = () => {
                     <View style={styles.cardHeader}>
                         <Text style={styles.serviceTitle}>{service.name}</Text>
                         <View style={styles.iconRow}>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={()=>handleServiceDeletion(service.id)}>
                             <Ionicons name="trash-outline" size={18} color="#000" />
                         </TouchableOpacity>
                         <TouchableOpacity style={{ marginLeft: 10 }}>
@@ -90,6 +110,25 @@ const HairdresserServiceManageScreen = () => {
         <TouchableOpacity style={styles.addButton} onPress={()=>navigation.navigate('HairdresserServiceCreation')}>
             <Ionicons name="add" size={28} color="#000" />
         </TouchableOpacity>
+
+        {isModalVisible && selectedServiceId !== null && (
+        <ConfirmationModal
+            visible={isModalVisible}
+            title="Confirmar exclusão de serviço"
+            description="Tem certeza de que deseja excluir este serviço?"
+            confirmText="Sim, tenho certeza"
+            onConfirm={async () => {
+                await proceedServiceDeletion(selectedServiceId);
+                setIsModalVisible(false);
+                setSelectedServiceId(null);
+            }}
+            onCancel={() => {
+                setIsModalVisible(false);
+                setSelectedServiceId(null);
+            }}
+        />
+        )}
+
         <BottomTabBar/>
     </View>
     );

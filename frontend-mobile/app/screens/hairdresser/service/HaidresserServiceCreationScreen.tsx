@@ -32,8 +32,6 @@ export default function HairdresserServiceCreationScreen() {
   }, [])
 
   const handleCreateService = async () => {
-    // Your save logic here
-    //console.log({ name, description, duration });
     try {
       const data = {
         hairdresser: hairdresser?.id, 
@@ -96,7 +94,7 @@ export default function HairdresserServiceCreationScreen() {
           onChangeText={(price) => setPrice(price)}
         />
         <View style={styles.footerButtons}>
-          <TouchableOpacity style={styles.cancelButton}>
+          <TouchableOpacity style={styles.cancelButton} onPress={()=>navigation.navigate('HairdresserServiceManager')}>
             <Text style={styles.cancelText}>Voltar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.saveButton} onPress={handleCreateService}>
