@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput, Switch, ScrollView, StyleSheet
 } from 'react-native';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useBottomTab } from '@/app/contexts/BottomTabContext';
-import { AvailabilityRequest } from '@/app/models/Availability.types';
-import { createAvailability } from '@/app/services/availability.service';
+import { updateAvailability } from '@/app/services/availability.service';
+import { styles } from './styles/AvailabilityEditStyles';
 
 const DAYS = [
   {name: 'Segunda-Feira', weekday: 'monday'},
@@ -19,23 +19,81 @@ const DAYS = [
   {name:'Domingo', weekday:'sunday'},
 ];
 
+type Availability = {
+  id: number;
+  weekday: string;
+  start_time: string;
+  end_time: string;
+  break_start?: string;
+  break_end?: string;
+};
+
+type DayState = {
+  info: typeof DAYS[0];
+  active: boolean;
+  start: string;
+  end: string;
+  breakStart?: string;
+  breakEnd?: string;
+  availabilityId?: number;
+};
+
 type AvailabilityCreateScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+type AvailabilityCreateScreenRouteProp = RouteProp<RootStackParamList, 'AvailabilityEdit'>;
 
 export default function AvailabilityEditScreen() {
   const navigation = useNavigation<AvailabilityCreateScreenNavigationProp>();
-  const {hairdresser, setActiveTab} = useBottomTab();
-  const [mode, setMode] = useState<'all' | 'custom'>('all');
-  const [allStart, setAllStart] = useState('08:00');
-  const [allEnd, setAllEnd] = useState('17:00');
+  const route = useRoute<AvailabilityCreateScreenRouteProp>();
 
-  const [days, setDays] = useState(
-    DAYS.map((day, index) => ({
-      info: day,
-      active: true,
-      start: '08:00',
-      end: '17:00',
-    }))
-  );
+  const [availabilities, setAvailabilities] = useState(route.params.availabilities);
+  const [nonWorkingDays, setNonWorkingDays] = useState(route.params.nonWorkingDays);
+  const {hairdresser, setActiveTab} = useBottomTab();
+
+  const [days, setDays] = useState<DayState[]>([]);
+
+  // Helper function to convert time format from "HH:MM:SS" to "HH:MM"
+  const formatTimeDisplay = (time: string): string => {
+    return time.substring(0, 5);
+  };
+
+  // Helper function to convert time format from "HH:MM" to "HH:MM:SS"
+  const formatTimeForBackend = (time: string): string => {
+    return `${time}:00`;
+  };
+
+  // Initialize days state based on availabilities and nonWorkingDays
+  useEffect(() => {
+    const initialDays = DAYS.map((day, index) => {
+      // Check if this day is a non-working day
+      const isNonWorkingDay = nonWorkingDays.includes(index + 1); // assuming 1-based indexing
+      
+      // Find availability for this day
+      const availability = availabilities?.find(avail => avail.weekday === day.weekday);
+      
+      if (isNonWorkingDay || !availability) {
+        // Non-working day or no availability found
+        return {
+          info: day,
+          active: false,
+          start: '08:00',
+          end: '17:00',
+        };
+      } else {
+        // Working day with availability
+        return {
+          info: day,
+          active: true,
+          start: formatTimeDisplay(availability.start_time),
+          end: formatTimeDisplay(availability.end_time),
+          breakStart: availability.break_start ? formatTimeDisplay(availability.break_start) : undefined,
+          breakEnd: availability.break_end ? formatTimeDisplay(availability.break_end) : undefined,
+          availabilityId: availability.id,
+        };
+      }
+    });
+    
+    setDays(initialDays);
+  }, [availabilities, nonWorkingDays]);
 
   const toggleDay = (index: number) => {
     const newDays = [...days];
@@ -43,66 +101,55 @@ export default function AvailabilityEditScreen() {
     setDays(newDays);
   };
 
-  const handleChangeTime = (index: number, key: 'start' | 'end', value: string) => {
+  const handleChangeTime = (index: number, key: 'start' | 'end' | 'breakStart' | 'breakEnd', value: string) => {
     const newDays = [...days];
     newDays[index][key] = value;
     setDays(newDays);
   };
 
   const handleAvailabilitySubmit = async () => {
-    const availabilitiesRaw = days.filter((day) => day.active == true);
-    const availabilities = availabilitiesRaw.map((availability) => {
-      return {
-        weekday: availability.info.weekday,
-        start_time: `${availability.start}:00`,
-        end_time: `${availability.end}:00`
+    // Get active days (working days)
+    const workingDays = days.filter((day) => day.active === true);
+    
+    // Format availabilities for backend
+    const availabilitiesForBackend = workingDays.map((day) => {
+      const availability: any = {
+        weekday: day.info.weekday,
+        start_time: formatTimeForBackend(day.start),
+        end_time: formatTimeForBackend(day.end),
+      };
+      
+      if (day.availabilityId) {
+        availability.id = day.availabilityId;
       }
-    })
-    await createAvailability(availabilities, hairdresser?.id);
-    navigation.navigate("HairdresserProfile");
-  }
+      
+      if (day.breakStart && day.breakEnd) {
+        availability.break_start = formatTimeForBackend(day.breakStart);
+        availability.break_end = formatTimeForBackend(day.breakEnd);
+      }
+      
+      return availability;
+    });
+    
+    const nonWorkingDaysForBackend = days
+      .map((day, index) => day.active ? null : index + 1)
+      .filter(dayIndex => dayIndex !== null);
+    
+    try {
+      await updateAvailability(availabilitiesForBackend, hairdresser?.id);
+      
+      navigation.navigate("HairdresserProfile");
+    } catch (error) {
+      console.error('Error updating availability:', error);
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Horário de Atendimento EDITTAAAA</Text>
+      <Text style={styles.title}>Editar Horário de Atendimento</Text>
 
       {/* Toggle Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, mode === 'all' && styles.activeTab]}
-          onPress={() => setMode('all')}
-        >
-          <Text style={mode === 'all' ? styles.activeTabText : styles.tabText}>Todos os dias</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, mode === 'custom' && styles.activeTab]}
-          onPress={() => setMode('custom')}
-        >
-          <Text style={mode === 'custom' ? styles.activeTabText : styles.tabText}>Customizar</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* All Days Same */}
-      {mode === 'all' ? (
-        <View style={styles.timeContainer}>
-          <Text style={styles.label}>Horário de início</Text>
-          <TextInput
-            style={styles.input}
-            value={allStart}
-            onChangeText={setAllStart}
-            keyboardType="numeric"
-          />
-
-          <Text style={[styles.label, { marginTop: 20 }]}>Horário de fim</Text>
-          <TextInput
-            style={styles.input}
-            value={allEnd}
-            onChangeText={setAllEnd}
-            keyboardType="numeric"
-          />
-        </View>
-      ) : (
-        // Custom Per Day
         <View style={{ marginTop: 20 }}>
           {days.map((day, index) => (
             <View key={day.info.name} style={styles.dayRow}>
@@ -112,20 +159,46 @@ export default function AvailabilityEditScreen() {
               />
               <Text style={styles.dayLabel}>{day.info.name}</Text>
               {day.active ? (
-                <View style={styles.timeInputs}>
-                  <TextInput
-                    style={styles.smallInput}
-                    value={day.start}
-                    onChangeText={(value) => handleChangeTime(index, 'start', value)}
-                    keyboardType="numeric"
-                  />
-                  <Text style={{ marginHorizontal: 5 }}>às</Text>
-                  <TextInput
-                    style={styles.smallInput}
-                    value={day.end}
-                    onChangeText={(value) => handleChangeTime(index, 'end', value)}
-                    keyboardType="numeric"
-                  />
+                <View style={styles.timeContainer}>
+                  <View style={styles.timeInputs}>
+                    <TextInput
+                      style={styles.smallInput}
+                      value={day.start}
+                      onChangeText={(value) => handleChangeTime(index, 'start', value)}
+                      keyboardType="numeric"
+                      placeholder="08:00"
+                    />
+                    <Text style={{ marginHorizontal: 5 }}>às</Text>
+                    <TextInput
+                      style={styles.smallInput}
+                      value={day.end}
+                      onChangeText={(value) => handleChangeTime(index, 'end', value)}
+                      keyboardType="numeric"
+                      placeholder="17:00"
+                    />
+                  </View>
+                  
+                  {/* Optional: Break time inputs */}
+                  {/* <View style={styles.breakTimeContainer}>
+                    <Text style={styles.breakLabel}>Intervalo (opcional):</Text>
+                    <View style={styles.timeInputs}>
+                      <TextInput
+                        style={styles.smallInput}
+                        value={day.breakStart || ''}
+                        onChangeText={(value) => handleChangeTime(index, 'breakStart', value)}
+                        keyboardType="numeric"
+                        placeholder="12:00"
+                      />
+                      <Text style={{ marginHorizontal: 5 }}>às</Text>
+                      <TextInput
+                        style={styles.smallInput}
+                        value={day.breakEnd || ''}
+                        onChangeText={(value) => handleChangeTime(index, 'breakEnd', value)}
+                        keyboardType="numeric"
+                        placeholder="13:00"
+                      />
+                    </View>
+                  </View> */}
                 </View>
               ) : (
                 <Text style={{ marginLeft: 10, color: 'gray' }}>Fechado</Text>
@@ -133,7 +206,7 @@ export default function AvailabilityEditScreen() {
             </View>
           ))}
         </View>
-      )}
+      </View>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.cancelButton} onPress={()=>navigation.navigate('AvailabilityManager')}>
@@ -146,43 +219,3 @@ export default function AvailabilityEditScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF3ED', padding: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  tabContainer: { flexDirection: 'row', justifyContent: 'center' },
-  tab: {
-    borderWidth: 1, borderColor: '#ccc', padding: 10, width: 140,
-    borderRadius: 12, marginHorizontal: 5, backgroundColor: '#FFF'
-  },
-  activeTab: {
-    backgroundColor: '#fce6d6', borderColor: '#fa944b'
-  },
-  tabText: { textAlign: 'center', color: '#666' },
-  activeTabText: { color: '#fa944b', fontWeight: 'bold', textAlign: 'center' },
-  timeContainer: { marginTop: 20 },
-  label: { fontWeight: 'bold', marginBottom: 5 },
-  input: {
-    backgroundColor: '#fde4d2', padding: 10, borderRadius: 10,
-    width: 100, textAlign: 'center', fontSize: 18
-  },
-  dayRow: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 15
-  },
-  dayLabel: { marginLeft: 10, width: 100 },
-  timeInputs: { flexDirection: 'row', alignItems: 'center' },
-  smallInput: {
-    backgroundColor: '#fde4d2', padding: 5, borderRadius: 10,
-    width: 60, textAlign: 'center'
-  },
-  buttonRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    marginTop: 30, paddingHorizontal: 10
-  },
-  cancelButton: {
-    backgroundColor: '#e5e4f4', padding: 12, borderRadius: 10, width: '40%', alignItems: 'center'
-  },
-  saveButton: {
-    backgroundColor: '#fa944b', padding: 12, borderRadius: 10, width: '40%', alignItems: 'center'
-  },
-});

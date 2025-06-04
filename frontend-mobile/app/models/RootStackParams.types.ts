@@ -113,7 +113,7 @@ export type RootStackParamList = {
   AvailabilityManager: any | undefined
   AvailabilityCreate: any | undefined
   AvailabilityEdit: {
-    availabilities: AvailabilityResponse[] | undefined, 
-    nonWorkingDays: NonWorkingDays | undefined
-  }
+    availabilities: AvailabilityResponse[];
+    nonWorkingDays: number[]
+  };
 };

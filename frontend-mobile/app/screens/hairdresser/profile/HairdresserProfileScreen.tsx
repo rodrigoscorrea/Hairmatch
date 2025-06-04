@@ -17,13 +17,11 @@ import { PreferencesResponse } from '@/app/models/Preferences.types';
 import { ServiceResponse } from '@/app/models/Service.types';
 import { AvailabilityResponse } from '@/app/models/Availability.types';
 import { NonWorkingDays } from '@/app/models/Availability.types';
-import { listAvailabilitiesByHairdresser } from '@/app/services/availability.service';
-import { listServicesByHairdresser } from '@/app/services/service.service';
-import { formatAvailability } from '@/app/utils/availability-formater';
 import BottomTabBar from '@/app/components/BottomBar';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import {styles} from './styles/HairdresserProfileStyles';
 
 type HairdresserProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -48,26 +46,7 @@ export default function HairdresserProfileScreen() {
         console.log("Failed to retrieve user preferences",err);
         }
     }
-    const fetchHairdresserAvailability = async () => {
-        try {
-        const availabilityResponse = await listAvailabilitiesByHairdresser(hairdresser?.id)
-        setAvailabilities(availabilityResponse.data);
-        setNonWorkingDays(availabilityResponse.non_working_days)
-        } catch (err) {
-        console.log("Failed to fetch Hairdresser Availabilities", err)
-        }
-    }
-    const fetchHairdresserService = async () => {
-        try {
-        const serviceResponse = await listServicesByHairdresser(hairdresser?.id);
-        setServices(serviceResponse.data);
-        } catch (err) {
-        console.log("Failed to fetch Hairdresser Services", err);
-        }
-    }
-    //fetchHairdresserAvailability();
-    //fetchHairdresserService();
-    //fetchHairdresserPreferences();
+    fetchHairdresserPreferences();
     setActiveTab('HairdresserProfile');
   },[])  
   return (
@@ -159,139 +138,3 @@ export default function HairdresserProfileScreen() {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  profile: {
-    flexDirection: 'row',
-    marginVertical: 16,
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 12,
-  },
-  profileText: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  location: {
-    fontSize: 12,
-    color: '#555',
-  },
-  rating: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#000',
-  },
-  bio: {
-    fontSize: 13,
-    color: '#333',
-    marginBottom: 10,
-  },
-  more: {
-    color: '#A85E49',
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontWeight: 'bold',
-    marginVertical: 10,
-    fontSize: 16,
-  },
-  gallery: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  galleryImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  techniques: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginVertical: 12,
-  },
-  techTag: {
-    backgroundColor: '#FFD6C7',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  techText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#FFFFFF'
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: '#FFA366',
-    borderRadius: 16,
-    padding: 12,
-    paddingLeft: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFEFE8',
-  },
-  cardText: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  arrowButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FF7A00',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  availabilityRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
-  },
-  weekday: {
-    fontWeight: 'bold'
-  },
-  timeRange: {
-    color: '#666'
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8, // React Native doesn’t support `gap` natively; use margin instead if needed
-    marginTop: 8,
-  },
-  techCard: {
-    backgroundColor: '#FF8822',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    margin: 4,
-  },
-});

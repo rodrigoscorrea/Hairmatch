@@ -13,12 +13,10 @@ import { NonWorkingDays } from '@/app/models/Availability.types';
 import { AvailabilityResponse } from '@/app/models/Availability.types';
 import { listAvailabilitiesByHairdresser } from '@/app/services/availability.service';
 
-type AvailabilityManagerScreenRouteProp = RouteProp<RootStackParamList, 'AvailabilityManager'>;
 type AvailabilityManagerScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const AvailabilityManageScreen = () => {
   const navigation = useNavigation<AvailabilityManagerScreenNavigationProp>();
-  const route = useRoute<AvailabilityManagerScreenRouteProp>();
   const { hairdresser, setActiveTab } = useBottomTab();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
