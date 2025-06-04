@@ -25,7 +25,10 @@ import HairdresserProfileScreen from './screens/hairdresser/profile/HairdresserP
 import HairdresserServiceManageScreen from './screens/hairdresser/service/HaidresserServiceManager';
 import HairdresserServiceCreationScreen from './screens/hairdresser/service/HaidresserServiceCreationScreen';
 import HairdresserServiceEditScreen from './screens/hairdresser/service/HairdresserServiceEditScreen';
-import AvailabilityManagerScreen from './screens/hairdresser/availability/AvailabilityManager';
+import AvailabilityManagerScreen from './screens/hairdresser/availability/AvailabilityManagerScreen';
+import AvailabilityCreateScreen from './screens/hairdresser/availability/AvailabilityCreateScreen';
+import AvailabilityEditScreen from './screens/hairdresser/availability/AvailabilityEditScreen';
+
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});
@@ -237,6 +240,8 @@ function App() {
                 <Stack.Screen name="HairdresserServiceCreation" component={HairdresserServiceCreationScreen} />
                 <Stack.Screen name="HairdresserServiceEdit" component={HairdresserServiceEditScreen} />
                 <Stack.Screen name="AvailabilityManager" component={AvailabilityManagerScreen} />
+                <Stack.Screen name="AvailabilityCreate" component={AvailabilityCreateScreen} />
+                <Stack.Screen name="AvailabilityEdit" component={AvailabilityEditScreen} />
               </Stack.Navigator>
             </>
           )}

@@ -5,29 +5,33 @@ import {
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
+import { useBottomTab } from '@/app/contexts/BottomTabContext';
+import { AvailabilityRequest } from '@/app/models/Availability.types';
+import { createAvailability } from '@/app/services/availability.service';
 
 const DAYS = [
-  'Segunda-Feira',
-  'Terça-Feira',
-  'Quarta-Feira',
-  'Quinta-Feira',
-  'Sexta-Feira',
-  'Sábado',
-  'Domingo',
+  {name: 'Segunda-Feira', weekday: 'monday'},
+  {name:'Terça-Feira', weekday:'tuesday'},
+  {name:'Quarta-Feira', weekday:'wednesday'},
+  {name:'Quinta-Feira', weekday:'thursday'},
+  {name:'Sexta-Feira', weekday:'friday'},
+  {name:'Sábado', weekday:'saturday'},
+  {name:'Domingo', weekday:'sunday'},
 ];
 
-type AvailabilityManagerScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+type AvailabilityCreateScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-export default function AvailabilityManagerScreen() {
-  const navigation = useNavigation<AvailabilityManagerScreenNavigationProp>();
+export default function AvailabilityCreateScreen() {
+  const navigation = useNavigation<AvailabilityCreateScreenNavigationProp>();
+  const {hairdresser, setActiveTab} = useBottomTab();
   const [mode, setMode] = useState<'all' | 'custom'>('all');
   const [allStart, setAllStart] = useState('08:00');
   const [allEnd, setAllEnd] = useState('17:00');
 
   const [days, setDays] = useState(
     DAYS.map((day, index) => ({
-      name: day,
-      active: index !== 6, // Sunday off by default
+      info: day,
+      active: true,
       start: '08:00',
       end: '17:00',
     }))
@@ -44,6 +48,19 @@ export default function AvailabilityManagerScreen() {
     newDays[index][key] = value;
     setDays(newDays);
   };
+
+  const handleAvailabilitySubmit = async () => {
+    const availabilitiesRaw = days.filter((day) => day.active == true);
+    const availabilities = availabilitiesRaw.map((availability) => {
+      return {
+        weekday: availability.info.weekday,
+        start_time: `${availability.start}:00`,
+        end_time: `${availability.end}:00`
+      }
+    })
+    await createAvailability(availabilities, hairdresser?.id);
+    navigation.navigate("HairdresserProfile");
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -88,12 +105,12 @@ export default function AvailabilityManagerScreen() {
         // Custom Per Day
         <View style={{ marginTop: 20 }}>
           {days.map((day, index) => (
-            <View key={day.name} style={styles.dayRow}>
+            <View key={day.info.name} style={styles.dayRow}>
               <Switch
                 value={day.active}
                 onValueChange={() => toggleDay(index)}
               />
-              <Text style={styles.dayLabel}>{day.name}</Text>
+              <Text style={styles.dayLabel}>{day.info.name}</Text>
               {day.active ? (
                 <View style={styles.timeInputs}>
                   <TextInput
@@ -119,10 +136,10 @@ export default function AvailabilityManagerScreen() {
       )}
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.cancelButton} onPress={()=>navigation.navigate('HairdresserProfile')}>
+        <TouchableOpacity style={styles.cancelButton} onPress={()=>navigation.navigate('AvailabilityManager')}>
           <Text>Voltar</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleAvailabilitySubmit}>
           <Text style={{ color: '#fff' }}>Salvar</Text>
         </TouchableOpacity>
       </View>

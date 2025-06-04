@@ -1,5 +1,6 @@
 import { ServiceResponse } from "./Service.types";
 import { Hairdresser } from "./Hairdresser.types";
+import { AvailabilityResponse, NonWorkingDays } from "./Availability.types";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -110,4 +111,9 @@ export type RootStackParamList = {
     service: ServiceResponse
   }
   AvailabilityManager: any | undefined
+  AvailabilityCreate: any | undefined
+  AvailabilityEdit: {
+    availabilities: AvailabilityResponse[] | undefined, 
+    nonWorkingDays: NonWorkingDays | undefined
+  }
 };

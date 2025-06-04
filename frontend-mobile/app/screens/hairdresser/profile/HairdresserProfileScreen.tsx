@@ -65,9 +65,9 @@ export default function HairdresserProfileScreen() {
         console.log("Failed to fetch Hairdresser Services", err);
         }
     }
-    fetchHairdresserAvailability();
-    fetchHairdresserService();
-    fetchHairdresserPreferences();
+    //fetchHairdresserAvailability();
+    //fetchHairdresserService();
+    //fetchHairdresserPreferences();
     setActiveTab('HairdresserProfile');
   },[])  
   return (
@@ -135,36 +135,25 @@ export default function HairdresserProfileScreen() {
         </Accordion>
       
         {/* Available times */}
-        {availabilities ? (
-            <TouchableOpacity style={styles.card} onPress={()=>{navigation.navigate('AvailabilityManager')}}>
-              <Text style={styles.cardText}>Meus horários de atendimento</Text>
-              <View style={styles.arrowButton}>
-                <Ionicons name="arrow-forward" size={16} color="#fff" />
-              </View>
-            </TouchableOpacity>
-        ):(
-          <>
-            <View>
-              <Text>Não há horários cadastrados</Text>
-            </View>
-          </>
-        )}
+        <TouchableOpacity style={styles.card} 
+          onPress={()=>{navigation.navigate('AvailabilityManager', {
+            availabilities: availabilities, 
+            nonWorkingDays: nonWorkingDays
+          })}}>
+          <Text style={styles.cardText}>Meus horários de atendimento</Text>
+          <View style={styles.arrowButton}>
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
+          </View>
+        </TouchableOpacity>
 
         {/* Available services */}
-        {services ? (
-            <TouchableOpacity style={styles.card} onPress={()=>{navigation.navigate('HairdresserServiceManager')}}>
-              <Text style={styles.cardText}>Meus serviços</Text>
-              <View style={styles.arrowButton}>
-                <Ionicons name="arrow-forward" size={16} color="#fff" />
-              </View>
-            </TouchableOpacity>
-        ):(
-          <>
-            <View>
-              <Text>Não há serviços cadastrados</Text>
-            </View>
-          </>
-        )}
+        <TouchableOpacity style={styles.card} onPress={()=>{navigation.navigate('HairdresserServiceManager')}}>
+          <Text style={styles.cardText}>Meus serviços</Text>
+          <View style={styles.arrowButton}>
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
+          </View>
+        </TouchableOpacity>
+        
       </ScrollView>
       <BottomTabBar/>
     </SafeAreaView>
