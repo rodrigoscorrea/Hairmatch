@@ -109,4 +109,5 @@ export type RootStackParamList = {
   HairdresserServiceEdit: {
     service: ServiceResponse
   }
+  AvailabilityManager: any | undefined
 };

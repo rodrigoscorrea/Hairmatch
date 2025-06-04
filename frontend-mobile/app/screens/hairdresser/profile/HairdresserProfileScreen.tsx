@@ -135,22 +135,20 @@ export default function HairdresserProfileScreen() {
         </Accordion>
       
         {/* Available times */}
-        <Accordion title="Meus Horários de Atendimento">
-          {availabilities ? availabilities.map((availability) => {
-          const formatted = formatAvailability(availability);
-            return (
-              <View key={availability.id} style={styles.availabilityRow}>
-                <Text style={styles.weekday}>{formatted.weekday}</Text>
-                <Text style={styles.timeRange}>{formatted.timeRange}</Text>
+        {availabilities ? (
+            <TouchableOpacity style={styles.card} onPress={()=>{navigation.navigate('AvailabilityManager')}}>
+              <Text style={styles.cardText}>Meus horários de atendimento</Text>
+              <View style={styles.arrowButton}>
+                <Ionicons name="arrow-forward" size={16} color="#fff" />
               </View>
-            );
-          }) : 
-          (
-            <>
-              <Text>Carregando horários do cabeleireiro...</Text>
-            </>
-          )}
-        </Accordion>
+            </TouchableOpacity>
+        ):(
+          <>
+            <View>
+              <Text>Não há horários cadastrados</Text>
+            </View>
+          </>
+        )}
 
         {/* Available services */}
         {services ? (
