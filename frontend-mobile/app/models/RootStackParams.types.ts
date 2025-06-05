@@ -116,4 +116,5 @@ export type RootStackParamList = {
     availabilities: AvailabilityResponse[];
     nonWorkingDays: number[]
   };
+  AgendaManager: any | undefined
 };

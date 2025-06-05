@@ -46,6 +46,12 @@ const hairdresserTabs = [
     activeIcon: 'cut-outline',
     route: 'HairdresserServiceManager'
   },
+  {
+    name: 'AgendaManager',
+    icon: 'calendar-clear-outline',
+    activeIcon: 'calendar-clear',
+    route: 'AgendaManager'
+  }
 ]
 
 const BottomTabBar: React.FC = () => {

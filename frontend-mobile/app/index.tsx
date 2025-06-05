@@ -28,6 +28,7 @@ import HairdresserServiceEditScreen from './screens/hairdresser/service/Hairdres
 import AvailabilityManagerScreen from './screens/hairdresser/availability/AvailabilityManagerScreen';
 import AvailabilityCreateScreen from './screens/hairdresser/availability/AvailabilityCreateScreen';
 import AvailabilityEditScreen from './screens/hairdresser/availability/AvailabilityEditScreen';
+import AgendaManagerScreen from './screens/hairdresser/agenda/AgendaManagerScreen';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
@@ -242,6 +243,7 @@ function App() {
                 <Stack.Screen name="AvailabilityManager" component={AvailabilityManagerScreen} />
                 <Stack.Screen name="AvailabilityCreate" component={AvailabilityCreateScreen} />
                 <Stack.Screen name="AvailabilityEdit" component={AvailabilityEditScreen} />
+                <Stack.Screen name="AgendaManager" component={AgendaManagerScreen} />
               </Stack.Navigator>
             </>
           )}
