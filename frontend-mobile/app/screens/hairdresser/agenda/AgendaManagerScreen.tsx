@@ -6,6 +6,7 @@ import { Calendar} from 'react-native-big-calendar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
+import { listAgendaByHairdresser } from '@/app/services/agenda.service';
 const STORAGE_KEY = "@calendar_events";
 function AgendaManagerScreen() {
     const {hairdresser, setActiveTab} = useBottomTab();
@@ -19,6 +20,7 @@ function AgendaManagerScreen() {
     const [startTime, setStartTime] = useState<any>(null);
     const [endTime, setEndTime] = useState<any>(null);
     const [editingEventId, setEditingEventId] = useState<any>(null);
+    const [agendaEvents, setAgendaEvents] = useState<any>();
     const [events, setEvents] = useState<any[]>([]);
     
     const onEventPress = (event: any) => {
@@ -31,23 +33,22 @@ function AgendaManagerScreen() {
 
     // Carregar eventos do AsyncStorage
   useEffect(() => {
-    const loadEvents = async () => {
+
+    const fetchAgendaEvents = async () => {
       try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const converted = parsed.map((ev:any) => ({
-            ...ev,
-            start: new Date(ev.start),
-            end: new Date(ev.end),
-          }));
-          setEvents(converted);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar eventos:", e);
+        const response = await listAgendaByHairdresser(hairdresser?.id);
+        const converted = response.data.map((ev:any) => ({
+          id: ev.id,
+          title: ev.service.name,
+          start: new Date(ev.start_time),
+          end: new Date(ev.end_time),
+        }));
+        setEvents(converted);  
+      } catch (error) {
+        console.log('Error while fetching agenda events', error);
       }
-    };
-    loadEvents();
+    }
+    fetchAgendaEvents();
   }, []);
 
     const onCellPress = (date: any) => {
