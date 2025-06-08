@@ -16,24 +16,20 @@ export const listAgendaByHairdresser = async (hairdresserId: number | undefined)
     }
 }
 
-/* export const createAvailability = async (data: AvailabilityRequest[], hairdresserId: number | undefined) => {
-    if(!hairdresserId){
-        console.error("no hairdresser id provided for availability creation");
+export const createAgendaApointment = async (data: any) => {
+    if(!data){
+        console.error("no data provided for agenda apointment creation");
         return;
     }
     
-    if(!data) {
-        console.error("no data provided for availability creation");
-        return;
-    }
     try {
-        await axios.post(`${API_BACKEND_URL}/api/availability/create/multiple/${hairdresserId}`, {availabilities: data});
+        await axios.post(`${API_BACKEND_URL}/api/agenda/create`, data);
     } catch (error) {
-        console.error("Error create availability:", error);
+        console.error("Error create agenda:", error);
         throw error;
     }
 }
-
+/*
 export const updateAvailability = async (data: AvailabilityRequest[], hairdresserId: number | undefined) => {
     if(!hairdresserId){
         console.error("no hairdresser id provided for availability edition");

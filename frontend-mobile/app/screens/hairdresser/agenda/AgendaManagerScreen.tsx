@@ -1,26 +1,24 @@
 import React, {useState, useEffect} from 'react'
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, TextInput, Pressable, Platform } from 'react-native';
+import { Text, View, TouchableOpacity, Alert, Modal, TextInput, Pressable, Platform } from 'react-native';
 import { useBottomTab } from '@/app/contexts/BottomTabContext'
 import BottomTabBar from '@/app/components/BottomBar'
 import { Calendar} from 'react-native-big-calendar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
-import { listAgendaByHairdresser } from '@/app/services/agenda.service';
-const STORAGE_KEY = "@calendar_events";
+import { createAgendaApointment, listAgendaByHairdresser } from '@/app/services/agenda.service';
+import { styles } from './AgendaManagerStyles';
+
 function AgendaManagerScreen() {
     const {hairdresser, setActiveTab} = useBottomTab();
     const [mode, setMode] = useState<any>("schedule");
     const [showPicker, setShowPicker] = useState<boolean>(false);
     const [pickerMode, setPickerMode] = useState<string>("start"); 
-    const [displayMonth, setDisplayMonth] = useState<any>(new Date());
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [selectedDate, setSelectedDate] = useState<any>(null);
     const [eventTitle, setEventTitle] = useState<string>("");
     const [startTime, setStartTime] = useState<any>(null);
     const [endTime, setEndTime] = useState<any>(null);
     const [editingEventId, setEditingEventId] = useState<any>(null);
-    const [agendaEvents, setAgendaEvents] = useState<any>();
     const [events, setEvents] = useState<any[]>([]);
     
     const onEventPress = (event: any) => {
@@ -31,7 +29,6 @@ function AgendaManagerScreen() {
         setModalVisible(true);
     };
 
-    // Carregar eventos do AsyncStorage
   useEffect(() => {
 
     const fetchAgendaEvents = async () => {
@@ -51,7 +48,26 @@ function AgendaManagerScreen() {
     fetchAgendaEvents();
   }, []);
 
-    const onCellPress = (date: any) => {
+  const createNewAgendaAppointment = async (event: any) => {
+    try {
+      console.log(event)
+      await createAgendaApointment({
+        hairdresser: event.hairdresser,
+        service: event.service,
+        start_time: event.start_time,
+      });
+      setEvents([...events, {
+        id: Math.random().toString(),
+        title: 'Outro',
+        start: new Date(event.start_time),
+        end: new Date(event.end_time),
+      }]);
+    } catch (error) {
+      console.log('Error while creating agenda apointment', error);
+    }
+  }
+
+    /* const onCellPress = (date: any) => {
         const base = dayjs(date).startOf("hour");
         setSelectedDate(base);
         setStartTime(base.toDate());
@@ -59,7 +75,7 @@ function AgendaManagerScreen() {
         setEventTitle("corte");
         setEditingEventId(null);
         setModalVisible(true);
-    };
+    }; */
 
     const onDayChange = (val: any) => {
         setMode(val);
@@ -67,16 +83,16 @@ function AgendaManagerScreen() {
 
     const handleTimeChange = (event: any, selectedDate: any) => {
         if (selectedDate) {
-        if (pickerMode === "start") {
-            setStartTime(selectedDate);
-        } else {
-            setEndTime(selectedDate);
-        }
+          if (pickerMode === "start") {
+              setStartTime(selectedDate);
+          } else {
+              setEndTime(selectedDate);
+          }
         }
         setShowPicker(false);
     };
 
-    const handleAddOrEditEvent = () => {
+    /* const handleAddOrEditEvent = () => {
         if (!eventTitle.trim()) {
         Alert.alert("Erro", "Digite um título para o evento.");
         return;
@@ -88,17 +104,17 @@ function AgendaManagerScreen() {
         }
     
         const hasConflict = events.some((ev: any) => {
-        if (editingEventId && ev.id === editingEventId) return false;
-    
-        return (
-            dayjs(startTime).isBefore(dayjs(ev.end)) &&
-            dayjs(endTime).isAfter(dayjs(ev.start))
-        );
+          if (editingEventId && ev.id === editingEventId) return false;
+      
+          return (
+              dayjs(startTime).isBefore(dayjs(ev.end)) &&
+              dayjs(endTime).isAfter(dayjs(ev.start))
+          );
         });
     
         if (hasConflict) {
-        Alert.alert("Conflito", "Esse horário já está ocupado por outro evento.");
-        return;
+          Alert.alert("Conflito", "Esse horário já está ocupado por outro evento.");
+          return;
         }
     
         if (editingEventId) {
@@ -111,20 +127,21 @@ function AgendaManagerScreen() {
             );
         } else {
             const newEvent = {
-                title: eventTitle,
-                start: startTime,
-                end: endTime,
+                hairdresser: hairdresser?.id,
+                service: 1,
+                start_time: startTime,
+                end_time: endTime
             };
-            setEvents((prev: any) => [...prev, newEvent]);
+            createNewAgendaAppointment(newEvent);
         }
     
         closeModal();
-    };
+    }; */
 
-    const handleDeleteEvent = () => {
+    const handleCancelEvent = () => {
         if (editingEventId) {
-        setEvents((prev: any) => prev.filter((ev:any) => ev.id !== editingEventId));
-        closeModal();
+          setEvents((prev: any) => prev.filter((ev:any) => ev.id !== editingEventId));
+          closeModal();
         }
     };
 
@@ -168,7 +185,6 @@ function AgendaManagerScreen() {
             height={600}
             mode={mode}
             onPressEvent={onEventPress}
-            onPressCell={onCellPress}
             locale="pt-br"
             minHour={10}
             maxHour={18}
@@ -183,18 +199,13 @@ function AgendaManagerScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingEventId ? "Editar Evento" : "Novo Evento"}
+              Agendamento
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Título do evento"
-              value={eventTitle}
-              onChangeText={setEventTitle}
-            />
+            <Text style={styles.input}>{eventTitle}</Text>
 
             <Text style={styles.label}>Início: {startTime ? dayjs(startTime).format("HH:mm") : "--:--"}</Text>
-            <Pressable
+            {/* <Pressable
               style={styles.selectButton}
               onPress={() => {
                 setPickerMode("start");
@@ -202,10 +213,10 @@ function AgendaManagerScreen() {
               }}
             >
               <Text style={styles.buttonText}>Selecionar Início</Text>
-            </Pressable>
+            </Pressable> */}
 
             <Text style={styles.label}>Fim: {endTime ? dayjs(endTime).format("HH:mm") : "--:--"}</Text>
-            <Pressable
+            {/* <Pressable
               style={styles.selectButton}
               onPress={() => {
                 setPickerMode("end");
@@ -213,19 +224,14 @@ function AgendaManagerScreen() {
               }}
             >
               <Text style={styles.buttonText}>Selecionar Fim</Text>
-            </Pressable>
+            </Pressable> */}
 
             <View style={styles.modalButtons}>
-              <Pressable style={styles.confirmButton} onPress={handleAddOrEditEvent}>
-                <Text style={styles.buttonText}>{editingEventId ? "Salvar" : "Adicionar"}</Text>
-              </Pressable>
-              {editingEventId && (
-                <Pressable style={styles.deleteButton} onPress={handleDeleteEvent}>
-                  <Text style={styles.buttonText}>Excluir</Text>
-                </Pressable>
-              )}
-              <Pressable style={styles.cancelButton} onPress={closeModal}>
+              <Pressable style={styles.cancelButton} onPress={handleCancelEvent}>
                 <Text style={styles.buttonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={styles.backButton} onPress={closeModal}>
+                <Text style={styles.buttonText}>Voltar</Text>
               </Pressable>
             </View>
           </View>
@@ -245,102 +251,5 @@ function AgendaManagerScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  viewstyle: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 16
-  },
-  button: {
-    height: 30,
-    width: 70,
-    alignContent: "center",
-    alignItems: "center",
-    padding: 5,
-    borderRadius: 10
-  },
-  textstyle: {
-    color: "white",
-    textAlign: "center",
-    fontWeight: "700",
-    textTransform: "capitalize"
-  },
-  activecolor: {
-    backgroundColor: "green"
-  },
-  inactivecolor: {
-    backgroundColor: "gray"
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  modalContent: {
-    width: 300,
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 10
-  },
-  label: {
-    marginTop: 10,
-    marginBottom: 5,
-    fontWeight: '600'
-  },
-  selectButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center'
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10
-  },
-  confirmButton: {
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 8
-  },
-  deleteButton: {
-    backgroundColor: 'red',
-    padding: 10,
-    borderRadius: 8
-  },
-  cancelButton: {
-    backgroundColor: 'gray',
-    padding: 10,
-    borderRadius: 8
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold'
-  },
-  monthContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  monthText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-});
 
 export default AgendaManagerScreen
