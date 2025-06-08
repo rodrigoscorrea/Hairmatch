@@ -32,6 +32,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+EVOLUTION_API_URL=os.getenv('EVOLUTION_API_URL')
+EVOLUTION_API_KEY=os.getenv('EVOLUTION_API_KEY')
+EVOLUTION_INSTANCE_NAME=os.getenv('EVOLUTION_INSTANCE_NAME')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,6 +46,7 @@ INSTALLED_APPS = [
     'service',
     'reserve',
     'agenda',
+    'chatbot',
     'rest_framework',
     'corsheaders',
     'django.contrib.admin',

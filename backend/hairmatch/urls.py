@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/reserve/', include('reserve.urls')),
     path('api/agenda/', include('agenda.urls')),
     path('api/service/', include('service.urls')),
+    path('api/chatbot/', include('chatbot.urls'))
 ] 
 
 if settings.DEBUG:
