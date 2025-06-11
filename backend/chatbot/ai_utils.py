@@ -1,10 +1,14 @@
 import requests
+import json
+import re
 import google.generativeai as genai
 
 from django.conf import settings
+from django.shortcuts import render
 from users.models import User
 from users.serializers import UserFullInfoSerializer
 from .prompts import Prompts
+from .templates import Templates
 
 class AiUtils():
     @staticmethod
@@ -148,3 +152,30 @@ class AiUtils():
 
         except requests.exceptions.RequestException as e:
             print(f"Error sending message via Evolution API: {e}")
+
+    @staticmethod
+    def format_hairdresser(text):
+        
+        new_text = text.strip().strip('"').strip()
+        new_text = re.sub(r'```json|```', '', new_text).strip()
+
+
+        try:
+            hairdressers_data = json.loads(new_text) 
+        except json.JSONDecodeError:
+            return "Erro: Não foi possível decodificar os dados de entrada."
+        
+        hairdressers_formatted = ""
+        names = []
+
+        for h in hairdressers_data:
+            fullname = f"{h['first_name']} {h['last_name']}"
+            names.append(fullname)
+            location = h['city']
+            rating = h['rating']
+            preferences =  ', '.join(h['preferences'])
+            reasoning = h['reasoning']
+        
+            hairdressers_formatted += f"""\n- 👤 **Nome completo:** {fullname}\n- 📍 **Localização:** {location}\n- ⭐ **Avaliação:** {rating}\n- 💼 **Especialidades relevantes:** {preferences}\n- ✨ **Justificativa personalizada:** {reasoning}"""
+
+        return hairdressers_formatted.strip(), names

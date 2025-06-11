@@ -67,13 +67,17 @@ class EvolutionApi(APIView):
                                     f"Com base na nossa conversa, preciso de recomendações de cabeleireiros. "
                                     f"Minhas preferências incluem: {', '.join(preferences)}" 
                                 )
-                                response_message = recommendation_response.text
-                                for index in range(len(matching_hairdressers)):
+                                recommended_or_searched_hairdressers[sender_number] = recommendation_response.text
+                                formatted_answer,names = AiUtils.format_hairdresser(recommendation_response.text)
+
+                                response_message = f"Com base no que você me contou, encontrei alguns profissionais perfeitos para você:\n {formatted_answer}"
+ 
+                                for index in range(3):
                                     response_message += (
-                                        f"\n\n*Digite {index+1}* para visualizar os serviços de {matching_hairdressers[index]['first_name']} {matching_hairdressers[index]['last_name']}"
+                                        f"\n\n*Digite {index+1}* para visualizar os serviços de {names[index]}"
                                     ) 
-                                response_message += (
-                                    f"\n*Digite 4* para buscar profissionais novamente\n\n"
+                                response_message += ( 
+                                    f"\n\n*Digite 4* para buscar profissionais novamente\n\n"
                                 ) 
 
                                 user_states[sender_number] = 'hairdresser_service_selection'

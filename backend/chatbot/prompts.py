@@ -74,17 +74,17 @@ class Prompts():
 
    4. **Formato da Resposta:**
       ```
-      Com base no que você me contou, encontrei alguns profissionais perfeitos para você:
-
-      👤 **[Nome do Cabeleireiro]**
-      📍 [Localização]
-      ⭐ Nota: [X]/5
-      💼 Especialidades: [Lista relevante]
-      ✨ **Por que é ideal para você:** [Justificativa personalizada conectando as preferências do usuário com as especialidades]
-
-      [Repetir para cada recomendação]
-
-      💡 Gostaria de mais informações sobre algum deles ou prefere que eu faça uma nova busca?
+     [
+         {
+            "first_name" : "Primeiro Nome",
+            "last_name" : "Sobrenome",
+            "rating" : "Avaliação",
+            "preferences": [lista de especialidades relevantes],
+            "city": "Cidade",
+            "reasoning" : "Justificativa Personalizada"
+         },
+      ]
+      [Repetir as chaves para cada recomendação]
       ```
 
    **Regras importantes:**
