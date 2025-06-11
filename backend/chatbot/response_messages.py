@@ -24,6 +24,8 @@ class ResponseMessage():
 
     CHAT_STOPPED = ("Atendimento finalizado. Obrigado por conversar comigo!")
 
+    CHAT_STOP = ('Pare')
+
     FIND_SPECIFIC_HAIRDRESSER = "Entendido. Qual o nome do cabeleireiro que você procura?"
 
     SERVICE_TYPE_SEARCH = "Ótimo! Para começar, me diga: que tipo de serviço você está buscando hoje? (ex: corte, coloração, um tratamento especial...)"

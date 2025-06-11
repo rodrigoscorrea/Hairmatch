@@ -45,11 +45,11 @@ class EvolutionApi(APIView):
                 response_message = "Desculpe, não entendi. Poderia repetir?" 
                 incoming_text = incoming_text.strip()
 
-                if incoming_text.lower() == 'pare':
+                if incoming_text.lower() == ResponseMessage.CHAT_STOP.lower():
                     response_message = ResponseMessage.CHAT_STOPPED
-                    user_states = {}
-                    user_chats = {}
-                    user_preferences = {}
+                    user_states.pop(sender_number, None)
+                    user_chats.pop(sender_number, None)
+                    user_preferences.pop(sender_number,None)
                     AiUtils.send_whatsapp_message(sender_number, response_message)
                     return JsonResponse({"status": "ok"}, status=200)
 
