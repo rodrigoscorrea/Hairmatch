@@ -21,11 +21,8 @@ user_states = {}
 #armazena a sessão do gemini por usuário
 user_chats = {}
 user_preferences = {}
-hairdressers_list = UserFullInfoSerializer(
-    User.objects.filter(role='hairdresser')[:10], 
-    many=True
-).data
-recommended_or_searched_hairdressers = []
+
+recommended_or_searched_hairdressers = {}
 class EvolutionApi(APIView):
     def post(self, request):
         try:
@@ -60,8 +57,8 @@ class EvolutionApi(APIView):
             
                         if preferences:
                             user_preferences[sender_number] = preferences
-                            matching_hairdressers = AiUtils.get_hairdressers_by_preferences(preferences, limit=3)
-                            recommended_or_searched_hairdressers = matching_hairdressers
+                            matching_hairdressers = AiUtils.get_hairdressers_by_preferences(preferences, limit=5)
+                            recommended_or_searched_hairdressers[sender_number] = matching_hairdressers
                             if matching_hairdressers:
                                 recommendation_model = AiUtils.create_gemini_model_for_recommendation(matching_hairdressers)
                                 recommendation_chat = recommendation_model.start_chat(history=[])
@@ -76,8 +73,8 @@ class EvolutionApi(APIView):
                                         f"\n\n*Digite {index+1}* para visualizar os serviços de {matching_hairdressers[index]['first_name']} {matching_hairdressers[index]['last_name']}"
                                     ) 
                                 response_message += (
-                                    f"*Digite {len(matching_hairdressers) + 1}* para buscar profissionais novamente\n\n"
-                                )
+                                    f"\n*Digite 4* para buscar profissionais novamente\n\n"
+                                ) 
 
                                 user_states[sender_number] = 'hairdresser_service_selection'
                             else:
@@ -157,7 +154,7 @@ class EvolutionApi(APIView):
                         if hairdressers.exists():
                             serialized_hairdressers = UserFullInfoSerializer(hairdressers, many=True).data
                             response_message = "Encontrei estes profissionais:\n\n"
-                            recommended_or_searched_hairdressers = serialized_hairdressers
+                            recommended_or_searched_hairdressers[sender_number] = serialized_hairdressers
                             for h in serialized_hairdressers:
                                 specialties_str = ", ".join(h['preferences'])
                                 response_message += (
@@ -173,7 +170,8 @@ class EvolutionApi(APIView):
                         print(f"Error searching for specific hairdresser: {e}")
                         response_message = "Erro ao buscar o cabeleireiro. Tente novamente."
                 elif current_state == 'hairdresser_service_selection':
-                    
+                    if incoming_text == '1':
+                        response_message = f"{recommended_or_searched_hairdressers}" 
                     user_states[sender_number] = 'hairdresser_service_choice'
                 AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:

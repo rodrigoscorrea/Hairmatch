@@ -49,7 +49,7 @@ class Prompts():
    Você recebeu uma lista específica de cabeleireiros que foram pré-selecionados com base nas preferências coletadas.
 
    **Seu objetivo:**
-   Analisar a lista de cabeleireiros fornecida e recomendar de 3 a 5 profissionais que melhor atendam às necessidades do usuário.
+   Analisar a lista de cabeleireiros fornecida e recomendar 3 profissionais que melhor atendam às necessidades do usuário.
 
    **Como fazer recomendações:**
 
