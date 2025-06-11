@@ -10,7 +10,8 @@ from rest_framework.views import APIView
 from django.conf import settings
 from users.models import User
 from users.serializers import UserFullInfoSerializer
-
+from .prompts import RECOMENDATION_PROMPT
+from .response_messages import HAIRDRESSER_NOT_FOUND, HOW_CAN_I_HELP_YOU_TODAY
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -39,43 +40,7 @@ def format_hairdressers_for_prompt(h_list):
         )
     return formatted_list
 
-system_instruction = f"""
-Você é um assistente virtual amigável e especialista em ajudar usuários a encontrar o cabeleireiro ideal em sua cidade.
-Seu principal objetivo é conversar com o usuário para entender profundamente suas preferências e necessidades.
-Depois de coletar informações suficientes, você deve recomendar de 3 a 5 cabeleireiros da lista fornecida abaixo que melhor se encaixem no perfil do usuário.
-
-**Processo de Interação e Recomendação:**
-
-1.  **Coleta de Informações:**
-    * Comece perguntando qual tipo de serviço o usuário está procurando (ex: corte, coloração, tratamento, penteado para uma ocasião especial, etc.).
-    * Pergunte sobre o tipo de cabelo do usuário (ex: liso, cacheado, crespo, ondulado, fino, grosso, oleoso, seco, com química, natural, etc.).
-    * Investigue preferências de estilo (ex: moderno, clássico, ousado, natural, discreto, um corte que valorize os cachos, uma cor específica, etc.).
-    * Pergunte sobre a faixa de preço desejada (ex: acessível, custo-benefício, médio, pode ser um pouco mais caro se valer a pena, alto padrão).
-    * Pergunte por qualquer outra característica importante (ex: ambiente do salão, uso de produtos específicos, experiência com algum tipo de técnica).
-
-2.  **Condução da Conversa:**
-    * Faça perguntas claras, objetivas e amigáveis, uma ou duas de cada vez para não sobrecarregar o usuário.
-    * Seja paciente e, se o usuário der respostas vagas, peça educadamente por mais detalhes. Por exemplo, se disser "um corte legal", pergunte "O que seria um corte legal para você? Algo mais curto, repicado, com franja?".
-    * Mantenha um tom de conversa natural e prestativo.
-
-3.  **Momento da Recomendação:**
-    * Quando você sentir que possui informações suficientes para fazer uma boa sugestão, ou se o usuário explicitamente pedir pelas recomendações (ex: "Pode me indicar alguns agora?", "Quais você sugere?"), prossiga para a recomendação.
-    * Não faça recomendações se tiver pouquíssima informação.
-
-4.  **Como Recomendar:**
-    * Analise CUIDADOSAMENTE a lista de cabeleireiros fornecida abaixo.
-    * Com base EM TODA a conversa com o usuário, selecione de 3 a 5 cabeleireiros que sejam as melhores opções.
-    * Apresente cada recomendação de forma clara:
-        * Nome do Salão/Cabeleireiro.
-        * Uma breve justificativa PERSONALIZADA, explicando POR QUE aquele salão é uma boa escolha para AQUELE usuário, conectando com as preferências que ele mencionou (ex: "O 'Beleza Cacheada' parece ótimo para você, pois são especialistas em cortes para cabelos cacheados como o seu e usam produtos naturais, o que você mencionou que valoriza.").
-        * Mencione as especialidades relevantes do salão para o pedido do usuário.
-        * Se relevante, mencione a faixa de preço e localização.
-
-5.  **Restrições Importantes:**
-    * NUNCA invente cabeleireiros ou informações que não estejam na lista fornecida.
-    * Se não houver um cabeleireiro que corresponda PERFEITAMENTE a todos os critérios, tente encontrar os mais próximos e explique as ressalvas ou por que ainda assim pode ser uma boa opção.
-    * Seja honesto se não encontrar boas opções.
-
+system_instruction = RECOMENDATION_PROMPT + f"""
 **Lista de Cabeleireiros Disponíveis:**
 {format_hairdressers_for_prompt(hairdressers_list)}
 """
@@ -134,11 +99,8 @@ class EvolutionApi(APIView):
                         user = User.objects.get(phone=sender_number)
                         response_message = ''
                         response_message += (
-                            f"Olá {user.first_name} {user.last_name}! Bem-vindo(a) de volta ao Hairmatch. "
-                            f"Como posso te ajudar hoje?\n\n"
-                            f"*Digite 1* para encontrar um cabeleireiro com base nas suas preferências.\n"
-                            f"*Digite 2* se você já tem um cabeleireiro em mente.\n"
-                            f"*Digite Pare* a qualquer momento para encerar o seu atendimento."
+                            f"Olá {user.first_name} {user.last_name}! Bem-vindo(a) de volta ao Hairmatch."
+                            f"{HOW_CAN_I_HELP_YOU_TODAY}"
                         )
                         user_states[sender_number] = 'main_menu'
                     except User.DoesNotExist: 
@@ -147,7 +109,12 @@ class EvolutionApi(APIView):
 
                 elif current_state == 'waiting_name':
                     user_name = incoming_text
-                    response_message = f"Prazer, {user_name}! Como posso te ajudar hoje?\n\n*Digite 1* para encontrar um cabeleireiro com base nas suas preferências.\n*Digite 2* se você já tem um cabeleireiro em mente."
+                    response_message=''
+                    response_message += (
+                        f"Prazer, {user_name}!"
+                        f"{HOW_CAN_I_HELP_YOU_TODAY}" 
+                    )
+
                     user_states[sender_number] = 'main_menu'
 
                 elif current_state == 'main_menu':
@@ -173,6 +140,13 @@ class EvolutionApi(APIView):
                         except Exception as e:
                             print(f"Error calling Gemini API: {e}")
                             response_message = "Desculpe, estou com um problema para processar sua solicitação no momento. Tente novamente em alguns instantes."
+                elif current_state == 'find_specific_hairdresser':
+                    try:
+                        user = User.objects.get(first_name=incoming_text)
+                        user_data = UserFullInfoSerializer(user).data
+                        response_message=f'Apresentando profissional {user_data}'
+                    except User.DoesNotExist:
+                        response_message=HAIRDRESSER_NOT_FOUND
                 send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:
             return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
