@@ -10,8 +10,8 @@ from rest_framework.views import APIView
 from django.conf import settings
 from users.models import User
 from users.serializers import UserFullInfoSerializer
-from .prompts import RECOMENDATION_PROMPT
-from .response_messages import HAIRDRESSER_NOT_FOUND, HOW_CAN_I_HELP_YOU_TODAY
+from .ai_utils import AiUtils
+from .response_messages import ResponseMessage
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -20,54 +20,12 @@ genai.configure(api_key=GEMINI_API_KEY)
 user_states = {}
 #armazena a sessão do gemini por usuário
 user_chats = {}
+user_preferences = {}
 hairdressers_list = UserFullInfoSerializer(
     User.objects.filter(role='hairdresser')[:10], 
     many=True
 ).data
-
-
-def format_hairdressers_for_prompt(h_list):
-    formatted_list = "\nAqui está a lista de cabeleireiros disponíveis para sua referência:\n"
-    for h in h_list:
-        specialties_str = ", ".join(h['preferences'])
-        formatted_list += (
-            f"- Nome: {h['first_name']}\n"
-            f"  Sobrenome: {h['last_name']}\n"
-            f"  Descrição: {h['hairdresser']['resume']}\n"
-            f"  Especialidades: {specialties_str}\n"
-            f"  Localização: {h['neighborhood'], h['city']}\n"
-            f"  Nota: {h['rating']}\n"
-        )
-    return formatted_list
-
-system_instruction = RECOMENDATION_PROMPT + f"""
-**Lista de Cabeleireiros Disponíveis:**
-{format_hairdressers_for_prompt(hairdressers_list)}
-"""
-
-gemini_model = genai.GenerativeModel(
-    'gemini-2.0-flash',
-    system_instruction=system_instruction,
-    generation_config={
-        "temperature": 0.65,
-        "max_output_tokens": 2048
-    }
-)
-
-def send_whatsapp_message(number, message):
-    url = f"{settings.EVOLUTION_API_URL}/message/sendText/{settings.EVOLUTION_INSTANCE_NAME}"
-    headers = {"apikey": settings.EVOLUTION_API_KEY}
-    payload = {
-        "number": number,
-        "text": message
-    }
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error sending message via Evolution API: {e}")
-
+recommended_or_searched_hairdressers = []
 class EvolutionApi(APIView):
     def post(self, request):
         try:
@@ -88,19 +46,57 @@ class EvolutionApi(APIView):
                 incoming_text = incoming_text.strip()
 
                 if incoming_text.lower() == 'pare':
-                    response_message = "Atendimento finalizado. Obrigado por conversar comigo!"
-                    user_states.pop(sender_number, None)
-                    user_chats.pop(sender_number, None)
-                    send_whatsapp_message(sender_number, response_message)
+                    response_message = ResponseMessage.CHAT_STOPPED
+                    user_states = {}
+                    user_chats = {}
+                    user_preferences = {}
+                    AiUtils.send_whatsapp_message(sender_number, response_message)
                     return JsonResponse({"status": "ok"}, status=200)
 
-                if current_state == 'start':
+                if incoming_text.lower() in ['recomendar', 'recomendação', 'sugerir', 'indicar']:
+                    if sender_number in user_chats and sender_number in user_preferences:
+                        chat_session = user_chats[sender_number]
+                        preferences = AiUtils.extract_preferences_from_conversation(chat_session.history)
+            
+                        if preferences:
+                            user_preferences[sender_number] = preferences
+                            matching_hairdressers = AiUtils.get_hairdressers_by_preferences(preferences, limit=3)
+                            recommended_or_searched_hairdressers = matching_hairdressers
+                            if matching_hairdressers:
+                                recommendation_model = AiUtils.create_gemini_model_for_recommendation(matching_hairdressers)
+                                recommendation_chat = recommendation_model.start_chat(history=[])
+                                
+                                recommendation_response = recommendation_chat.send_message(
+                                    f"Com base na nossa conversa, preciso de recomendações de cabeleireiros. "
+                                    f"Minhas preferências incluem: {', '.join(preferences)}" 
+                                )
+                                response_message = recommendation_response.text
+                                for index in range(len(matching_hairdressers)):
+                                    response_message += (
+                                        f"\n\n*Digite {index+1}* para visualizar os serviços de {matching_hairdressers[index]['first_name']} {matching_hairdressers[index]['last_name']}"
+                                    ) 
+                                response_message += (
+                                    f"*Digite {len(matching_hairdressers) + 1}* para buscar profissionais novamente\n\n"
+                                )
+
+                                user_states[sender_number] = 'hairdresser_service_selection'
+                            else:
+                                response_message = ("Não encontrei cabeleireiros que correspondam exatamente às suas preferências. "
+                                                  "Gostaria que eu amplie a busca ou prefere tentar com outras preferências?")
+                        else:
+                            response_message = ("Preciso coletar mais informações sobre suas preferências antes de fazer recomendações. "
+                                              "Pode me contar mais sobre o que você está procurando?")
+                    else:
+                        response_message = "Vamos começar nossa conversa primeiro. Que tipo de serviço você está procurando?"
+                        user_states[sender_number] = 'collecting_preferences'
+
+                elif current_state == 'start':
                     try:
                         user = User.objects.get(phone=sender_number)
                         response_message = ''
                         response_message += (
                             f"Olá {user.first_name} {user.last_name}! Bem-vindo(a) de volta ao Hairmatch."
-                            f"{HOW_CAN_I_HELP_YOU_TODAY}"
+                            f"{ResponseMessage.HOW_CAN_I_HELP_YOU_TODAY}"
                         )
                         user_states[sender_number] = 'main_menu'
                     except User.DoesNotExist: 
@@ -112,42 +108,74 @@ class EvolutionApi(APIView):
                     response_message=''
                     response_message += (
                         f"Prazer, {user_name}!"
-                        f"{HOW_CAN_I_HELP_YOU_TODAY}" 
+                        f"{ResponseMessage.HOW_CAN_I_HELP_YOU_TODAY}" 
                     )
 
                     user_states[sender_number] = 'main_menu'
 
                 elif current_state == 'main_menu':
                     if incoming_text == '1':
-                        user_states[sender_number] = 'gemini_recommendation'
-                        chat_session = gemini_model.start_chat(history=[])
+                        user_states[sender_number] = 'collecting_preferences'
+                        preference_model = AiUtils.create_gemini_model_for_preference_collection()
+                        chat_session = preference_model.start_chat(history=[])
                         user_chats[sender_number] = chat_session
-                        response_message = "Ótimo! Para começar, me diga: que tipo de serviço você está buscando hoje? (ex: corte, coloração, um tratamento especial...)"
+                        user_preferences[sender_number] = []
+                        response_message = ResponseMessage.SERVICE_TYPE_SEARCH
                     elif incoming_text == '2':
-                        response_message = "Entendido. Qual o nome do cabeleireiro que você procura?"
+                        response_message = ResponseMessage.FIND_SPECIFIC_HAIRDRESSER
                         user_states[sender_number] = 'find_specific_hairdresser'
                     else:
-                        response_message = "Opção inválida. Por favor, digite '1' para recomendações ou '2' para buscar um profissional específico."
-                elif current_state == 'gemini_recommendation':
+                        response_message = ResponseMessage.INVALID_OPTION_MESSAGE
+                elif current_state == 'collecting_preferences':
                     chat_session = user_chats.get(sender_number)
                     if not chat_session:
-                        response_message = "Opa! Parece que nossa conversa foi interrompida. Vamos recomeçar. Digite '1' para receber recomendações."
+                        response_message = ResponseMessage.RECOMMENDATION_RESTART_CHAT
                         user_states[sender_number] = 'main_menu'
                     else:
                         try:
                             gemini_response = chat_session.send_message(incoming_text)
                             response_message = gemini_response.text
+                            
+                            if len(chat_session.history) > 3:  # After some conversation
+                                response_message = ResponseMessage.I_COLLECTED_ENOUGH_DATA_RECOMMEND
+                                
                         except Exception as e:
                             print(f"Error calling Gemini API: {e}")
-                            response_message = "Desculpe, estou com um problema para processar sua solicitação no momento. Tente novamente em alguns instantes."
+                            response_message = ResponseMessage.PROBLEM_WHILE_PROCESSING_OPERATION
+                
                 elif current_state == 'find_specific_hairdresser':
+                    hairdresser_name = incoming_text.lower()
                     try:
-                        user = User.objects.get(first_name=incoming_text)
-                        user_data = UserFullInfoSerializer(user).data
-                        response_message=f'Apresentando profissional {user_data}'
-                    except User.DoesNotExist:
-                        response_message=HAIRDRESSER_NOT_FOUND
-                send_whatsapp_message(sender_number,response_message)
+                        hairdressers = User.objects.filter(
+                            role='hairdresser',
+                            first_name__icontains=hairdresser_name
+                        ) | User.objects.filter(
+                            role='hairdresser',
+                            last_name__icontains=hairdresser_name
+                        )
+                        
+                        if hairdressers.exists():
+                            serialized_hairdressers = UserFullInfoSerializer(hairdressers, many=True).data
+                            response_message = "Encontrei estes profissionais:\n\n"
+                            recommended_or_searched_hairdressers = serialized_hairdressers
+                            for h in serialized_hairdressers:
+                                specialties_str = ", ".join(h['preferences'])
+                                response_message += (
+                                    f"👤 *{h['first_name']} {h['last_name']}*\n"
+                                    f"📍 {h['neighborhood']}, {h['city']}\n"
+                                    f"⭐ Nota: {h['rating']}\n"
+                                    f"💼 Especialidades: {specialties_str}\n"
+                                    f"📝 {h['hairdresser']['resume']}\n\n"
+                                )
+                        else:
+                            response_message = f"Não encontrei nenhum cabeleireiro com o nome '{hairdresser_name}'. Gostaria de tentar outro nome ou receber recomendações baseadas em suas preferências?"
+                    except Exception as e:
+                        print(f"Error searching for specific hairdresser: {e}")
+                        response_message = "Erro ao buscar o cabeleireiro. Tente novamente."
+                elif current_state == 'hairdresser_service_selection':
+                    
+                    user_states[sender_number] = 'hairdresser_service_choice'
+                AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:
             return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
         except Exception as e:
