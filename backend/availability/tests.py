@@ -685,3 +685,439 @@ class AvailabilityModelTest(TestCase):
         hairdresser_id = self.hairdresser.id
         self.user.delete()  # This should also delete the hairdresser due to cascade
         self.assertEqual(Availability.objects.filter(hairdresser_id=hairdresser_id).count(), 0)
+
+class UpdateMultipleAvailabilityTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        self.login_url = reverse('login')
+        
+        # Hairdresser payload
+        self.hairdresser_payload = {
+            "email": "rodrigosc615@gmail.com",
+            "first_name": "Rodrigo Santos",
+            "last_name": "o 12",
+            "password": "senha123",
+            "phone": "+5592984502890",
+            "complement": "casa",
+            "neighborhood": "centro",
+            "city": "manaus",
+            "state": "AM",
+            "address": "rua francy assis",
+            "number": "2229",
+            "postal_code": "69050750",
+            "rating": 5.0,
+            "role": "hairdresser",
+            "cnpj": "12345678901212",
+            "experience_years": 4,
+            "resume": "ele é legal e joga bem",
+            "preferences": [],
+            'experience_time':'experience_time',
+            'experiences':'experiences',
+            'products':'products',
+            'resume':'resume'
+        }
+        
+        # Register and login hairdresser
+        self.client.post(
+            self.register_url,
+            data=json.dumps(self.hairdresser_payload),
+            content_type='application/json'
+        )
+        
+        login_payload = {
+            'email': 'rodrigosc615@gmail.com',
+            'password': 'senha123'
+        }
+        self.client.post(
+            self.login_url,
+            data=json.dumps(login_payload),
+            content_type='application/json'
+        )
+        
+        # Get the hairdresser object
+        self.hairdresser = Hairdresser.objects.get(user__email='rodrigosc615@gmail.com')
+        
+        # Create existing availabilities
+        Availability.objects.create(
+            hairdresser=self.hairdresser,
+            weekday='monday',
+            start_time=time(9, 0),
+            end_time=time(17, 0)
+        )
+        
+        Availability.objects.create(
+            hairdresser=self.hairdresser,
+            weekday='tuesday',
+            start_time=time(10, 0),
+            end_time=time(18, 0),
+            break_start=time(12, 0),
+            break_end=time(13, 0)
+        )
+        
+        # URL for updating multiple availabilities
+        self.update_multiple_url = reverse('update_multiple_availability', kwargs={'hairdresser_id': self.hairdresser.id})
+    
+    def test_update_multiple_availability_success(self):
+        """Test successful update of multiple availabilities - should replace all existing ones"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'wednesday',
+                    'start_time': '08:00:00',
+                    'end_time': '16:00:00'
+                },
+                {
+                    'weekday': 'thursday',
+                    'start_time': '09:30:00',
+                    'end_time': '17:30:00',
+                    'break_start': '12:30:00',
+                    'break_end': '13:30:00'
+                },
+                {
+                    'weekday': 'friday',
+                    'start_time': '10:00:00',
+                    'end_time': '18:00:00'
+                }
+            ]
+        }
+        
+        # Verify we start with 2 availabilities
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = json.loads(response.content)
+        self.assertEqual(data['message'], 'Multiple availabilities registered successfully')
+        
+        # Should have 3 new availabilities (old ones deleted)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 3)
+        
+        # Verify old availabilities are gone
+        self.assertFalse(Availability.objects.filter(hairdresser=self.hairdresser, weekday='monday').exists())
+        self.assertFalse(Availability.objects.filter(hairdresser=self.hairdresser, weekday='tuesday').exists())
+        
+        # Verify new availabilities exist
+        wednesday_availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='wednesday')
+        self.assertEqual(str(wednesday_availability.start_time), '08:00:00')
+        self.assertEqual(str(wednesday_availability.end_time), '16:00:00')
+        self.assertIsNone(wednesday_availability.break_start)
+        self.assertIsNone(wednesday_availability.break_end)
+        
+        thursday_availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='thursday')
+        self.assertEqual(str(thursday_availability.start_time), '09:30:00')
+        self.assertEqual(str(thursday_availability.end_time), '17:30:00')
+        self.assertEqual(str(thursday_availability.break_start), '12:30:00')
+        self.assertEqual(str(thursday_availability.break_end), '13:30:00')
+        
+        friday_availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='friday')
+        self.assertEqual(str(friday_availability.start_time), '10:00:00')
+        self.assertEqual(str(friday_availability.end_time), '18:00:00')
+    
+    def test_update_multiple_availability_with_break_times(self):
+        """Test update with break times only"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'saturday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00',
+                    'break_start': '12:00:00',
+                    'break_end': '13:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 1)
+        
+        availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='saturday')
+        self.assertEqual(str(availability.break_start), '12:00:00')
+        self.assertEqual(str(availability.break_end), '13:00:00')
+    
+    def test_update_multiple_availability_without_break_times(self):
+        """Test update without break times"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'sunday',
+                    'start_time': '10:00:00',
+                    'end_time': '16:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 1)
+        
+        availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='sunday')
+        self.assertIsNone(availability.break_start)
+        self.assertIsNone(availability.break_end)
+    
+    def test_update_multiple_availability_missing_weekday(self):
+        """Test update with missing weekday field"""
+        payload = {
+            'availabilities': [
+                {
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('required fields is missing', data['error'])
+    
+    def test_update_multiple_availability_missing_start_time(self):
+        """Test update with missing start_time field"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('required fields is missing', data['error'])
+    
+    def test_update_multiple_availability_missing_end_time(self):
+        """Test update with missing end_time field"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('required fields is missing', data['error'])
+    
+    def test_update_multiple_availability_invalid_weekday(self):
+        """Test update with invalid weekday"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'invalidday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('Invalid weekday', data['error'])
+    
+    def test_update_multiple_availability_nonexistent_hairdresser(self):
+        """Test update for non-existent hairdresser"""
+        non_existent_url = reverse('update_multiple_availability', kwargs={'hairdresser_id': 9999})
+        
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            non_existent_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = json.loads(response.content)
+        self.assertEqual(data['error'], 'Hairdresser not found')
+    
+    def test_update_multiple_availability_empty_list(self):
+        """Test update with empty availabilities list"""
+        payload = {
+            'availabilities': []
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # All existing availabilities should be deleted
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 0)
+    
+    def test_update_multiple_availability_duplicate_weekdays_in_payload(self):
+        """Test update with duplicate weekdays in the same payload"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00'
+                },
+                {
+                    'weekday': 'monday',
+                    'start_time': '10:00:00',
+                    'end_time': '18:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        # This should fail because of duplicate weekdays
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('Availability already exists', data['error'])
+    
+    def test_update_multiple_availability_malformed_json(self):
+        """Test update with malformed JSON"""
+        response = self.client.put(
+            self.update_multiple_url,
+            data='invalid json',
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('error', data)
+    
+    def test_update_multiple_availability_missing_availabilities_key(self):
+        """Test update with missing 'availabilities' key in payload"""
+        payload = {
+            'invalid_key': []
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.content)
+        self.assertIn('error', data)
+    
+    def test_update_multiple_availability_partial_break_time(self):
+        """Test update with only break_start or break_end (not both)"""
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'monday',
+                    'start_time': '09:00:00',
+                    'end_time': '17:00:00',
+                    'break_start': '12:00:00'
+                    # Missing break_end
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Should create availability without break times
+        availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='monday')
+        self.assertIsNone(availability.break_start)
+        self.assertIsNone(availability.break_end)
+    
+    def test_update_multiple_availability_replaces_all_existing(self):
+        """Test that update replaces ALL existing availabilities, not just the ones with matching weekdays"""
+        # Start with 2 existing availabilities (monday, tuesday)
+        initial_count = Availability.objects.filter(hairdresser=self.hairdresser).count()
+        self.assertEqual(initial_count, 2)
+        
+        # Update with completely different weekdays
+        payload = {
+            'availabilities': [
+                {
+                    'weekday': 'wednesday',
+                    'start_time': '08:00:00',
+                    'end_time': '16:00:00'
+                },
+                {
+                    'weekday': 'saturday',
+                    'start_time': '10:00:00',
+                    'end_time': '14:00:00'
+                }
+            ]
+        }
+        
+        response = self.client.put(
+            self.update_multiple_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Should have exactly 2 availabilities (the new ones)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
+        
+        # Old availabilities should be gone
+        self.assertFalse(Availability.objects.filter(hairdresser=self.hairdresser, weekday='monday').exists())
+        self.assertFalse(Availability.objects.filter(hairdresser=self.hairdresser, weekday='tuesday').exists())
+        
+        # New availabilities should exist
+        self.assertTrue(Availability.objects.filter(hairdresser=self.hairdresser, weekday='wednesday').exists())
+        self.assertTrue(Availability.objects.filter(hairdresser=self.hairdresser, weekday='saturday').exists())

@@ -1,10 +1,13 @@
-export interface AvailabilityResponse {
-    id: number,
+export interface AvailabilityRequest {
     weekday: string,
     start_time: string,
     end_time: string,
-    break_start: string | null,
-    break_end: string | null
+    break_start?: string | null,
+    break_end?: string | null
+}
+
+export interface AvailabilityResponse extends AvailabilityRequest{
+    id: number,
 }
 
 export interface NonWorkingDays {
