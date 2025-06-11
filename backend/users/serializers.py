@@ -52,3 +52,21 @@ class CustomerNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ['id', 'user']
+
+# AI AIMED SERIALIZERS
+
+class UserFullInfoSerializer(serializers.ModelSerializer):
+    hairdresser = HairdresserSerializer(read_only=True)
+    preferences = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'first_name', 'last_name', 'email', 'phone',
+            'complement', 'neighborhood', 'city', 'state', 'address', 
+            'number', 'postal_code', 'rating', 'role', 'hairdresser', 'preferences'
+        ]
+    
+    def get_preferences(self, obj):
+        preferences = obj.preferences.all()
+        return [preference.name for preference in preferences]

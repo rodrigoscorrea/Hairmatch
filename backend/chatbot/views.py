@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from django.conf import settings
+from users.models import User
+from users.serializers import UserFullInfoSerializer
 
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
@@ -17,169 +19,10 @@ genai.configure(api_key=GEMINI_API_KEY)
 user_states = {}
 #armazena a sessão do gemini por usuário
 user_chats = {}
-hairdressers_list = [
-    {
-        "id": 1,
-        "name": "Amanda Souza",
-        "neighborhood": "Adrianópolis",
-        "city": "Manaus",
-        "rating": 4.9,
-        "preferences": ["Coloração", "Corte feminino", "Luzes"],
-        "experience_years": 10,
-        "resume": "Especialista em coloração e luzes, com experiência em tendências internacionais de coloração.",
-        "experiences": [
-            "Curso de Colorimetria Avançada (Senac - 2018)",
-            "Participação no Hair Brasil (2022)",
-            "Workshop L'Oréal Paris (2021)"
-        ],
-        "products": ["L'Oréal", "Schwarzkopf", "Keune"],
-        "services": ["Coloração", "Mechas", "Corte feminino", "Escova modeladora"]
-    },
-    {
-        "id": 2,
-        "name": "Rafael Matos",
-        "neighborhood": "Aleixo",
-        "city": "Manaus",
-        "rating": 4.7,
-        "preferences": ["Corte masculino", "Fade", "Barba"],
-        "experience_years": 7,
-        "resume": "Barbeiro especializado em cortes modernos e design de barba com precisão.",
-        "experiences": [
-            "Curso de Corte Fade - Instituto Barber Pro (2019)",
-            "Barber Week Manaus (2021)"
-        ],
-        "products": ["Reuzel", "Balm Viking", "Machado's"],
-        "services": ["Corte masculino", "Design de barba", "Pigmentação capilar"]
-    },
-    {
-        "id": 3,
-        "name": "Luciana Mendes",
-        "neighborhood": "Parque Dez de Novembro",
-        "city": "Manaus",
-        "rating": 5.0,
-        "preferences": ["Tratamentos capilares", "Hidratação", "Reconstrução"],
-        "experience_years": 12,
-        "resume": "Referência em cuidados capilares com foco em saúde dos fios e couro cabeludo.",
-        "experiences": [
-            "Curso de Tricologia Estética (2020)",
-            "Formação Kérastase Expert (2019)"
-        ],
-        "products": ["Kérastase", "Truss", "Nioxin"],
-        "services": ["Hidratação", "Reconstrução capilar", "Massagem capilar"]
-    },
-    {
-        "id": 4,
-        "name": "Tiago Lima",
-        "neighborhood": "Compensa",
-        "city": "Manaus",
-        "rating": 4.5,
-        "preferences": ["Corte criativo", "Coloração fantasia"],
-        "experience_years": 6,
-        "resume": "Profissional criativo com foco em estilos alternativos e coloração ousada.",
-        "experiences": [
-            "Curso de Coloração Criativa (2022)",
-            "Participação no Encontro de Estilo Urbano (2023)"
-        ],
-        "products": ["Alfaparf", "Crazy Color", "Igora"],
-        "services": ["Corte moderno", "Coloração fantasia", "Descoloração"]
-    },
-    {
-        "id": 5,
-        "name": "Renata Carvalho",
-        "neighborhood": "Coroado",
-        "city": "Manaus",
-        "rating": 4.8,
-        "preferences": ["Noivas", "Penteados", "Maquiagem"],
-        "experience_years": 14,
-        "resume": "Especialista em beleza para noivas e eventos formais, com foco em penteados e maquiagem HD.",
-        "experiences": [
-            "Curso de Maquiagem Profissional (2017)",
-            "Equipe de beleza no Casamento Coletivo AM (2022)"
-        ],
-        "products": ["MAC", "Vult", "Truss", "Catharine Hill"],
-        "services": ["Penteado", "Maquiagem", "Assessoria para noivas"]
-    },
-    {
-        "id": 6,
-        "name": "Eduardo Silva",
-        "neighborhood": "Cidade Nova",
-        "city": "Manaus",
-        "rating": 4.6,
-        "preferences": ["Corte masculino", "Barba", "Sobrancelha"],
-        "experience_years": 9,
-        "resume": "Barbeiro experiente com foco em estética facial e atendimento masculino completo.",
-        "experiences": [
-            "Curso Master Barber (2020)",
-            "Workshop Barba Perfeita (2021)"
-        ],
-        "products": ["Go. Barber", "Reuzel", "Barba de Respeito"],
-        "services": ["Corte", "Barba", "Sobrancelha masculina"]
-    },
-    {
-        "id": 7,
-        "name": "Patrícia Nogueira",
-        "neighborhood": "Flores",
-        "city": "Manaus",
-        "rating": 4.9,
-        "preferences": ["Escova progressiva", "Botox capilar", "Selagem"],
-        "experience_years": 11,
-        "resume": "Especialista em alisamentos e tratamentos redutores de volume com produtos profissionais.",
-        "experiences": [
-            "Curso de Química Capilar (2018)",
-            "Treinamento em Botox Capilar - Portier (2022)"
-        ],
-        "products": ["Portier", "Let Me Be", "L'Oréal"],
-        "services": ["Progressiva", "Botox capilar", "Selagem térmica"]
-    },
-    {
-        "id": 8,
-        "name": "João Paulo Costa",
-        "neighborhood": "São Jorge",
-        "city": "Manaus",
-        "rating": 4.4,
-        "preferences": ["Corte infantil", "Corte clássico", "Modelagem"],
-        "experience_years": 5,
-        "resume": "Atende principalmente o público infantil e cortes clássicos para todas as idades.",
-        "experiences": [
-            "Curso de Corte Infantil (2019)",
-            "Treinamento em Técnicas Clássicas (2021)"
-        ],
-        "products": ["Johnson's Baby", "Barber Shop", "Salon Line"],
-        "services": ["Corte infantil", "Corte clássico", "Modelagem"]
-    },
-    {
-        "id": 9,
-        "name": "Daniela Ferreira",
-        "neighborhood": "Japiim",
-        "city": "Manaus",
-        "rating": 5.0,
-        "preferences": ["Mega hair", "Alongamento", "Técnicas afro"],
-        "experience_years": 13,
-        "resume": "Trabalha com técnicas de alongamento capilar e cuidados com cabelos crespos e cacheados.",
-        "experiences": [
-            "Especialização em Mega Hair (2016)",
-            "Formação em Cabelos Afro (2020)"
-        ],
-        "products": ["Salon Line", "Yamá", "Embelleze"],
-        "services": ["Mega hair", "Texturização", "Hidratação para cachos"]
-    },
-    {
-        "id": 10,
-        "name": "Marcos Vinícius",
-        "neighborhood": "Planalto",
-        "city": "Manaus",
-        "rating": 4.7,
-        "preferences": ["Corte artístico", "Barbearia moderna", "Coloração masculina"],
-        "experience_years": 8,
-        "resume": "Focado em cortes artísticos e coloração masculina com estilo e atitude.",
-        "experiences": [
-            "Curso Corte Artístico SP (2021)",
-            "Evento Estilo Urbano Barbers (2023)"
-        ],
-        "products": ["Barbershop Pro", "Color Men", "Taiff"],
-        "services": ["Corte artístico", "Coloração masculina", "Barba desenhada"]
-    }
-]
+hairdressers_list = UserFullInfoSerializer(
+    User.objects.filter(role='hairdresser')[:10], 
+    many=True
+).data
 
 
 def format_hairdressers_for_prompt(h_list):
@@ -187,8 +30,9 @@ def format_hairdressers_for_prompt(h_list):
     for h in h_list:
         specialties_str = ", ".join(h['preferences'])
         formatted_list += (
-            f"- Nome: {h['name']}\n"
-            f"  Descrição: {h['resume']}\n"
+            f"- Nome: {h['first_name']}\n"
+            f"  Sobrenome: {h['last_name']}\n"
+            f"  Descrição: {h['hairdresser']['resume']}\n"
             f"  Especialidades: {specialties_str}\n"
             f"  Localização: {h['neighborhood'], h['city']}\n"
             f"  Nota: {h['rating']}\n"
@@ -286,8 +130,20 @@ class EvolutionApi(APIView):
                     return JsonResponse({"status": "ok"}, status=200)
 
                 if current_state == 'start':
-                    response_message = f"Olá! Bem-vindo(a) ao Hairmatch. Para começarmos, qual é o seu nome?"
-                    user_states[sender_number] = 'waiting_name'
+                    try:
+                        user = User.objects.get(phone=sender_number)
+                        response_message = ''
+                        response_message += (
+                            f"Olá {user.first_name} {user.last_name}! Bem-vindo(a) de volta ao Hairmatch. "
+                            f"Como posso te ajudar hoje?\n\n"
+                            f"*Digite 1* para encontrar um cabeleireiro com base nas suas preferências.\n"
+                            f"*Digite 2* se você já tem um cabeleireiro em mente.\n"
+                            f"*Digite Pare* a qualquer momento para encerar o seu atendimento."
+                        )
+                        user_states[sender_number] = 'main_menu'
+                    except User.DoesNotExist: 
+                        response_message = f"Olá! Bem-vindo(a) ao Hairmatch. Para começarmos, qual é o seu nome?"
+                        user_states[sender_number] = 'waiting_name'
 
                 elif current_state == 'waiting_name':
                     user_name = incoming_text
