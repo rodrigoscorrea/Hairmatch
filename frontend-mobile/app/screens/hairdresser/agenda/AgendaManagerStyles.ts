@@ -225,4 +225,52 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#A0A0A0',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    width: 300,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10
+  },
+  label: {
+    marginTop: 10,
+    marginBottom: 5,
+    fontWeight: '600'
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10
+  },
+  cancelButton: {
+    backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 8
+  },
+  backButton: {
+    backgroundColor: 'gray',
+    padding: 10,
+    borderRadius: 8
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
 });

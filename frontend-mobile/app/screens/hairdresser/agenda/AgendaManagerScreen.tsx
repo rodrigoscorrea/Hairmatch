@@ -6,6 +6,8 @@ import {
   StatusBar,
   SafeAreaView,
   FlatList,
+  Modal,
+  Pressable
 } from 'react-native';
 import BottomTabBar from '@/app/components/BottomBar';
 import { Calendar } from 'react-native-big-calendar';
@@ -14,8 +16,6 @@ import dayjs from 'dayjs';
 import { styles, calendarTheme } from './AgendaManagerStyles';
 import { createAgendaApointment, listAgendaByHairdresser } from '@/app/services/agenda.service';
 import { useBottomTab } from '@/app/contexts/BottomTabContext'
-
-
 
 interface Event {
   title: string;
@@ -31,6 +31,19 @@ const CalendarScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const {hairdresser, setActiveTab} = useBottomTab();
   const [events, setEvents] = useState<any[]>([]);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [eventTitle, setEventTitle] = useState<string>("");
+  const [startTime, setStartTime] = useState<any>(null);
+  const [endTime, setEndTime] = useState<any>(null);
+  const [editingEventId, setEditingEventId] = useState<any>(null);
+
+  const onEventPress = (event: any) => {
+    setEditingEventId(event.id);
+    setEventTitle(event.title);
+    setStartTime(new Date(event.start));
+    setEndTime(new Date(event.end));
+    setModalVisible(true);
+};
 
   useEffect(() => {
     const fetchAgendaEvents = async () => {
@@ -222,6 +235,21 @@ const CalendarScreen: React.FC = () => {
     );
   };
 
+  const closeModal = () => {
+    setModalVisible(false);
+    setEventTitle("");
+    setStartTime(null);
+    setEndTime(null);
+    setEditingEventId(null);
+  };
+
+  const handleCancelEvent = () => {
+    if (editingEventId) {
+      setEvents((prev: any) => prev.filter((ev:any) => ev.id !== editingEventId));
+      closeModal();
+    }
+};
+
   return (
 
     <SafeAreaView style={styles.container}>
@@ -248,6 +276,53 @@ const CalendarScreen: React.FC = () => {
       </View>)}
 
       <View>
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Agendamento
+            </Text>
+
+            <Text style={styles.input}>{eventTitle}</Text>
+
+            <Text style={styles.label}>Início: {startTime ? dayjs(startTime).format("HH:mm") : "--:--"}</Text>
+            {/* <Pressable
+              style={styles.selectButton}
+              onPress={() => {
+                setPickerMode("start");
+                setShowPicker(true);
+              }}
+            >
+              <Text style={styles.buttonText}>Selecionar Início</Text>
+            </Pressable> */}
+
+            <Text style={styles.label}>Fim: {endTime ? dayjs(endTime).format("HH:mm") : "--:--"}</Text>
+            {/* <Pressable
+              style={styles.selectButton}
+              onPress={() => {
+                setPickerMode("end");
+                setShowPicker(true);
+              }}
+            >
+              <Text style={styles.buttonText}>Selecionar Fim</Text>
+            </Pressable> */}
+
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.cancelButton} onPress={handleCancelEvent}>
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={styles.backButton} onPress={closeModal}>
+                <Text style={styles.buttonText}>Voltar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
         <BottomTabBar/>
       </View>
     </SafeAreaView>
