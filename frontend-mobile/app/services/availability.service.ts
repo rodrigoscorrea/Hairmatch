@@ -1,7 +1,7 @@
 import axios from 'axios'; 
 import { API_BACKEND_URL } from '../index';
 import { AvailabilityRequest } from '../models/Availability.types';
-
+import axiosInstance from './axios-instance';
 export const listAvailabilitiesByHairdresser = async (hairdresserId: number | undefined) => {
     if(!hairdresserId) {
         console.error("hairdresser id not provided");
@@ -9,7 +9,7 @@ export const listAvailabilitiesByHairdresser = async (hairdresserId: number | un
     }
     
     try {
-        const response = await axios.get(`${API_BACKEND_URL}/api/availability/list/${hairdresserId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/availability/list/${hairdresserId}`);
         return response.data;
     } catch (error) {
         console.error("Error in list availabilities by hairdresser:", error);
@@ -28,7 +28,7 @@ export const createAvailability = async (data: AvailabilityRequest[], hairdresse
         return;
     }
     try {
-        await axios.post(`${API_BACKEND_URL}/api/availability/create/multiple/${hairdresserId}`, {availabilities: data});
+        await axiosInstance.post(`${API_BACKEND_URL}/api/availability/create/multiple/${hairdresserId}`, {availabilities: data});
     } catch (error) {
         console.error("Error create availability:", error);
         throw error;
@@ -46,7 +46,7 @@ export const updateAvailability = async (data: AvailabilityRequest[], hairdresse
         return;
     }
     try {
-        await axios.put(`${API_BACKEND_URL}/api/availability/update/multiple/${hairdresserId}`, {availabilities: data});
+        await axiosInstance.put(`${API_BACKEND_URL}/api/availability/update/multiple/${hairdresserId}`, {availabilities: data});
     } catch (error) {
         console.error("Error updating availability:", error);
         throw error;

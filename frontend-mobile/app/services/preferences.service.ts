@@ -1,5 +1,6 @@
 import axios from 'axios'; 
 import { API_BACKEND_URL } from '../index';
+import axiosInstance from './axios-instance';
 
 export const getPreferencesByUser = async (userID: number | undefined) => {
     if(!userID) {
@@ -7,7 +8,7 @@ export const getPreferencesByUser = async (userID: number | undefined) => {
         return
     }
     try {
-        const response = await axios.get(`${API_BACKEND_URL}/api/preferences/list/${userID}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/preferences/list/${userID}`);
         return response.data;
     } catch (error) {
         console.error("Error in getPreferencesByUser:", error);
@@ -17,7 +18,7 @@ export const getPreferencesByUser = async (userID: number | undefined) => {
 
 export const listPreferences = async () => {
     try {
-        const response = await axios.get(`${API_BACKEND_URL}/api/preferences/list`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/preferences/list`);
         return response.data;
     } catch (error) {
         console.error("Error in getPreferencesByUser:", error);
