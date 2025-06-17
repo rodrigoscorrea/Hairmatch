@@ -61,12 +61,8 @@ class UserFullInfoSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = [
-            'id', 'first_name', 'last_name', 'email', 'phone',
-            'complement', 'neighborhood', 'city', 'state', 'address', 
-            'number', 'postal_code', 'rating', 'role', 'hairdresser', 'preferences'
-        ]
+        fields = ['hairdresser','preferences'] 
     
     def get_preferences(self, obj):
         preferences = obj.preferences.all()
-        return [preference.name for preference in preferences]
+        return [preference.name for preference in preferences] 

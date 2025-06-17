@@ -58,24 +58,20 @@ class EvolutionApi(APIView):
                         if preferences:
                             user_preferences[sender_number] = preferences
                             matching_hairdressers = AiUtils.get_hairdressers_by_preferences(preferences, limit=5)
-                            recommended_or_searched_hairdressers[sender_number] = matching_hairdressers
                             if matching_hairdressers:
                                 recommendation_model = AiUtils.create_gemini_model_for_recommendation(matching_hairdressers)
                                 recommendation_chat = recommendation_model.start_chat(history=[])
-                                
                                 recommendation_response = recommendation_chat.send_message(
                                     f"Com base na nossa conversa, preciso de recomendações de cabeleireiros. "
                                     f"Minhas preferências incluem: {', '.join(preferences)}" 
-                                )
-                                recommended_or_searched_hairdressers[sender_number] = recommendation_response.text
-                                formatted_answer,names = AiUtils.format_hairdresser(recommendation_response.text)
-
+                                )  
+                                formatted_answer,names, ids = AiUtils.format_hairdresser(recommendation_response.text)
+                                recommended_or_searched_hairdressers['sender_number'] = ids
                                 response_message = f"Com base no que você me contou, encontrei alguns profissionais perfeitos para você:\n {formatted_answer}"
- 
-                                for index in range(3):
+                                for index in range(len(ids)):
                                     response_message += (
                                         f"\n\n*Digite {index+1}* para visualizar os serviços de {names[index]}"
-                                    ) 
+                                    )  
                                 response_message += ( 
                                     f"\n\n*Digite 4* para buscar profissionais novamente\n\n"
                                 ) 
@@ -174,8 +170,10 @@ class EvolutionApi(APIView):
                         print(f"Error searching for specific hairdresser: {e}")
                         response_message = "Erro ao buscar o cabeleireiro. Tente novamente."
                 elif current_state == 'hairdresser_service_selection':
-                    if incoming_text == '1':
-                        response_message = f"{recommended_or_searched_hairdressers}" 
+                    if incoming_text == '1': 
+                        haidressers = recommended_or_searched_hairdressers['sender_number']
+                        haidresser = AiUtils.get_hairdresser_by_id(haidressers[0])
+                        response_message = f" Dados do usuário desejado{haidresser}" 
                     user_states[sender_number] = 'hairdresser_service_choice'
                 AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:

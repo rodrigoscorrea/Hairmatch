@@ -4,7 +4,7 @@ import re
 import google.generativeai as genai
 
 from django.conf import settings
-from django.shortcuts import render
+from django.core.exceptions import ObjectDoesNotExist
 from users.models import User
 from users.serializers import UserFullInfoSerializer
 from .prompts import Prompts
@@ -126,9 +126,9 @@ class AiUtils():
         """Create Gemini model for making recommendations with specific hairdressers"""
         system_instruction = Prompts.RECOMMENDATION_PROMPT + f"""
         **Lista de Cabeleireiros Disponíveis:**
-        {AiUtils.format_hairdressers_for_prompt(hairdressers_list)}
+        {hairdressers_list}
         """
-        
+
         return genai.GenerativeModel(
             'gemini-2.0-flash',
             system_instruction=system_instruction,
@@ -167,8 +167,10 @@ class AiUtils():
         
         hairdressers_formatted = ""
         names = []
+        ids = []
 
         for h in hairdressers_data:
+            ids.append(h['id'])
             fullname = f"{h['first_name']} {h['last_name']}"
             names.append(fullname)
             location = h['city']
@@ -176,6 +178,19 @@ class AiUtils():
             preferences =  ', '.join(h['preferences'])
             reasoning = h['reasoning']
         
-            hairdressers_formatted += f"""\n- 👤 **Nome completo:** {fullname}\n- 📍 **Localização:** {location}\n- ⭐ **Avaliação:** {rating}\n- 💼 **Especialidades relevantes:** {preferences}\n- ✨ **Justificativa personalizada:** {reasoning}"""
+            hairdressers_formatted += f"""\n- 👤 *Nome completo:* {fullname}\n- 📍 *Localização:* {location}\n- ⭐ *Avaliação:* {rating}\n- 💼 *Especialidades relevantes:* {preferences}\n- ✨ *Justificativa personalizada:* {reasoning}"""
 
-        return hairdressers_formatted.strip(), names
+        return hairdressers_formatted.strip(), names, ids
+    
+    @staticmethod
+    def get_hairdresser_by_id(hairdresser_id):
+        try:
+            hairdresser = User.objects.get(id=hairdresser_id, role='hairdresser')
+            return UserFullInfoSerializer(hairdresser).data
+            
+        except ObjectDoesNotExist:
+            print(f"Nenhum cabeleireiro encontrado com o ID: {hairdresser_id}")
+            return None
+        except Exception as e:
+            print(f"Ocorreu um erro ao buscar o cabeleireiro: {e}")
+            return None

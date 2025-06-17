@@ -16,7 +16,6 @@ class Prompts():
    - Tipo de cabelo (liso, cacheado, crespo, ondulado, fino, grosso, oleoso, seco, com química)
    - Preferências de estilo (moderno, clássico, ousado, natural, discreto)
    - Ocasião especial ou uso do penteado
-   - Faixa de preço aproximada
    - Localização preferida
    - Experiências anteriores (positivas ou negativas)
    - Qualquer requisito especial
@@ -63,29 +62,19 @@ class Prompts():
       - Priorize aqueles com especialidades mais relevantes
       - Considere a nota/avaliação como critério de qualidade
 
-   3. **Apresentação das Recomendações:**
-      Para cada cabeleireiro recomendado, inclua:
-      - 👤 Nome completo
-      - 📍 Localização
-      - ⭐ Avaliação
-      - 💼 Especialidades relevantes
-      - 📝 Breve descrição personalizada
-      - ✨ **Justificativa personalizada** explicando POR QUE este profissional é ideal para o usuário
-
    4. **Formato da Resposta:**
-      ```
-     [
+      - Sua resposta final deve ser exclusivamente um array JSON válido, sem nenhum texto ou explicação adicional fora dele. Use o exemplo abaixo como guia absoluto.
+      [
          {
-            "first_name" : "Primeiro Nome",
-            "last_name" : "Sobrenome",
-            "rating" : "Avaliação",
-            "preferences": [lista de especialidades relevantes],
-            "city": "Cidade",
-            "reasoning" : "Justificativa Personalizada"
-         },
+            "id": 18,
+            "first_name": "Valentina",
+            "last_name": "Camargo",
+            "rating": 4,
+            "preferences": ["Coloração", "Corte em Camadas", "Hidratação"],
+            "city": "Pelotas",
+            "reasoning": "Valentina é uma excelente escolha por ser especialista em Coloração, Corte em Camadas e Hidratação, cobrindo todas as suas necessidades. Sua avaliação de 4 estrelas reforça a qualidade do seu trabalho."
+         }
       ]
-      [Repetir as chaves para cada recomendação]
-      ```
 
    **Regras importantes:**
    - NUNCA invente informações que não estejam na lista
