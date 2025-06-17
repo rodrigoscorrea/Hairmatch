@@ -36,6 +36,7 @@ const CalendarScreen: React.FC = () => {
   const [startTime, setStartTime] = useState<any>(null);
   const [endTime, setEndTime] = useState<any>(null);
   const [editingEventId, setEditingEventId] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null)
 
   const onEventPress = (event: any) => {
     setEditingEventId(event.id);
@@ -43,6 +44,11 @@ const CalendarScreen: React.FC = () => {
     setStartTime(new Date(event.start));
     setEndTime(new Date(event.end));
     setModalVisible(true);
+};
+
+const handleEventPress = (event: any) => {
+  setSelectedEvent(event);
+  setModalVisible(true);
 };
 
   useEffect(() => {
@@ -203,37 +209,39 @@ const CalendarScreen: React.FC = () => {
     events: Event[];
   }
   
-  const AgendaView: React.FC<AgendaViewProps> = ({ events }) => {
-    // Usa useMemo para ordenar os eventos apenas quando a lista mudar, otimizando a performance.
+  const AgendaView: React.FC<{ events: any[], onEventPress: (event: any) => void }> = ({ events, onEventPress }) => {
     const sortedEvents = useMemo(() => {
       return [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
     }, [events]);
-  
-    const renderItem = ({ item }: { item: Event }) => (
-      <View style={styles.agendaItem}>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dayText}>{dayjs(item.start).format('DD')}</Text>
-          <Text style={styles.monthText}>{dayjs(item.start).format('MMM').toUpperCase()}</Text>
+
+    const renderItem = ({ item }: { item: any }) => (
+      <TouchableOpacity onPress={() => onEventPress(item)}>
+        <View style={styles.agendaItem}>
+          <View style={styles.dateContainer}>
+            <Text style={styles.dayText}>{dayjs(item.start).format('DD')}</Text>
+            <Text style={styles.monthText}>{dayjs(item.start).format('MMM').toUpperCase()}</Text>
+          </View>
+          <View style={styles.detailsContainer}>
+            <Text style={styles.titleText}>{item.title}</Text>
+            <Text style={styles.timeText}>
+              {dayjs(item.start).format('HH:mm')} - {dayjs(item.end).format('HH:mm')}
+            </Text>
+          </View>
         </View>
-        <View style={styles.detailsContainer}>
-          <Text style={styles.titleText}>{item.title}</Text>
-          <Text style={styles.timeText}>
-            {dayjs(item.start).format('HH:mm')} - {dayjs(item.end).format('HH:mm')}
-          </Text>
-        </View>
-      </View>
+      </TouchableOpacity>
     );
-  
+
     return (
       <FlatList
         data={sortedEvents}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.title}-${index}`}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingVertical: 10 }}
         ListEmptyComponent={<Text style={styles.emptyText}>Nenhum evento agendado.</Text>}
       />
     );
   };
+
 
   const closeModal = () => {
     setModalVisible(false);
@@ -243,12 +251,24 @@ const CalendarScreen: React.FC = () => {
     setEditingEventId(null);
   };
 
-  const handleCancelEvent = () => {
-    if (editingEventId) {
-      setEvents((prev: any) => prev.filter((ev:any) => ev.id !== editingEventId));
+  const handleCancelEvent = async () => {
+    if (!selectedEvent?.id) return;
+
+    try {
+      // Deleta do backend primeiro
+      //await deleteAgendaAppointment(selectedEvent.id);
+      
+      // Se tiver sucesso, atualiza o estado local para refletir a mudança
+      setEvents((prevEvents) => prevEvents.filter((ev) => ev.id !== selectedEvent.id));
+      
+      //Alert.alert("Sucesso", "Agendamento cancelado.");
       closeModal();
+    } catch (error) {
+      console.error("Erro ao cancelar agendamento:", error);
+      //Alert.alert("Erro", "Não foi possível cancelar o agendamento. Tente novamente.");
     }
-};
+  };
+
 
   return (
 
@@ -257,7 +277,7 @@ const CalendarScreen: React.FC = () => {
       {renderCalendarHeader()}
       
       {selectedView === 'agenda' ? (
-          <AgendaView events={events} />
+          <AgendaView events={events} onEventPress={handleEventPress} />
         ) : (
       <View style={styles.calendarContainer}>
         <Calendar
