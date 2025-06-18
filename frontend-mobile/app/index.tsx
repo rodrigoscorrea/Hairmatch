@@ -29,7 +29,7 @@ import AvailabilityManagerScreen from './screens/hairdresser/availability/Availa
 import AvailabilityCreateScreen from './screens/hairdresser/availability/AvailabilityCreateScreen';
 import AvailabilityEditScreen from './screens/hairdresser/availability/AvailabilityEditScreen';
 import AgendaManagerScreen from './screens/hairdresser/agenda/AgendaManagerScreen';
-
+import axiosInstance from './services/axios-instance';
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});
@@ -46,25 +46,25 @@ function App() {
   const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
-    signIn: async (email: string, password: string) => {
+     signIn: async (email: string, password: string) => {
       setIsLoading(true);
       try {
         // Step 1: Make login POST request (sets HttpOnly cookie)
         await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
-          email,
-          password
-        });
+      email,
+      password
+    }, { withCredentials: true });
         
         // Step 2: Check authentication with GET request
-        const authResponse = await axios.get(`${API_BACKEND_URL}/api/auth/user`);
+        const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
         console.log('Auth check response:', authResponse.data);
-        
+        console.log(authResponse)
         if (authResponse.data.authenticated) {
           console.log('User is authenticated');
           setUserToken('authenticated'); // Just need a non-null value to trigger navigation
           
           // Step 3: Fetch user info
-          const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
+         const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
           setUserInfo(userResponse.data);
           return true;
         } else {
