@@ -16,46 +16,30 @@ import dayjs from 'dayjs';
 import { styles, calendarTheme } from './AgendaManagerStyles';
 import { createAgendaApointment, listAgendaByHairdresser } from '@/app/services/agenda.service';
 import { useBottomTab } from '@/app/contexts/BottomTabContext'
+import type { AgendaEvent, CalendarMode, AgendaViewProps } from '@/app/models/Agenda.types';
 
-interface Event {
-  title: string;
-  start: Date;
-  end: Date;
-  color: string;
-}
-
-type CalendarMode = 'month' | 'week' | 'day' | 'agenda';
-
-const CalendarScreen: React.FC = () => {
+const AgendaManagerScreen: React.FC = () => {
   const [selectedView, setSelectedView] = useState<CalendarMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const {hairdresser, setActiveTab} = useBottomTab();
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [eventTitle, setEventTitle] = useState<string>("");
   const [startTime, setStartTime] = useState<any>(null);
-  const [endTime, setEndTime] = useState<any>(null);
-  const [editingEventId, setEditingEventId] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
 
-  const onEventPress = (event: any) => {
-    setEditingEventId(event.id);
+  const onEventPress = (event: AgendaEvent) => {
+    setSelectedEvent(event);
     setEventTitle(event.title);
     setStartTime(new Date(event.start));
-    setEndTime(new Date(event.end));
     setModalVisible(true);
-};
-
-const handleEventPress = (event: any) => {
-  setSelectedEvent(event);
-  setModalVisible(true);
-};
+  };
 
   useEffect(() => {
     const fetchAgendaEvents = async () => {
       try {
         const response = await listAgendaByHairdresser(hairdresser?.id);
-        const converted = response.data.map((ev:any) => ({
+        const converted:AgendaEvent[] =response.data.map((ev:any) => ({
           id: ev.id,
           title: ev.service.name,
           start: new Date(ev.start_time),
@@ -204,17 +188,14 @@ const handleEventPress = (event: any) => {
       </View>
     );
   };
-
-  interface AgendaViewProps {
-    events: Event[];
-  }
   
-  const AgendaView: React.FC<{ events: any[], onEventPress: (event: any) => void }> = ({ events, onEventPress }) => {
-    const sortedEvents = useMemo(() => {
-      return [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
-    }, [events]);
+  const AgendaView: React.FC<AgendaViewProps> = ({ events, onEventPress }) => { // Usando AgendaViewProps
+    const sortedEvents = useMemo(() =>
+      [...events].sort((a, b) => a.start.getTime() - b.start.getTime()),
+      [events]
+    );
 
-    const renderItem = ({ item }: { item: any }) => (
+    const renderItem = ({ item }: { item: AgendaEvent }) => ( // Tipado com AgendaEvent
       <TouchableOpacity onPress={() => onEventPress(item)}>
         <View style={styles.agendaItem}>
           <View style={styles.dateContainer}>
@@ -242,13 +223,10 @@ const handleEventPress = (event: any) => {
     );
   };
 
-
   const closeModal = () => {
     setModalVisible(false);
     setEventTitle("");
     setStartTime(null);
-    setEndTime(null);
-    setEditingEventId(null);
   };
 
   const handleCancelEvent = async () => {
@@ -277,7 +255,7 @@ const handleEventPress = (event: any) => {
       {renderCalendarHeader()}
       
       {selectedView === 'agenda' ? (
-          <AgendaView events={events} onEventPress={handleEventPress} />
+          <AgendaView events={events} onEventPress={onEventPress} />
         ) : (
       <View style={styles.calendarContainer}>
         <Calendar
@@ -286,7 +264,7 @@ const handleEventPress = (event: any) => {
           mode={selectedView}
           date={selectedDate}
           locale="pt-br"
-          onPressEvent={(event: Event) => console.log('Event pressed:', event)}
+          onPressEvent={onEventPress}
           onPressCell={handlePressCell}
           weekStartsOn={1}
           showTime={selectedView !== 'month'}
@@ -303,42 +281,29 @@ const handleEventPress = (event: any) => {
         onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Agendamento
+          <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Confirmar Cancelamento</Text>
+            <Text style={styles.modalText}>
+                Cheque todos os dados sobre o agendamento abaixo e clique em Cancelar para prosseguir.
             </Text>
-
-            <Text style={styles.input}>{eventTitle}</Text>
-
-            <Text style={styles.label}>Início: {startTime ? dayjs(startTime).format("HH:mm") : "--:--"}</Text>
-            {/* <Pressable
-              style={styles.selectButton}
-              onPress={() => {
-                setPickerMode("start");
-                setShowPicker(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Selecionar Início</Text>
-            </Pressable> */}
-
-            <Text style={styles.label}>Fim: {endTime ? dayjs(endTime).format("HH:mm") : "--:--"}</Text>
-            {/* <Pressable
-              style={styles.selectButton}
-              onPress={() => {
-                setPickerMode("end");
-                setShowPicker(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Selecionar Fim</Text>
-            </Pressable> */}
-
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelButton} onPress={handleCancelEvent}>
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </Pressable>
-              <Pressable style={styles.backButton} onPress={closeModal}>
-                <Text style={styles.buttonText}>Voltar</Text>
-              </Pressable>
+            <View style={styles.modalReserveInformations}>
+              <Text >Serviço agendado: {eventTitle}</Text> 
+              <Text >Data Reservada: {startTime ? dayjs(startTime).format('DD/MM/YYYY') : "--:--"}</Text>
+              <Text >Horário Reservado: {startTime ? dayjs(startTime).format("HH:mm"): "--:--"}</Text>
+            </View>
+            <View style={styles.modalButtonGroup}>
+                <TouchableOpacity
+                style={styles.modalBackButton}
+                onPress={closeModal}
+                >
+                <Text style={styles.modalBackButtonText}>Voltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                style={styles.modalAcceptButton}
+                onPress={handleCancelEvent}
+                >
+                <Text style={styles.modalAcceptButtonText}>Cancelar</Text>
+                </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -349,4 +314,4 @@ const handleEventPress = (event: any) => {
   );
 };
 
-export default CalendarScreen;
+export default AgendaManagerScreen;
