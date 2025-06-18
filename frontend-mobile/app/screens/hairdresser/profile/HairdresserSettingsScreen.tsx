@@ -3,15 +3,15 @@ import { View, Text, Image, TouchableOpacity, ScrollView, Alert} from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTabBar from '@/app/components/BottomBar';
 import { useBottomTab } from "@/app/contexts/BottomTabContext";
-import { styles } from "./styles/ProfileStyle";
+import { styles } from './styles/HairdresserSettingsStyle';
 import Icon from 'react-native-vector-icons/Feather';
-import { AuthContext } from '../../index';
+import { AuthContext } from '../../../index';
 import ConfirmationModal from "@/app/components/modals/confirmationModal/ConfirmationModal";
 import { AuthContextType } from "@/app/models/Auth.types";
 import MenuItem from "@/app/components/modals/MenuItem/MenuItem";
 
-export default function ProfileScreen(){
-    const { setActiveTab, customer } = useBottomTab();
+export default function HairdresserSettingsScreen(){
+    const { setActiveTab, hairdresser } = useBottomTab();
     const { signOut } = useContext<AuthContextType>(AuthContext);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     useEffect(()=>{
@@ -44,10 +44,10 @@ export default function ProfileScreen(){
                 />
             </View>
             <View style={styles.profileDetails}>
-                <Text style={styles.profileName}>{customer?.user.first_name} {customer?.user.last_name}</Text>
+                <Text style={styles.profileName}>{hairdresser?.user.first_name} {hairdresser?.user.last_name}</Text>
                 <View style={styles.profileRating}>
                 <Icon name="star" size={16} color="#eab308" />
-                <Text style={styles.ratingText}>{customer?.user.rating}</Text>
+                <Text style={styles.ratingText}>{hairdresser?.user.rating}</Text>
                 </View>
             </View>
             </View>
