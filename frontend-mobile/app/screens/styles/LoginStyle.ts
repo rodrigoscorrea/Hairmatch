@@ -28,6 +28,13 @@ export const styles = StyleSheet.create({
       width: '80%',
       maxWidth: 350,
     },
+    inputContainer: {
+      marginBottom: 20,
+    },
+    inputError: {
+    borderWidth: 1.5,
+    borderColor: 'purple',
+  },
     inputLabel: {
       fontSize: 14,
       color: '#333',
@@ -37,10 +44,17 @@ export const styles = StyleSheet.create({
       backgroundColor: '#FFFFFF',
       borderRadius: 8,
       padding: 12,
-      marginBottom: 20,
+      //marginBottom: 20,
       borderWidth: 0.2,
       borderColor: '#828282',
       fontSize: 16,
+    },
+    errorText:{
+      color: 'purple',
+      fontSize: 12,
+      marginBottom: 10,
+      marginLeft: 4,
+      marginTop: 4,
     },
     passwordContainer: {
       flexDirection: 'row',
