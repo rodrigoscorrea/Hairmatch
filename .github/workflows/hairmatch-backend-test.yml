@@ -37,6 +37,9 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
 
+      BACKEND_ALLOWED_HOST: localhost
+      BACKEND_ALLOWED_CORS: http://localhost
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

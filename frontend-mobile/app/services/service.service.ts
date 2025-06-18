@@ -1,7 +1,7 @@
 import axios from 'axios'; 
 import { API_BACKEND_URL } from '../index';
 import { ServiceRequest, ServiceResponse } from '../models/Service.types';
-
+import axiosInstance from './axios-instance';
 export const listServicesByHairdresser = async (hairdresserId: number | undefined) => {
     if(!hairdresserId) {
         console.error("hairdresser id not provided");
@@ -9,7 +9,7 @@ export const listServicesByHairdresser = async (hairdresserId: number | undefine
     }
     
     try {
-        const response = await axios.get(`${API_BACKEND_URL}/api/service/hairdresser/${hairdresserId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/service/hairdresser/${hairdresserId}`);
         return response.data;
     } catch (error) {
         console.error("Error in list services by hairdresser:", error);
@@ -23,7 +23,7 @@ export const createService = async (data: ServiceRequest) => {
         return;
     }
     try {
-        await axios.post(`${API_BACKEND_URL}/api/service/create`, data);
+        await axiosInstance.post(`${API_BACKEND_URL}/api/service/create`, data);
     } catch (error) {
         console.error("Error create service:", error);
         throw error;
@@ -36,7 +36,7 @@ export const editService = async (data: ServiceRequest) => {
         return;
     }
     try {
-        await axios.put(`${API_BACKEND_URL}/api/service/update/${data.id}`, data);
+        await axiosInstance.put(`${API_BACKEND_URL}/api/service/update/${data.id}`, data);
     } catch (error) {
         console.error("Error in service edition:", error);
         throw error;
@@ -49,7 +49,7 @@ export const deleteService = async (serviceId: number) => {
         return;
     }
     try {
-        await axios.delete(`${API_BACKEND_URL}/api/service/remove/${serviceId}`);
+        await axiosInstance.delete(`${API_BACKEND_URL}/api/service/remove/${serviceId}`);
     } catch (error) {
         console.error("Error to delete service:", error);
         throw error;
