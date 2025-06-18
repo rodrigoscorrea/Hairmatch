@@ -30,6 +30,7 @@ import AvailabilityCreateScreen from './screens/hairdresser/availability/Availab
 import AvailabilityEditScreen from './screens/hairdresser/availability/AvailabilityEditScreen';
 import AgendaManagerScreen from './screens/hairdresser/agenda/AgendaManagerScreen';
 import axiosInstance from './services/axios-instance';
+import HairdresserSettingsScreen from './screens/hairdresser/profile/HairdresserSettingsScreen';
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});
@@ -235,6 +236,7 @@ function App() {
             <>
               <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="HairdresserProfile" component={HairdresserProfileScreen} />
+                <Stack.Screen name="HairdresserSettings" component={HairdresserSettingsScreen}/>
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen name="Search" component={SearchScreen} />
                 <Stack.Screen name="HairdresserServiceManager" component={HairdresserServiceManageScreen} />
