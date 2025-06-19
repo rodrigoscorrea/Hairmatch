@@ -58,10 +58,7 @@ function App() {
         
         // Step 2: Check authentication with GET request
         const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
-        console.log('Auth check response:', authResponse.data);
-        console.log(authResponse)
         if (authResponse.data.authenticated) {
-          console.log('User is authenticated');
           setUserToken('authenticated'); // Just need a non-null value to trigger navigation
           
           // Step 3: Fetch user info
