@@ -77,6 +77,10 @@ export const styles = StyleSheet.create({
       paddingVertical: 12,
       marginVertical: 5,
     },
+    inputError: {
+    borderWidth: 1.5,
+    borderColor: 'purple',
+  },
     passwordContainer: {
       flexDirection: 'row',
       alignItems: 'center',
