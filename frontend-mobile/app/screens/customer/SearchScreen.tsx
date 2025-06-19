@@ -32,8 +32,11 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       const data = await searchHairdressers(query);
-      if(data.data[0]?.result_type === 'hairdresser') setHairdresserResults(data.data);
-      else if (data.data[0]?.result_type === 'service') setServiceResults(data.data);
+      data.map((item: any) => {
+        if(item.result_type === 'hairdresser') setHairdresserResults([...hairdresserResults, item])
+        else if (item.result === 'service') setServiceResults([...serviceResults, item])
+        return;
+      });
     } catch (error) {
       console.error("Error searching for hairdressers:", error);
     } finally {
@@ -55,7 +58,7 @@ export default function SearchScreen() {
         setHairdresserResults([]);
         setServiceResults([]);
       }
-    }, 500);
+    }, 1500);
 
     setDebounceTimeout(timeout);
     return () => clearTimeout(timeout);
