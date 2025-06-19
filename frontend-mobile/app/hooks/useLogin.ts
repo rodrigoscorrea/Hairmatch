@@ -47,20 +47,16 @@ export const useLogin = () => {
     return true;
   }
 
-	  const handleLogin = async () => {
-    if (!validateFields()) {return}
-    else{
-			try {
-				await signIn(formData.email, formData.password);
-				navigation.navigate('Home');
-			} catch (error: any) {
-				const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
-				setErrorModal({ visible: true, message: errorMessage });
-			}
-    }
+	const handleLogin = async () => { 
+		if (!validateFields()) {
+			return;
+		}
+		const result = await signIn(formData.email, formData.password);
+		if (!result.success) {
+			setErrorModal({ visible: true, message: result.error || 'An unknown error occurred.' });
+		}
+	};
 
-    
-  };
 	return {
 	formData,
 	handleInputChange,
