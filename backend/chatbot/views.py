@@ -8,21 +8,26 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from django.conf import settings
-from users.models import User
+from users.models import User, Hairdresser
 from users.serializers import UserFullInfoSerializer
+from service.models import Service
+from reserve.models import Reserve
+from reserve.views import *
 from .ai_utils import AiUtils
 from .response_messages import ResponseMessage
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# TODO mudar para acessar o banco
+# TODO fazer models
 user_states = {}
-#armazena a sessão do gemini por usuário
 user_chats = {}
 user_preferences = {}
 
 recommended_or_searched_hairdressers = {}
+chosen_hairdresser = {}
+chosen_hairdresser_services= {}
+
 class EvolutionApi(APIView):
     def post(self, request):
         try:
@@ -36,8 +41,6 @@ class EvolutionApi(APIView):
                 if not incoming_text:
                     return JsonResponse({"status":"ok", "message":"No text in message"}, status=200)
 
-
-                # TODO handle response to the user - gemini and database usage
                 current_state = user_states.get(sender_number,'start')
                 response_message = "Desculpe, não entendi. Poderia repetir?" 
                 incoming_text = incoming_text.strip()
@@ -66,14 +69,14 @@ class EvolutionApi(APIView):
                                     f"Minhas preferências incluem: {', '.join(preferences)}" 
                                 )  
                                 formatted_answer,names, ids = AiUtils.format_hairdresser(recommendation_response.text)
-                                recommended_or_searched_hairdressers['sender_number'] = ids
+                                recommended_or_searched_hairdressers[sender_number] = ids
                                 response_message = f"Com base no que você me contou, encontrei alguns profissionais perfeitos para você:\n {formatted_answer}"
                                 for index in range(len(ids)):
                                     response_message += (
                                         f"\n\n*Digite {index+1}* para visualizar os serviços de {names[index]}"
                                     )  
                                 response_message += ( 
-                                    f"\n\n*Digite 4* para buscar profissionais novamente\n\n"
+                                    f"\n\n*Digite {len(ids)+1}* para buscar profissionais novamente\n\n"
                                 ) 
 
                                 user_states[sender_number] = 'hairdresser_service_selection'
@@ -170,11 +173,65 @@ class EvolutionApi(APIView):
                         print(f"Error searching for specific hairdresser: {e}")
                         response_message = "Erro ao buscar o cabeleireiro. Tente novamente."
                 elif current_state == 'hairdresser_service_selection':
-                    if incoming_text == '1': 
-                        haidressers = recommended_or_searched_hairdressers['sender_number']
-                        haidresser = AiUtils.get_hairdresser_by_id(haidressers[0])
-                        response_message = f" Dados do usuário desejado{haidresser}" 
-                    user_states[sender_number] = 'hairdresser_service_choice'
+                    try:
+                        choice = int(incoming_text) 
+                        hairdressers_ids = recommended_or_searched_hairdressers[sender_number]
+                        if choice == len(hairdressers_ids)+1:
+                            user_states[sender_number] = 'collecting_preferences'
+                            response_message = ResponseMessage.SERVICE_TYPE_SEARCH
+                        elif hairdressers_ids and 0 < choice <= len(hairdressers_ids):
+                            hairdresser_id = hairdressers_ids[choice-1]
+                            try: 
+                                hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+                                chosen_hairdresser[sender_number] = hairdresser_id
+                                services = Service.objects.filter(hairdresser=hairdresser)
+                                print(services) 
+                                chosen_hairdresser_services[sender_number] = services
+                                if services.exists():
+                                    response_message = f"Serviços de {hairdresser.user.first_name} {hairdresser.user.last_name}:\n\n"
+                                    for service in services: 
+                                        response_message += (
+                                            f"*{service.name}*\n"
+                                            f"Descrição: {service.description}\n"
+                                            f"Preço: R${service.price}\n"
+                                            f"Duração: {service.duration} minutos \n\n"
+                                        )
+                                    response_message += "Qual serviço você gostaria de agendar?\n\n"
+                                    for i in range(len(services)):
+                                        response_message += f"*Digite {i+1}* para agendar o serviço {services[i].name}\n\n"
+                                    response_message += ( 
+                                        f"*Digite {len(services)+1}* para buscar profissionais novamente\n\n"
+                                    )
+                                    user_states[sender_number] = 'service_slots'
+                                else:
+                                    response_message = "Este profissional ainda não cadastrou serviços."
+                                    user_states[sender_number] = 'main_menu'
+                            except Hairdresser.DoesNotExist:
+                                response_message = "Profissional não encontrado."
+                                user_states[sender_number] = 'main_menu'
+                        else:
+                            response_message = "Opção inválida. Por favor, digite o número correspondente ao profissional."
+                    except ValueError:
+                        response_message = "Por favor, digite um número."
+                    except Exception as e:
+                        print(
+                            f"Error in hairdresser_service_selection: {e}")
+                        response_message = "Ocorreu um erro ao selecionar o profissional. Tente novamente."
+                        user_states[sender_number] = 'main_menu'
+                
+                elif current_state == 'service_slots':
+                    choice = int(incoming_text)
+                    services = chosen_hairdresser_services[sender_number]
+                    print(choice)
+                    print(services) 
+                    if choice == len(services)+1:
+                        user_states[sender_number] = 'collecting_preferences'
+                        response_message = ResponseMessage.SERVICE_TYPE_SEARCH
+                    elif services and 0 < choice <= len(services):
+                        slots = ReserveSlot.post(hairdresser_id=chosen_hairdresser[sender_number])
+                        response_message = f"Os horários disponíveis são: {slots}"
+                        
+
                 AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:
             return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
