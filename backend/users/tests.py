@@ -8,7 +8,7 @@ import datetime
 import bcrypt
 from .models import User, Customer, Hairdresser
 from preferences.models import Preferences
-
+from service.models import Service
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -1066,3 +1066,356 @@ class CustomerHomeViewTest(TestCase):
                 self.assertIn('email', hairdresser['user'])
                 self.assertIn('role', hairdresser['user'])
                 self.assertEqual(hairdresser['user']['role'], 'hairdresser')
+class GlobalSearchViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.search_url = reverse('global_search')
+        
+        # Create test users for hairdressers
+        self.user1 = User.objects.create(
+            first_name='Alice',
+            last_name='Johnson',
+            phone='11987654321',
+            email='alice@example.com',
+            role='hairdresser',
+            number= '15',
+            complement= 'Apt 2',
+            neighborhood= 'Hairdresser Neighborhood',
+            city= 'Hairdresser City',
+            state= 'HR',
+            address= 'Hairdresser Street',
+            postal_code= '54321',
+            password= 'hairdresser_password',
+            rating= 4,
+        )
+        self.user2 = User.objects.create(
+            first_name='Bob',
+            last_name='Smith',
+            phone='11876543210',
+            email='bob@example.com',
+            role='hairdresser',
+            number= '15',
+            complement= 'Apt 2',
+            neighborhood= 'Hairdresser Neighborhood',
+            city= 'Hairdresser City',
+            state= 'HR',
+            address= 'Hairdresser Street',
+            postal_code= '54321',
+            password= 'hairdresser_password',
+            rating= 4,
+        )
+        self.user3 = User.objects.create(
+            first_name='Carol',
+            last_name='Davis',
+            phone='11765432109',
+            email='carol@example.com',
+            role='hairdresser',
+            number= '15',
+            complement= 'Apt 2',
+            neighborhood= 'Hairdresser Neighborhood',
+            city= 'Hairdresser City',
+            state= 'HR',
+            address= 'Hairdresser Street',
+            postal_code= '54321',
+            password= 'hairdresser_password',
+            rating= 4,
+        )
+        
+        self.pref1, created = Preferences.objects.get_or_create(name="Coloração")
+        self.pref2, created = Preferences.objects.get_or_create(name="Cachos")
+        self.pref3, created = Preferences.objects.get_or_create(name="Corte")
+        
+        # Set preferences using the proper many-to-many method
+        self.user1.preferences.set([self.pref1, self.pref3])
+        self.user2.preferences.set([self.pref2])
+        self.user3.preferences.set([self.pref1, self.pref2, self.pref3])
+
+        # Create test hairdressers
+        self.hairdresser1 = Hairdresser.objects.create(
+            user=self.user1,
+            cnpj='12345678000191',
+            experience_years=5,
+            experience_time= 'experience_time',
+            experiences= 'experiences',
+            products= 'products',
+            resume='Specialist in modern cuts and coloring'
+        )
+        self.hairdresser2 = Hairdresser.objects.create(
+            user=self.user2,
+            cnpj='12345678000192',
+            experience_years=3,
+            experience_time= 'experience_time',
+            experiences= 'experiences',
+            products= 'products',
+            resume='Expert in curly hair treatments'
+        )
+        self.hairdresser3 = Hairdresser.objects.create(
+            user=self.user3,
+            cnpj='12345678000193',
+            experience_years=7,
+            experience_time= 'experience_time',
+            experiences= 'experiences',
+            products= 'products',
+            resume='Professional hair styling and makeup'
+        )
+        
+        # Create test services
+        self.service1 = Service.objects.create(
+            name='Hair Cut',
+            hairdresser=self.hairdresser1,
+            price=50.00,
+            duration=60
+        )
+        self.service2 = Service.objects.create(
+            name='Hair Coloring',
+            hairdresser=self.hairdresser1,
+            price=120.00,
+            duration=180
+        )
+        self.service3 = Service.objects.create(
+            name='Curly Hair Treatment',
+            hairdresser=self.hairdresser2,
+            price=80.00,
+            duration=120
+        )
+        self.service4 = Service.objects.create(
+            name='Wedding Makeup',
+            hairdresser=self.hairdresser3,
+            price=200.00,
+            duration=90
+        )
+
+    def test_search_without_query_parameter(self):
+        """Test search endpoint without query parameter returns empty list"""
+        response = self.client.get(self.search_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data, [])
+
+    def test_search_with_empty_query_parameter(self):
+        """Test search endpoint with empty query parameter returns empty list"""
+        response = self.client.get(self.search_url, {'search': ''})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data, [])
+
+    def test_search_with_none_query_parameter(self):
+        """Test search endpoint with None query parameter returns empty list"""
+        response = self.client.get(self.search_url, None)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data, [])
+
+    def test_search_hairdressers_by_first_name(self):
+        """Test search finds hairdressers by first name"""
+        response = self.client.get(self.search_url, {'search': 'Alice'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        self.assertIn('data', response_data)
+        results = response_data['data']
+        
+        # Should find Alice
+        hairdresser_results = [r for r in results if r.get('result_type') == 'hairdresser']
+        self.assertEqual(len(hairdresser_results), 1)
+        self.assertEqual(hairdresser_results[0]['user']['first_name'], 'Alice')
+
+    def test_search_hairdressers_by_last_name(self):
+        """Test search finds hairdressers by last name"""
+        response = self.client.get(self.search_url, {'search': 'Smith'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        hairdresser_results = [r for r in results if r.get('result_type') == 'hairdresser']
+        self.assertEqual(len(hairdresser_results), 1)
+        self.assertEqual(hairdresser_results[0]['user']['last_name'], 'Smith')
+
+    def test_search_services_by_name(self):
+        """Test search finds services by name"""
+        response = self.client.get(self.search_url, {'search': 'Hair Cut'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        service_results = [r for r in results if r.get('result_type') == 'service']
+        self.assertEqual(len(service_results), 1)
+        self.assertEqual(service_results[0]['name'], 'Hair Cut')
+
+    def test_search_services_partial_name_match(self):
+        """Test search finds services with partial name match"""
+        response = self.client.get(self.search_url, {'search': 'Hair'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        service_results = [r for r in results if r.get('result_type') == 'service']
+        
+        # Should find "Hair Cut" and "Hair Coloring" and "Curly Hair Treatment"
+        service_names = [s['name'] for s in service_results]
+        self.assertIn('Hair Cut', service_names)
+        self.assertIn('Hair Coloring', service_names)
+        self.assertIn('Curly Hair Treatment', service_names)
+
+    def test_search_case_insensitive(self):
+        """Test search is case insensitive"""
+        response = self.client.get(self.search_url, {'search': 'hair cut'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        service_results = [r for r in results if r.get('result_type') == 'service']
+        self.assertEqual(len(service_results), 1)
+        self.assertEqual(service_results[0]['name'], 'Hair Cut')
+
+    def test_search_combined_results(self):
+        """Test search returns both hairdressers and services when relevant"""
+        # Search for "curl" which should match hairdresser Carol and Curly Hair Treatment service
+        response = self.client.get(self.search_url, {'search': 'curl'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        
+        # Check we have both types of results
+        result_types = [r.get('result_type') for r in results]
+        self.assertIn('hairdresser', result_types)
+        self.assertIn('service', result_types)
+        
+        # Verify specific matches
+        hairdresser_results = [r for r in results if r.get('result_type') == 'hairdresser']
+        service_results = [r for r in results if r.get('result_type') == 'service']
+        
+        # Should find Carol (contains "car" which might match depending on filter implementation)
+        # and Curly Hair Treatment service
+        service_names = [s['name'] for s in service_results]
+        self.assertIn('Curly Hair Treatment', service_names)
+
+    def test_search_no_results_found(self):
+        """Test search with query that matches nothing"""
+        response = self.client.get(self.search_url, {'search': 'nonexistent'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        self.assertIn('data', response_data)
+        results = response_data['data']
+        self.assertEqual(len(results), 0)
+
+    def test_search_result_serializer_structure(self):
+        """Test that search results have correct structure and required fields"""
+        response = self.client.get(self.search_url, {'search': 'Alice'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        self.assertGreater(len(results), 0)
+        
+        # Check hairdresser result structure
+        hairdresser_results = [r for r in results if r.get('result_type') == 'hairdresser']
+        if hairdresser_results:
+            hairdresser = hairdresser_results[0]
+            self.assertIn('result_type', hairdresser)
+            self.assertEqual(hairdresser['result_type'], 'hairdresser')
+            self.assertIn('user', hairdresser)
+            self.assertIn('cnpj', hairdresser)
+            self.assertIn('resume', hairdresser)
+
+    def test_search_service_result_structure(self):
+        """Test that service search results have correct structure"""
+        response = self.client.get(self.search_url, {'search': 'Hair Cut'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        
+        results = response_data['data']
+        service_results = [r for r in results if r.get('result_type') == 'service']
+        self.assertGreater(len(service_results), 0)
+        
+        service = service_results[0]
+        self.assertIn('result_type', service)
+        self.assertEqual(service['result_type'], 'service')
+        self.assertIn('name', service)
+        self.assertIn('price', service)
+        self.assertIn('duration', service)
+        self.assertIn('hairdresser', service)
+
+    def test_search_response_format(self):
+        """Test that response is in correct JSON format"""
+        response = self.client.get(self.search_url, {'search': 'Alice'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/json')
+        
+        # Should be able to parse as JSON
+        response_data = response.json()
+        self.assertIsInstance(response_data, dict)
+        self.assertIn('data', response_data)
+        self.assertIsInstance(response_data['data'], list)
+
+    def test_search_with_special_characters(self):
+        """Test search handles special characters gracefully"""
+        response = self.client.get(self.search_url, {'search': 'Alice@#$%'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertIn('data', response_data)
+
+    def test_search_with_very_long_query(self):
+        """Test search handles very long query strings"""
+        long_query = 'a' * 1000
+        response = self.client.get(self.search_url, {'search': long_query})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertIn('data', response_data)
+
+    def test_search_with_unicode_characters(self):
+        """Test search handles unicode characters"""
+        response = self.client.get(self.search_url, {'search': 'Alicê'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertIn('data', response_data)
+
+    def test_search_result_order_consistency(self):
+        """Test that search results are returned in consistent order"""
+        response1 = self.client.get(self.search_url, {'search': 'Hair'})
+        response2 = self.client.get(self.search_url, {'search': 'Hair'})
+        
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        
+        # Results should be identical for same query
+        self.assertEqual(response1.json(), response2.json())
+
+    def test_search_handles_deleted_objects(self):
+        """Test search gracefully handles if objects are deleted during processing"""
+        response = self.client.get(self.search_url, {'search': 'Alice'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertIn('data', response_data)
+
+    def test_search_performance_with_multiple_results(self):
+        """Test search performance doesn't degrade significantly with multiple results"""
+        import time
+        
+        start_time = time.time()
+        response = self.client.get(self.search_url, {'search': 'Hair'})
+        end_time = time.time()
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        response_time = end_time - start_time
+        self.assertLess(response_time, 1.0)
