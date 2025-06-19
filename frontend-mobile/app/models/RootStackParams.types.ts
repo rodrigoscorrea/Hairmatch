@@ -105,6 +105,7 @@ export type RootStackParamList = {
     preferences: number[]
   }
   HairdresserProfile: any | undefined
+  HairdresserSettings: any | undefined
   HairdresserServiceManager: any | undefined
   HairdresserServiceCreation: any | undefined
   HairdresserServiceEdit: {
