@@ -9,12 +9,34 @@ import { ptBR } from 'date-fns/locale';
 import { ReserveWithService } from '@/app/models/Reserve.types';
 import { formatDate } from '@/app/utils/date-formater';
 import { formatTime } from '@/app/utils/time-formater';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 export default function ReservesScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const [isFetchingReserves, setFetchingReserves] = useState(true);
   const [reserves, setReserves] = useState<ReserveWithService[]>([]);
   const { customer, setActiveTab } = useBottomTab();
   
+  const handleMoreInfo = () => {
+    const serviceData = {
+      name: 'Camilly Borgaço',
+      rating: 5.0,
+      date: '20/04/2025',
+      time: '15h',
+      service: 'SOS Cachos',
+      location: 'CBCachos',
+      address: 'Rua Mayoruna, 42 Alvorada 1, Manaus - AM, 69043-110',
+      phone: '(92) 9 8431-7533',
+      status: 'Aguardando Confirmação',
+    };
+    
+    navigation.navigate('ServiceInfo', { serviceData });
+  };
+
   useEffect(() => {
     setActiveTab('Reserves');
     
@@ -97,7 +119,7 @@ export default function ReservesScreen() {
                     </View>
                   </View>
                   
-                  <TouchableOpacity style={styles.moreInfoButton}>
+                  <TouchableOpacity style={styles.moreInfoButton} onPress={handleMoreInfo}>
                     <Text style={styles.moreInfoButtonText}>Mais Informações</Text>
                   </TouchableOpacity>
                 </View>

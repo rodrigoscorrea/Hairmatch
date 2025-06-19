@@ -118,4 +118,17 @@ export type RootStackParamList = {
     nonWorkingDays: number[]
   };
   AgendaManager: any | undefined
+  ServiceInfo: {
+    serviceData: {
+      name: string;
+      rating: number;
+      date: string;
+      time: string;
+      service: string;
+      location: string;
+      address: string;
+      phone: string;
+      status: string;
+    }
+  };
 };

@@ -29,3 +29,15 @@ export interface ServiceWithHairdresserName extends Service {
         }
     }
 }
+
+export interface ServiceInfo {
+    name: string;
+    rating: number;
+    date: string;
+    time: string;
+    service: string;
+    location: string;
+    address: string;
+    phone: string;
+    status: string;
+  }
