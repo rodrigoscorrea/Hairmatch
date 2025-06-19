@@ -57,8 +57,8 @@ export default function HairdresserProfileScreen() {
           <TouchableOpacity>
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Ionicons name="heart-outline" size={24} color="black" />
+          <TouchableOpacity onPress={()=> navigation.navigate('HairdresserSettings')}>
+            <Ionicons name="settings-outline" size={24} color="black" />
           </TouchableOpacity>
         </View>
 
