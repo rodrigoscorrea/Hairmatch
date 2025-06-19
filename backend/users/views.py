@@ -113,8 +113,8 @@ class LoginView(APIView):
                 }
 
                 return response
-            return JsonResponse({'error': 'Invalid credentials'}, status=403)
-        return JsonResponse({'error': 'User does not exist'}, status=400)
+            return JsonResponse({'error': 'Credenciais inválidas, verifique seus dados e tente novamente'}, status=403)
+        return JsonResponse({'error': 'Usuário não cadastrado na base de dados'}, status=400)
     
     def get(self, request):
         token = request.COOKIES.get('jwt')
