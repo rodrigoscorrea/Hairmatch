@@ -1,4 +1,4 @@
-import { ServiceResponse } from "./Service.types";
+import { ServiceRequest, ServiceResponse } from "./Service.types";
 import { Hairdresser } from "./Hairdresser.types";
 import { AvailabilityResponse, NonWorkingDays } from "./Availability.types";
 
@@ -44,9 +44,8 @@ export type RootStackParamList = {
     }
   };
   ServiceBooking: {
-    service: ServiceResponse
+    service: ServiceResponse | ServiceRequest
     customer_id: string | number
-    non_working_days: any;
     hairdresser: any;
   };
   CustomerHome: any,

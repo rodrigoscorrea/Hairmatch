@@ -1,6 +1,6 @@
  import { API_BACKEND_URL } from '../index';
 import axiosInstance from './axios-instance';
-export const getAvailableResearchSlots = async (hairdresser_id: string | number, serviceId: number, selectedDate: string) => {
+export const getAvailableResearchSlots = async (hairdresser_id: string | number, serviceId: number | string | undefined, selectedDate: string) => {
     try {
         const response = await axiosInstance.post(`${API_BACKEND_URL}/api/reserve/slots/${hairdresser_id}`, {service: serviceId, date: selectedDate});
         return response.data;

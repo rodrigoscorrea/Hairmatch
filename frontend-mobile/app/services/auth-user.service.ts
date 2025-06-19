@@ -26,3 +26,15 @@ export const requestAiResume = async (data: HairdresserDescriptionAIRequest) => 
         throw error;
     }
 }
+
+export async function searchHairdressers(query: string) {
+  try {
+    const response = await axiosInstance.get(`${API_BACKEND_URL}/api/user/search`, {
+      params: { search: query },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Search error:", error);
+    throw error;
+  }
+}

@@ -11,6 +11,11 @@ from django.db.models import Q, Count
 import jwt, datetime
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
+from .filters import HairdresserFilter
+from .serializers import SearchResultSerializer # Import our new serializer
+from .filters import HairdresserFilter
+from service.models import Service
+from itertools import chain
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -272,6 +277,25 @@ class UserInfoCookieView(APIView):
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request
 # Those views should only be used by admin personal or internal functions
+
+class GlobalSearchView(APIView):
+    def get(self, request):
+        query = request.query_params.get('search', None)
+
+        if not query:
+            return Response([], status=200)
+
+        hairdresser_queryset = Hairdresser.objects.all()
+        hairdresser_filter = HairdresserFilter({'search': query}, queryset=hairdresser_queryset)
+        hairdresser_results = hairdresser_filter.qs
+
+        service_results = Service.objects.filter(
+            Q(name__icontains=query)
+        ) 
+        combined_results = list(chain(hairdresser_results, service_results))
+        serializer = SearchResultSerializer(combined_results, many=True, context={'request': request})
+
+        return JsonResponse({'data':serializer.data}, status=200)
 
 class UserInfoView(APIView):
     def get(self,request,email=None):
