@@ -32,7 +32,7 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       const data = await searchHairdressers(query);
-      data.map((item: any) => {
+      data.data.map((item: any) => {
         if(item.result_type === 'hairdresser') setHairdresserResults([...hairdresserResults, item])
         else if (item.result === 'service') setServiceResults([...serviceResults, item])
         return;
@@ -89,7 +89,7 @@ export default function SearchScreen() {
         <>
             {hairdresserResults ? (
                 hairdresserResults.map((result) => (
-                    <TouchableOpacity style={styles.card} key={result.id} onPress={()=> navigation.navigate('HairdresserProfileReservation', {hairdresser: result, avatar: ''})}>
+                    <TouchableOpacity style={styles.card} key={`hairdresser-${result.id}`} onPress={()=> navigation.navigate('HairdresserProfileReservation', {hairdresser: result, avatar: ''})}>
                         <View style={styles.avatar} />
                         <View style={styles.info}>
                             <Text style={styles.name}>{`${result.user.first_name} ${result.user.last_name}`}</Text>
@@ -118,7 +118,7 @@ export default function SearchScreen() {
             )}
             {serviceResults ? (
                 serviceResults.map((result) => (
-                    <TouchableOpacity style={styles.card} key={result.id} onPress={()=> {
+                    <TouchableOpacity style={styles.card} key={`service-${result.id}`} onPress={()=> {
                         navigation.navigate('ServiceBooking', {
                             hairdresser: result.hairdresser, 
                             customer_id: customer!.id,
