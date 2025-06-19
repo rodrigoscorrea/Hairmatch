@@ -18,6 +18,7 @@ import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 import { ServiceRequest } from "@/app/models/Service.types";
+import { ScrollView } from "react-native-gesture-handler";
 
 type CustomerSearchScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 export default function SearchScreen() {
@@ -31,12 +32,19 @@ export default function SearchScreen() {
   const fetchResults = async (query: string) => {
     try {
       setLoading(true);
-      const data = await searchHairdressers(query);
-      data.data.map((item: any) => {
-        if(item.result_type === 'hairdresser') setHairdresserResults([...hairdresserResults, item])
-        else if (item.result === 'service') setServiceResults([...serviceResults, item])
-        return;
+      const response = await searchHairdressers(query);
+      const newHairdressers: Hairdresser[] = [];
+      const newServices: ServiceRequest[] = [];
+
+      response.data.forEach((item: any) => {
+        if (item.result_type === 'hairdresser') {
+          newHairdressers.push(item);
+        } else if (item.result_type === 'service') {
+          newServices.push(item);
+        }
       });
+      setHairdresserResults(newHairdressers);
+      setServiceResults(newServices);
     } catch (error) {
       console.error("Error searching for hairdressers:", error);
     } finally {
@@ -66,6 +74,7 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView>
       <View style={styles.searchWrapper}>
         <Ionicons name="search" size={20} color="#7B3F00" style={styles.iconLeft} />
         <TextInput
@@ -149,7 +158,7 @@ export default function SearchScreen() {
         </>
       )}
         
-
+      </ScrollView>
       <BottomTabBar />
     </SafeAreaView>
   );
