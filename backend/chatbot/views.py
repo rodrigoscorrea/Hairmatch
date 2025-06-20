@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import google.generativeai as genai
+from datetime import datetime
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -12,9 +13,11 @@ from users.models import User, Hairdresser
 from users.serializers import UserFullInfoSerializer
 from service.models import Service
 from reserve.models import Reserve
-from reserve.views import *
+from reserve.views import get_available_slots
+from availability.views import get_hairdresser_availability
 from .ai_utils import AiUtils
 from .response_messages import ResponseMessage
+from .templates import Templates
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -23,10 +26,10 @@ genai.configure(api_key=GEMINI_API_KEY)
 user_states = {}
 user_chats = {}
 user_preferences = {}
-
 recommended_or_searched_hairdressers = {}
 chosen_hairdresser = {}
-chosen_hairdresser_services= {}
+show_services= {}
+chosen_service = {}
 
 class EvolutionApi(APIView):
     def post(self, request):
@@ -185,8 +188,7 @@ class EvolutionApi(APIView):
                                 hairdresser = Hairdresser.objects.get(id=hairdresser_id)
                                 chosen_hairdresser[sender_number] = hairdresser_id
                                 services = Service.objects.filter(hairdresser=hairdresser)
-                                print(services) 
-                                chosen_hairdresser_services[sender_number] = services
+                                show_services[sender_number] = list(services)
                                 if services.exists():
                                     response_message = f"Serviços de {hairdresser.user.first_name} {hairdresser.user.last_name}:\n\n"
                                     for service in services: 
@@ -202,7 +204,7 @@ class EvolutionApi(APIView):
                                     response_message += ( 
                                         f"*Digite {len(services)+1}* para buscar profissionais novamente\n\n"
                                     )
-                                    user_states[sender_number] = 'service_slots'
+                                    user_states[sender_number] = 'service_booking_selection'
                                 else:
                                     response_message = "Este profissional ainda não cadastrou serviços."
                                     user_states[sender_number] = 'main_menu'
@@ -219,18 +221,42 @@ class EvolutionApi(APIView):
                         response_message = "Ocorreu um erro ao selecionar o profissional. Tente novamente."
                         user_states[sender_number] = 'main_menu'
                 
-                elif current_state == 'service_slots':
+                elif current_state == 'service_booking_selection':
                     choice = int(incoming_text)
-                    services = chosen_hairdresser_services[sender_number]
                     print(choice)
-                    print(services) 
-                    if choice == len(services)+1:
+                    services_list = show_services[sender_number] 
+                    if choice == len(services_list)+1:
                         user_states[sender_number] = 'collecting_preferences'
                         response_message = ResponseMessage.SERVICE_TYPE_SEARCH
-                    elif services and 0 < choice <= len(services):
-                        slots = ReserveSlot.post(hairdresser_id=chosen_hairdresser[sender_number])
-                        response_message = f"Os horários disponíveis são: {slots}"
-                        
+                    elif services_list and 0 < choice <= len(services_list):
+                        service = services_list[choice-1]
+                        chosen_service[sender_number] = service.id 
+                        hairdresser_id = chosen_hairdresser[sender_number]
+
+                        if not hairdresser_id:
+                            response_message = "Erro: não foi possível encontrar o profissional. Vamos começar de novo."
+                            user_states[sender_number] = 'main_menu'
+                        else:
+                            availability_result = get_hairdresser_availability(hairdresser_id=hairdresser_id)
+                            print(availability_result)
+                            if 'error' in availability_result:
+                                response_message = "Não consegui consultar os dias de trabalho deste profissional."
+                                user_states[sender_number] = 'main_menu' 
+                            else:
+                                availabilities = availability_result.get('availabilities', [])
+                                if not availabilities:
+                                    response_message = "Este profissional ainda não configurou seus dias de trabalho e não pode ser agendado."
+                                    user_states[sender_number] = 'main_menu'
+                                else:
+                                    response_message = f"Ótima escolha! O horário de funcionamento de {service.hairdresser.user.first_name} é:\n\n"
+                                    for avail in availabilities:
+                                        day_name = Templates.WEEKDAY_TRANSLATIONS.get(avail['weekday'].lower(), avail['weekday'])
+                                        start = datetime.strptime(avail['start_time'], '%H:%M:%S').strftime('%H:%M')
+                                        end = datetime.strptime(avail['end_time'], '%H:%M:%S').strftime('%H:%M')
+                                        response_message += f"*{day_name}:* das {start} às {end}\n"
+                                    
+                                    response_message += "\nPara qual data você gostaria de agendar?\n"
+                                    response_message += "Diga *hoje*, *amanhã* ou use o formato *dd/mm/yyyy*."
 
                 AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:

@@ -2,6 +2,7 @@ import requests
 import json
 import re
 import google.generativeai as genai
+from datetime import datetime, date, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -193,4 +194,20 @@ class AiUtils():
             return None
         except Exception as e:
             print(f"Ocorreu um erro ao buscar o cabeleireiro: {e}")
+            return None
+    
+    @staticmethod
+    def parse_date_from_text(text):
+        text = text.lower()
+        today = date.today()
+        if 'hoje' in text:
+            return today.strftime('%Y-%m-%d')
+        if 'amanhã' in text:
+            tomorrow = today + timedelta(days=1)
+            return tomorrow.strftime('%Y-%m-%d')
+        try:
+            # Try to parse 'DD/MM/YYYY'
+            dt = datetime.strptime(text, '%d/%m/%Y')
+            return dt.strftime('%Y-%m-%d')
+        except ValueError:
             return None

@@ -89,54 +89,18 @@ class RemoveReserve(APIView):
 class ReserveSlot(APIView):
     def post(self, request, hairdresser_id):
         data = json.loads(request.body)
+        service_id = data.get('service')
+        date_str = data.get('date')
 
-        try:
-            hairdresser = Hairdresser.objects.get(id=hairdresser_id)
-        except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+        if not service_id or not date_str:
+            return JsonResponse({'error':'service and date are required'}, status = 400)
+        
+        result = get_available_slots(hairdresser_id, service_id, date_str)
 
-        try:
-            service = Service.objects.get(id=data['service'])
-        except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=500)
-        
-        date = data['date']
-        try:
-            selected_date = datetime.strptime(date, '%Y-%m-%d').date()
-        except ValueError:
-            return JsonResponse({'error': 'Invalid date format'}, status=400)
+        if 'error' in result:
+            return JsonResponse({'error': result['error']}, status=result.get('status', 400))
 
-        weekday_name = calendar.day_name[selected_date.weekday()]
-     
-        availability = Availability.objects.filter(
-            hairdresser=hairdresser_id,
-            weekday=weekday_name.lower()
-        ).first()
-        
-        if not availability:
-            return JsonResponse({'available_slots': []})  # No availability on this day
-        
-        start_of_day = datetime.combine(selected_date, datetime.min.time())
-        end_of_day = datetime.combine(selected_date, datetime.max.time())
-        
-        bookings = Agenda.objects.filter(
-            hairdresser=hairdresser_id,
-            start_time__gte=start_of_day,
-            end_time__lte=end_of_day
-        ).order_by('start_time')
-
-        # Generate time slots
-        available_slots = generate_time_slots(
-            selected_date,
-            availability.start_time,
-            availability.end_time,
-            bookings,
-            service.duration,
-            availability.break_start,  
-            availability.break_end
-        )
-        
-        return JsonResponse({'available_slots': available_slots})
+        return JsonResponse(result, status=200)
     
 def calculate_end_time(start_time, duration_minutes):
     if not isinstance(start_time, str):
@@ -206,3 +170,47 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration, 
         current_dt += slot_duration
     
     return slots
+
+def get_available_slots(hairdresser_id, service_id, date_str):
+    try:
+        hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+        service = Service.objects.get(id=service_id)
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except Hairdresser.DoesNotExist:
+        return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+    except Service.DoesNotExist:
+        return JsonResponse({'error': 'Service not found'}, status=500)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format'}, status=400)
+    
+    weekday_name = calendar.day_name[selected_date.weekday()]
+     
+    availability = Availability.objects.filter(
+        hairdresser=hairdresser_id,
+        weekday=weekday_name.lower()
+    ).first()
+    
+    if not availability:
+        return {'available_slots': []}
+    
+    start_of_day = datetime.combine(selected_date, datetime.min.time())
+    end_of_day = datetime.combine(selected_date, datetime.max.time())
+    
+    bookings = Agenda.objects.filter(
+        hairdresser=hairdresser,
+        start_time__gte=start_of_day,
+        end_time__lte=end_of_day
+    ).order_by('start_time')
+
+    # Generate time slots
+    available_slots = generate_time_slots(
+        selected_date,
+        availability.start_time,
+        availability.end_time,
+        bookings,
+        service.duration,
+        availability.break_start,  
+        availability.break_end
+    )
+
+    return {'available_slots' : available_slots}
