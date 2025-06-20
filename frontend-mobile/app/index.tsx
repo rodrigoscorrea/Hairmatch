@@ -48,35 +48,28 @@ function App() {
   const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
-     signIn: async (email: string, password: string) => {
-      setIsLoading(true);
-      try {
-        // Step 1: Make login POST request (sets HttpOnly cookie)
-        await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
-      email,
-      password
-    }, { withCredentials: true });
-        
-        // Step 2: Check authentication with GET request
-        const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
-        if (authResponse.data.authenticated) {
-          setUserToken('authenticated'); // Just need a non-null value to trigger navigation
-          
-          // Step 3: Fetch user info
-         const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
-          setUserInfo(userResponse.data);
-          return true;
-        } else {
-          console.log('Authentication failed');
-          return false;
-        }
-      } catch (error: any) {
-        console.error('Login error:', error.response?.data || error.message);
-        throw error;
-      } finally {
-        setIsLoading(false);
+  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
+        email,
+        password
+      }, { withCredentials: true });
+
+      const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
+
+      if (authResponse.data.authenticated) {
+        const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
+        setUserInfo(userResponse.data);
+        setUserToken('authenticated'); 
+        return { success: true }; 
+      } else {
+        return { success: false, error: 'Authentication failed. Please check your credentials.' };
       }
-    },
+    } catch (error: any) {
+        const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
+      return { success: false, error: errorMessage };
+    }
+  },
     signUp: async (
       first_name: string,
       last_name: string,

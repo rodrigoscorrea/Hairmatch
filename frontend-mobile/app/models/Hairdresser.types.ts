@@ -3,12 +3,13 @@ import { User } from "./User.types"
 interface HairdresserBase {
     id?: number | undefined
     cnpj: string,
-    experience_years: number,
+    experience_years?: number,
     resume: string
 }
 
 export interface Hairdresser extends HairdresserBase{
     user: User
+    result_type?: string
 }
 
 export interface HairdresserResponse extends HairdresserBase{

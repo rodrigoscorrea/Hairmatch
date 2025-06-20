@@ -162,11 +162,6 @@ const CustomerHomeScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
-      <TextInput
-        placeholder="Buscar no HairMatch"
-        style={styles.searchBar}
-        placeholderTextColor="#999"
-      />
 
       {/* Seção Para Você */}
       {customerHomeInfo?.for_you && customerHomeInfo.for_you.length > 0 && (

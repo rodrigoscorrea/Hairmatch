@@ -8,3 +8,4 @@ Pillow
 Faker
 google.generativeai
 coverage
+django-filter
