@@ -32,6 +32,12 @@ export const styles = StyleSheet.create({
       marginBottom: 12,
       color: '#333',
     },
+    hairdresserName:{
+      fontSize: 18,
+      marginTop: 6,
+      marginBottom: 12,
+      color: '#333',
+    },
     sectionTitle: {
       fontWeight: 'bold',
       fontSize: 16,

@@ -39,7 +39,6 @@ export default function HairdresserProfileReservationScreen() {
   const [availabilities, setAvailabilities] = useState<AvailabilityResponse[]>();
   const [services, setServices] = useState<ServiceResponse[]>();
   const [preferences, setPreferences] = useState<PreferencesResponse[]>();
-  const [nonWorkingDays, setNonWorkingDays] = useState<NonWorkingDays>();
   const {userInfo} = useContext(AuthContext)
 
   const navigation = useNavigation<HairdresserProfileReservationScreenNavigationProp>();
@@ -52,7 +51,6 @@ export default function HairdresserProfileReservationScreen() {
       try {
         const availabilityResponse = await listAvailabilitiesByHairdresser(hairdresser.id)
         setAvailabilities(availabilityResponse.data);
-        setNonWorkingDays(availabilityResponse.non_working_days)
       } catch (err) {
         console.log("Failed to fetch Hairdresser Availabilities", err)
       }
@@ -162,7 +160,7 @@ export default function HairdresserProfileReservationScreen() {
       {/* Available services */}
       <Accordion title="Serviços">
         {services ? services.map((service) => (
-          <TouchableOpacity style={styles.card} key={service.id} onPress={()=>navigation.navigate('ServiceBooking', {service: service, customer_id: userInfo.customer.id, non_working_days: nonWorkingDays, hairdresser: hairdresser})}>
+          <TouchableOpacity style={styles.card} key={service.id} onPress={()=>navigation.navigate('ServiceBooking', {service: service, customer_id: userInfo.customer.id, hairdresser: hairdresser})}>
             <Text style={styles.cardText}>{service.name}</Text>
             <View style={styles.arrowButton}>
               <Ionicons name="arrow-forward" size={16} color="#fff" />

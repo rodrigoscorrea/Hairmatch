@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { styles } from './styles/ServiceReservationStyle';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
@@ -11,6 +11,9 @@ import { createReserve } from '@/app/services/reserve.service';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { serviceTimeFormater } from '@/app/utils/serviceTime-formater';
 import { formatDate } from '@/app/utils/date-formater';
+import { listAvailabilitiesByHairdresser } from '@/app/services/availability.service';
+import { useBottomTab } from '@/app/contexts/BottomTabContext';
+import BottomTabBar from '@/app/components/BottomBar';
 
 type ServiceReserveScreenRouteProp = RouteProp<RootStackParamList, 'ServiceBooking'>;
 type ServiceReserveScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -21,19 +24,18 @@ LocaleConfig.defaultLocale = "pt-br";
 export default function ServiceBookingScreen() {
   const navigation = useNavigation<ServiceReserveScreenNavigationProp>();
   const route = useRoute<ServiceReserveScreenRouteProp>();
-  
+  const { setActiveTab } = useBottomTab();
   const service = route.params?.service;
   const customer_id = route.params?.customer_id;
-  const non_working_days = route.params?.non_working_days
   const hairdresser = route.params?.hairdresser
-
+  
   const [selectedServiceOption, setSelectedServiceOption] = useState<any>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [markedDates, setMarkedDates] = useState<any>({});
   const [availableReserveSlots, setAvailableReserveSlots] = useState<string[]>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [nonWorkingDays, setNonWorkingDays] = useState<number[]>([]);
   const [showReserveConfirmationModal, setShowReserveConfirmationModal] = useState<boolean>(false);
   
   const getCurrentDate = () => {
@@ -51,43 +53,57 @@ export default function ServiceBookingScreen() {
   const maxDate: string = getMaxDate();
 
   useEffect(() => {
-    markSundaysAsDisabled();
+    const fetchHairdresserAvailability = async () => {
+      try {
+        const availabilityResponse = await listAvailabilitiesByHairdresser(hairdresser.id)
+        setNonWorkingDays(availabilityResponse.non_working_days)
+      } catch (err) {
+        console.log("Failed to fetch Hairdresser Availabilities", err)
+      }
+    }
+    fetchHairdresserAvailability();
+    setActiveTab('Search')
   }, []);
 
   useEffect(() => {
     const fetchAvailableResearchSlots = async () => {
       if(!selectedDate) return; 
-      const availableReserveSlotsResponse = await getAvailableResearchSlots(1, service.id, selectedDate!);
+      const availableReserveSlotsResponse = await getAvailableResearchSlots(hairdresser.id, service.id, selectedDate!);
       setAvailableReserveSlots(availableReserveSlotsResponse.available_slots)
     }
 
     fetchAvailableResearchSlots();
   }, [selectedDate]);
 
-  const markSundaysAsDisabled = () => {
-    const startDate = new Date(initialDate);
-    const endDate = new Date(initialDate);
-    endDate.setFullYear(endDate.getFullYear() + 1); // Mark Sundays for a year ahead
-    
-    const marked: any = {};
+  const memorizedMarkedDates = useMemo(() => {
+        const startDate = new Date(initialDate);
+        const endDate = new Date(maxDate);
+        const marked: any = {};
 
-    for(let non_working_day of non_working_days){
-        let currentDate = new Date(startDate);
-        while (currentDate <= endDate) {            
-            if (currentDate.getDay() === non_working_day) { // Check if the day is Sunday (0 = Sunday, 1 = Monday, etc.)
-                const dateString: string = currentDate.toISOString().split('T')[0];
-                marked[dateString] = { 
-                disabled: true, 
-                disableTouchEvent: true,
-                textColor: 'gray',
-                color: '#e0e0e0'
-                };
+        if (nonWorkingDays.length > 0) {
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                if (nonWorkingDays.includes(currentDate.getDay())) {
+                    const dateString = currentDate.toISOString().split('T')[0];
+                    marked[dateString] = {
+                        disabled: true,
+                        disableTouchEvent: true,
+                        textColor: 'gray',
+                    };
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
             }
-            currentDate.setDate(currentDate.getDate() + 1);
         }
-    }
-    setMarkedDates(marked);
-  };
+        if (selectedDate) {
+            marked[selectedDate] = {
+                ...marked[selectedDate],
+                selected: true,
+                selectedColor: '#F06543'
+            };
+        }
+
+        return marked;
+    }, [nonWorkingDays, selectedDate, initialDate, maxDate]);
 
   const formatStartTime = (selectedDate: string, selectedTime: string): string => {
     let formatedTime: string = `${selectedDate}T${selectedTime}:00`;
@@ -125,7 +141,7 @@ export default function ServiceBookingScreen() {
             hideExtraDays
             minDate={initialDate}
             maxDate={maxDate}
-            markedDates={markedDates}
+            markedDates={memorizedMarkedDates}
             theme={{
                 arrowColor: '#F06543',
                 disabledArrowColor: '#d9e1e8',
@@ -152,8 +168,13 @@ export default function ServiceBookingScreen() {
         </View>
         
       </View>
+      
       <Text style={styles.description}>
         {service.description}
+      </Text>
+
+      <Text style={styles.hairdresserName}>
+        Profissional: {hairdresser.user.first_name} {hairdresser.user.last_name}
       </Text>
 
       <Text style={styles.sectionTitle}>Valor</Text>
@@ -259,6 +280,7 @@ export default function ServiceBookingScreen() {
             </View>
         </View>
       </Modal>
+      <BottomTabBar/>
     </ScrollView>
   );
 }

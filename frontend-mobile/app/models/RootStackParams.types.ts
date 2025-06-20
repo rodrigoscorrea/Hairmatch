@@ -1,5 +1,6 @@
-import { ServiceResponse } from "./Service.types";
+import { ServiceRequest, ServiceResponse } from "./Service.types";
 import { Hairdresser } from "./Hairdresser.types";
+import { AvailabilityResponse, NonWorkingDays } from "./Availability.types";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -43,9 +44,8 @@ export type RootStackParamList = {
     }
   };
   ServiceBooking: {
-    service: ServiceResponse
+    service: ServiceResponse | ServiceRequest
     customer_id: string | number
-    non_working_days: any;
     hairdresser: any;
   };
   CustomerHome: any,
@@ -104,4 +104,17 @@ export type RootStackParamList = {
     preferences: number[]
   }
   HairdresserProfile: any | undefined
+  HairdresserSettings: any | undefined
+  HairdresserServiceManager: any | undefined
+  HairdresserServiceCreation: any | undefined
+  HairdresserServiceEdit: {
+    service: ServiceResponse
+  }
+  AvailabilityManager: any | undefined
+  AvailabilityCreate: any | undefined
+  AvailabilityEdit: {
+    availabilities: AvailabilityResponse[];
+    nonWorkingDays: number[]
+  };
+  AgendaManager: any | undefined
 };

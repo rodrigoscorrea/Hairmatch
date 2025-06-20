@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -17,16 +16,21 @@ import ProfessionalStory from './screens/register/ProfessionalStory';
 import DescriptionScreen from './screens/register/DescriptionScreen';
 import { RootStackParamList } from './models/RootStackParams.types';
 import HairdresserProfileReservationScreen from './screens/customer/reservation/HairdresserProfileReservationScreen';
-import { AuthContextType } from './models/Auth.types';
 import { UserInfo, UserRole } from './models/User.types';
 import { Preference } from './models/Preferences.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
-import { Customer } from './models/Customer.types';
-import { Hairdresser } from './models/Hairdresser.types';
 import { BottomTabProvider } from './contexts/BottomTabContext';
-import HairdresserProfileScreen from './screens/hairdresser/HairdresserProfileScreen';
-
+import HairdresserProfileScreen from './screens/hairdresser/profile/HairdresserProfileScreen';
+import HairdresserServiceManageScreen from './screens/hairdresser/service/HaidresserServiceManager';
+import HairdresserServiceCreationScreen from './screens/hairdresser/service/HaidresserServiceCreationScreen';
+import HairdresserServiceEditScreen from './screens/hairdresser/service/HairdresserServiceEditScreen';
+import AvailabilityManagerScreen from './screens/hairdresser/availability/AvailabilityManagerScreen';
+import AvailabilityCreateScreen from './screens/hairdresser/availability/AvailabilityCreateScreen';
+import AvailabilityEditScreen from './screens/hairdresser/availability/AvailabilityEditScreen';
+import AgendaManagerScreen from './screens/hairdresser/agenda/AgendaManagerScreen';
+import axiosInstance from './services/axios-instance';
+import HairdresserSettingsScreen from './screens/hairdresser/profile/HairdresserSettingsScreen';
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});
@@ -43,38 +47,28 @@ function App() {
   const navigation = useNavigation<IndexNavigationProp>();
 
   const authContext = React.useMemo(() => ({
-    signIn: async (email: string, password: string) => {
-      setIsLoading(true);
-      try {
-        // Step 1: Make login POST request (sets HttpOnly cookie)
-        await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
-          email,
-          password
-        });
-        
-        // Step 2: Check authentication with GET request
-        const authResponse = await axios.get(`${API_BACKEND_URL}/api/auth/user`);
-        console.log('Auth check response:', authResponse.data);
-        
-        if (authResponse.data.authenticated) {
-          console.log('User is authenticated');
-          setUserToken('authenticated'); // Just need a non-null value to trigger navigation
-          
-          // Step 3: Fetch user info
-          const userResponse = await axios.get(`${API_BACKEND_URL}/api/user/authenticated`);
-          setUserInfo(userResponse.data);
-          return true;
-        } else {
-          console.log('Authentication failed');
-          return false;
-        }
-      } catch (error: any) {
-        console.error('Login error:', error.response?.data || error.message);
-        throw error;
-      } finally {
-        setIsLoading(false);
+  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
+        email,
+        password
+      }, { withCredentials: true });
+
+      const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
+
+      if (authResponse.data.authenticated) {
+        const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
+        setUserInfo(userResponse.data);
+        setUserToken('authenticated'); 
+        return { success: true }; 
+      } else {
+        return { success: false, error: 'Authentication failed. Please check your credentials.' };
       }
-    },
+    } catch (error: any) {
+        const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
+      return { success: false, error: errorMessage };
+    }
+  },
     signUp: async (
       first_name: string,
       last_name: string,
@@ -232,8 +226,16 @@ function App() {
             <>
               <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="HairdresserProfile" component={HairdresserProfileScreen} />
+                <Stack.Screen name="HairdresserSettings" component={HairdresserSettingsScreen}/>
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen name="Search" component={SearchScreen} />
+                <Stack.Screen name="HairdresserServiceManager" component={HairdresserServiceManageScreen} />
+                <Stack.Screen name="HairdresserServiceCreation" component={HairdresserServiceCreationScreen} />
+                <Stack.Screen name="HairdresserServiceEdit" component={HairdresserServiceEditScreen} />
+                <Stack.Screen name="AvailabilityManager" component={AvailabilityManagerScreen} />
+                <Stack.Screen name="AvailabilityCreate" component={AvailabilityCreateScreen} />
+                <Stack.Screen name="AvailabilityEdit" component={AvailabilityEditScreen} />
+                <Stack.Screen name="AgendaManager" component={AgendaManagerScreen} />
               </Stack.Navigator>
             </>
           )}

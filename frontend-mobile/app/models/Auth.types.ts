@@ -1,8 +1,8 @@
 import { Preference } from "./Preferences.types";
 
 export interface AuthContextType {
-  signIn?: (email: string, password: string) => Promise<void>;
-  signUp?: (
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (
     first_name: string,
     last_name: string,
     phone: string,
@@ -25,7 +25,7 @@ export interface AuthContextType {
     products?: string,
     resume?: string
   ) => Promise<any>;
-  signOut?: () => Promise<void>;
+  signOut: () => Promise<void>;
   getUserInfo: () => Promise<any>; 
   userInfo?: any;
 }

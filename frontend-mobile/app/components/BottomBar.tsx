@@ -39,6 +39,18 @@ const hairdresserTabs = [
     icon: 'person-outline',
     activeIcon: 'person',
     route: 'HairdresserProfile'
+  },
+  {
+    name: 'HairdresserServiceManager',
+    icon: 'cut-outline',
+    activeIcon: 'cut-outline',
+    route: 'HairdresserServiceManager'
+  },
+  {
+    name: 'AgendaManager',
+    icon: 'calendar-clear-outline',
+    activeIcon: 'calendar-clear',
+    route: 'AgendaManager'
   }
 ]
 
@@ -63,7 +75,7 @@ const BottomTabBar: React.FC = () => {
         navigation.navigate(tabRoute, { customer });
       } else if (hairdresser) {
         // @ts-ignore - We're ignoring the type error because navigation props vary
-        navigation.navigate(hairdresserTabs, { hairdresser });
+        navigation.navigate(tabRoute, { hairdresser });
       }else {
         // @ts-ignore
         navigation.navigate(tabRoute);

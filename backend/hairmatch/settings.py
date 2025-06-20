@@ -26,11 +26,10 @@ SECRET_KEY = 'django-insecure-b$7)-^_%c!#6^bsob1w^c*hz1ie&3*bny&(on%2%0=+0sm53%h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
+BACKEND_ALLOWED_HOST = os.getenv('BACKEND_ALLOWED_HOST')
+BACKEND_ALLOWED_CORS = os.getenv('BACKEND_ALLOWED_CORS')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 EVOLUTION_API_URL=os.getenv('EVOLUTION_API_URL')
 EVOLUTION_API_KEY=os.getenv('EVOLUTION_API_KEY')
@@ -58,6 +57,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -144,8 +144,22 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS=True
+ALLOWED_HOSTS = [
+    BACKEND_ALLOWED_HOST,
+    'localhost',
+    '127.0.0.1',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8081',
+    BACKEND_ALLOWED_CORS,
+    'http://localhost:8000'
+]
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8081',
+    BACKEND_ALLOWED_CORS,
+    'http://localhost:8000'
+]
 CORS_ALLOW_CREDENTIALS=True
 AUTH_USER_MODEL = 'users.User'
 
@@ -162,5 +176,6 @@ CORS_ALLOW_HEADERS = [
     'origin',
     'user-agent',
     'x-csrftoken',
-    'x-requested-with'
+    'x-requested-with',
+    "ngrok-skip-browser-warning"
 ]

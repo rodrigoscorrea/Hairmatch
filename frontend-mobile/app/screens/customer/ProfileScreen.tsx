@@ -1,36 +1,19 @@
-import React, { useEffect, useContext } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView} from "react-native";
+import React, { useEffect, useContext, useState } from "react";
+import { View, Text, Image, TouchableOpacity, ScrollView, Alert} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTabBar from '@/app/components/BottomBar';
 import { useBottomTab } from "@/app/contexts/BottomTabContext";
 import { styles } from "./styles/ProfileStyle";
 import Icon from 'react-native-vector-icons/Feather';
-
-interface MenuItemProps {
-    iconName: string;
-    title: string;
-    subtitle: string;
-    onPress?: () => void;
-}
-  
-const MenuItem: React.FC<MenuItemProps> = ({ iconName, title, subtitle, onPress }) => (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.menuItemLeft}>
-        <Icon name={iconName} size={20} color="#000000" />
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle}>{subtitle}</Text>
-        </View>
-      </View>
-      <View style={styles.menuArrow}>
-        <Icon name="chevron-right" size={16} color="#ffffff" />
-      </View>
-    </TouchableOpacity>
-);
+import { AuthContext } from '../../index';
+import ConfirmationModal from "@/app/components/modals/confirmationModal/ConfirmationModal";
+import { AuthContextType } from "@/app/models/Auth.types";
+import MenuItem from "@/app/components/modals/MenuItem/MenuItem";
 
 export default function ProfileScreen(){
-    const { setActiveTab } = useBottomTab();
-
+    const { setActiveTab, customer } = useBottomTab();
+    const { signOut } = useContext<AuthContextType>(AuthContext);
+    const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     useEffect(()=>{
         setActiveTab('Profile')
     }, [])
@@ -40,8 +23,12 @@ export default function ProfileScreen(){
     };
     
     const handleNavPress = (tab: string) => {
-    console.log(`Navigated to ${tab}`);
+      console.log(`Navigated to ${tab}`);
     };
+
+    const handleLogout = () => {
+      setIsModalVisible(true);
+    }
 
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -57,10 +44,10 @@ export default function ProfileScreen(){
                 />
             </View>
             <View style={styles.profileDetails}>
-                <Text style={styles.profileName}>Fulana</Text>
+                <Text style={styles.profileName}>{customer?.user.first_name} {customer?.user.last_name}</Text>
                 <View style={styles.profileRating}>
                 <Icon name="star" size={16} color="#eab308" />
-                <Text style={styles.ratingText}>5.0</Text>
+                <Text style={styles.ratingText}>{customer?.user.rating}</Text>
                 </View>
             </View>
             </View>
@@ -107,7 +94,7 @@ export default function ProfileScreen(){
             iconName="log-out"
             title="Sair"
             subtitle="Fazer logout da conta"
-            onPress={() => handleMenuPress('Sair')}
+            onPress={() => handleLogout()}
           />
         </View>
 
@@ -116,7 +103,22 @@ export default function ProfileScreen(){
 
         {/* Bottom Navigation */}
         <BottomTabBar />
-        
+
+      {isModalVisible && (
+        <ConfirmationModal
+            visible={isModalVisible}
+            title="Deseja realmente sair do Hairmatch?"
+            description="Você terá de entrar novamente para continuar utilizando o sistema"
+            confirmText="Sim, tenho certeza"
+            onConfirm={async () => {
+                await signOut();
+                setIsModalVisible(false);
+            }}
+            onCancel={() => {
+                setIsModalVisible(false);
+            }}
+        />
+        )}  
     </SafeAreaView>
     );
 }
