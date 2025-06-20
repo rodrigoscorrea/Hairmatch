@@ -13,6 +13,8 @@ import { ServiceInfo } from '@/app/models/Service.types';
 import { RootStackParamList } from '@/app/models/RootStackParams.types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
+import BottomTabBar from '../../components/BottomBar';
+
 
 type ServiceInfoRouteProp = RouteProp<RootStackParamList, 'ServiceInfo'>;
 
@@ -43,17 +45,6 @@ export default function InfoScreen() {
     console.log('Back pressed');
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Ionicons
-        key={index}
-        name="star"
-        size={12}
-        color={index < rating ? '#FFD700' : '#DDD'}
-      />
-    ));
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -61,7 +52,7 @@ export default function InfoScreen() {
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mais Informações</Text>
+        <Text style={styles.headerTitle}>Agendamentos</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -73,7 +64,7 @@ export default function InfoScreen() {
               <View style={styles.nameContainer}>
                 <Text style={styles.name}>{serviceData.name}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {renderStars(serviceData.rating)}
+                    <Ionicons name="star" size={16} color="#FF9F66" />
                   <Text style={styles.rating}>{serviceData.rating}</Text>
                 </View>
               </View>
@@ -116,10 +107,9 @@ export default function InfoScreen() {
           <Text style={styles.infoLabel}>Status:</Text>
           <Text style={styles.infoValue}>{serviceData.status}</Text>
         </View>
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
+        
+        {/* Action Buttons */}
+        <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, styles.cancelButton]} 
           onPress={handleCancel}
@@ -134,23 +124,8 @@ export default function InfoScreen() {
           <Text style={styles.evaluateButtonText}>Fazer Avaliação</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <View style={styles.navItem}>
-          <Ionicons name="home-outline" size={24} color="#333" />
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="search-outline" size={24} color="#333" />
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="calendar-outline" size={24} color="#333" />
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="person-outline" size={24} color="#007AFF" />
-          <View style={styles.navIndicator} />
-        </View>
-      </View>
+      </ScrollView>
+      <BottomTabBar />
     </SafeAreaView>
   );
 };
