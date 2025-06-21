@@ -169,4 +169,77 @@ export const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     marginHorizontal: 20,
   },
+  disabledButton:{
+    backgroundColor: colors.primary,
+    opacity: 0.5,
+  },
+  disabledButtonText:{
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalReserveInformations: {
+    marginBottom: 25,
+    fontWeight: 400,
+    marginTop: 5
+  },
+  modalContainer: {
+    backgroundColor: colors.secondary,
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+    color: colors.textPrimary
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#555',
+    marginBottom: 20,
+  },
+  modalButtonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalBackButton: {
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderColor: colors.details_purple,
+    borderWidth: 1,
+    marginRight: 10,
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalBackButtonText: {
+    color: colors.details_purple,
+    fontWeight: '500',
+  },
+  modalAcceptButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalAcceptButtonText: {
+    color: colors.white,
+    fontWeight: '600',
+  },
 });
