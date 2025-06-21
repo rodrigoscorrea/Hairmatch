@@ -9,12 +9,25 @@ import { ptBR } from 'date-fns/locale';
 import { ReserveWithService } from '@/app/models/Reserve.types';
 import { formatDate } from '@/app/utils/date-formater';
 import { formatTime } from '@/app/utils/time-formater';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/app/models/RootStackParams.types';
+import {ServiceInfo} from '@/app/models/Service.types';
+import 'dayjs/locale/pt-br';
+import dayjs from 'dayjs';
+
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 export default function ReservesScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const [isFetchingReserves, setFetchingReserves] = useState(true);
-  const [reserves, setReserves] = useState<ReserveWithService[]>([]);
+  const [reserves, setReserves] = useState<ServiceInfo[]>([]);
   const { customer, setActiveTab } = useBottomTab();
   
+  const handleMoreInfo = (serviceData:ServiceInfo) => {
+    navigation.navigate('ServiceInfo', { serviceData });
+  };
+
   useEffect(() => {
     setActiveTab('Reserves');
     
@@ -29,9 +42,22 @@ export default function ReservesScreen() {
       try {
         setFetchingReserves(true);
         const reserveResponse = await getCustomerReserves(customer.id);
-        if (Array.isArray(reserveResponse.data)) { 
+        const converted:ServiceInfo[] =reserveResponse.data.map((ev:any) => ({
+          id: ev.id,
+          name: `${ev.service.hairdresser.user.first_name} ${ev.service.hairdresser.user.last_name}`,
+          rating: ev.service.hairdresser.user.rating,
+          date: dayjs(ev.service.startTime).format('DD/MM/YYYY'),
+          time: dayjs(ev.service.startTime).format("HH:mm"),
+          service: ev.service.name,
+          address: ev.service.hairdresser.user.address,
+          phone: ev.service.hairdresser.user.phone,
+          status: ev.service.status,
+        }));
+        setReserves(converted);  
+        console.log('Reserves fetched successfully:', converted);
+        /*if (Array.isArray(reserveResponse.data)) { 
           setReserves(reserveResponse.data);
-        }
+        }*/
       } catch (error) {
         console.error('Error fetching reserves:', error);
         Alert.alert('Erro', 'Falha ao buscar reservas');
@@ -74,19 +100,16 @@ export default function ReservesScreen() {
                     <View style={styles.hairdresserDetailsContainer}>
                       <View style={{display: 'flex', flexDirection: 'row'}}>
                         <Text style={styles.hairdresserFirstName}>
-                          {reserve.service.hairdresser.user.first_name || 'Camilly Borgaco'}
-                        </Text>
-                        <Text style={styles.hairdresserLastName}>
-                          {reserve.service.hairdresser.user.last_name || 'Camilly Borgaco'}
+                          {reserve.name || 'Camilly Borgaco'}
                         </Text>
                       </View>
                       <Text style={styles.reserveDetailText}>
-                        {`Dia: ${formatDate(reserve.start_time)}`}
+                        {`Dia: ${(reserve.date)}`}
                         <Text style={styles.spacer}> · </Text>
-                        {`Hora: ${formatTime(reserve.start_time)}`}
+                        {`Hora: ${(reserve.time)}`}
                       </Text>
                       <Text style={styles.reserveDetailText}>
-                        {`Serviço: ${reserve.service.name || 'SOS Cachos'}`}
+                        {`Serviço: ${reserve.service || 'SOS Cachos'}`}
                       </Text>
                       <View style={styles.statusContainer}>
                         <Text style={styles.statusLabel}>Status:</Text>
@@ -94,12 +117,11 @@ export default function ReservesScreen() {
                           { 'Aguardando confirmação' }
                         </Text>
                       </View>
+                      <TouchableOpacity style={styles.moreInfoButton} onPress={()=>handleMoreInfo(reserve)}>
+                        <Text style={styles.moreInfoButtonText}>Mais Informações</Text>
+                    </TouchableOpacity>
                     </View>
                   </View>
-                  
-                  <TouchableOpacity style={styles.moreInfoButton}>
-                    <Text style={styles.moreInfoButtonText}>Mais Informações</Text>
-                  </TouchableOpacity>
                 </View>
               ))}
             </View>
