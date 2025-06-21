@@ -1,6 +1,7 @@
 import { ServiceRequest, ServiceResponse } from "./Service.types";
 import { Hairdresser } from "./Hairdresser.types";
 import { AvailabilityResponse, NonWorkingDays } from "./Availability.types";
+import { ServiceInfo } from "./Service.types";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -118,16 +119,6 @@ export type RootStackParamList = {
   };
   AgendaManager: any | undefined
   ServiceInfo: {
-    serviceData: {
-      name: string;
-      rating: number;
-      date: string;
-      time: string;
-      service: string;
-      location: string;
-      address: string;
-      phone: string;
-      status: string;
-    }
+    serviceData: ServiceInfo
   };
 };

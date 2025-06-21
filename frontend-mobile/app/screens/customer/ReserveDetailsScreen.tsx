@@ -19,19 +19,9 @@ import BottomTabBar from '../../components/BottomBar';
 type ServiceInfoRouteProp = RouteProp<RootStackParamList, 'ServiceInfo'>;
 
 export default function InfoScreen() {
-    const route = useRoute<ServiceInfoRouteProp>();
-  // Dados estáticos baseados na imagem
-  const serviceData: ServiceInfo = {
-    name: 'Camilly Borgaço',
-    rating: 5.0,
-    date: '20/04/2025',
-    time: '15h',
-    service: 'SOS Cachos',
-    location: 'CBCachos',
-    address: 'Rua Mayoruna, 42 Alvorada 1, Manaus - AM, 69043-110',
-    phone: '(92) 9 8431-7533',
-    status: 'Aguardando Confirmação',
-  };
+  const route = useRoute<ServiceInfoRouteProp>();
+  const navigation = useNavigation<any>();
+  const serviceData = route.params?.serviceData;
 
   const handleCancel = () => {
     console.log('Cancelar pressed');
@@ -43,6 +33,7 @@ export default function InfoScreen() {
 
   const handleBack = () => {
     console.log('Back pressed');
+    navigation.goBack();
   };
 
   return (
@@ -52,7 +43,7 @@ export default function InfoScreen() {
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Agendamentos</Text>
+        <Text style={styles.headerTitle}> Meus Agendamentos</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -84,12 +75,6 @@ export default function InfoScreen() {
           </View>
         </View>
 
-        {/* Location Card */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Local:</Text>
-          <Text style={styles.infoValue}>{serviceData.location}</Text>
-        </View>
-
         {/* Address Card */}
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Endereço:</Text>
@@ -101,15 +86,10 @@ export default function InfoScreen() {
           <Text style={styles.infoLabel}>Telefone:</Text>
           <Text style={styles.infoValue}>{serviceData.phone}</Text>
         </View>
-
-        {/* Status Card */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Status:</Text>
-          <Text style={styles.infoValue}>{serviceData.status}</Text>
-        </View>
-        
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
+      
+      </ScrollView>
+      {/* Action Buttons */}
+      <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, styles.cancelButton]} 
           onPress={handleCancel}
@@ -124,7 +104,6 @@ export default function InfoScreen() {
           <Text style={styles.evaluateButtonText}>Fazer Avaliação</Text>
         </TouchableOpacity>
       </View>
-      </ScrollView>
       <BottomTabBar />
     </SafeAreaView>
   );

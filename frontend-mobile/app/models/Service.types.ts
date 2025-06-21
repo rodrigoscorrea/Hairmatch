@@ -31,6 +31,7 @@ export interface ServiceWithHairdresserName extends Service {
 }
 
 export interface ServiceInfo {
+    id: number,
     name: string;
     rating: number;
     date: string;

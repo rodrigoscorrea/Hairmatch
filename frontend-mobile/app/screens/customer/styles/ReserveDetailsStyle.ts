@@ -107,7 +107,8 @@ export const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'space-between',
     marginTop: 5,
-    marginBottom: 20
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   button: {
     borderRadius: 10,
@@ -136,6 +137,7 @@ export const styles = StyleSheet.create({
   },
   evaluateButton: {
     backgroundColor: colors.primary,
+    marginRight: 5,
   },
   cancelButtonText: {
     fontSize: 14,
