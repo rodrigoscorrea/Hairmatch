@@ -9,11 +9,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from django.conf import settings
-from users.models import User, Hairdresser
+from django.utils import timezone
+
+from users.models import User, Hairdresser, Customer
 from users.serializers import UserFullInfoSerializer
 from service.models import Service
 from reserve.models import Reserve
-from reserve.views import get_available_slots
+from reserve.views import get_available_slots, create_new_reserve
 from availability.views import get_hairdresser_availability
 from .ai_utils import AiUtils
 from .response_messages import ResponseMessage
@@ -30,6 +32,7 @@ recommended_or_searched_hairdressers = {}
 chosen_hairdresser = {}
 show_services= {}
 chosen_service = {}
+chosen_date = {}
 
 class EvolutionApi(APIView):
     def post(self, request):
@@ -258,6 +261,90 @@ class EvolutionApi(APIView):
                                     response_message += "\nPara qual data você gostaria de agendar?\n"
                                     response_message += "Diga *hoje*, *amanhã* ou use o formato *dd/mm/yyyy*."
 
+                                    user_states[sender_number] = 'waiting_for_date'
+                    else:
+                        response_message = "Opção inválida. Por favor, digite o número de um dos serviços listados."               
+                
+                elif current_state == 'waiting_for_date':
+                    date_str_formatted = AiUtils.parse_date_from_text(incoming_text)
+                    if date_str_formatted:
+                        chosen_date[sender_number] = date_str_formatted
+                        hairdresser_id = chosen_hairdresser[sender_number]
+                        service_id = chosen_service[sender_number]
+                        if hairdresser_id and service_id:
+                            result = get_available_slots(hairdresser_id,service_id,date_str_formatted)
+                            if "error" in result:
+                                response_message = f"Desculpe, ocorreu um erro: {result['error']}"
+                            else:
+                                slots = result.get('available_slots',[])
+                                if slots:
+                                    response_message = f"Horários disponíveis para {datetime.strptime(date_str_formatted, '%Y-%m-%d').strftime('%d/%m/%Y')}:\n\n"
+                                    response_message += " ".join([f"*{slot}*\n" for slot in slots])
+                                    response_message += "\n\nDigite o horário que deseja para confirmar."
+                                    user_states[sender_number] = 'confirm_booking'
+                                else: 
+                                    response_message = f"Desculpe, não há horários disponíveis nesta data. Gostaria de tentar outra?"
+                        else:
+                            response_message = "Ocorreu um erro. Vamos tentar novamente."
+                            user_states[sender_number] = 'main_menu'
+                    else:
+                        response_message = "Formato de data inválido. Por favor, use *hoje*, *amanhã* ou *dd/mm/yyyy*."
+                
+                elif current_state == 'confirm_booking':
+                    try:
+                        hairdresser_id = chosen_hairdresser[sender_number]
+                        service_id = chosen_service[sender_number]
+                        selected_date_str = chosen_date[sender_number]
+                        selected_time_str = incoming_text
+
+                        user = User.objects.get(phone=sender_number)
+                        customer = Customer.objects.get(user=user)
+
+                        booking_datetime_naive = datetime.strptime(
+                            f"{selected_date_str} {selected_time_str}",
+                            '%Y-%m-%d %H:%M' 
+                        )
+                        booking_datetime_aware = timezone.make_aware(booking_datetime_naive)
+                        result = create_new_reserve(
+                            customer_id=customer.id,
+                            service_id=service_id,
+                            hairdresser_id=hairdresser_id,
+                            start_time_dt=booking_datetime_aware
+                        )
+                        if result.get('success'):
+                            service_info = Service.objects.get(id=service_id)
+                            hairdresser_info = Hairdresser.objects.get(id=hairdresser_id)
+                            
+                            response_message = (
+                                "✅ *Agendamento Confirmado!* ✅\n\n"
+                                f"Serviço: *{service_info.name}*\n"
+                                f"Profissional: *{hairdresser_info.user.first_name}*\n"
+                                f"Data: *{booking_datetime_aware.strftime('%d/%m/%Y')}*\n"
+                                f"Horário: *{booking_datetime_aware.strftime('%H:%M')}*\n\n"
+                                "Obrigado por usar o Hairmatch! O que mais posso fazer por você?"
+                            )
+                            # Cleanup state for the user
+                            user_states.pop(sender_number, None)
+                            chosen_hairdresser.pop(sender_number, None)
+                            show_services.pop(sender_number, None)
+                            chosen_service.pop(sender_number, None)
+                            chosen_date.pop(sender_number, None)
+                        else:
+                            # If booking failed (e.g., slot taken), inform the user
+                            response_message = result.get('error', 'Ocorreu um erro desconhecido.')
+                            response_message += "\n\nPor favor, escolha outro horário da lista, ou digite 'cancelar' para voltar."
+                            # Keep user in the same state to allow another attempt
+                     
+                    except (ValueError, TypeError):
+                        response_message = "Formato de hora inválido. Por favor, digite a hora como aparece na lista (ex: 14:30)."
+                    except User.DoesNotExist:
+                        response_message = "Não consegui encontrar seu cadastro. Por favor, complete seu registro no nosso site antes de agendar."
+                    except Customer.DoesNotExist:
+                        response_message = "Seu perfil de cliente não foi encontrado. Por favor, complete seu registro no nosso site."
+                    except Exception as e:
+                        print(f"Error in 'confirm_booking': {e}")
+                        response_message = "Ocorreu um erro crítico ao confirmar seu agendamento. Tente novamente."
+                        user_states[sender_number] = 'main_menu' 
                 AiUtils.send_whatsapp_message(sender_number,response_message)
         except json.JSONDecodeError:
             return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)

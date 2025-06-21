@@ -19,39 +19,21 @@ class CreateReserve(APIView):
     def post(self, request):
         data = json.loads(request.body)
 
-        if Reserve.objects.filter(start_time=data['start_time'], customer=data['customer']).exists() or Agenda.objects.filter(start_time=data['start_time'], hairdresser=data['hairdresser']).exists():
-            return JsonResponse({'error': 'Start_time contains overlap'}, status=500)
+        try:
+            start_time_iso = data['start_time']
+            start_time_dt = timezone.make_aware(datetime.fromisoformat(start_time_iso.replace('Z', '')))
+        except (ValueError, KeyError):
+             return JsonResponse({'error': 'Invalid or missing start_time. Use ISO format.'}, status=400)
         
-
-        try:
-            customer_instance = Customer.objects.get(id=data['customer'])
-        except Customer.DoesNotExist:
-            return JsonResponse({'error': 'Customer not found'}, status=500)
-
-        try:
-            hairdresser_instance = Hairdresser.objects.get(id=data['hairdresser'])
-        except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=500)
-
-        try:
-            service_instance = Service.objects.get(id=data['service'])
-        except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=500)
-
-        Reserve.objects.create(
-            start_time = data['start_time'],     
-            customer = customer_instance,
-            service = service_instance,
-        ) 
-
-        processed_end_time = calculate_end_time(data['start_time'], service_instance.duration)
-        
-        Agenda.objects.create(
-            start_time = data['start_time'],
-            end_time = processed_end_time,
-            hairdresser = hairdresser_instance,
-            service = service_instance
+        result = create_new_reserve(
+            customer_id=data['customer'],
+            service_id=data['service'],
+            hairdresser_id=data['hairdresser'],
+            start_time_dt=start_time_dt
         )
+
+        if 'error' in result:
+            return JsonResponse({'error': result['error']}, status=500)
             
         return JsonResponse({'message': 'reserve created successfully'}, status=201)     
 
@@ -214,3 +196,37 @@ def get_available_slots(hairdresser_id, service_id, date_str):
     )
 
     return {'available_slots' : available_slots}
+def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
+    try:
+        customer_instace = Customer.objects.get(id=customer_id)
+        service_instance = Service.objects.get(id=service_id)
+        hairdresser_instance = Hairdresser.objects.get(id=hairdresser_id)
+
+        end_time_dt = start_time_dt + timedelta(minutes=service_instance.duration)
+
+        #checking overlaps
+        if Agenda.objects.filter(
+            hairdresser= hairdresser_instance,
+            start_time__lt=end_time_dt,
+            end_time__gt=start_time_dt
+        ).exists():
+            return {'error':'Desculpe, este horário foi agendado por outra pessoa. Por favor, escolha outro.'}
+        
+        reserve = Reserve.objects.create(
+            start_time = start_time_dt,
+            customer=customer_instace,
+            service=service_instance
+        )
+        Agenda.objects.create(
+                start_time=start_time_dt,
+                end_time=end_time_dt,
+                hairdresser=hairdresser_instance,
+                service=service_instance
+            )
+            
+        return {'success': True, 'reserve': reserve}
+    except (Customer.DoesNotExist, Service.DoesNotExist, Hairdresser.DoesNotExist):
+        return {'error': 'Não foi possível encontrar os dados necessários (cliente, serviço ou profissional).'}
+    except Exception as e:
+        print(f"Error in create_new_reserve: {e}")
+        return {'error': 'Ocorreu um erro inesperado ao tentar criar a reserva.'}
