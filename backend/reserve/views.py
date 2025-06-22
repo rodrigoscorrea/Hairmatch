@@ -74,7 +74,7 @@ class ListReserve(APIView):
             except customer.DoesNotExist:
                 return JsonResponse({'error': 'Customer not found'}, status=404)
             
-            reserves = Reserve.objects.filter(customer=customer_id)
+            reserves = Reserve.objects.filter(customer=customer_id).order_by('start_time')
             result = ReserveFullInfoSerializer(reserves, many=True).data
             return JsonResponse({'data': result}, status=200)
             
