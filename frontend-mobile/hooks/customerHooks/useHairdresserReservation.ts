@@ -30,10 +30,8 @@ export const useHairdresserProfile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This function will fetch all data in parallel
     const fetchData = async () => {
-      if (!id) return; // Don't fetch if there's no ID in the URL
-
+      if (!id) return; 
       setLoading(true);
       try {
         const [
@@ -45,22 +43,13 @@ export const useHairdresserProfile = () => {
           getHairdresser(id),
           listAvailabilitiesByHairdresser(Number(id)),
           listServicesByHairdresser(Number(id)),
-          getPreferencesByUser(userInfo.id),
-          // Assuming getPreferencesByUser needs the user's ID, which is part of the hairdresser object
-          // We will fetch this after fetching the hairdresser
+          getPreferencesByUser(userInfo.customer.user.id),
         ]);
 
-        // Set the primary data
         setHairdresser(hairdresserData.data);
         setAvailabilities(availabilitiesData.data);
         setServices(servicesData.data);
-
-        console.log(hairdresserData.data)
-        // Fetch preferences now that we have the user ID from the hairdresser data
-        if (hairdresserData?.data?.user?.id) {
-          const prefs = await getPreferencesByUser(hairdresserData.data.user.id);
-          setPreferences(prefs);
-        }
+        setPreferences(preferencesData)
 
       } catch (error) {
         console.error("Failed to fetch hairdresser profile data:", error);

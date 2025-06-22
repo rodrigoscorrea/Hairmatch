@@ -1,8 +1,7 @@
 // hooks/useCustomerHome.ts
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/app/_layout'; 
-import { useBottomTab } from '@/contexts/BottomTabContext'; 
+import { useAuth } from '@/app/_layout';  
 import { getCustomerHomeInfo } from '@/services/auth-user.service';
 import { CustomerHomeInfoResponse } from '@/models/User.types';
 import { Hairdresser } from '@/models/Hairdresser.types';
@@ -20,7 +19,6 @@ const defaultAvatar = require("../../assets/hairdressers/male/default.jpg");
 export const useCustomerHome = () => {
   const router = useRouter();
   const { userInfo } = useAuth();
-  const { setActiveTab } = useBottomTab();
 
   const [customerHomeInfo, setCustomerHomeInfo] = useState<CustomerHomeInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +40,6 @@ export const useCustomerHome = () => {
     };
 
     fetchCustomerHomeInfo();
-    setActiveTab('CustomerHome');
   }, [userInfo]);
 
   const handleClickHairdresser = (hairdresser: Hairdresser, avatar: any) => {

@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/app/_layout';
-import { useBottomTab } from '@/contexts/BottomTabContext';
 import { searchHairdressers } from '@/services/auth-user.service';
 import { Hairdresser } from '@/models/Hairdresser.types';
 import { ServiceRequest, ServiceResponseWithHairdresser } from '@/models/Service.types';
@@ -10,7 +9,6 @@ import { ServiceRequest, ServiceResponseWithHairdresser } from '@/models/Service
 export const useSearch = () => {
   const router = useRouter();
   const { userInfo } = useAuth();
-  const { setActiveTab } = useBottomTab();
 
   // State for the search query and results
   const [searchText, setSearchText] = useState("");
@@ -18,35 +16,24 @@ export const useSearch = () => {
   const [serviceResults, setServiceResults] = useState<ServiceResponseWithHairdresser[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // useRef is better for storing timeout IDs as it doesn't trigger re-renders
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // This effect sets the active tab when the screen is focused
   useEffect(() => {
-    setActiveTab("Search");
-  }, []);
-
-  // This effect handles the debounced search API call
-  useEffect(() => {
-    // Clear the previous timeout on every keystroke
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
 
-    // Set a new timeout
     debounceTimeout.current = setTimeout(() => {
       if (searchText.trim().length > 0) {
         fetchResults(searchText);
       } else {
-        // Clear results if search text is empty
         setHairdresserResults([]);
         setServiceResults([]);
       }
-    }, 1000); // 1-second debounce delay
+    }, 1000); 
 
-    // Cleanup function to clear the timeout if the component unmounts
     return () => {
       if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
     };
-  }, [searchText]); // This effect re-runs only when searchText changes
+  }, [searchText]);
 
   const fetchResults = async (query: string) => {
     setLoading(true);

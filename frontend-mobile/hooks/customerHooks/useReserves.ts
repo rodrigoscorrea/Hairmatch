@@ -2,19 +2,16 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/app/_layout';
-import { useBottomTab } from '@/contexts/BottomTabContext';
 import { getCustomerReserves } from '@/services/reserve.service';
 import { ReserveWithService } from '@/models/Reserve.types';
 
 export const useReserves = () => {
   const { userInfo } = useAuth();
-  const { setActiveTab } = useBottomTab();
   const router = useRouter(); 
   const [reserves, setReserves] = useState<ReserveWithService[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setActiveTab('Reserves');
     
     const fetchReserves = async () => {
       // Get the customer ID directly from our main Auth context
