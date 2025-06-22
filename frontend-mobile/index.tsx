@@ -32,6 +32,7 @@ import AvailabilityEditScreen from './screens/hairdresser/availability/Availabil
 import AgendaManagerScreen from './screens/hairdresser/agenda/AgendaManagerScreen';
 import axiosInstance from './services/axios-instance';
 import HairdresserSettingsScreen from './screens/hairdresser/profile/HairdresserSettingsScreen';
+import InfoScreen from './screens/customer/ReserveDetailsScreen';
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL
 
 export const AuthContext = React.createContext<any>({});

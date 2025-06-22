@@ -36,6 +36,19 @@ export interface ServiceWithHairdresserName extends Service {
     }
 }
 
+export interface ServiceInfo {
+    id: number,
+    name: string;
+    rating: number;
+    date: string;
+    time: string;
+    service: string;
+    location: string;
+    address: string;
+    phone: string;
+    status: string;
+  }
+
 export interface ServiceWithHairdresserFullInfo extends Service {
     hairdresser: Hairdresser
 }
