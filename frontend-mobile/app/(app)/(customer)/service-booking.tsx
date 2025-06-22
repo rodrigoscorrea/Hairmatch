@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
-import { styles } from '@/screens/customer/reservation/styles/ServiceReservationStyle'; // Adjust path
+import { styles } from '@/styles/customer/reservation/styles/ServiceReservationStyle'; // Adjust path
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ptBR } from '@/utils/locale-calendar'; // Adjust path
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';

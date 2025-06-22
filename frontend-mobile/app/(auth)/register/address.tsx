@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Alert, TextInput, TouchableOpacity, KeyboardAvoidingView, Image, ScrollView } from 'react-native';
-import { styles } from '../../../screens/register/styles/AdressStyle'
+import { styles } from '../../../styles/register/styles/AdressStyle'
 import { ErrorModal } from '@/app/../components/modals/ErrorModal/ErrorModal';
 import { useAddress } from '@/hooks/authHooks/useAddress';
 import { formatCEP } from '@/app/../utils/forms';

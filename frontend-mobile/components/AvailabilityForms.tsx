@@ -1,7 +1,7 @@
 // components/hairdresser/AvailabilityForm.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, Switch } from 'react-native';
-import { styles } from '@/screens/hairdresser/availability/styles/AvailabilityCreateStyle'; // Use styles from create screen
+import { styles } from '@/styles/hairdresser/availability/styles/AvailabilityCreateStyle'; // Use styles from create screen
 
 // The form now accepts props from the hook
 export const AvailabilityForm = ({

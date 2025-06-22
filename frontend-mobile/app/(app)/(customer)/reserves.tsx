@@ -1,7 +1,7 @@
 // app/(app)/(customer)/reserves.tsx
 
 import { ActivityIndicator, Text, View, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native'
-import { styles } from '@/screens/customer/styles/ReserveStyle'; // Adjust path
+import { styles } from '@/styles/customer/styles/ReserveStyle'; // Adjust path
 import React from 'react'
 import BottomTabBar from '@/components/BottomBar'; // Adjust path
 import { formatDate } from '@/utils/date-formater'; // Adjust path

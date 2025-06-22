@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, KeyboardAvoidingView, ScrollView, ActivityIndicator, Modal, Image } from 'react-native';
-import { styles } from '../../../screens/register/styles/PreferencesStyle'; // Adjust path if needed
+import { styles } from '../../../styles/register/styles/PreferencesStyle'; // Adjust path if needed
 import { usePreferencesForm } from '../../../hooks/authHooks/usePreferences'; // Adjust path
 import { UserRole } from '@/models/User.types';
 

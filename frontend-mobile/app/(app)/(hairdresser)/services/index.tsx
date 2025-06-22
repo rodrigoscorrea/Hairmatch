@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Accordion } from '@/components/Accordion';
 import { Ionicons } from '@expo/vector-icons';
-import { styles } from '@/screens/hairdresser/service/styles/HairdresserServiceManager'; // Adjust path
+import { styles } from '@/styles/hairdresser/service/styles/HairdresserServiceManager'; // Adjust path
 import ConfirmationModal from '@/components/modals/confirmationModal/ConfirmationModal';
 import { useServiceManager } from '@/hooks/hairdresserHooks/useServiceManager';
 import { serviceTimeFormater } from '@/utils/serviceTime-formater';

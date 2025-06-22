@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, TextInput } from 'react-native'; // TextInput importado de 'react-native'
-import { styles } from '../../../screens/register/styles/RegisterStyle'
+import { styles } from '../../../styles/register/styles/RegisterStyle'
 import { UserRole } from '@/app/../models/User.types';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorModal } from '@/app/../components/modals/ErrorModal/ErrorModal';

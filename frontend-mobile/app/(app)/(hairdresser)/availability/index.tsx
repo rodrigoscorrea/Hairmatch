@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { styles } from '@/screens/hairdresser/availability/styles/AvailabilityManagerStyles'; // Adjust path
+import { styles } from '@/styles/hairdresser/availability/styles/AvailabilityManagerStyles'; // Adjust path
 import { formatAvailability } from '@/utils/availability-formater';
 import { useAvailabilityManager } from '@/hooks/hairdresserHooks/useAvailabilityManager';
 

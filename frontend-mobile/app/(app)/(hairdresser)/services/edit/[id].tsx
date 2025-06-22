@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { styles } from '@/screens/hairdresser/service/styles/HaidresserServiceCreation'; // Adjust path
+import { styles } from '@/styles/hairdresser/service/styles/HaidresserServiceCreation'; // Adjust path
 import { useServiceForm } from '@/hooks/hairdresserHooks/useServiceForms';
 
 export default function ServiceEditScreen() {

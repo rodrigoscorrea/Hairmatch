@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { styles } from '@/screens/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
+import { styles } from '@/styles/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import { Accordion } from '@/components/Accordion';
 

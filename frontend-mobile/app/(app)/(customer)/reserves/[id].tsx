@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { styles } from '@/screens/customer/reservation/styles/ReservationDetailsStyles';
+import { styles } from '@/styles/customer/reservation/styles/ReservationDetailsStyles';
 import { useReserveDetails } from '@/hooks/customerHooks/useReserveDetails';
 import { formatDate} from '@/utils/date-formater';
 import { formatTime } from '@/utils/time-formater';

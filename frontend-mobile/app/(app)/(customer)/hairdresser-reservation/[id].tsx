@@ -9,7 +9,7 @@ import {
   FlatList,
   ActivityIndicator
 } from 'react-native';
-import { styles } from '@/screens/customer/reservation/styles/HairdresserProfileReservationStyle'; // Adjust path
+import { styles } from '@/styles/customer/reservation/styles/HairdresserProfileReservationStyle'; // Adjust path
 import { Ionicons } from '@expo/vector-icons';
 import { Accordion } from '@/components/Accordion'; // Adjust path
 import { formatAvailability } from '@/utils/availability-formater'; // Adjust path

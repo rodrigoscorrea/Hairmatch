@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { formatDate } from '../../../utils/date-formater';
 import { formatTime } from '../../../utils/time-formater';
-import { styles, calendarTheme } from '@/screens/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
+import { styles, calendarTheme } from '@/styles/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
 

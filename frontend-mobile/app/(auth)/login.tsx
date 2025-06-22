@@ -8,7 +8,7 @@ import {
   StatusBar,
   Image
 } from 'react-native';
-import { styles } from '../../screens/styles/LoginStyle';
+import { styles } from '../../styles/register/styles/LoginStyle';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorModal } from '../../components/modals/ErrorModal/ErrorModal';
 import { useLogin } from '@/hooks/authHooks/useLogin'; 

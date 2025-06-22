@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import BottomTabBar from "@/components/BottomBar";
-import { styles } from "@/screens/customer/styles/SearchStyle"; // Adjust path
+import { styles } from "@/styles/customer/styles/SearchStyle"; // Adjust path
 import { useSearch } from "@/hooks/customerHooks/useSearch"; // <-- Our new hook
 
 export default function SearchScreen() {

@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
-import { styles } from '@/screens/customer/home/styles/CustomerHomeStyle'; // Adjust path if needed
+import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle'; // Adjust path if needed
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome'; // <-- Import our new hook
 import BottomTabBar from '@/components/BottomBar'; // Adjust path
 import { formatText } from '@/utils/text-formater'; // Adjust path
