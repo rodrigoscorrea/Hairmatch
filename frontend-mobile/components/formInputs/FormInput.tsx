@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextInput, TextInputProps, View, StyleSheet } from 'react-native';
-import { styles as globalStyles } from '@/app/screens/register/styles/RegisterStyle'; // Importe seus estilos
+import { styles as globalStyles } from '../../styles/register/styles/RegisterStyle';
 
 interface FormInputProps extends TextInputProps {
   isError?: boolean;
