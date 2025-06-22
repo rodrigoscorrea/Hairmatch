@@ -4,7 +4,8 @@ import { View, Text, TouchableOpacity, SafeAreaView, FlatList, Modal, StatusBar 
 import { Calendar } from 'react-native-big-calendar';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-
+import { formatDate } from '../../../utils/date-formater';
+import { formatTime } from '../../../utils/time-formater';
 import { styles, calendarTheme } from '@/screens/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
@@ -114,8 +115,8 @@ export default function AgendaManagerScreen() {
             <Text style={styles.modalTitle}>Detalhes do Agendamento</Text>
             <View style={styles.modalReserveInformations}>
                 <Text>Serviço agendado: {selectedEvent?.title}</Text> 
-                <Text>Data: {selectedEvent ? dayjs(selectedEvent.start).format('DD/MM/YYYY') : ""}</Text>
-                <Text>Horário: {selectedEvent ? dayjs(selectedEvent.start).format("HH:mm") : ""}</Text>
+                <Text>Data: {selectedEvent ? formatDate(selectedEvent.start.toISOString()) : ""}</Text>
+                <Text>Horário: {selectedEvent ? formatTime(selectedEvent.start.toISOString()) : ""}</Text>
             </View>
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity style={styles.modalBackButton} onPress={closeModal}>

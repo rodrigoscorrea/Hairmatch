@@ -22,11 +22,21 @@ type DayState = {
   end: string;
 };
 
+const createPayloadFromDays = (days: DayState[]) => {
+    return days
+      .filter(day => day.active)
+      .map(day => ({
+        weekday: day.info.weekday,
+        start_time: `${day.start}:00`,
+        end_time: `${day.end}:00`,
+      }));
+};
+
 export const useAvailabilityForm = (mode: 'create' | 'edit') => {
   const router = useRouter();
   const { userInfo } = useAuth();
   const hairdresserId = userInfo?.hairdresser?.id;
-  const [initialState, setInitialState] = useState<DayState[] | null>(null);
+  const [initialPayload, setInitialPayload] = useState<object[] | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [days, setDays] = useState<DayState[]>(() => DAYS_OF_WEEK.map(day => ({
     info: day,
@@ -40,42 +50,41 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
   const [loading, setLoading] = useState(mode === 'edit');
 
   useEffect(() => {
-    // If in edit mode, fetch existing data to pre-populate the form
     if (mode === 'edit' && hairdresserId) {
       const fetchInitialData = async () => {
         try {
           const { data: existingAvailabilities } = await listAvailabilitiesByHairdresser(hairdresserId);
-          const initialDays = DAYS_OF_WEEK.map((day, index) => {
-            const availability = existingAvailabilities.find((a:any) => a.weekday === day.weekday);
-            return {
-              info: day,
-              active: !!availability,
-              start: availability ? availability.start_time.substring(0, 5) : '08:00',
-              end: availability ? availability.end_time.substring(0, 5) : '18:00',
-            };
-          });
-          setDays(initialDays);
-          setInitialState(initialDays);
-        } catch (error) {
-          console.error("Failed to fetch data for edit form", error);
-        } finally {
-          setLoading(false);
-        }
+          if (existingAvailabilities && existingAvailabilities.length > 0) {
+            const initialDaysState = DAYS_OF_WEEK.map((day) => {
+              const availability = existingAvailabilities.find((a:any) => a.weekday === day.weekday);
+              return {
+                info: day,
+                active: !!availability,
+                start: availability ? availability.start_time.substring(0, 5) : '08:00',
+                end: availability ? availability.end_time.substring(0, 5) : '18:00',
+              };
+            });
+            setDays(initialDaysState);
+            // Create and store the initial payload for comparison
+            setInitialPayload(createPayloadFromDays(initialDaysState));
+          } else {
+            // If no availabilities exist, the initial payload is an empty array
+            setInitialPayload([]);
+          }
+        } catch (error) { console.error("Failed to fetch data for edit form", error); }
+        finally { setLoading(false); }
       };
       fetchInitialData();
     }
   }, [mode, hairdresserId]);
 
   useEffect(() => {
-    if (mode === 'edit' && initialState) {
-      // For a simple and effective deep comparison of our state array,
-      // we can compare their JSON string representations.
-      const currentStateString = JSON.stringify(days);
-      const initialStateString = JSON.stringify(initialState);
-      
-      setIsDirty(currentStateString !== initialStateString);
+    if (mode === 'edit' && initialPayload) {
+      const currentPayload = createPayloadFromDays(days);
+      const dirty = JSON.stringify(currentPayload) !== JSON.stringify(initialPayload);
+      setIsDirty(dirty);
     }
-  }, [days, initialState, mode]);
+  }, [days, initialPayload, mode]);
 
 
   const handleTimeChange = (index: number, key: 'start' | 'end', value: string) => {
@@ -131,7 +140,7 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
       } else {
         await createAvailability(availabilitiesPayload, hairdresserId);
       }
-      router.back(); // Go back to the manager screen
+      router.back();
     } catch (error) {
       console.error("Error saving availability:", error);
     }
