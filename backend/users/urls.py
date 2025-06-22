@@ -8,6 +8,7 @@ from .views import (
     UserInfoView, 
     ChangePasswordView, 
     CustomerHomeView, 
+    HairdresserInfoView,
     GeminiChatView
 )
 
@@ -22,6 +23,6 @@ urlpatterns = [
     path('user/<str:email>', UserInfoView.as_view(), name='user_info'),
     path('customer/home', CustomerHomeView.as_view(), name='customer_home_info'),
     path('customer/home/<str:email>', CustomerHomeView.as_view(), name='customer_home_info'),
-
+    path('hairdresser/<int:hairdresser_id>', HairdresserInfoView.as_view(), name='hairdresser_info'),
     path('hairdresser/gemini_completion', GeminiChatView.as_view(), name='gemini_completion'),
 ]

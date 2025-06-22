@@ -14,6 +14,17 @@ from availability.models import Availability
 import calendar
 # Create your views here.
 
+class ReserveById(APIView):
+    def get(self, request, id=None):
+    
+        try:
+            reserve = Reserve.objects.get(id=id)
+        except Reserve.DoesNotExist:
+            return JsonResponse({'error': 'Reserve not found'}, status=404)
+        
+        result = ReserveFullInfoSerializer(reserve).data
+        return JsonResponse({'data': result}, status=200) 
+
 
 class CreateReserve(APIView):
     def post(self, request):

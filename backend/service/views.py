@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from users.models import User, Hairdresser
 from service.models import Service
-from service.serializers import ServiceSerializer
+from service.serializers import ServiceSerializer, ServiceWithHairdresserSerializer
 from rest_framework.views import APIView
 from django.http import JsonResponse
+from agenda.models import Agenda
 import json
 # Create your views here.
 
@@ -73,10 +74,19 @@ class UpdateService(APIView):
 class RemoveService(APIView):
     def delete(self, request, service_id):
         try:
-            service = Service.objects.get(id=service_id)
+            service_to_delete = Service.objects.get(id=service_id)
+            if Agenda.objects.filter(service=service_to_delete).exists():
+                return JsonResponse(
+                    {"error": "There are already appointments for this service"},
+                    status=400
+                )
+            
+            service_to_delete.delete()
+            
+            return JsonResponse({'message': 'service deleted successfully'}, status=200)
+
         except Service.DoesNotExist:
-            return JsonResponse({"error": "Service not found"}, status=404)
-        
-        service.delete()
-        return JsonResponse({"data": "Service register deleted successfully"}, status=200)
+            return JsonResponse({"error": "Service not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": "Unexpected error found."}, status=500)
         

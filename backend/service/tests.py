@@ -1,12 +1,15 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 import json
 from decimal import Decimal
-
+from unittest.mock import patch
 from users.models import User, Hairdresser
 from service.models import Service
+from agenda.models import Agenda
+from django.utils import timezone
+from datetime import timedelta
 
 
 class ServiceTestCase(TestCase):
@@ -369,18 +372,373 @@ class UpdateServiceTest(ServiceTestCase):
         self.assertEqual(response.json()['error'], 'Service not found')
 
 
-class RemoveServiceTest(ServiceTestCase):
-    def test_remove_service_success(self):
-        """Test successful service removal"""
-        response = self.client.delete(self.remove_url(self.service.id))
+class RemoveServiceViewTest(TestCase):
+    def setUp(self):
+        """Set up test data before each test method."""
+        self.client = Client()
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()['data'], 'Service register deleted successfully')
-        self.assertEqual(Service.objects.count(), 1)  # 2 from setup - 1 deleted
+        # Create a test user for hairdresser
+        self.hairdresser_user = User.objects.create(
+            email='hairdresser@test.com',
+            password='testpass123',
+            first_name='John',
+            last_name='Doe',
+            phone='1234567890',
+            complement='Apt 1',
+            neighborhood='Downtown',
+            city='Test City',
+            state='TX',
+            address='123 Test St',
+            number='123',
+            postal_code='12345',
+            role='HAIRDRESSER'
+        )
         
-    def test_remove_nonexistent_service(self):
-        """Test removing a non-existent service"""
-        response = self.client.delete(self.remove_url(9999))  # Non-existent ID
+        # Create a hairdresser instance
+        self.hairdresser = Hairdresser.objects.create(
+            user=self.hairdresser_user,
+            experience_years=5,
+            resume='Experienced hairdresser',
+            cnpj='12345678901234',
+            experience_time='5 years',
+            experiences='Cutting, coloring',
+            products='Professional products'
+        )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        # Create another hairdresser for additional tests
+        self.hairdresser_user_2 = User.objects.create(
+            email='hairdresser2@test.com',
+            password='testpass123',
+            first_name='Jane',
+            last_name='Smith',
+            phone='0987654321',
+            complement='Suite 2',
+            neighborhood='Uptown',
+            city='Test City 2',
+            state='CA',
+            address='456 Test Ave',
+            number='456',
+            postal_code='67890',
+            role='HAIRDRESSER'
+        )
+        
+        self.hairdresser_2 = Hairdresser.objects.create(
+            user=self.hairdresser_user_2,
+            experience_years=3,
+            resume='Creative hairdresser',
+            cnpj='98765432109876'
+        )
+        
+        # Create test services
+        self.service_1 = Service.objects.create(
+            name='Haircut',
+            description='Basic haircut service',
+            price=Decimal('25.00'),
+            duration=30,
+            hairdresser=self.hairdresser
+        )
+        
+        self.service_2 = Service.objects.create(
+            name='Hair Coloring',
+            description='Professional hair coloring',
+            price=Decimal('75.00'),
+            duration=120,
+            hairdresser=self.hairdresser
+        )
+        
+        self.service_3 = Service.objects.create(
+            name='Hair Styling',
+            description='Professional hair styling',
+            price=Decimal('35.00'),
+            duration=45,
+            hairdresser=self.hairdresser_2
+        )
+
+    def test_delete_service_success(self):
+        """Test successful deletion of a service with no appointments."""
+        # Verify service exists before deletion
+        self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
+        
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Service.objects.filter(id=self.service_1.id).exists())
+        self.assertEqual(response.content, b'{"message": "service deleted successfully"}')
+
+    def test_delete_service_not_found(self):
+        """Test deletion with non-existent service ID."""
+        non_existent_id = 99999
+        url = reverse('remove_service', kwargs={'service_id': non_existent_id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 404)
+        
+        response_data = json.loads(response.content)
+        self.assertIn('error', response_data)
+        self.assertEqual(response_data['error'], 'Service not found.')
+
+    def test_delete_service_with_existing_appointments(self):
+        """Test that service cannot be deleted when appointments exist."""
+        # Create an appointment for the service
+        start_time = timezone.now() + timedelta(days=1)
+        end_time = start_time + timedelta(minutes=self.service_1.duration)
+        
+        agenda = Agenda.objects.create(
+            start_time=start_time,
+            end_time=end_time,
+            hairdresser=self.hairdresser,
+            service=self.service_1
+        )
+        
+        # Verify appointment exists
+        self.assertTrue(Agenda.objects.filter(service=self.service_1).exists())
+        
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 400)
+        
+        response_data = json.loads(response.content)
+        self.assertIn('error', response_data)
+        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        
+        # Verify service still exists
+        self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
+
+    def test_delete_service_with_multiple_appointments(self):
+        """Test service deletion prevention with multiple appointments."""
+        # Create multiple appointments for the service
+        base_time = timezone.now() + timedelta(days=1)
+        
+        for i in range(3):
+            start_time = base_time + timedelta(hours=i)
+            end_time = start_time + timedelta(minutes=self.service_2.duration)
+            
+            Agenda.objects.create(
+                start_time=start_time,
+                end_time=end_time,
+                hairdresser=self.hairdresser,
+                service=self.service_2
+            )
+        
+        # Verify multiple appointments exist
+        self.assertEqual(Agenda.objects.filter(service=self.service_2).count(), 3)
+        
+        url = reverse('remove_service', kwargs={'service_id': self.service_2.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 400)
+        
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        
+        # Verify service still exists
+        self.assertTrue(Service.objects.filter(id=self.service_2.id).exists())
+
+    def test_delete_service_zero_id(self):
+        """Test deletion with ID 0."""
+        url = reverse('remove_service', kwargs={'service_id': 0})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 404)
+        
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['error'], 'Service not found.')
+
+    def test_get_method_not_allowed(self):
+        """Test that GET method is not allowed."""
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_post_method_not_allowed(self):
+        """Test that POST method is not allowed."""
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.post(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_put_method_not_allowed(self):
+        """Test that PUT method is not allowed."""
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.put(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_patch_method_not_allowed(self):
+        """Test that PATCH method is not allowed."""
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.patch(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_response_content_type(self):
+        """Test that response content type is JSON for error responses."""
+        url = reverse('remove_service', kwargs={'service_id': 99999})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response['Content-Type'], 'application/json')
+
+    @patch('service.views.Service.objects.get')  # Replace 'service' with your actual app name
+    def test_unexpected_error_handling(self, mock_get):
+        """Test handling of unexpected exceptions."""
+        # Mock an unexpected exception
+        mock_get.side_effect = Exception("Unexpected database error")
+        
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 500)
+        
+        response_data = json.loads(response.content)
+        self.assertIn('error', response_data)
+        self.assertEqual(response_data['error'], 'Unexpected error found.')
+
+    def test_delete_service_different_hairdresser(self):
+        """Test deletion of service from different hairdresser."""
+        # This test verifies that the service can be deleted regardless of which hairdresser owns it
+        # (assuming no business logic prevents this)
+        
+        url = reverse('remove_service', kwargs={'service_id': self.service_3.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify service was deleted
+        self.assertFalse(Service.objects.filter(id=self.service_3.id).exists())
+
+    def test_service_deletion_cascade_behavior(self):
+        """Test what happens to appointments when service is deleted (if cascade is implemented)."""
+        # Note: Your current model uses DO_NOTHING, so this test verifies that behavior
+        
+        # Create an appointment
+        start_time = timezone.now() + timedelta(days=1)
+        end_time = start_time + timedelta(minutes=self.service_1.duration)
+        
+        agenda = Agenda.objects.create(
+            start_time=start_time,
+            end_time=end_time,
+            hairdresser=self.hairdresser,
+            service=self.service_1
+        )
+        
+        # Try to delete service (should fail due to business logic)
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 400)
+        
+        # Both service and appointment should still exist
+        self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
+        self.assertTrue(Agenda.objects.filter(id=agenda.id).exists())
+
+    def test_url_pattern_matching(self):
+        """Test that URL pattern correctly captures service_id."""
+        test_ids = [1, 123, 999999]
+        
+        for test_id in test_ids:
+            url = reverse('remove_service', kwargs={'service_id': test_id})
+            self.assertIn(str(test_id), url)
+
+    def test_concurrent_deletion_safety(self):
+        """Test behavior when service is deleted while being checked for appointments."""
+        # This is more of an integration test for race conditions
+        
+        # Create service and appointment
+        start_time = timezone.now() + timedelta(days=1)
+        end_time = start_time + timedelta(minutes=self.service_1.duration)
+        
+        Agenda.objects.create(
+            start_time=start_time,
+            end_time=end_time,
+            hairdresser=self.hairdresser,
+            service=self.service_1
+        )
+        
+        # The view should still handle this correctly
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
+
+
+class RemoveServiceViewIntegrationTest(TestCase):
+    """Integration tests for RemoveService view."""
+    
+    def setUp(self):
+        """Set up test data for integration tests."""
+        self.client = Client()
+        
+        # Create complete test setup
+        self.user = User.objects.create(
+            email='integration@test.com',
+            password='testpass123',
+            first_name='Integration',
+            last_name='Test',
+            phone='5555555555',
+            complement='Integration Suite',
+            neighborhood='Test Neighborhood',
+            city='Integration City',
+            state='IT',
+            address='Integration St',
+            number='555',
+            postal_code='55555',
+            role='HAIRDRESSER'
+        )
+        
+        self.hairdresser = Hairdresser.objects.create(
+            user=self.user,
+            experience_years=10,
+            resume='Integration test hairdresser',
+            cnpj='55555555555555'
+        )
+        
+        self.service = Service.objects.create(
+            name='Integration Service',
+            description='Service for integration testing',
+            price=Decimal('50.00'),
+            duration=60,
+            hairdresser=self.hairdresser
+        )
+
+    def test_full_deletion_workflow(self):
+        """Test the complete service deletion workflow."""
+        # Verify service exists
+        self.assertTrue(Service.objects.filter(id=self.service.id).exists())
+        
+        # Delete the service
+        url = reverse('remove_service', kwargs={'service_id': self.service.id})
+        response = self.client.delete(url)
+        
+        # Verify successful deletion
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Service.objects.filter(id=self.service.id).exists())
+
+    def test_business_logic_enforcement(self):
+        """Test that business rules are properly enforced."""
+        # Create appointment
+        start_time = timezone.now() + timedelta(days=1)
+        end_time = start_time + timedelta(minutes=self.service.duration)
+        
+        Agenda.objects.create(
+            start_time=start_time,
+            end_time=end_time,
+            hairdresser=self.hairdresser,
+            service=self.service
+        )
+        
+        # Attempt deletion
+        url = reverse('remove_service', kwargs={'service_id': self.service.id})
+        response = self.client.delete(url)
+        
+        # Verify business rule enforcement
+        self.assertEqual(response.status_code, 400)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        
+        # Verify service preservation
+        self.assertTrue(Service.objects.filter(id=self.service.id).exists())

@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import CreateReserve, ListReserve, UpdateReserve, RemoveReserve, ReserveSlot
+from .views import CreateReserve, ListReserve, UpdateReserve, RemoveReserve, ReserveSlot, ReserveById
 
 urlpatterns = [
+    path('<int:id>', ReserveById.as_view(), name='retrieve_reserve_by_id'),
     path('create', CreateReserve.as_view(), name='create_reserve'),
     path('slots/<int:hairdresser_id>', ReserveSlot.as_view(), name="get_slots"),
     path('list/<int:customer_id>', ListReserve.as_view(), name='list_reserve'),
