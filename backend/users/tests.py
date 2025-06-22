@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -9,6 +9,7 @@ import bcrypt
 from .models import User, Customer, Hairdresser
 from preferences.models import Preferences
 from service.models import Service
+from unittest.mock import patch
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -1419,3 +1420,262 @@ class GlobalSearchViewTest(TestCase):
         
         response_time = end_time - start_time
         self.assertLess(response_time, 1.0)
+
+class HairdresserInfoViewTest(TestCase):
+    def setUp(self):
+        """Set up test data before each test method."""
+        self.client = Client()
+        
+        # Create a test user for hairdresser
+        self.hairdresser_user = User.objects.create(
+            email='hairdresser@test.com',
+            password='testpass123',
+            first_name='John',
+            last_name='Doe',
+            phone='1234567890',
+            complement='Apt 1',
+            neighborhood='Downtown',
+            city='Test City',
+            state='TX',
+            address='123 Test St',
+            number='123',
+            postal_code='12345',
+            role='HAIRDRESSER'
+        )
+        
+        # Create a hairdresser instance
+        self.hairdresser = Hairdresser.objects.create(
+            user=self.hairdresser_user,
+            experience_years=5,
+            resume='Experienced hairdresser with 5 years in the industry',
+            cnpj='12345678901234',
+            experience_time='5 years',
+            experiences='Cutting, coloring, styling',
+            products='Professional hair care products'
+        )
+        
+        # Create another hairdresser for additional tests
+        self.hairdresser_user_2 = User.objects.create(
+            email='hairdresser2@test.com',
+            password='testpass123',
+            first_name='Jane',
+            last_name='Smith',
+            phone='0987654321',
+            complement='Suite 2',
+            neighborhood='Uptown',
+            city='Test City 2',
+            state='CA',
+            address='456 Test Ave',
+            number='456',
+            postal_code='67890',
+            role='HAIRDRESSER'
+        )
+        
+        self.hairdresser_2 = Hairdresser.objects.create(
+            user=self.hairdresser_user_2,
+            experience_years=3,
+            resume='Creative hairdresser specializing in modern styles',
+            cnpj='98765432109876',
+            experience_time='3 years',
+            experiences='Modern cuts, hair extensions',
+            products='Organic hair products'
+        )
+
+    def test_get_hairdresser_info_success(self):
+        """Test successful retrieval of hairdresser information."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Parse JSON response
+        response_data = json.loads(response.content)
+        
+        # Check response structure
+        self.assertIn('data', response_data)
+        hairdresser_data = response_data['data']
+        
+        # Verify hairdresser data is present
+        self.assertIsNotNone(hairdresser_data)
+        
+        # Verify some key fields (adjust based on your serializer)
+        # Note: The exact fields depend on your HairdresserSerializer implementation
+        self.assertEqual(hairdresser_data['id'], self.hairdresser.id)
+
+    def test_get_hairdresser_info_not_found(self):
+        """Test retrieval with non-existent hairdresser ID."""
+        non_existent_id = 99999
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': non_existent_id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 404)
+        
+        # Parse JSON response
+        response_data = json.loads(response.content)
+        
+        # Check error message
+        self.assertIn('error', response_data)
+        self.assertEqual(response_data['error'], 'Hairdresser not found')
+
+    def test_get_hairdresser_info_zero_id(self):
+        """Test retrieval with ID 0."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': 0})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 404)
+        
+        response_data = json.loads(response.content)
+        self.assertIn('error', response_data)
+        self.assertEqual(response_data['error'], 'Hairdresser not found')
+
+    def test_get_different_hairdresser_info(self):
+        """Test retrieval of different hairdresser information."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser_2.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        response_data = json.loads(response.content)
+        hairdresser_data = response_data['data']
+        
+        # Verify it's the correct hairdresser
+        self.assertEqual(hairdresser_data['id'], self.hairdresser_2.id)
+
+    def test_response_content_type(self):
+        """Test that response content type is JSON."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/json')
+
+    def test_post_method_not_allowed(self):
+        """Test that POST method is not allowed."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.post(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_put_method_not_allowed(self):
+        """Test that PUT method is not allowed."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.put(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    def test_delete_method_not_allowed(self):
+        """Test that DELETE method is not allowed."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+    @patch('users.views.HairdresserSerializer')  # Replace 'your_app' with your actual app name
+    def test_serializer_called_correctly(self, mock_serializer):
+        """Test that the serializer is called with the correct hairdresser instance."""
+        # Mock the serializer
+        mock_serializer.return_value.data = {'id': self.hairdresser.id, 'test': 'data'}
+        
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify serializer was called with correct hairdresser instance
+        mock_serializer.assert_called_once_with(self.hairdresser)
+
+    def test_hairdresser_with_minimal_data(self):
+        """Test hairdresser with minimal required data."""
+        # Create a hairdresser with minimal data
+        minimal_user = User.objects.create(
+            email='minimal@test.com',
+            password='testpass123',
+            first_name='Min',
+            last_name='User',
+            phone='1111111111',
+            complement='N/A',
+            neighborhood='Minimal',
+            city='Min City',
+            state='MN',
+            address='Min St',
+            postal_code='11111',
+            role='HAIRDRESSER'
+        )
+        
+        minimal_hairdresser = Hairdresser.objects.create(
+            user=minimal_user,
+            cnpj='11111111111111'
+            # Other fields are optional/nullable
+        )
+        
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': minimal_hairdresser.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        response_data = json.loads(response.content)
+        self.assertIn('data', response_data)
+        self.assertIsNotNone(response_data['data'])
+
+    def test_url_pattern_matching(self):
+        """Test that URL pattern correctly captures hairdresser_id."""
+        # Test with various ID formats
+        test_ids = [1, 123, 999999]
+        
+        for test_id in test_ids:
+            url = reverse('hairdresser_info', kwargs={'hairdresser_id': test_id})
+            self.assertIn(str(test_id), url)
+
+    def tearDown(self):
+        """Clean up after each test."""
+        pass
+
+
+class HairdresserInfoViewIntegrationTest(TestCase):
+    """Integration tests for HairdresserInfoView."""
+    
+    def setUp(self):
+        """Set up test data."""
+        self.client = Client()
+        
+        # Create a complete hairdresser with user
+        self.user = User.objects.create(
+            email='integration@test.com',
+            password='testpass123',
+            first_name='Integration',
+            last_name='Test',
+            phone='5555555555',
+            complement='Integration Suite',
+            neighborhood='Test Neighborhood',
+            city='Integration City',
+            state='IT',
+            address='Integration St',
+            number='555',
+            postal_code='55555',
+            role='HAIRDRESSER',
+            rating=4
+        )
+        
+        self.hairdresser = Hairdresser.objects.create(
+            user=self.user,
+            experience_years=10,
+            resume='Highly experienced hairdresser',
+            cnpj='55555555555555',
+            experience_time='10 years',
+            experiences='All types of hair services',
+            products='Premium hair care products'
+        )
+
+    def test_full_hairdresser_data_retrieval(self):
+        """Test complete data retrieval including user information."""
+        url = reverse('hairdresser_info', kwargs={'hairdresser_id': self.hairdresser.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        response_data = json.loads(response.content)
+        hairdresser_data = response_data['data']
+        
+        self.assertIsInstance(hairdresser_data, dict)
+        self.assertIn('id', hairdresser_data)
+        self.assertEqual(hairdresser_data['id'], self.hairdresser.id)
