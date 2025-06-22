@@ -1,5 +1,5 @@
 import axios from 'axios'; 
-import { API_BACKEND_URL } from '../index';
+import { API_BACKEND_URL } from '@/app/_layout';
 import axiosInstance from './axios-instance';
 export const listAgendaByHairdresser = async (hairdresserId: number | undefined) => {
     if(!hairdresserId) {
