@@ -27,7 +27,7 @@ const AgendaListView: React.FC<AgendaViewProps> = ({ events, onEventPress }) => 
           <View style={styles.detailsContainer}>
             <Text style={styles.titleText}>{item.title}</Text>
             <Text style={styles.timeText}>
-              {dayjs(item.start).format('HH:mm')} - {dayjs(item.end).format('HH:mm')}
+              {formatTime((item.start).toISOString())} - {formatTime((item.end).toISOString())}
             </Text>
           </View>
         </View>
