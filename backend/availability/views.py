@@ -101,9 +101,8 @@ class CreateMultipleAvailability(APIView):
 class ListAvailability(APIView):
     def get(self, request, hairdresser_id):
         result = get_hairdresser_availability(hairdresser_id)
-
         if 'error' in result:
-            return JsonResponse(result, status=result.get('status',400))
+            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
         
         serialized_data = result['availabilities']
         working_days = [avail['weekday'].lower() for avail in serialized_data]
@@ -234,7 +233,7 @@ def delete_all_availabilities_by_hairdresser_safe(hairdresser_id: int) -> bool:
     
 def get_hairdresser_availability(hairdresser_id):
     try:
-        if not Hairdresser.objects.filter(id=hairdresser_id).exists:
+        if not Hairdresser.objects.filter(id=hairdresser_id).exists():
             return {'error' : 'Hairdresser not found', 'status':'404'}
         availabilities = Availability.objects.filter(hairdresser_id=hairdresser_id)
         weekday_order = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
