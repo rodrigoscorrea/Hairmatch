@@ -397,3 +397,13 @@ class GeminiChatView(APIView):
         data = json.loads(request.body)
         result = hairdresser_profile_ai_completion(data)
         return result
+    
+class HairdresserInfoView(APIView):
+    def get(self,request,hairdresser_id=None): 
+        try:
+            hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+        except Hairdresser.DoesNotExist:
+            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+
+        hairdresser_serialized = HairdresserSerializer(hairdresser).data
+        return JsonResponse({'data': hairdresser_serialized}, status=200)
