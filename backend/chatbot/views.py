@@ -4,7 +4,7 @@ import json
 import os
 import google.generativeai as genai
 from datetime import datetime
-
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
@@ -153,26 +153,38 @@ class EvolutionApi(APIView):
                     hairdresser_name = incoming_text.lower()
                     try:
                         hairdressers = User.objects.filter(
-                            role='hairdresser',
-                            first_name__icontains=hairdresser_name
-                        ) | User.objects.filter(
-                            role='hairdresser',
-                            last_name__icontains=hairdresser_name
-                        )
-                        
-                        if hairdressers.exists():
-                            serialized_hairdressers = UserFullInfoSerializer(hairdressers, many=True).data
+                            role='hairdresser'
+                        ).filter(
+                            Q(hairdresser__isnull=False) & (
+                                Q(first_name__icontains=hairdresser_name) |
+                                Q(last_name__icontains=hairdresser_name)
+                            )
+                         ).distinct()
+
+                        if hairdressers.exists(): 
+                            serialized_hairdressers = UserFullInfoSerializer(hairdressers, many=True).data 
                             response_message = "Encontrei estes profissionais:\n\n"
-                            recommended_or_searched_hairdressers[sender_number] = serialized_hairdressers
-                            for h in serialized_hairdressers:
-                                specialties_str = ", ".join(h['preferences'])
+                            hairdresser_ids_for_next_state = [h['hairdresser']['id'] for h in serialized_hairdressers]
+                            recommended_or_searched_hairdressers[sender_number] = hairdresser_ids_for_next_state
+                            for h in serialized_hairdressers: 
+                                specialties_str = ", ".join(h['preferences']) 
                                 response_message += (
-                                    f"👤 *{h['first_name']} {h['last_name']}*\n"
-                                    f"📍 {h['neighborhood']}, {h['city']}\n"
-                                    f"⭐ Nota: {h['rating']}\n"
-                                    f"💼 Especialidades: {specialties_str}\n"
-                                    f"📝 {h['hairdresser']['resume']}\n\n"
+                                    f"👤 *{h['hairdresser']['user']['first_name']} {h['hairdresser']['user']['last_name']}*\n"
+                                    f"📍 *Localização*: {h['hairdresser']['user']['neighborhood']}, {h['hairdresser']['user']['city']}\n"
+                                    f"⭐ *Nota*: {h['hairdresser']['user']['rating']}\n"
+                                    f"💼 *Especialidades*: {specialties_str}\n"
+                                    f"📝 *Descrição*: {h['hairdresser']['resume']}\n"
+                                ) 
+
+                            for index in range(len(serialized_hairdressers)):
+                                response_message += (
+                                    f"\n\n*Digite {index+1}* para visualizar os serviços de {serialized_hairdressers[index]['hairdresser']['user']['first_name']} {serialized_hairdressers[index]['hairdresser']['user']['last_name']}"
+                                ) 
+                            response_message += ( 
+                                    f"\n\n*Digite {len(serialized_hairdressers)+1}* para buscar profissionais novamente\n\n"
                                 )
+                                
+                            user_states[sender_number] = 'hairdresser_service_selection' 
                         else:
                             response_message = f"Não encontrei nenhum cabeleireiro com o nome '{hairdresser_name}'. Gostaria de tentar outro nome ou receber recomendações baseadas em suas preferências?"
                     except Exception as e:
@@ -241,7 +253,6 @@ class EvolutionApi(APIView):
                             user_states[sender_number] = 'main_menu'
                         else:
                             availability_result = get_hairdresser_availability(hairdresser_id=hairdresser_id)
-                            print(availability_result)
                             if 'error' in availability_result:
                                 response_message = "Não consegui consultar os dias de trabalho deste profissional."
                                 user_states[sender_number] = 'main_menu' 
