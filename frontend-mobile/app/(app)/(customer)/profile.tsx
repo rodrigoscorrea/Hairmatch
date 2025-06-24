@@ -6,19 +6,24 @@ import Icon from 'react-native-vector-icons/Feather';
 import ConfirmationModal from "@/components/modals/confirmationModal/ConfirmationModal"; // Adjust path
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
+import { usePathname } from 'expo-router'; // Adjust path if needed
 
 export default function ProfileScreen(){
+    const pathname = usePathname();
     const { 
       customer, 
       isModalVisible, 
       handleLogout, 
       confirmLogout, 
-      cancelLogout 
+      cancelLogout, 
+      handleAccountSettings,
+      handleAddressSettings
     } = useCustomerProfile();
 
     const handleMenuPress = (item: string) => {
-      
     };
+
+    console.log('Estou na rota:', pathname);
 
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -49,14 +54,14 @@ export default function ProfileScreen(){
             iconName="user"
             title="Dados da Conta"
             subtitle="Editar informações da sua conta"
-            onPress={() => handleMenuPress('Dados da Conta')}
+            onPress={() => handleAccountSettings()}
           />
           
           <MenuItem
             iconName="map-pin"
             title="Endereço"
             subtitle="Alterar seu endereço"
-            onPress={() => handleMenuPress('Endereço')}
+            onPress={() => handleAddressSettings()}
           />
           
           <MenuItem
