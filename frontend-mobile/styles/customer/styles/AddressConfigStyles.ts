@@ -2,22 +2,18 @@ import { colors } from '@/assets/colors';
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  container: {
-    flexGrow: 1, 
+},
+    header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    //paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
     backgroundColor: colors.background,
-    alignItems: 'center',
-    padding: 20,
-    justifyContent: 'space-between', 
-  },
-  header: {
-    marginTop: 70, 
-    marginBottom: 10,
-    alignItems: 'center',
-  },
+},
   form: {
     width: '100%',
     flex: 1,
@@ -98,7 +94,7 @@ export const styles = StyleSheet.create({
     color: '#333',
 },
 headerTitle:{
-    fontSize: 18,
+    fontSize: 20,
     flex: 1,
     fontWeight: '600',
     color: '#333',

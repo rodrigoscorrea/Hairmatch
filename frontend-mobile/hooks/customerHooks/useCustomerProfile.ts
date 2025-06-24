@@ -25,6 +25,10 @@ export const useCustomerProfile = () => {
     router.push(`/(app)/(customer)/configs/accountSetting`);
   };
 
+  const handleAddressSettings = () => {
+    router.push(`/(app)/(customer)/configs/addressSetting`);
+  };
+
   const handleGoBack = () => {
     router.back();
   };
@@ -36,6 +40,7 @@ export const useCustomerProfile = () => {
     confirmLogout,
     cancelLogout,
     handleAccountSettings,
-    handleGoBack
+    handleGoBack,
+    handleAddressSettings
   };
 };

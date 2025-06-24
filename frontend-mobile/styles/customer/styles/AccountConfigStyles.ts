@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
       marginBottom: 15,
     },
     saveButton: {
-      backgroundColor: '#FF7A00', // Laranja
+      backgroundColor: colors.primary, // Laranja
       padding: 15,
       borderRadius: 8,
       alignItems: 'center',

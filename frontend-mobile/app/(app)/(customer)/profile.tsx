@@ -16,7 +16,8 @@ export default function ProfileScreen(){
       handleLogout, 
       confirmLogout, 
       cancelLogout, 
-      handleAccountSettings
+      handleAccountSettings,
+      handleAddressSettings
     } = useCustomerProfile();
 
     const handleMenuPress = (item: string) => {
@@ -60,7 +61,7 @@ export default function ProfileScreen(){
             iconName="map-pin"
             title="Endereço"
             subtitle="Alterar seu endereço"
-            onPress={() => handleMenuPress('Endereço')}
+            onPress={() => handleAddressSettings()}
           />
           
           <MenuItem
