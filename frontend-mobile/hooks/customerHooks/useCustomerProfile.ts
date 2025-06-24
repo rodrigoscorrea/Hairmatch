@@ -30,7 +30,7 @@ export const useCustomerProfile = () => {
   };
 
   const handleGoBack = () => {
-    router.back();
+    router.push('/(app)/(customer)/profile');
   };
 
   return {
