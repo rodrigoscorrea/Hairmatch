@@ -52,7 +52,7 @@ export const useServiceForm = () => {
       errors.duration = true;
       errorList.push('Duração deve ser maior que 0.');
     }
-    if (duration.toString().length > 3) {
+    if (duration.toString().length > 4) {
       errors.duration = true;
       errorList.push('Duração deve ter no máximo 4 dígitos.');
     }
