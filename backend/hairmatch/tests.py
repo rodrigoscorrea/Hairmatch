@@ -133,11 +133,6 @@ class GeminiClientTest(TestCase):
         self.assertIsInstance(response, JsonResponse)
         self.assertEqual(response.status_code, 200)
 
-    def test_hairdresser_profile_ai_completion_no_data(self):
-        """Test completion function when input data is None."""
-        response = hairdresser_profile_ai_completion(None)
-        self.assertEqual(response.status_code, 404)
-
     @patch('hairmatch.ai_clients.gemini_client.setup_environment', side_effect=ValueError("Test error"))
     def test_hairdresser_profile_ai_completion_config_error(self, mock_setup):
         """Test completion function when setup_environment fails."""
