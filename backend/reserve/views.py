@@ -15,8 +15,10 @@ import calendar
 from django.db import transaction
 from rest_framework import status
 from django.utils.dateparse import parse_datetime
-# Create your views here.
+from zoneinfo import ZoneInfo
 
+# Create your views here.
+LOCAL_TIMEZONE = ZoneInfo('America/Manaus')
 class ReserveById(APIView):
     def get(self, request, id=None):
     
@@ -229,43 +231,50 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration,
     """
     slots = []
     
-    # Convert start/end times to timezone-aware datetime objects for today's date
-    current_dt = timezone.make_aware(datetime.combine(date, start_time))
-    end_dt = timezone.make_aware(datetime.combine(date, end_time))
+    naive_start_dt = datetime.combine(date, start_time)
+    naive_end_dt = datetime.combine(date, end_time)
+
+    current_dt = naive_start_dt.replace(tzinfo=LOCAL_TIMEZONE)
+    end_dt = naive_end_dt.replace(tzinfo=LOCAL_TIMEZONE)
     
     # The last possible start time must account for the service's duration
+    service_delta = timedelta(minutes=service_duration)
     end_dt -= timedelta(minutes=service_duration)
     
-    slot_duration = timedelta(minutes=30)
-    
-    # Convert bookings to a list of blocked periods for easy checking
+    slot_duration = timedelta(minutes=30) 
+    last_possible_start_dt = end_dt - service_delta
     blocked_periods = [(b.start_time, b.end_time) for b in bookings]
-    
-    if break_start and break_end:
-        break_start_dt = timezone.make_aware(datetime.combine(date, break_start))
-        break_end_dt = timezone.make_aware(datetime.combine(date, break_end))
+    if break_start and break_end: 
+        naive_break_start = datetime.combine(date, break_start)
+        naive_break_end = datetime.combine(date, break_end)
+        break_start_dt = naive_break_start.replace(tzinfo=LOCAL_TIMEZONE)
+        break_end_dt = naive_break_end.replace(tzinfo=LOCAL_TIMEZONE)
         blocked_periods.append((break_start_dt, break_end_dt))
-    
-    # --- Main Loop to Generate Slots ---
-    while current_dt <= end_dt:
-        # ** NEW LOGIC: If checking for today, skip slots that are already in the past **
-        if now_dt and current_dt <= now_dt:
-            current_dt += slot_duration
-            continue  # Skip to the next potential slot
 
-        slot_end = current_dt + timedelta(minutes=service_duration)
-        
-        is_available = True
-        for blocked_start, blocked_end in blocked_periods:
-            # Check for any overlap between the potential slot and a blocked period
-            if current_dt < blocked_end and slot_end > blocked_start:
-                is_available = False
-                break
-        
-        if is_available:
+    blocked_periods.sort(key=lambda x: x[0])
+
+    while current_dt <= last_possible_start_dt:
+        # Skip slots in the past for today's date
+        if now_dt and current_dt < now_dt:
+            current_dt += slot_duration
+            continue
+
+        slot_end_dt = current_dt + service_delta
+ 
+        is_blocked = False
+        for blocked_start, blocked_end in blocked_periods: 
+            # Check for overlap 
+            if current_dt < blocked_end and slot_end_dt > blocked_start:
+                # This slot is blocked.
+                is_blocked = True
+                # CRITICAL: Jump the clock to the end of the current blockage.
+                # This ensures we don't check any more slots within this blocked period.
+                current_dt = blocked_end
+                break 
+
+        if not is_blocked:
             slots.append(current_dt.strftime('%H:%M'))
-        
-        current_dt += slot_duration
+            current_dt += slot_duration
     
     return slots
 
