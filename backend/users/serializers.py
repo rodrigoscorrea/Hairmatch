@@ -89,3 +89,17 @@ class SearchResultSerializer(serializers.BaseSerializer):
             
         # If the object type is unknown, raise an error.
         raise Exception(f"Unknown type for SearchResultSerializer: {type(instance).__name__}")
+
+# AI AIMED SERIALIZERS
+
+class UserFullInfoSerializer(serializers.ModelSerializer):
+    hairdresser = HairdresserSerializer(read_only=True)
+    preferences = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['hairdresser','preferences'] 
+    
+    def get_preferences(self, obj):
+        preferences = obj.preferences.all()
+        return [preference.name for preference in preferences] 

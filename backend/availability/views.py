@@ -100,33 +100,22 @@ class CreateMultipleAvailability(APIView):
 
 class ListAvailability(APIView):
     def get(self, request, hairdresser_id):
-        weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        result = get_hairdresser_availability(hairdresser_id)
+        if 'error' in result:
+            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
         
-        try:
-            hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
-            if not hairdresser:
-                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
-                
-            availability = Availability.objects.all().filter(hairdresser_id=hairdresser_id)
-            serializer = AvailabilitySerializer(availability, many=True)
+        serialized_data = result['availabilities']
+        working_days = [avail['weekday'].lower() for avail in serialized_data]
             
-            # Get the days the hairdresser works (from serialized data)
-            working_days = []
-            for avail in serializer.data:
-                if 'weekday' in avail:
-                    working_days.append(avail['weekday'].lower())
-            
-            # Convert to numerical representation (days the hairdresser does NOT work)
-            non_working_day_numbers = self.get_non_working_days(working_days)
-            
-            response_data = {
-                'data': serializer.data,
-                'non_working_days': non_working_day_numbers
-            }
-            
-            return JsonResponse(response_data, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        # Convert to numerical representation (days the hairdresser does NOT work)
+        non_working_day_numbers = self.get_non_working_days(working_days)
+        
+        response_data = {
+            'data': serialized_data,
+            'non_working_days': non_working_day_numbers
+        }
+        
+        return JsonResponse(response_data, status=200)
     
     def get_non_working_days(self, working_days):
         """
@@ -242,3 +231,15 @@ def delete_all_availabilities_by_hairdresser_safe(hairdresser_id: int) -> bool:
     except Exception as e:
         return False
     
+def get_hairdresser_availability(hairdresser_id):
+    try:
+        if not Hairdresser.objects.filter(id=hairdresser_id).exists():
+            return {'error' : 'Hairdresser not found', 'status':'404'}
+        availabilities = Availability.objects.filter(hairdresser_id=hairdresser_id)
+        weekday_order = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        sorted_availabilities = sorted(availabilities, key=lambda a: weekday_order.index(a.weekday.lower()))
+
+        serializer = AvailabilitySerializer(sorted_availabilities, many=True)
+        return {'availabilities': serializer.data}
+    except Exception as e:
+        return {'error': str(e), 'status': 400}   

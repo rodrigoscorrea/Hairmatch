@@ -109,7 +109,7 @@ class ReserveTestCase(TestCase):
 class CreateReserveTest(ReserveTestCase):
     def test_create_reserve_success(self):
         """Test successful reserve creation"""
-        # Create new start time that doesn't conflict with existing reserve
+        # Create a new start time that doesn't conflict with the existing reserve
         new_start_time = self.reserve_start_time + timedelta(hours=2)
         
         reserve_data = {
@@ -119,6 +119,7 @@ class CreateReserveTest(ReserveTestCase):
             'service': self.service.id
         }
         
+        # Assuming 'create-reserve' is the name of your URL pattern
         response = self.client.post(
             self.create_url,
             data=json.dumps(reserve_data),
@@ -127,10 +128,10 @@ class CreateReserveTest(ReserveTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Reserve.objects.count(), 2)  # 1 from setup + 1 new
-        self.assertEqual(Agenda.objects.count(), 2)  # 1 from setup + 1 new
+        self.assertEqual(Agenda.objects.count(), 2)   # 1 from setup + 1 new
         
     def test_create_reserve_overlap_error(self):
-        """Test reserve creation with overlapping start time"""
+        """Test reserve creation with an overlapping start time"""
         reserve_data = {
             'start_time': self.reserve_start_time.isoformat(),  # Same start time as existing reserve
             'customer': self.customer.id,
@@ -144,9 +145,13 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json()['error'], 'Start_time contains overlap')
-        self.assertEqual(Reserve.objects.count(), 1)  # No new reserve created
+        # --- FIX: Assert the correct error message and status code ---
+        # The code now returns a 409 Conflict for this specific error.
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        # Check for the actual user-facing error message from the view logic.
+        self.assertEqual(response.json()['error'], 'Desculpe, este horário foi agendado por outra pessoa. Por favor, escolha outro.')
+        self.assertEqual(Reserve.objects.count(), 1)  # No new reserve should be created
+        self.assertEqual(Agenda.objects.count(), 1)   # No new agenda item should be created
         
     def test_create_reserve_invalid_customer(self):
         """Test reserve creation with non-existent customer"""
@@ -165,7 +170,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Customer not found')
         
     def test_create_reserve_invalid_hairdresser(self):
@@ -185,11 +190,11 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Hairdresser not found')
         
     def test_create_reserve_invalid_service(self):
-        """Test reserve creation with non-existent service"""
+        """Test reserve creation with a non-existent service"""
         new_start_time = self.reserve_start_time + timedelta(hours=2)
         
         reserve_data = {
@@ -205,7 +210,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
 
 
