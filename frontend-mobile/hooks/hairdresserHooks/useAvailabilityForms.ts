@@ -147,8 +147,7 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
     }
   };
 
-  // --- NOVA LÓGICA ---
-  // Verifica se pelo menos um dia está ativo no formulário.
+
   const isAtLeastOneDayActive = days.some(day => day.active);
 
   return {
@@ -156,8 +155,6 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
     days,
     formMode,
     isDirty,
-    // --- LÓGICA DE DESABILITAÇÃO ATUALIZADA ---
-    // Desabilita o botão se (no modo 'edit') nada mudou OU se nenhum dia está selecionado.
     isSaveDisabled: (mode === 'edit' ? !isDirty : false) || !isAtLeastOneDayActive,
     handleModeChange,
     allStart, setAllStart,

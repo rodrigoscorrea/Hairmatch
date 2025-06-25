@@ -4,6 +4,8 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator 
 import Slider from '@react-native-community/slider';
 import { styles } from '@/styles/hairdresser/service/styles/HaidresserServiceCreation'; // Adjust path
 import { useServiceForm } from '@/hooks/hairdresserHooks/useServiceForms';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
+
 
 export default function ServiceEditScreen() {
   const {
@@ -14,7 +16,10 @@ export default function ServiceEditScreen() {
     price, setPrice,
     handleSubmit,
     handleBack,
-    handleDurationChange
+    handleDurationChange,
+    errors,
+    errorModal,
+    closeErrorModal
   } = useServiceForm();
 
   if (loading) {
@@ -27,14 +32,14 @@ export default function ServiceEditScreen() {
         <Text style={styles.title}>Editar Serviço</Text>
         
         <Text style={styles.label}>Nome do Serviço</Text>
-        <TextInput style={styles.input} placeholder="Nome" value={name} onChangeText={setName} />
+        <TextInput style={[styles.input, errors.name && styles.inputError]} placeholder="Nome" value={name} onChangeText={setName} />
 
         <Text style={styles.label}>Descrição</Text>
-        <TextInput style={[styles.input, styles.textarea]} placeholder="Descreva o serviço..." multiline value={description} onChangeText={setDescription} />
+        <TextInput style={[styles.input, styles.textarea, errors.description && styles.inputError]} placeholder="Descreva o serviço..." multiline value={description} onChangeText={setDescription} />
 
         <Text style={styles.label}>Tempo de Duração (em minutos)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errors.duration && styles.inputError]}
           placeholder="Ex: 60"
           keyboardType="numeric"
           value={duration > 0 ? duration.toString() : ''}
@@ -42,7 +47,7 @@ export default function ServiceEditScreen() {
         />
         
         <Text style={styles.label}>Valor</Text>
-        <TextInput style={styles.valueInput} placeholder="R$" keyboardType="numeric" value={price} onChangeText={setPrice} />
+        <TextInput style={[styles.valueInput, errors.price && styles.inputError]} placeholder="R$" keyboardType="numeric" value={price} onChangeText={setPrice} />
         
         <View style={styles.footerButtons}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleBack}>
@@ -53,6 +58,11 @@ export default function ServiceEditScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <ErrorModal
+              visible={errorModal.visible}
+              message={errorModal.message}
+              onClose={closeErrorModal}
+            />
     </View>
   );
 }
