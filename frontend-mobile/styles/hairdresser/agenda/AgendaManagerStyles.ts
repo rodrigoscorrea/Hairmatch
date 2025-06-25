@@ -264,7 +264,7 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   modalBackButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.secondary,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,

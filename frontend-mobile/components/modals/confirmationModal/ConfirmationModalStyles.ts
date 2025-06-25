@@ -1,3 +1,4 @@
+import { colors } from "@/assets/colors";
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
@@ -34,7 +35,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#EFE7F1',
+    backgroundColor: colors.background,
+    borderWidth:1,
+    borderColor: colors.details_purple
   },
   cancelText: {
     color: '#5C4583',
