@@ -268,3 +268,87 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration,
         current_dt += slot_duration
     
     return slots
+
+def get_available_slots(hairdresser_id, service_id, date_str):
+    try:
+        hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+        service = Service.objects.get(id=service_id)
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except Hairdresser.DoesNotExist:
+        return {'error': 'Hairdresser not found', 'status': 404}
+    except Service.DoesNotExist:
+        return {'error': 'Service not found', 'status': 500}
+    except ValueError:
+        return {'error': 'Invalid date format', 'status': 400}
+
+    weekday_name = calendar.day_name[selected_date.weekday()]
+
+    availability = Availability.objects.filter(
+        hairdresser=hairdresser,
+        weekday=weekday_name.lower()
+    ).first()
+
+    if not availability:
+        return {'available_slots': []}
+
+    start_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()))
+    end_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.max.time()))
+
+    bookings = Agenda.objects.filter(
+        hairdresser=hairdresser,
+        start_time__lt=end_of_day,
+        end_time__gt=start_of_day
+    ).order_by('start_time')
+
+    # Generate time slots
+    available_slots = generate_time_slots(
+        selected_date,
+        availability.start_time,
+        availability.end_time,
+        bookings,
+        service.duration,
+        availability.break_start,
+        availability.break_end
+    )
+
+    return {'available_slots' : available_slots}
+
+def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
+    try:
+        customer_instance = Customer.objects.get(id=customer_id)
+        service_instance = Service.objects.get(id=service_id)
+        hairdresser_instance = Hairdresser.objects.get(id=hairdresser_id)
+
+        end_time_dt = start_time_dt + timedelta(minutes=service_instance.duration)
+
+        # Checking for overlapping appointments in the Agenda
+        if Agenda.objects.filter(
+            hairdresser=hairdresser_instance,
+            start_time__lt=end_time_dt,
+            end_time__gt=start_time_dt
+        ).exists():
+            return {'error': 'Desculpe, este horário foi agendado por outra pessoa. Por favor, escolha outro.'}
+        
+        reserve = Reserve.objects.create(
+            start_time=start_time_dt,
+            customer=customer_instance,
+            service=service_instance
+        )
+        Agenda.objects.create(
+            start_time=start_time_dt,
+            end_time=end_time_dt,
+            hairdresser=hairdresser_instance,
+            service=service_instance
+        )
+            
+        return {'success': True, 'reserve': reserve}
+    except Customer.DoesNotExist:
+        return {'error': 'Customer not found'}
+    except Service.DoesNotExist:
+        return {'error': 'Service not found'}
+    except Hairdresser.DoesNotExist:
+        return {'error': 'Hairdresser not found'}
+    except Exception as e:
+        # Catch any other unexpected errors
+        print(f"An unexpected error occurred in create_new_reserve: {e}")
+        return {'error': 'Ocorreu um erro inesperado ao tentar criar a reserva.'}

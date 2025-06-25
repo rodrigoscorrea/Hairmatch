@@ -109,7 +109,7 @@ class ReserveTestCase(TestCase):
 class CreateReserveTest(ReserveTestCase):
     def test_create_reserve_success(self):
         """Test successful reserve creation"""
-        # Create new start time that doesn't conflict with existing reserve
+        # Create a new start time that doesn't conflict with the existing reserve
         new_start_time = self.reserve_start_time + timedelta(hours=2)
         
         reserve_data = {
@@ -119,6 +119,7 @@ class CreateReserveTest(ReserveTestCase):
             'service': self.service.id
         }
         
+        # Assuming 'create-reserve' is the name of your URL pattern
         response = self.client.post(
             self.create_url,
             data=json.dumps(reserve_data),
@@ -127,10 +128,10 @@ class CreateReserveTest(ReserveTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Reserve.objects.count(), 2)  # 1 from setup + 1 new
-        self.assertEqual(Agenda.objects.count(), 2)  # 1 from setup + 1 new
+        self.assertEqual(Agenda.objects.count(), 2)   # 1 from setup + 1 new
         
     def test_create_reserve_overlap_error(self):
-        """Test reserve creation with overlapping start time"""
+        """Test reserve creation with an overlapping start time"""
         reserve_data = {
             'start_time': self.reserve_start_time.isoformat(),  # Same start time as existing reserve
             'customer': self.customer.id,
@@ -186,10 +187,11 @@ class CreateReserveTest(ReserveTestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Hairdresser not found')
         
     def test_create_reserve_invalid_service(self):
-        """Test reserve creation with non-existent service"""
+        """Test reserve creation with a non-existent service"""
         new_start_time = self.reserve_start_time + timedelta(hours=2)
         
         reserve_data = {
@@ -205,6 +207,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
 
