@@ -173,6 +173,11 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     opacity: 0.5,
   },
+  disabledCancelButton:{
+    backgroundColor: colors.background,
+    borderColor: colors.details_purple,
+    opacity: 0.5
+  },
   disabledButtonText:{
     color: '#FFFFFF',
     fontWeight: '600',

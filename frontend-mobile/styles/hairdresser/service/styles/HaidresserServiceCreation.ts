@@ -1,3 +1,4 @@
+import { colors } from "@/assets/colors";
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
@@ -100,33 +101,36 @@ export const styles = StyleSheet.create({
   },
   footerButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     padding: 16,
     backgroundColor: '#FFEFE2',
     borderTopWidth: 1,
     borderColor: '#ddd',
+    gap: 16,
   },
-  cancelButton: {
-    backgroundColor: '#E8E3F3',
+  saveButton: {
+    backgroundColor: colors.primary,
     padding: 14,
     borderRadius: 10,
     flex: 1,
     marginRight: 10,
     alignItems: 'center',
   },
-  cancelText: {
-    color: '#333',
+  saveText: {
+    color: colors.white,
     fontWeight: '600',
   },
-  saveButton: {
-    backgroundColor: '#FF8A00',
+  cancelButton: {
+    backgroundColor: colors.background,
+    borderWidth:1,
+    borderColor: colors.details_purple,
     padding: 14,
     borderRadius: 10,
     flex: 1,
     alignItems: 'center',
   },
-  saveText: {
-    color: '#FFF',
+  cancelText: {
+    color: colors.details_purple,
     fontWeight: '600',
   },
   inputError: {

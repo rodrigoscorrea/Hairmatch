@@ -91,7 +91,11 @@ export default function ReserveInfoScreen() {
       
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity 
+          style={[styles.button, styles.cancelButton, evaluationEnabled && styles.disabledCancelButton]} 
+          onPress={() => setModalVisible(true)}
+          disabled={evaluationEnabled}
+        >
           <Text style={styles.cancelButtonText}>Cancelar</Text>
         </TouchableOpacity>
         <TouchableOpacity

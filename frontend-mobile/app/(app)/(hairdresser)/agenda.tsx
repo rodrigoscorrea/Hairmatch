@@ -9,6 +9,7 @@ import { formatTime } from '../../../utils/time-formater';
 import { styles, calendarTheme } from '@/styles/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
+import 'dayjs/locale/pt-br';
 
 // The Agenda list view can be a separate component for cleanliness
 const AgendaListView: React.FC<AgendaViewProps> = ({ events, onEventPress }) => (
@@ -54,20 +55,35 @@ export default function AgendaManagerScreen() {
     confirmCancelEvent,
   } = useAgenda();
 
+  const calendarViews = [
+    { label: 'Agenda', value: 'agenda' },
+    { label: 'Mês', value: 'month' },
+    { label: 'Semana', value: 'week' },
+    { label: 'Dia', value: 'day' },
+  ] as const;
+
   const Header = () => (
     <View style={styles.header}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5E6D3" />
       <View style={styles.tabContainer}>
-        {(['agenda','month', 'week', 'day', ] as const).map((view) => (
-          <TouchableOpacity
-            key={view}
-            style={[styles.tab, selectedView === view && styles.activeTab]}
-            onPress={() => handleViewChange(view)}
+        {calendarViews.map((viewInfo) => (
+        <TouchableOpacity
+          key={viewInfo.value} 
+          style={[
+            styles.tab,
+            selectedView === viewInfo.value && styles.activeTab,
+          ]}
+          onPress={() => handleViewChange(viewInfo.value)}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              selectedView === viewInfo.value && styles.activeTabText,
+            ]}
           >
-            <Text style={[styles.tabText, selectedView === view && styles.activeTabText]}>
-              {view.charAt(0).toUpperCase() + view.slice(1)}
-            </Text>
-          </TouchableOpacity>
+            {viewInfo.label}
+          </Text>
+        </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -104,6 +120,7 @@ export default function AgendaManagerScreen() {
             showTime={selectedView !== 'month'}
             swipeEnabled={false}
             theme={calendarTheme}
+            
           />
         </View>
       )}

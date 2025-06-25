@@ -55,6 +55,7 @@ export const styles = StyleSheet.create({
     gallery: {
       flexDirection: 'row',
       gap: 8,
+      marginBottom:10,
     },
     galleryImage: {
       width: 100,
@@ -128,5 +129,9 @@ export const styles = StyleSheet.create({
       borderRadius: 999,
       margin: 4,
     },
+    accordionStyle: {
+      borderColor: colors.primary,
+      borderWidth:1
+    }
   });
   

@@ -39,7 +39,7 @@ export default function ServiceManagerScreen() {
             <Accordion key={service.id} title={service.name}>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.serviceTitle}>{service.name}</Text>
+                  <Text style={styles.label}>Tempo: <Text style={styles.bold}>{serviceTimeFormater(service.duration)}</Text></Text>
                   <View style={styles.iconRow}>
                     <TouchableOpacity onPress={() => handleDelete(service.id)}>
                       <Ionicons name="trash-outline" size={18} color="#000" />
@@ -49,7 +49,6 @@ export default function ServiceManagerScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={styles.label}>Tempo: <Text style={styles.bold}>{serviceTimeFormater(service.duration)}</Text></Text>
                 <Text>Valor: <Text style={styles.bold}>R$ {service.price}</Text></Text>
                 <Text style={styles.label}>Descrição: <Text style={styles.description}>{service.description}</Text></Text>
               </View>

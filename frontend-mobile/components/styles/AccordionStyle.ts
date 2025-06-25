@@ -3,7 +3,7 @@ import { colors } from "@/assets/colors";
 
 export const styles = StyleSheet.create({
     container: {
-      backgroundColor: '#FFF2EC',
+      backgroundColor: colors.secondary,
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,

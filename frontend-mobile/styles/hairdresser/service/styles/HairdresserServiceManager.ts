@@ -14,16 +14,16 @@ export const styles = StyleSheet.create({
     marginVertical: 10,
   },
   card: {
-    backgroundColor: '#FDDCC6',
+    backgroundColor: colors.secondary,
     borderRadius: 10,
-    padding: 12,
+    padding: 5,
     marginVertical: 8,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   serviceTitle: {
     fontSize: 16,
