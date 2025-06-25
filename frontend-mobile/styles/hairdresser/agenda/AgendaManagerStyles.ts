@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Dimensions, ViewStyle, TextStyle, Platform } from 'react-native';
 import { colors } from '@/assets/colors';
 
 const { width } = Dimensions.get('window');
@@ -273,6 +273,11 @@ export const styles = StyleSheet.create({
     marginRight: 10,
     flex: 1,
     alignItems: 'center',
+    ...Platform.select({
+      web:{
+        justifyContent: 'center'
+      }
+    })
   },
   modalBackButtonText: {
     color: colors.details_purple,
