@@ -19,6 +19,46 @@ export const useServiceForm = () => {
   const [duration, setDuration] = useState(30);
   const [price, setPrice] = useState('');
   const [loading, setLoading] = useState(isEditMode);
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
+
+
+
+  const validateFields = () => {
+    const errors: { [key: string]: boolean } = {};
+    let errorList: string[] = [];
+
+    if (!name.trim()) {
+      errors.name = true;
+      errorList.push('Nome é obrigatório.');
+    }
+    if(name.length > 250){
+      errors.name = true;
+      errorList.push('Nome deve ter no máximo 250 caracteres.');
+    }
+    if (!description.trim()) {
+      errors.description = true;
+      errorList.push('Descrição é obrigatória.');
+    }
+    if(description.length > 500){
+      errors.description = true;
+      errorList.push('Descrição deve ter no máximo 500 caracteres.');
+    }
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+      errors.price = true;
+      errorList.push('Preço deve ser maior que 0.');
+    }
+    if (duration <= 0) {
+      errors.duration = true;
+      errorList.push('Duração deve ser maior que 0.');
+    }
+    setErrors(errors);
+    if (errorList.length > 0) {
+      setErrorModal({ visible: true, message: errorList[0] });
+      return false;
+    }
+    return true ;
+  }
 
   useEffect(() => {
     const fetchServiceData = async () => {
@@ -48,6 +88,7 @@ export const useServiceForm = () => {
 
   const handleSubmit = async () => {
     if (!hairdresserId) return;
+    if (!validateFields()) {return;}
 
     const serviceData = {
       hairdresser: hairdresserId,
@@ -81,6 +122,9 @@ export const useServiceForm = () => {
     price, setPrice,
     handleSubmit,
     handleBack,
-    handleDurationChange
+    handleDurationChange,
+    errors,
+    errorModal,
+    closeErrorModal: () => setErrorModal({ ...errorModal, visible: false }),
   };
 };
