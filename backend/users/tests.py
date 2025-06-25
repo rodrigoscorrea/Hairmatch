@@ -149,7 +149,7 @@ class RegisterViewTest(TestCase):
         
     def test_register_with_short_phone(self):
         invalid_payload = self.valid_hairdresser_payload.copy()
-        invalid_payload['phone'] = '1234567890'  # Less than 11 digits
+        invalid_payload['phone'] = '123456789'  # Less than 10 digits
         
         response = self.client.post(
             self.register_url,

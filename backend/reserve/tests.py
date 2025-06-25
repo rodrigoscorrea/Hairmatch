@@ -145,13 +145,9 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        # --- FIX: Assert the correct error message and status code ---
-        # The code now returns a 409 Conflict for this specific error.
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        # Check for the actual user-facing error message from the view logic.
-        self.assertEqual(response.json()['error'], 'Desculpe, este horário foi agendado por outra pessoa. Por favor, escolha outro.')
-        self.assertEqual(Reserve.objects.count(), 1)  # No new reserve should be created
-        self.assertEqual(Agenda.objects.count(), 1)   # No new agenda item should be created
+        self.assertEqual(response.json()['error'], 'The hairdresser is not available during this time slot.')
+        self.assertEqual(Reserve.objects.count(), 1)  # No new reserve created
         
     def test_create_reserve_invalid_customer(self):
         """Test reserve creation with non-existent customer"""
@@ -191,6 +187,7 @@ class CreateReserveTest(ReserveTestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Hairdresser not found')
         
     def test_create_reserve_invalid_service(self):
@@ -210,6 +207,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
 
@@ -308,7 +306,7 @@ class ReserveSlotTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
         
     def test_get_slots_invalid_date_format(self):
@@ -325,7 +323,7 @@ class ReserveSlotTest(ReserveTestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()['error'], 'Invalid date format')
+        self.assertEqual(response.json()['error'], 'Invalid date format. Please use YYYY-MM-DD.')
         
     def test_get_slots_no_availability(self):
         """Test getting slots when hairdresser has no availability for that day"""

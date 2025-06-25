@@ -39,7 +39,7 @@ class RegisterView(APIView):
             return JsonResponse({'error': 'No password assigned to user'}, status=400)
         if data.get('phone') is None or data['phone'] is None or data['phone'] == '':
             return JsonResponse({'error': 'No phone assigned to user'}, status=400)
-        if  len(data['phone']) < 11:
+        if  len(data['phone']) < 10:
             return JsonResponse({'error': 'Phone number is too short'}, status=400)
 
         raw_password = data['password'].replace(' ', '')
