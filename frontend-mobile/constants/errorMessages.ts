@@ -19,5 +19,6 @@ export const ERROR_MESSAGES = {
   postal_code_required: "CEP é obrigatório",
   neighborhood_required: "Bairro é obrigatório",
   number_invalid: "Número inválido. Deve conter até 6 dígitos",
+  postal_code_invalid: "CEP inválido. Formato esperado: XXXXX-XXX",
 
 };

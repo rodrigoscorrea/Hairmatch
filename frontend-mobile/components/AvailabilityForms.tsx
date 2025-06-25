@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { styles } from '@/styles/hairdresser/availability/styles/AvailabilityCreateStyle'; // Use styles from create screen
-
+import { formatTimeInput } from '@/utils/forms';
 // The form now accepts props from the hook
 export const AvailabilityForm = ({
   days,
@@ -38,9 +38,9 @@ export const AvailabilityForm = ({
       {formMode === 'all' ? (
         <View style={styles.timeContainer}>
           <Text style={styles.label}>Horário de início</Text>
-          <TextInput style={styles.input} value={allStart} onChangeText={setAllStart} />
+          <TextInput style={styles.input} value={allStart} onChangeText={setAllStart} onBlur={()=>{setAllStart(formatTimeInput(allStart))}}  />
           <Text style={[styles.label, { marginTop: 20 }]}>Horário de fim</Text>
-          <TextInput style={styles.input} value={allEnd} onChangeText={setAllEnd} />
+          <TextInput style={styles.input} value={allEnd} onChangeText={setAllEnd} onBlur={()=>{setAllEnd(formatTimeInput(allEnd))}}/>
         </View>
       ) : (
         <View style={{ marginTop: 20 }}>

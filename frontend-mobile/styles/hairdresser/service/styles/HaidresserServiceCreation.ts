@@ -129,4 +129,8 @@ export const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '600',
   },
+  inputError: {
+    borderWidth: 1.5,
+    borderColor: 'purple',
+  },
 });
