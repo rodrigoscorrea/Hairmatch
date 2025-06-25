@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { colors } from "@/assets/colors";
 
 export const styles = StyleSheet.create({
@@ -17,6 +17,11 @@ export const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 8,
     height: 40,
+    ...Platform.select({
+      web: {
+        marginBottom:12
+      },
+    }),
   },
   input: {
     flex: 1,
