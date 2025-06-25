@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/app/_layout';
+import { formatTimeInput } from '@/utils/forms';
 import { createAvailability, updateAvailability, listAvailabilitiesByHairdresser } from '@/services/availability.service';
 
 const DAYS_OF_WEEK = [
@@ -89,7 +90,7 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
 
   const handleTimeChange = (index: number, key: 'start' | 'end', value: string) => {
     const newDays = [...days];
-    newDays[index][key] = value;
+    newDays[index][key] = formatTimeInput(value);
     setDays(newDays);
   };
 
@@ -146,12 +147,15 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
     }
   };
 
+
+  const isAtLeastOneDayActive = days.some(day => day.active);
+
   return {
     loading,
     days,
     formMode,
     isDirty,
-    isSaveDisabled: mode === 'edit' ? !isDirty : false,
+    isSaveDisabled: (mode === 'edit' ? !isDirty : false) || !isAtLeastOneDayActive,
     handleModeChange,
     allStart, setAllStart,
     allEnd, setAllEnd,

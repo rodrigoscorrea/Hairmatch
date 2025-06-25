@@ -25,12 +25,13 @@ export const useAddress = () =>{
   };
 
   const validateFields = () => {
-    const newErrors: { [key: string]: boolean } = {};
+    const newErrors: { [key: string]: boolean } = {};69020405
     let errorList: string[] = [];
     if (!registrationData.address) { newErrors.address = true; errorList.push(ERROR_MESSAGES.address_required); }
     if (!registrationData.number || registrationData.number.length > 6) { newErrors.number = true; errorList.push(ERROR_MESSAGES.number_invalid); }
     if (!registrationData.neighborhood) { newErrors.neighborhood = true; errorList.push(ERROR_MESSAGES.neighborhood_required); }
     if (!registrationData.postal_code) { newErrors.postal_code = true; errorList.push(ERROR_MESSAGES.postal_code_required); }
+    if(registrationData.postal_code?.length !== 9) {newErrors.postal_code = true; errorList.push(ERROR_MESSAGES.postal_code_invalid);}
     if (!registrationData.city) { newErrors.city = true; errorList.push(ERROR_MESSAGES.city_required); }
     if (!registrationData.state || registrationData.state.length !== 2) { newErrors.state = true; errorList.push(ERROR_MESSAGES.state_required); }
     setErrors(newErrors);

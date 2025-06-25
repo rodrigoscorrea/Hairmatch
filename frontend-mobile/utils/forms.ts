@@ -55,3 +55,22 @@ export const isValidEmail = (email: string): boolean => {
 };
 
 export const stripNonDigits = (value: string) => value.replace(/\D/g, '');
+
+export const formatTimeInput = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+
+  if (digits.length === 0) return '';
+
+  let hour = parseInt(digits.slice(0, 2), 10);
+  let minute = parseInt(digits.slice(2, 4), 10);
+
+  // Limitar valores máximos válidos
+  hour = Math.min(hour, 23);
+  minute = Math.min(minute, 59);
+
+  const formattedHour = hour.toString().padStart(2, '0');
+  const formattedMinute = minute.toString().padStart(2, '0');
+
+  return `${formattedHour}:${formattedMinute}`;
+};
+
