@@ -37,6 +37,10 @@ export const useServiceBooking = () => {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [errorInfo, setErrorInfo] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: '',
+  });
 
   const initialDate = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -134,9 +138,12 @@ export const useServiceBooking = () => {
 
   const handleBooking = async () => {
     if (!selectedTime || !selectedDate || !service || !hairdresser || !customerId) {
-        Alert.alert("Erro", "Informações incompletas para realizar o agendamento.");
-        return;
-    }
+      setErrorInfo({
+        visible: true,
+        message: "Por favor, selecione uma data e um horário para continuar."
+    });
+    return;
+  }
     
     const reserveData = {
       customer: Number(customerId),
@@ -150,10 +157,24 @@ export const useServiceBooking = () => {
         setShowConfirmationModal(false);
         Alert.alert("Sucesso!", "Sua reserva foi concluída com sucesso :D");
         router.replace('/(app)/(customer)/reserves');
-    } catch (err) {
-        console.error("Error creating reserve:", err);
-        Alert.alert("Erro", "Aconteceu um problema ao tentar confirmar sua reserva.");
+    } catch (err: any) {
+        setShowConfirmationModal(false);
+        if (err.response && err.response.data && err.response.data.error) {
+          setErrorInfo({
+              visible: true,
+              message: err.response.data.error,
+          });
+        } else {
+          setErrorInfo({
+              visible: true,
+              message: "Não foi possível confirmar sua reserva. Tente novamente mais tarde.",
+          });
+        }
     }
+  };
+
+  const closeErrorModal = () => {
+    setErrorInfo({ visible: false, message: '' });
   };
 
   return {
@@ -174,5 +195,7 @@ export const useServiceBooking = () => {
     setShowConfirmationModal,
     handleBooking,
     formattedSelectedDate: selectedDate ? formatDate(selectedDate) : '',
+    errorInfo,
+    closeErrorModal
   };
 };

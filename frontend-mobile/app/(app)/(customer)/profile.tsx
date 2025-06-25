@@ -23,8 +23,6 @@ export default function ProfileScreen(){
     const handleMenuPress = (item: string) => {
     };
 
-    console.log('Estou na rota:', pathname);
-
     return (
     <SafeAreaView style={styles.safeArea}>        
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>

@@ -8,6 +8,7 @@ import { serviceTimeFormater } from '@/utils/serviceTime-formater'; // Adjust pa
 import { useServiceBooking } from '@/hooks/customerHooks/useServiceBooking'; // <-- Our powerful new hook
 import BottomTabBar from '@/components/BottomBar'; // Adjust path
 import { formatDate } from '@/utils/date-formater';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
 
 LocaleConfig.locales["pt-br"] = ptBR;
 LocaleConfig.defaultLocale = "pt-br";
@@ -31,6 +32,8 @@ export default function ServiceBookingScreen() {
     setShowConfirmationModal,
     handleBooking,
     formattedSelectedDate,
+    errorInfo,
+    closeErrorModal,
   } = useServiceBooking();
 
   const getMaxDate = () => {
@@ -183,6 +186,13 @@ export default function ServiceBookingScreen() {
             </View>
         </View>
       </Modal>
+
+      <ErrorModal
+                visible={errorInfo.visible}
+                message={errorInfo.message}
+                onClose={closeErrorModal}
+                title="Atenção" // Optional: custom title
+            />
     </ScrollView>
   );
 }

@@ -12,7 +12,7 @@ class User(AbstractUser):
     password = models.CharField(max_length=255, blank=True, null=True)
     phone= models.CharField(max_length=20, blank=False, null=False)
 
-    complement = models.CharField(max_length=150, blank=False, null=False)
+    complement = models.CharField(max_length=150, blank=True, null=True)
     neighborhood = models.CharField(max_length=150, blank=False, null=False)
     city = models.CharField(max_length=150, blank=False, null=False)
     state = models.CharField(max_length=2, blank=False, null=False)

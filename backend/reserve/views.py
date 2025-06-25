@@ -12,6 +12,9 @@ from service.models import Service
 from agenda.models import Agenda
 from availability.models import Availability
 import calendar
+from django.db import transaction
+from rest_framework import status
+from django.utils.dateparse import parse_datetime
 # Create your views here.
 
 class ReserveById(APIView):
@@ -28,43 +31,85 @@ class ReserveById(APIView):
 
 class CreateReserve(APIView):
     def post(self, request):
-        data = json.loads(request.body)
-
-        if Reserve.objects.filter(start_time=data['start_time'], customer=data['customer']).exists() or Agenda.objects.filter(start_time=data['start_time'], hairdresser=data['hairdresser']).exists():
-            return JsonResponse({'error': 'Start_time contains overlap'}, status=500)
-        
+        try:
+            data = json.loads(request.body)
+            customer_id = data['customer']
+            hairdresser_id = data['hairdresser']
+            service_id = data['service']
+            start_time_str = data['start_time']
+        except (json.JSONDecodeError, KeyError) as e:
+            return JsonResponse({'error': f'Invalid request body: {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            customer_instance = Customer.objects.get(id=data['customer'])
+            customer_instance = Customer.objects.get(id=customer_id)
+            hairdresser_instance = Hairdresser.objects.get(id=hairdresser_id)
+            service_instance = Service.objects.get(id=service_id)
         except Customer.DoesNotExist:
-            return JsonResponse({'error': 'Customer not found'}, status=500)
-
-        try:
-            hairdresser_instance = Hairdresser.objects.get(id=data['hairdresser'])
-        except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=500)
-
-        try:
-            service_instance = Service.objects.get(id=data['service'])
+            return JsonResponse({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
         except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=500)
+            return JsonResponse({'error': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Hairdresser.DoesNotExist:
+            return JsonResponse({'error': 'Hairdresser not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        Reserve.objects.create(
-            start_time = data['start_time'],     
-            customer = customer_instance,
-            service = service_instance,
-        ) 
-
-        processed_end_time = calculate_end_time(data['start_time'], service_instance.duration)
+        start_time = parse_datetime(start_time_str)
+        if not start_time:
+            return JsonResponse(
+                {'error': "Invalid datetime format. Expected ISO format like '2025-04-26T14:30:00Z'"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        Agenda.objects.create(
-            start_time = data['start_time'],
-            end_time = processed_end_time,
-            hairdresser = hairdresser_instance,
-            service = service_instance
-        )
+        if timezone.is_naive(start_time):
+             start_time = timezone.make_aware(start_time)
+
+        end_time = calculate_end_time(start_time, service_instance.duration)
+        hairdresser_overlap = Agenda.objects.filter(
+            hairdresser=hairdresser_instance,
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists()
+
+        if hairdresser_overlap:
+            return JsonResponse(
+                {'error': 'The hairdresser is not available during this time slot.'},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        customer_reservations = Reserve.objects.filter(customer=customer_instance).select_related('service')
+        for reservation in customer_reservations:
+            existing_start = reservation.start_time
+
+            if timezone.is_naive(existing_start):
+                existing_start = timezone.make_aware(existing_start)
             
-        return JsonResponse({'message': 'reserve created successfully'}, status=201)     
+            existing_end = calculate_end_time(existing_start, reservation.service.duration)
+            
+            if existing_start < end_time and start_time < existing_end:
+                 return JsonResponse(
+                     {'error': 'Você já tem outra reserva agendada para o mesmo horário'},
+                     status=status.HTTP_409_CONFLICT
+                 )
+
+        try:
+            with transaction.atomic():
+                Reserve.objects.create(
+                    start_time=start_time,
+                    customer=customer_instance,
+                    service=service_instance,
+                )
+                
+                Agenda.objects.create(
+                    start_time=start_time,
+                    end_time=end_time,
+                    hairdresser=hairdresser_instance,
+                    service=service_instance
+                )
+        except Exception as e:
+            return JsonResponse(
+                {'error': f'An error occurred while saving the reservation: {e}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        return JsonResponse({'message': 'Reserve created successfully'}, status=status.HTTP_201_CREATED)     
 
 class ListReserve(APIView):
     def get(self, request, customer_id=None):
@@ -99,113 +144,120 @@ class RemoveReserve(APIView):
     
 class ReserveSlot(APIView):
     def post(self, request, hairdresser_id):
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+            service_id = data['service']
+            date_str = data['date']
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (json.JSONDecodeError, KeyError):
+            return JsonResponse({'error': 'Invalid payload. "service" and "date" are required.'}, status=400)
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD.'}, status=400)
 
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
+            service = Service.objects.get(id=service_id)
         except Hairdresser.DoesNotExist:
             return JsonResponse({'error': 'Hairdresser not found'}, status=404)
-
-        try:
-            service = Service.objects.get(id=data['service'])
         except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=500)
-        
-        date = data['date']
-        try:
-            selected_date = datetime.strptime(date, '%Y-%m-%d').date()
-        except ValueError:
-            return JsonResponse({'error': 'Invalid date format'}, status=400)
+            return JsonResponse({'error': 'Service not found'}, status=404)
 
         weekday_name = calendar.day_name[selected_date.weekday()]
-     
         availability = Availability.objects.filter(
-            hairdresser=hairdresser_id,
+            hairdresser=hairdresser,
             weekday=weekday_name.lower()
         ).first()
-        
+
         if not availability:
-            return JsonResponse({'available_slots': []})  # No availability on this day
-        
-        start_of_day = datetime.combine(selected_date, datetime.min.time())
-        end_of_day = datetime.combine(selected_date, datetime.max.time())
-        
+            return JsonResponse({'available_slots': []})
+
+        now = timezone.now()
+        is_today = (selected_date == now.date())
+
+        start_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()))
+        end_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.max.time()))
+
         bookings = Agenda.objects.filter(
-            hairdresser=hairdresser_id,
-            start_time__gte=start_of_day,
-            end_time__lte=end_of_day
+            hairdresser=hairdresser,
+            start_time__lt=end_of_day,
+            end_time__gt=start_of_day
         ).order_by('start_time')
 
-        # Generate time slots
         available_slots = generate_time_slots(
             selected_date,
             availability.start_time,
             availability.end_time,
             bookings,
             service.duration,
-            availability.break_start,  
-            availability.break_end
+            availability.break_start,
+            availability.break_end,
+
+            now_dt=now if is_today else None
         )
-        
+
         return JsonResponse({'available_slots': available_slots})
     
-def calculate_end_time(start_time, duration_minutes):
-    if not isinstance(start_time, str):
-        raise TypeError("start_time must be a string")
+def calculate_end_time(start_dt: datetime, duration_minutes: int) -> datetime:
+    """
+    Calculates the end time by adding a duration in minutes to a start datetime.
+    
+    Args:
+        start_dt: A datetime object representing the start time.
+        duration_minutes: An integer representing the duration in minutes.
+        
+    Returns:
+        A datetime object representing the end time.
+    
+    Raises:
+        TypeError: If the input types are incorrect.
+    """
+    if not isinstance(start_dt, datetime):
+        raise TypeError("start_dt must be a datetime object")
     
     try:
-        # Parse the datetime string - assuming ISO format from JSON
-        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-    except ValueError:
-        # If the string doesn't match ISO format, try a more flexible approach
-        try:
-            start_time = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            raise ValueError("Invalid datetime format. Expected ISO format like '2025-04-26T14:30:00Z'")
-    
-    if not isinstance(duration_minutes, int):
-        try:
-            duration_minutes = int(duration_minutes)
-        except (ValueError, TypeError):
-            raise TypeError("duration_minutes must be an integer")
-    
-    # Calculate end time by adding the duration in minutes
-    end_time = start_time + timedelta(minutes=duration_minutes)
-    
-    return end_time
+        duration = int(duration_minutes)
+    except (ValueError, TypeError):
+        raise TypeError("duration_minutes must be convertible to an integer.")
+        
+    return start_dt + timedelta(minutes=duration)
 
-def generate_time_slots(date, start_time, end_time, bookings, service_duration, break_start=None, break_end=None):
-    """Generate available time slots for given date and availability."""
+def generate_time_slots(date, start_time, end_time, bookings, service_duration, 
+                        break_start=None, break_end=None, now_dt=None):
+    """
+    Generate available time slots for a given date and availability.
+    If now_dt is provided, it will filter out slots that are in the past.
+    """
     slots = []
     
-    # Convert times to timezone-aware datetime objects
+    # Convert start/end times to timezone-aware datetime objects for today's date
     current_dt = timezone.make_aware(datetime.combine(date, start_time))
     end_dt = timezone.make_aware(datetime.combine(date, end_time))
     
-    # Account for service duration
-    end_dt = end_dt - timedelta(minutes=service_duration)
+    # The last possible start time must account for the service's duration
+    end_dt -= timedelta(minutes=service_duration)
     
-    # Create 30-minute slots
     slot_duration = timedelta(minutes=30)
     
-    # Convert bookings to a list of blocked periods
+    # Convert bookings to a list of blocked periods for easy checking
     blocked_periods = [(b.start_time, b.end_time) for b in bookings]
     
-    # Add break time to blocked periods if provided
     if break_start and break_end:
         break_start_dt = timezone.make_aware(datetime.combine(date, break_start))
         break_end_dt = timezone.make_aware(datetime.combine(date, break_end))
         blocked_periods.append((break_start_dt, break_end_dt))
     
-    # Generate slots
+    # --- Main Loop to Generate Slots ---
     while current_dt <= end_dt:
+        # ** NEW LOGIC: If checking for today, skip slots that are already in the past **
+        if now_dt and current_dt <= now_dt:
+            current_dt += slot_duration
+            continue  # Skip to the next potential slot
+
         slot_end = current_dt + timedelta(minutes=service_duration)
         
-        # Check if this slot overlaps with any booking or break time
         is_available = True
         for blocked_start, blocked_end in blocked_periods:
-            # Check for overlap: if the slot starts before blocked period ends AND
-            # slot ends after blocked period starts
+            # Check for any overlap between the potential slot and a blocked period
             if current_dt < blocked_end and slot_end > blocked_start:
                 is_available = False
                 break
@@ -213,7 +265,6 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration, 
         if is_available:
             slots.append(current_dt.strftime('%H:%M'))
         
-        # Move to next slot
         current_dt += slot_duration
     
     return slots
