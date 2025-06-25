@@ -39,6 +39,9 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE_NAME=${EVOLUTION_INSTANCE_NAME}
       - BACKEND_ALLOWED_HOST=${BACKEND_ALLOWED_HOST}
       - BACKEND_ALLOWED_CORS=${BACKEND_ALLOWED_CORS}
     restart: always
@@ -61,6 +64,19 @@ services:
     depends_on:
       - db
     restart: always
+
+  evolution-api:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.1.1
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - app_network
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
   #angular:
   #  build: ./frontend/
   #  container_name: angular_frontend
@@ -79,3 +95,4 @@ networks:
 volumes:
   postgres_data:
   pgadmin_data:
+  evolution_instances:
