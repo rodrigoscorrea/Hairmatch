@@ -1,11 +1,19 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-export const formatTime = (dateString: string) => {
+export const formatTime = (dateString: string) : string => {
   try {
-    const localDateString = dateString.replace(/Z$/, '')
-    const date = new Date(localDateString);
-    return format(date, "HH:mm'h'", { locale: ptBR }); // Format as "10:30h"
+    const date = new Date(dateString);
+    return format(date, "HH:mm'h'", { locale: ptBR });
   } catch (e) {
     return 'Invalid hour';
   }
 };
+
+export const formatDateTimeForAgenda = (date: string) : string => {
+  try {
+    const formatedDate =  date.replace(/Z$/, '');
+    return formatedDate;
+  } catch (error) {
+    return '';
+  }
+}
