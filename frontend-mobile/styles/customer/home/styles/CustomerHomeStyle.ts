@@ -38,6 +38,7 @@ export const styles = StyleSheet.create({
     arrow: {
       fontSize: 22,
       color: colors.black,
+      margin: 15
     },
     card: {
       backgroundColor: colors.secondary,

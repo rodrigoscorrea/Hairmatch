@@ -59,9 +59,6 @@ export default function HairdresserProfileReservationScreen() {
         <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity>
-          <Ionicons name="heart-outline" size={24} color="black" />
-        </TouchableOpacity>
       </View>
 
       {/* Profile */}
