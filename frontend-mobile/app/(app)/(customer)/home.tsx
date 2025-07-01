@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,62 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  Platform,
 } from 'react-native';
 import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle'; // Adjust path if needed
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome'; // <-- Import our new hook
 import BottomTabBar from '@/components/BottomBar'; // Adjust path
 import { formatText } from '@/utils/text-formater'; // Adjust path
 
-// This component is now much cleaner!
+type SectionKey = 'for_you' | 'cachos' | 'coloracao' | 'barbearia' | 'trancas';
+
 const CustomerHomeScreen = () => {
   const {
     loading,
     customerHomeInfo,
     handleClickHairdresser,
-    getRandomAvatarByInferredGender
+    getRandomAvatarByInferredGender,
   } = useCustomerHome();
+
+  // Refs for each FlatList
+  const flatListRefs: { [key in SectionKey]: React.RefObject<FlatList<any>> } = {
+    for_you: useRef<FlatList<any>>(null),
+    cachos: useRef<FlatList<any>>(null),
+    coloracao: useRef<FlatList<any>>(null),
+    barbearia: useRef<FlatList<any>>(null),
+    trancas: useRef<FlatList<any>>(null),
+  };
+
+  // State to track the current index of each FlatList
+  const [currentIndex, setCurrentIndex] = useState<{ [key in SectionKey]: number }>({
+    for_you: 0,
+    cachos: 0,
+    coloracao: 0,
+    barbearia: 0,
+    trancas: 0,
+  });
+
+  // Function to handle arrow clicks
+  const handleArrowClick = (section: SectionKey, direction: 'next' | 'prev') => {
+    if (!customerHomeInfo) {
+      return;
+    }
+    const ref = flatListRefs[section].current;
+    if (ref) {
+      const sectionData = section === 'for_you'
+        ? customerHomeInfo.for_you
+        : customerHomeInfo.hairdressers_by_preferences?.[section];
+        
+      if (!sectionData) return;
+
+      const newIndex = currentIndex[section] + (direction === 'next' ? 1 : -1);
+      if (newIndex >= 0 && newIndex < sectionData.length) {
+        ref.scrollToIndex({ index: newIndex, animated: true });
+        setCurrentIndex((prev) => ({ ...prev, [section]: newIndex }));
+      }
+    }
+  };
 
   const renderForYouItem = ({ item }: any) => {
     const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
@@ -65,95 +106,83 @@ const CustomerHomeScreen = () => {
     );
   }
 
+  // Helper to render a section
+  const renderSection = (title: string, data: any[], renderItem: ({ item }: any) => JSX.Element, sectionKey: SectionKey) => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {Platform.OS === 'web' && (
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity onPress={() => handleArrowClick(sectionKey, 'prev')}>
+              <Text style={styles.arrow}>‹</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleArrowClick(sectionKey, 'next')}>
+              <Text style={styles.arrow}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+      <FlatList
+        ref={flatListRefs[sectionKey]}
+        data={data}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, index) => `${sectionKey}-${index}`}
+        renderItem={renderItem}
+      />
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
+        {customerHomeInfo ? (
+          <>
+            {customerHomeInfo?.for_you?.length > 0 &&
+              renderSection('Para Você', customerHomeInfo.for_you, renderForYouItem, 'for_you')}
 
-      {/* Seção Para Você */}
-      {customerHomeInfo?.for_you && customerHomeInfo.for_you.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Para Você</Text>
-            <Text style={styles.arrow}>›</Text>
-          </View>
-          <FlatList
-            data={customerHomeInfo.for_you}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `para-voce-${index}`}
-            renderItem={renderForYouItem}
-          />
-        </View>
-      )}
+            {customerHomeInfo?.hairdressers_by_preferences?.cachos?.length > 0 &&
+              renderSection(
+                'Cachos',
+                customerHomeInfo.hairdressers_by_preferences.cachos,
+                renderHairdresserItem,
+                'cachos'
+              )}
 
-      {/* Seção Cachos */}
-      {customerHomeInfo?.hairdressers_by_preferences?.cachos && customerHomeInfo.hairdressers_by_preferences.cachos.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Cachos</Text>
-            <Text style={styles.arrow}>›</Text>
-          </View>
-          <FlatList
-            data={customerHomeInfo.hairdressers_by_preferences.cachos}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `cachos-${index}`}
-            renderItem={renderHairdresserItem}
-          />
-        </View>
-      )}
+            {customerHomeInfo?.hairdressers_by_preferences?.coloracao?.length > 0 &&
+              renderSection(
+                'Coloração',
+                customerHomeInfo.hairdressers_by_preferences.coloracao,
+                renderHairdresserItem,
+                'coloracao'
+              )}
 
-      {/* Seção Coloração */}
-      {customerHomeInfo?.hairdressers_by_preferences?.coloracao && customerHomeInfo.hairdressers_by_preferences.coloracao.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Coloração</Text>
-            <Text style={styles.arrow}>›</Text>
-          </View>
-          <FlatList
-            data={customerHomeInfo.hairdressers_by_preferences.coloracao}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `coloracao-${index}`}
-            renderItem={renderHairdresserItem}
-          />
-        </View>
-      )}
+            {customerHomeInfo?.hairdressers_by_preferences?.barbearia?.length > 0 &&
+              renderSection(
+                'Barbearia',
+                customerHomeInfo.hairdressers_by_preferences.barbearia,
+                renderHairdresserItem,
+                'barbearia'
+              )}
 
-      {/* Seção Barbearia */}
-      {customerHomeInfo?.hairdressers_by_preferences?.barbearia && customerHomeInfo.hairdressers_by_preferences.barbearia.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Barbearia</Text>
-            <Text style={styles.arrow}>›</Text>
-          </View>
-          <FlatList
-            data={customerHomeInfo.hairdressers_by_preferences.barbearia}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `barbearia-${index}`}
-            renderItem={renderHairdresserItem}
-          />
-        </View>
-      )}
-
-      {/* Seção Tranças */}
-      {customerHomeInfo?.hairdressers_by_preferences?.trancas && customerHomeInfo.hairdressers_by_preferences.trancas.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tranças</Text>
-            <Text style={styles.arrow}>›</Text>
-          </View>
-          <FlatList
-            data={customerHomeInfo.hairdressers_by_preferences.trancas}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `trancas-${index}`}
-            renderItem={renderHairdresserItem}
-          />
-        </View>
-      )}
+            {customerHomeInfo?.hairdressers_by_preferences?.trancas?.length > 0 &&
+              renderSection(
+                'Tranças',
+                customerHomeInfo.hairdressers_by_preferences.trancas,
+                renderHairdresserItem,
+                'trancas'
+              )}
+          </>
+        ) : (
+          <>
+            <View>
+              <Text>
+                Não foi possível recuperar cabeleireiros :C
+              </Text>
+            </View>
+          </>
+        )}
+        
       </ScrollView>
     </SafeAreaView>
   );
