@@ -7,6 +7,7 @@ import ConfirmationModal from "@/components/modals/confirmationModal/Confirmatio
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
 import { usePathname } from 'expo-router'; // Adjust path if needed
+import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function ProfileScreen(){
     const pathname = usePathname();
@@ -23,6 +24,11 @@ export default function ProfileScreen(){
     const handleMenuPress = (item: string) => {
     };
 
+    const fallbackImage = 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face';
+    const profilePictureUrl = customer?.user?.profile_picture
+        ? `${API_BACKEND_URL}${customer.user.profile_picture}`
+        : fallbackImage;
+    
     return (
     <SafeAreaView style={styles.safeArea}>        
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -31,7 +37,7 @@ export default function ProfileScreen(){
               <View style={styles.profileInfo}>
                   <View style={styles.profileImageContainer}>
                       <Image 
-                          source={{ uri: 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face' }}
+                          source={{ uri: profilePictureUrl }}
                           style={styles.profileImage}
                           resizeMode="cover"
                       />

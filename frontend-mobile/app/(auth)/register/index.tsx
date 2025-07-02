@@ -12,6 +12,8 @@ export default function RegisterScreen() {
   const { registrationData, setRegistrationData } = useRegistration();
   const {
     handleInputChange,
+    profileImage, 
+    handlePickImage,
     role,
     setRole,
     errors,
@@ -31,7 +33,7 @@ export default function RegisterScreen() {
         <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
 
-       <View style={styles.title}>
+      <View style={styles.title}>
         <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
       </View>
       <Text style={styles.subtitle}>Cadastre-se</Text>
@@ -62,11 +64,27 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.profilePicture}>
-        <Image
-          source={require('../../../imgs/Camera.png')}
-          style={styles.profileIcon}
-        />
+      <TouchableOpacity 
+          onPress={handlePickImage} 
+          style={{ alignItems: 'center', marginVertical: 20 }}
+      >
+          {profileImage ? (
+              <Image 
+                  source={{ uri: profileImage }} 
+                  style={{ width: 120, height: 120, borderRadius: 60 }} 
+              />
+          ) : (
+              <View style={{
+                  width: 120, 
+                  height: 120, 
+                  borderRadius: 60, 
+                  backgroundColor: '#e1e1e1',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+              }}>
+                  <Text>Adicione uma foto de perfil</Text>
+              </View>
+          )}
       </TouchableOpacity>
 
       <View style={styles.row}>

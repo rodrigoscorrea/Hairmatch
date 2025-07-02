@@ -70,100 +70,37 @@ export default function RootLayout() {
       return { success: false, error: errorMessage };
     }
   },
-    signUp: async (
-      first_name: string,
-      last_name: string,
-      phone: string,
-      email: string,
-      password: string,
-      address: string,
-      number: string,
-      neighborhood: string,
-      complement: string,
-      postal_code: string,
-      state: string,
-      city: string,
-      role: string,
-      rating: number,
-      cpf?: string,
-      cnpj?: string,
-      preferences?: Preference[],
-      experience_time?: string,
-      experiences?: string,
-      products?: string,
-      resume?: string
-    ) => {
-      setIsLoading(true);
-      try {
-        // Construct the data object based on role
-        const userData = role === UserRole.CUSTOMER 
-          ? {
-              first_name,
-              last_name,
-              phone,
-              email,
-              password,
-              address,
-              number,
-              complement,
-              neighborhood,
-              postal_code,
-              state,
-              city,
-              role,
-              rating,
-              cpf,
-              preferences
-            }
-          : {
-              first_name,
-              last_name,
-              phone,
-              email,
-              password,
-              address,
-              number, 
-              complement,
-              neighborhood,
-              postal_code,
-              state,
-              city,
-              role,
-              rating,
-              cnpj,
-              preferences,
-              experience_time,
-              experiences,
-              products,
-              resume
-            };  
-        const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, userData);
-        return response.data;
-      } catch (error: any) {
+  signUp: async (formData: FormData) => {
+    setIsLoading(true);
+    try {
+        const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
+        console.log(response);
+    } catch (error: any) {
+      console.log(error)
         console.error('Registration error:', error.response?.data || error.message);
-        throw error;
-      } finally {
+        throw error.response?.data || new Error("An unknown error occurred during registration.");
+    } finally {
         setIsLoading(false);
-      }
-    },
-    signOut: async () => {
-      setIsLoading(true);
-      try {
-        await axios.post(`${API_BACKEND_URL}/api/auth/logout`);
-        await AsyncStorage.removeItem('userToken');
-        setUserToken(null);
-        setUserInfo(null);
-        delete axios.defaults.headers.common['Authorization'];
-      } catch (error) {
-        console.error('Logout error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    userInfo,
-    userToken,
-    isLoading
-  }), [userToken, userInfo, isLoading]);
+    }
+  },
+  signOut: async () => {
+    setIsLoading(true);
+    try {
+      await axios.post(`${API_BACKEND_URL}/api/auth/logout`);
+      await AsyncStorage.removeItem('userToken');
+      setUserToken(null);
+      setUserInfo(null);
+      delete axios.defaults.headers.common['Authorization'];
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  userInfo,
+  userToken,
+  isLoading
+}), [userToken, userInfo, isLoading]);
 
   const fetchUserInfo = async (token: string) => {
     try {
