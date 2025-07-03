@@ -7,24 +7,34 @@ export const styles = StyleSheet.create({
       padding: 16,
       backgroundColor: colors.background,
     },
-    titleContainer: {
-      display: 'flex',
+    headerContainer: {
+      width: '100%', 
+      flexDirection: 'row',
+      alignItems: 'center', 
+      paddingVertical: 12,
+    },
+    contentContainer: {
+      flex: 1, 
       flexDirection: 'row',
       justifyContent: 'space-between',
-      width: "100%"
-    },
-    clockIconContainer: {
-      display: 'flex',
-      flexDirection: 'row',
-      alignContent: 'center',
-      marginTop: 2
-    },
-    clockIcon:{
-      marginTop: 5
+      alignItems: 'center',
+      marginLeft: 12, 
     },
     title: {
-      fontSize: 22,
+      flex: 1,
+      fontSize: 19,
       fontWeight: 'bold',
+      marginRight: 8, 
+    },
+    durationContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      
+    },
+    durationText: {
+      fontSize: 16,
+      fontWeight: '500',
     },
     description: {
       fontSize: 14,

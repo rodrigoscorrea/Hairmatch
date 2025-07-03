@@ -6,7 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView
+  ScrollView,
+  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
@@ -23,11 +24,18 @@ export default function SearchScreen() {
     serviceResults,
     handleNavigateToHairdresser,
     handleNavigateToService,
+    handleGoBack
   } = useSearch();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
+      <View style={styles.Headercontainer}>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+        )}
         <View style={styles.searchWrapper}>
           <Ionicons name="search" size={20} color="#7B3F00" style={styles.iconLeft} />
           <TextInput
@@ -39,6 +47,7 @@ export default function SearchScreen() {
           />
           <MaterialIcons name="filter-list" size={24} color="#7B3F00" style={styles.iconRight} />
         </View>
+      </View>
         
         {loading ? (
           <ActivityIndicator size="large" color="#FF6B00" style={{ marginTop: 20 }} />

@@ -7,10 +7,20 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: 16,
   },
+  headercontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute', 
+    left: 0
+  },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    alignSelf: 'center',
     marginVertical: 10,
   },
   card: {

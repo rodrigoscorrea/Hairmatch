@@ -8,7 +8,16 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
+  Headercontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  backButton: {
+    marginRight: 12, // Espaço entre o botão e a barra de busca
+  },
   searchWrapper: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
@@ -17,11 +26,10 @@ export const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 8,
     height: 40,
-    ...Platform.select({
-      web: {
-        marginBottom:12
-      },
-    }),
+    marginBottom:12
+  },
+  backIcon: {
+    marginRight: 10, 
   },
   input: {
     flex: 1,

@@ -177,6 +177,10 @@ export const useServiceBooking = () => {
     setErrorInfo({ visible: false, message: '' });
   };
 
+  const handleGoBack = () => {
+    router.back();
+  };
+
   return {
     loading,
     slotsLoading,
@@ -196,6 +200,7 @@ export const useServiceBooking = () => {
     handleBooking,
     formattedSelectedDate: selectedDate ? formatDate(selectedDate) : '',
     errorInfo,
-    closeErrorModal
+    closeErrorModal,
+    handleGoBack
   };
 };

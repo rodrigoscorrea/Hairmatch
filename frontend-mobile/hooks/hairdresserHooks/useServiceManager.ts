@@ -73,6 +73,9 @@ export const useServiceManager = () => {
   
   const goToEdit = (serviceId: number) => router.push(`/(app)/(hairdresser)/services/edit/${serviceId}`);
 
+  const handleGoBack = () => {
+    router.push('/(app)/(hairdresser)/profile');
+  };
   return {
     isLoading,
     services,
@@ -85,5 +88,6 @@ export const useServiceManager = () => {
     goToEdit,
     errorModal,
     closeErrorModal: () => setErrorModal({ visible: false, message: '' }),
+    handleGoBack
   };
 };
