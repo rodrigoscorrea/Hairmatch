@@ -34,7 +34,7 @@ export default function HairdresserProfileScreen() {
             />
             <View style={styles.profileText}>
                 <Text style={styles.name}>{hairdresser?.user.first_name} {hairdresser?.user.last_name}</Text>
-                <Text style={styles.location}><Ionicons name="location-outline" size={14} /> {hairdresser?.user.city} - {hairdresser?.user.state}</Text>
+                <Text style={styles.location}><Ionicons name="location-outline" size={14} /> {hairdresser.user.address}, {hairdresser.user.number}, {hairdresser.user.neighborhood}, {hairdresser.user.city} - {hairdresser.user.state}</Text>
                 <Text style={styles.rating}>⭐ {hairdresser?.user.rating}</Text>
             </View>
         </View>

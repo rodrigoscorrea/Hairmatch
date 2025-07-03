@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function HairdresserSettingsScreen(){
-    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack } = useHairdresserSettings();
+    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
     const fallbackImage = 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face';
       const profilePictureUrl = hairdresser?.user?.profile_picture
           ? `${API_BACKEND_URL}${hairdresser.user.profile_picture}`
@@ -44,12 +44,14 @@ export default function HairdresserSettingsScreen(){
             iconName="user"
             title="Dados da Conta"
             subtitle="Editar informações da sua conta"
+            onPress={handleAccountSettings}
           />
           
           <MenuItem
             iconName="map-pin"
             title="Endereço"
             subtitle="Alterar seu endereço"
+            onPress={handleAddressSettings}
           />
           
           <MenuItem
