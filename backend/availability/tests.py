@@ -27,12 +27,12 @@ class CreateAvailabilityTest(TestCase):
             "address": "rua francy assis",
             "number": "2229",
             "postal_code": "69050750",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 4,
             "resume": "ele é legal e joga bem",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -43,8 +43,7 @@ class CreateAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Login
@@ -81,8 +80,7 @@ class CreateAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Login
@@ -117,8 +115,7 @@ class CreateAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Login
@@ -181,12 +178,12 @@ class CreateMultipleAvailabilityTest(TestCase):
             "address": "rua francy assis",
             "number": "2229",
             "postal_code": "69050750",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 4,
             "resume": "ele é legal e joga bem",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -196,8 +193,7 @@ class CreateMultipleAvailabilityTest(TestCase):
         # Register and get hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Login
@@ -378,12 +374,12 @@ class ListAvailabilityTest(TestCase):
             "address": "Salon Street",
             "number": "123",
             "postal_code": "12345678",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -393,8 +389,7 @@ class ListAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Get hairdresser
@@ -466,12 +461,12 @@ class RemoveAvailabilityTest(TestCase):
             "address": "Salon Street",
             "number": "123",
             "postal_code": "12345678",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -481,8 +476,7 @@ class RemoveAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Get hairdresser
@@ -534,12 +528,12 @@ class UpdateAvailabilityTest(TestCase):
             "address": "Salon Street",
             "number": "123",
             "postal_code": "12345678",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 5,
             "resume": "Professional hairdresser",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -549,8 +543,7 @@ class UpdateAvailabilityTest(TestCase):
         # Register hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Get hairdresser
@@ -706,12 +699,12 @@ class UpdateMultipleAvailabilityTest(TestCase):
             "address": "rua francy assis",
             "number": "2229",
             "postal_code": "69050750",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901212",
             "experience_years": 4,
             "resume": "ele é legal e joga bem",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -721,8 +714,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         # Register and login hairdresser
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         login_payload = {

@@ -33,15 +33,14 @@ class PreferencesTestCase(TestCase):
             "postal_code": "69050750",
             "role": "customer",
             "cpf": "12345678901",
-            "rating": 4.5,
-            "preferences": []
+            "rating": 4,
+            "preferences": json.dumps([])
         }
         
         # Register user
         self.client.post(
             self.register_url,
-            data=json.dumps(self.user_payload),
-            content_type='application/json'
+            data=self.user_payload
         )
         
         # Get user object for testing
@@ -177,15 +176,14 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             "postal_code": "69050760",
             "role": "professional",
             "cpf": "98765432109",
-            "rating": 4.8,
-            "preferences": []
+            "rating": 4,
+            "preferences": json.dumps([])
         }
         
         # Register user2
         self.client.post(
             self.register_url,
-            data=json.dumps(self.user2_payload),
-            content_type='application/json'
+            data=self.user2_payload,
         )
         
         # Get user2 object
