@@ -9,7 +9,8 @@ import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserS
 import { Ionicons } from "@expo/vector-icons";
 
 export default function HairdresserSettingsScreen(){
-    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack } = useHairdresserSettings();
+    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings,
+      handleAddressSettings } = useHairdresserSettings();
 
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -40,12 +41,14 @@ export default function HairdresserSettingsScreen(){
             iconName="user"
             title="Dados da Conta"
             subtitle="Editar informações da sua conta"
+            onPress={handleAccountSettings}
           />
           
           <MenuItem
             iconName="map-pin"
             title="Endereço"
             subtitle="Alterar seu endereço"
+            onPress={handleAddressSettings}
           />
           
           <MenuItem
