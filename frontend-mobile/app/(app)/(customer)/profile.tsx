@@ -23,11 +23,6 @@ export default function ProfileScreen(){
 
     const handleMenuPress = (item: string) => {
     };
-
-    const fallbackImage = 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face';
-    const profilePictureUrl = customer?.user?.profile_picture
-        ? `${API_BACKEND_URL}${customer.user.profile_picture}`
-        : fallbackImage;
     
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -37,7 +32,11 @@ export default function ProfileScreen(){
               <View style={styles.profileInfo}>
                   <View style={styles.profileImageContainer}>
                       <Image 
-                          source={{ uri: profilePictureUrl }}
+                          source={
+                            customer?.user?.profile_picture
+                              ? { uri: `${API_BACKEND_URL}${customer.user.profile_picture}` }
+                              : require('../../../assets/images/profile_picture_placeholder.png')
+                          }
                           style={styles.profileImage}
                           resizeMode="cover"
                       />

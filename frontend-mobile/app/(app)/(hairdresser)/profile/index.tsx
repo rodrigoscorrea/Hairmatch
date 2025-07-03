@@ -9,11 +9,8 @@ import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
-  const fallbackImage = 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face';
-  const profilePictureUrl = hairdresser?.user?.profile_picture
-      ? `${API_BACKEND_URL}${hairdresser.user.profile_picture}`
-      : fallbackImage;
-  console.log(profilePictureUrl)
+  
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
@@ -28,7 +25,11 @@ export default function HairdresserProfileScreen() {
         {/* Profile */}
         <View style={styles.profile}>
             <Image 
-                source={{ uri: profilePictureUrl }}
+                source={
+                    hairdresser?.user?.profile_picture
+                        ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                        : require('../../../../assets/images/profile_picture_placeholder.png')
+                }
                 style={styles.profileImage}
                 resizeMode="cover"
             />
