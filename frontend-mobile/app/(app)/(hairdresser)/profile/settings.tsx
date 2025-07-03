@@ -7,10 +7,14 @@ import ConfirmationModal from "@/components/modals/confirmationModal/Confirmatio
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
+import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack } = useHairdresserSettings();
-
+    const fallbackImage = 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face';
+      const profilePictureUrl = hairdresser?.user?.profile_picture
+          ? `${API_BACKEND_URL}${hairdresser.user.profile_picture}`
+          : fallbackImage;
     return (
     <SafeAreaView style={styles.safeArea}>        
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -19,9 +23,9 @@ export default function HairdresserSettingsScreen(){
             <View style={styles.profileInfo}>
             <View style={styles.profileImageContainer}>
                 <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face' }}
-                style={styles.profileImage}
-                resizeMode="cover"
+                    source={{ uri: profilePictureUrl }}
+                    style={styles.profileImage}
+                    resizeMode="cover"
                 />
             </View>
             <View style={styles.profileDetails}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -73,8 +74,19 @@ export default function RootLayout() {
   signUp: async (formData: FormData) => {
     setIsLoading(true);
     try {
+      if(Platform.OS === 'web') {
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
         console.log(response);
+      } else {
+        const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        });
+      }
+        
     } catch (error: any) {
       console.log(error)
         console.error('Registration error:', error.response?.data || error.message);

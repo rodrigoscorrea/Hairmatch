@@ -26,6 +26,7 @@ export const usePreferencesForm = () => {
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
+        console.log('indo fazer requisição');
         setIsFetchingPreferences(true);
         const response = await listPreferences();
         if (response && Array.isArray(response)) {
@@ -82,19 +83,16 @@ export const usePreferencesForm = () => {
 
     if (registrationData.profile_picture) {
         if (Platform.OS === 'web') {
-            const response = await fetch(registrationData.profile_picture.uri);
-            const blob = await response.blob();
-            formData.append('profile_picture', blob, registrationData.profile_picture.name);
-
+          registrationData.profile_picture.name = `${registrationData.email}/${registrationData.profile_picture.name}`;
+          const response = await fetch(registrationData.profile_picture.uri);
+          const blob = await response.blob();
+          formData.append('profile_picture', blob, registrationData.profile_picture.name);
         } else {
             const fileData = {
               uri: registrationData.profile_picture.uri,
-              name: registrationData.profile_picture.name,
+              name: `${registrationData.email}/${registrationData.profile_picture.name}`,
               type: registrationData.profile_picture.type,
           };
-
-          // 👈 Add this log
-          console.log("NATIVE FILE DATA FOR UPLOAD:", JSON.stringify(fileData, null, 2)); 
 
           formData.append('profile_picture', fileData as any);
         }
@@ -118,7 +116,7 @@ export const usePreferencesForm = () => {
     } finally {
         setIsLoading(false);
     }
-};
+  };
   
   const handleNext = () => {
     const finalPreferences = registrationData.preferences || [];

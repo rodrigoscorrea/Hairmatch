@@ -7,6 +7,7 @@ import { ErrorModal } from '@/app/../components/modals/ErrorModal/ErrorModal';
 import { useRegisterForm } from '@/hooks/authHooks/useRegisterForm';
 import { formatCPF, formatCNPJ, formatPhone } from '@/app/../utils/forms';
 import { useRegistration } from '@/contexts/RegistrationContext';
+import Icon from 'react-native-vector-icons/FontAwesome'; 
 
 export default function RegisterScreen() {
   const { registrationData, setRegistrationData } = useRegistration();
@@ -82,7 +83,7 @@ export default function RegisterScreen() {
                   justifyContent: 'center',
                   alignItems: 'center'
               }}>
-                  <Text>Adicione uma foto de perfil</Text>
+                <Icon name="camera" size={40} color="#888" />
               </View>
           )}
       </TouchableOpacity>
