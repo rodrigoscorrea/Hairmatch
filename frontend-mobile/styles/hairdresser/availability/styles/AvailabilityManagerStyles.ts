@@ -8,10 +8,12 @@ export const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     alignSelf: 'center',
-    marginVertical: 10,
+    flex: 1, 
+    textAlign: 'center',
+    padding:4
   },
   card: {
     backgroundColor: '#FDDCC6',
@@ -31,6 +33,8 @@ export const styles = StyleSheet.create({
   },
   iconRow: {
     flexDirection: 'row',
+    alignItems: 'center', 
+    paddingVertical: 10,
   },
   label: {
     fontSize: 14,
