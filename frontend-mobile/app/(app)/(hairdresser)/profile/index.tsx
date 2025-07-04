@@ -5,13 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import { Accordion } from '@/components/Accordion';
-
-const galleryImages = [require('../../../../assets/images/react-logo.png')];
-const profile = [require('../../../../assets/hairdressers/perfil.png')]
+import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
-
+  
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
@@ -25,7 +24,15 @@ export default function HairdresserProfileScreen() {
 
         {/* Profile */}
         <View style={styles.profile}>
-            <Image source={profile[0]} style={styles.profileImage} />
+            <Image 
+                source={
+                    hairdresser?.user?.profile_picture
+                        ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                        : require('../../../../assets/images/profile_picture_placeholder.png')
+                }
+                style={styles.profileImage}
+                resizeMode="cover"
+            />
             <View style={styles.profileText}>
                 <Text style={styles.name}>{hairdresser?.user.first_name} {hairdresser?.user.last_name}</Text>
                 <Text style={styles.location}><Ionicons name="location-outline" size={14} /> {hairdresser.user.address}, {hairdresser.user.number}, {hairdresser.user.neighborhood}, {hairdresser.user.city} - {hairdresser.user.state}</Text>

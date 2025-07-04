@@ -30,8 +30,8 @@ class ReviewsTestCase(TestCase):
             "postal_code": "69050750",
             "role": "customer",
             "cpf": "12345678901",
-            "rating": 4.5,
-            "preferences": []
+            "rating": 4,
+            "preferences": json.dumps([])
         }
         
         # Hairdresser user
@@ -48,12 +48,12 @@ class ReviewsTestCase(TestCase):
             "address": "Hairdresser Street",
             "number": "456",
             "postal_code": "69050750",
-            "rating": 5.0,
+            "rating": 5,
             "role": "hairdresser",
             "cnpj": "12345678901234",
             "experience_years": 5,
             "resume": "Professional hairdresser with extensive experience",
-            "preferences": [],
+            "preferences": json.dumps([]),
             'experience_time':'experience_time',
             'experiences':'experiences',
             'products':'products',
@@ -63,14 +63,12 @@ class ReviewsTestCase(TestCase):
         # Register users
         self.client.post(
             self.register_url,
-            data=json.dumps(self.customer_payload),
-            content_type='application/json'
+            data=self.customer_payload,
         )
         
         self.client.post(
             self.register_url,
-            data=json.dumps(self.hairdresser_payload),
-            content_type='application/json'
+            data=self.hairdresser_payload,
         )
         
         # Get user objects for testing
@@ -106,7 +104,7 @@ class ReviewsTestCase(TestCase):
             data=json.dumps(login_payload),
             content_type='application/json'
         )
-        return response
+        return response 
 
 class CreateReviewTest(ReviewsTestCase):
     def test_create_review_success(self):
@@ -116,7 +114,7 @@ class CreateReviewTest(ReviewsTestCase):
         
         # Create review
         review_data = {
-            'rating': 4.5,
+            'rating': 4,
             'comment': 'Great service!',
             'hairdresser': self.hairdresser.id
         }
@@ -129,7 +127,7 @@ class CreateReviewTest(ReviewsTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Review.objects.count(), 1)
-        self.assertEqual(Review.objects.first().rating, 4.5)
+        self.assertEqual(Review.objects.first().rating, 4)
         self.assertEqual(Review.objects.first().comment, 'Great service!')
         self.assertEqual(Review.objects.first().customer, self.customer)
         self.assertEqual(Review.objects.first().hairdresser, self.hairdresser)
@@ -139,7 +137,7 @@ class CreateReviewTest(ReviewsTestCase):
         # Don't login - no token
         
         review_data = {
-            'rating': 4.5,
+            'rating': 4,
             'comment': 'Great service!',
             'hairdresser': self.hairdresser.id
         }
@@ -160,7 +158,7 @@ class CreateReviewTest(ReviewsTestCase):
         
         # Try to create review
         review_data = {
-            'rating': 4.5,
+            'rating': 4,
             'comment': 'Great service!',
             'hairdresser': self.hairdresser.id
         }
@@ -204,7 +202,7 @@ class ListReviewTest(ReviewsTestCase):
         
         # Create a few reviews
         review_data = {
-            'rating': 4.5,
+            'rating': 4,
             'comment': 'Great service!',
             'hairdresser': self.hairdresser.id
         }
@@ -216,7 +214,7 @@ class ListReviewTest(ReviewsTestCase):
         )
         
         review_data = {
-            'rating': 5.0,
+            'rating': 5,
             'comment': 'Excellent work!',
             'hairdresser': self.hairdresser.id
         }
@@ -240,9 +238,9 @@ class ListReviewTest(ReviewsTestCase):
         
         # Verify review data
         reviews = response_data['data']
-        self.assertEqual(reviews[0]['rating'], 4.5)
+        self.assertEqual(reviews[0]['rating'], 4)
         self.assertEqual(reviews[0]['comment'], 'Great service!')
-        self.assertEqual(reviews[1]['rating'], 5.0)
+        self.assertEqual(reviews[1]['rating'], 5)
         self.assertEqual(reviews[1]['comment'], 'Excellent work!')
 
 class UpdateReviewTest(ReviewsTestCase):
@@ -253,7 +251,7 @@ class UpdateReviewTest(ReviewsTestCase):
         self.login_as_customer()
         
         review_data = {
-            'rating': 4.0,
+            'rating': 4,
             'comment': 'Good service',
             'hairdresser': self.hairdresser.id
         }
@@ -275,7 +273,7 @@ class UpdateReviewTest(ReviewsTestCase):
         
         # Update review
         updated_data = {
-            'rating': 5.0,
+            'rating': 5,
             'comment': 'Updated: Excellent service!'
         }
         
@@ -289,7 +287,7 @@ class UpdateReviewTest(ReviewsTestCase):
         
         # Verify updated data
         self.review.refresh_from_db()
-        self.assertEqual(self.review.rating, 5.0)
+        self.assertEqual(self.review.rating, 5)
         self.assertEqual(self.review.comment, 'Updated: Excellent service!')
     
     def test_update_review_no_token(self):
@@ -300,7 +298,7 @@ class UpdateReviewTest(ReviewsTestCase):
         self.client.cookies.clear()
         
         updated_data = {
-            'rating': 5.0,
+            'rating': 5,
             'comment': 'Updated comment'
         }
         
@@ -314,7 +312,7 @@ class UpdateReviewTest(ReviewsTestCase):
         
         # Verify data was not updated
         self.review.refresh_from_db()
-        self.assertEqual(self.review.rating, 4.0)
+        self.assertEqual(self.review.rating, 4)
         self.assertEqual(self.review.comment, 'Good service')
     
     def test_update_review_wrong_user(self):
@@ -332,17 +330,16 @@ class UpdateReviewTest(ReviewsTestCase):
             "state": "AM",
             "address": "Second Street",
             "cpf": "12345678901",
-            "rating": 4.0,
+            "rating": 4,
             "number": "789",
             "postal_code": "69050750",
             "role": "customer",
-            "preferences": []
+            "preferences": json.dumps([])
         }
         
         self.client.post(
             self.register_url,
-            data=json.dumps(second_customer_payload),
-            content_type='application/json'
+            data=second_customer_payload,
         )
         
         # Login as second customer
@@ -361,7 +358,7 @@ class UpdateReviewTest(ReviewsTestCase):
         update_url = reverse('update_review', args=[self.review.id])
         
         updated_data = {
-            'rating': 5.0,
+            'rating': 5,
             'comment': 'Updated comment'
         }
         
@@ -375,7 +372,7 @@ class UpdateReviewTest(ReviewsTestCase):
         
         # Verify data was not changed
         self.review.refresh_from_db()
-        self.assertEqual(self.review.rating, 4.0)
+        self.assertEqual(self.review.rating, 4)
         self.assertEqual(self.review.comment, 'Good service')
 
 class RemoveReviewTest(ReviewsTestCase):
@@ -386,7 +383,7 @@ class RemoveReviewTest(ReviewsTestCase):
         self.login_as_customer()
         
         review_data = {
-            'rating': 3.5,
+            'rating': 3,
             'comment': 'Average service',
             'hairdresser': self.hairdresser.id
         }
@@ -432,7 +429,7 @@ class RemoveReviewAdminTest(ReviewsTestCase):
         self.login_as_customer()
         
         review_data = {
-            'rating': 2.0,
+            'rating': 2,
             'comment': 'Poor service',
             'hairdresser': self.hairdresser.id
         }

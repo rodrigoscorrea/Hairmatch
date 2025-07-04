@@ -30,7 +30,7 @@ class User(AbstractUser):
         ('CUSTOMER','customer'),
         ('HAIRDRESSER','hairdresser')
     )
-
+    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     role = models.CharField(max_length=12, choices=ROLES_CHOICES, default='CUSTOMER')
 
     def __str__(self):

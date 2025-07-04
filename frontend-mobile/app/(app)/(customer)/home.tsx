@@ -10,10 +10,10 @@ import {
   SafeAreaView,
   Platform,
 } from 'react-native';
-import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle'; // Adjust path if needed
-import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome'; // <-- Import our new hook
-import BottomTabBar from '@/components/BottomBar'; // Adjust path
-import { formatText } from '@/utils/text-formater'; // Adjust path
+import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle';
+import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome';
+import { formatText } from '@/utils/text-formater'; 
+import { API_BACKEND_URL } from '@/app/_layout';
 
 type SectionKey = 'for_you' | 'cachos' | 'coloracao' | 'barbearia' | 'trancas';
 
@@ -65,11 +65,18 @@ const CustomerHomeScreen = () => {
   };
 
   const renderForYouItem = ({ item }: any) => {
-    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
     return (
-      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
+      <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.card}>
-          <Image source={avatarSource} style={styles.imageCard} />
+          <Image
+            source={
+              item?.user?.profile_picture
+                  ? { uri: `${API_BACKEND_URL}${item.user.profile_picture}` }
+                  : require('../../../assets/images/profile_picture_placeholder.png')
+            }
+            resizeMode='cover' 
+            style={styles.imageCard} 
+          />
           <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 3 }}>
             <Text style={styles.nomeProfissional}>{item.user.first_name || 'Nome'}</Text>
             <Text style={styles.sobrenomeProfissional}>{item.user.last_name || ''}</Text>
@@ -83,11 +90,18 @@ const CustomerHomeScreen = () => {
   };
 
   const renderHairdresserItem = ({ item }: any) => {
-    const avatarSource = getRandomAvatarByInferredGender(item.user.first_name);
     return (
-      <TouchableOpacity onPress={() => handleClickHairdresser(item, avatarSource)}>
+      <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.circleItem}>
-          <Image source={avatarSource} style={styles.circleImage} />
+          <Image
+            source={
+              item?.user?.profile_picture
+                  ? { uri: `${API_BACKEND_URL}${item.user.profile_picture}` }
+                  : require('../../../assets/images/profile_picture_placeholder.png')
+            }
+            resizeMode='cover'
+            style={styles.circleImage} 
+          />
           <Text style={styles.circleText}>{item.user.first_name || 'Title'}</Text>
           <Text style={styles.circleText}>{item.user.last_name || ''}</Text>
         </View>

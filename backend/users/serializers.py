@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'first_name', 'last_name', 'email', 'phone', 
             'address', 'number', 'postal_code', 'rating', 'role',
-            'complement', 'neighborhood', 'city', 'state'
+            'complement', 'neighborhood', 'city', 'state', 'profile_picture'
         ]
 
 class UserNameSerializer(serializers.ModelSerializer):

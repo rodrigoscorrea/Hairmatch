@@ -1,6 +1,6 @@
 .env
 .expo
 __pycache__
-media
+backend/media/*
 android
 node_modules

@@ -1,19 +1,56 @@
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useRegistration } from '@/contexts/RegistrationContext';
 import { UserRole } from '@/app/../models/User.types';
 import { ERROR_MESSAGES } from '@/app/../constants/errorMessages';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { stripNonDigits, isValidEmail, validatePassword } from '@/app/../utils/forms';
 
 export const useRegisterForm = () => {
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
-  
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handlePickImage = async () => {
+    // 1. Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return;
+    }
+
+    // 2. Launch the picker
+    let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+    });
+
+    if (result.canceled) {
+        return;
+    }
+ 
+    const imageAsset = result.assets[0];
+    let finalUri = imageAsset.uri;
+    
+    setProfileImage(finalUri)
+    setRegistrationData(prev => ({
+        ...prev,
+        profile_picture: {
+            uri: finalUri,
+            type: imageAsset.mimeType || 'image/jpeg',
+            name: imageAsset.fileName || `profile_${Date.now()}.jpg`
+        }
+    }));
+};
 
   const handleInputChange = (field: keyof typeof registrationData, value: string) => {
     setRegistrationData(prev => ({ ...prev, [field]: value }))
@@ -103,7 +140,9 @@ export const useRegisterForm = () => {
   };
 
   return {
-    formData: registrationData, 
+    formData: registrationData,
+    profileImage,
+    handlePickImage, 
     handleInputChange,
     handleGoBack,
     role,
