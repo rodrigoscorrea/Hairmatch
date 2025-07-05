@@ -6,7 +6,6 @@ import axios from 'axios';
 import axiosInstance from '../services/axios-instance';
 import { UserInfo, UserRole } from '../models/User.types';
 import { Preference } from '../models/Preferences.types';
-import { BottomTabProvider } from '../contexts/BottomTabContext';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
 
@@ -93,7 +92,6 @@ export default function RootLayout() {
       products?: string,
       resume?: string
     ) => {
-      setIsLoading(true);
       try {
         // Construct the data object based on role
         const userData = role === UserRole.CUSTOMER 
@@ -142,9 +140,7 @@ export default function RootLayout() {
       } catch (error: any) {
         console.error('Registration error:', error.response?.data || error.message);
         throw error;
-      } finally {
-        setIsLoading(false);
-      }
+      } 
     },
     signOut: async () => {
       setIsLoading(true);

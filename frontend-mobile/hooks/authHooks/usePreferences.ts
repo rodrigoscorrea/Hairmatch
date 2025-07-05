@@ -21,6 +21,8 @@ export const usePreferencesForm = () => {
   const [isFetchingPreferences, setIsFetchingPreferences] = useState(true);
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [showSkipModal, setShowSkipModal] = useState(false);
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
+
 
   // --- Fetch Preferences on Mount ---
   useEffect(() => {
@@ -89,19 +91,17 @@ export const usePreferencesForm = () => {
         payload.cnpj,
         finalPreferences 
       );
-      
       Alert.alert(
-        'Sucesso',
-        'Cadastro realizado com sucesso! Faça login para continuar.',
-        // After signing up, replace the entire registration stack with the login screen.
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+        "Cadastro concluído!",
+        "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
       );
+  
+      router.replace('/(auth)/login'); 
+      
 
     } catch (error: any) {
-      
       const errorMessage = error.response?.data?.error || "Erro desconhecido";
-      console.error("Erro durante o processo de registro:", errorMessage);
-      Alert.alert("Erro no Cadastro", errorMessage || "Não foi possível completar o cadastro.");
+      setErrorModal({ visible: true, message: errorMessage }); 
     } finally {
       setIsLoading(false);
     }
@@ -138,5 +138,10 @@ export const usePreferencesForm = () => {
     togglePreference,
     handleNext,
     handleSkip,
+    errorModal,
+    closeErrorModal: () => {
+      setErrorModal({ ...errorModal, visible: false });
+      router.replace('/(auth)/login');
+    },
   };
 };
