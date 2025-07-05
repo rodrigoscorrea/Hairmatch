@@ -6,5 +6,5 @@ urlpatterns = [
     path('list/<int:hairdresser_id>', ListReview.as_view(), name='list_review'),
     path('update/<int:id>', UpdateReview.as_view(), name='update_review'),
     path('remove/<int:id>', RemoveReview.as_view(), name='remove_review'),
-    path('removeAdm/<int:id>', RemoveReviewAdmin.as_view(), name='remove_review'),
+    path('removeAdm/<int:id>', RemoveReviewAdmin.as_view(), name='remove_review_admin'),
     ]
