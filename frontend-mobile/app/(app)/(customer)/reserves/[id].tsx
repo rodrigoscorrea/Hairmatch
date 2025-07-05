@@ -6,6 +6,7 @@ import { useReserveDetails } from '@/hooks/customerHooks/useReserveDetails';
 import { formatDate} from '@/utils/date-formater';
 import { formatTime } from '@/utils/time-formater';
 import { API_BACKEND_URL } from '@/app/_layout';
+import ConfirmationModal from '@/components/modals/confirmationModal/ConfirmationModal';
 
 export default function ReserveInfoScreen() {
   const {
@@ -18,7 +19,10 @@ export default function ReserveInfoScreen() {
     confirmCancel,
     handleReviewScreen,
     menuVisible,
-    setMenuVisible
+    setMenuVisible,
+    handleDeleteReview,
+    setDeletionModalVisible,
+    deletionModalVisible
   } = useReserveDetails();
 
   if (loading) {
@@ -130,7 +134,7 @@ export default function ReserveInfoScreen() {
                           <TouchableOpacity style={styles.popupMenuItem}>
                               <Text style={styles.popupMenuItemText}>Editar avaliação</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.popupMenuItem}>
+                          <TouchableOpacity style={styles.popupMenuItem} onPress={() => setDeletionModalVisible(true)}>
                               <Text style={styles.popupMenuItemText}>Excluir avaliação</Text>
                           </TouchableOpacity>
                       </View>
@@ -182,6 +186,16 @@ export default function ReserveInfoScreen() {
             </View>
         </View>
       </Modal>
+
+      {/*Review deletion confirmation modal*/}
+      <ConfirmationModal
+        visible={deletionModalVisible}
+        title="Confirmar exclusão de avaliação"
+        description="Tem certeza de que deseja excluir esta avaliação?"
+        confirmText="Sim, excluir"
+        onConfirm={() => handleDeleteReview(reserve.review.id)}
+        onCancel={() => setDeletionModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

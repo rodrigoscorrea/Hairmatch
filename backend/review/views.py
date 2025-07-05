@@ -151,8 +151,18 @@ class RemoveReview(APIView):
             review = Review.objects.filter(id=id, customer_id=customer.id).first()
             if not review:
                 return JsonResponse({'error': 'Review not found'}, status=404)
-            review.delete()
-            return JsonResponse({'message': "Review deleted successfully"}, status=200)
+            
+            try:
+                with transaction.atomic():
+                    reserve = Reserve.objects.filter(review=review).first()
+                    if reserve:
+                        reserve.review = None
+                        reserve.save()
+
+                    review.delete()
+            except Reserve.DoesNotExist:
+                return JsonResponse({'error': 'Related reserve not found'}, status=404)
+            return JsonResponse({'message': "Review deleted successfully"}, status=204)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
