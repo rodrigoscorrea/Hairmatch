@@ -44,6 +44,10 @@ export const useServiceForm = () => {
       errors.description = true;
       errorList.push('Descrição deve ter no máximo 500 caracteres.');
     }
+    if (price && String(price).includes(',')) {
+      errors.price = true;
+      errorList.push('O formato do preço deve ser XX.XX. Utilize ponto (.) como separador decimal.');
+    }
     if (!price || isNaN(Number(price)) || Number(price) <= 0) {
       errors.price = true;
       errorList.push('Preço deve ser maior que 0.');

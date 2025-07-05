@@ -98,8 +98,10 @@ export const usePreferencesForm = () => {
       );
 
     } catch (error: any) {
-      console.error("Erro durante o processo de registro:", error);
-      Alert.alert("Erro no Cadastro", error.message || "Não foi possível completar o cadastro.");
+      
+      const errorMessage = error.response?.data?.error || "Erro desconhecido";
+      console.error("Erro durante o processo de registro:", errorMessage);
+      Alert.alert("Erro no Cadastro", errorMessage || "Não foi possível completar o cadastro.");
     } finally {
       setIsLoading(false);
     }
