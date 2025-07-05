@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Alert } from 'react-native';
 import { getReserveById } from '@/services/reserve.service'; 
 import { ReserveWithService } from '@/models/Reserve.types';
@@ -7,27 +7,29 @@ import { ReserveWithService } from '@/models/Reserve.types';
 export const useReserveDetails = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-
+  const [menuVisible, setMenuVisible] = useState<boolean>(false);
   const [reserve, setReserve] = useState<ReserveWithService | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
 
-  useEffect(() => {
-    const fetchReserve = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const response = await getReserveById(Number(id)); 
-        setReserve(response.data);
-      } catch (error) {
-        console.error("Failed to fetch reserve details:", error);
-        Alert.alert("Erro", "Não foi possível carregar os detalhes do agendamento.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReserve();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchReserve = async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+          const response = await getReserveById(Number(id)); 
+          setReserve(response.data);
+        } catch (error) {
+          console.error("Failed to fetch reserve details:", error);
+          Alert.alert("Erro", "Não foi possível carregar os detalhes do agendamento.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchReserve();
+    }, [id])
+  );
 
   const evaluationEnabled = useMemo(() => {
     if (!reserve?.start_time) return false;
@@ -66,6 +68,8 @@ export const useReserveDetails = () => {
     evaluationEnabled,
     handleBack,
     confirmCancel,
-    handleReviewScreen
+    handleReviewScreen,
+    menuVisible,
+    setMenuVisible
   };
 };

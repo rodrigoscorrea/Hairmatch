@@ -1,9 +1,10 @@
-import axiosInstance from "./axios-instance";
 import { API_BACKEND_URL } from "@/app/_layout";
+import axios from 'axios';
+import { Platform } from "react-native";
 
 export const createReview = async (reviewData: FormData) => {
     try {
-        await axiosInstance.post(`${API_BACKEND_URL}/api/review/register`, reviewData);
+        await axios.post(`${API_BACKEND_URL}/api/review/register`, reviewData, {withCredentials: Platform.OS === 'web'});
         return
     } catch (error) {
         console.error("Error in createReview:", error);

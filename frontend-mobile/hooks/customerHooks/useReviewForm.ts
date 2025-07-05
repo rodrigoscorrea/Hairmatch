@@ -95,6 +95,7 @@ export const useReviewForm = () => {
     formData.append('rating', isNaN(rating) ? Number(0).toString() : rating.toString());
     formData.append('comment', comment);
     formData.append('hairdresser', Number(reserve?.service.hairdresser.id).toString())
+    formData.append('reserve', id);
 
     if (image) {
       if (Platform.OS === 'web') {
@@ -112,6 +113,12 @@ export const useReviewForm = () => {
         formData.append('picture', fileData as any);
       }
     }
+
+    //Clean the forms
+    setImagePreview(null);
+    setComment('');
+    setRating(0);
+    setImage(null);
 
     try {      
       await createReview(formData);
