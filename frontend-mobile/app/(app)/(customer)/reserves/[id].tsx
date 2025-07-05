@@ -16,6 +16,7 @@ export default function ReserveInfoScreen() {
     evaluationEnabled,
     handleBack,
     confirmCancel,
+    handleReviewScreen
   } = useReserveDetails();
 
   if (loading) {
@@ -96,11 +97,11 @@ export default function ReserveInfoScreen() {
           onPress={() => setModalVisible(true)}
           disabled={evaluationEnabled}
         >
-          <Text style={styles.cancelButtonText}>Cancelar</Text>
+          <Text style={styles.cancelButtonText}>Cancelar Agendamento</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.evaluateButton, !evaluationEnabled && styles.disabledButton]}
-          onPress={() => console.log('Navigate to evaluation screen...')}
+          onPress={() => handleReviewScreen(reserve.id)}
           disabled={!evaluationEnabled}
         >
           <Text style={[styles.evaluateButtonText, !evaluationEnabled && styles.disabledButtonText]}>

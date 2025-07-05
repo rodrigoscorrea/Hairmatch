@@ -54,6 +54,10 @@ export const useReserveDetails = () => {
     }
   };
 
+  const handleReviewScreen = (reserveId: number) => {
+    router.push(`/review/${reserveId}`);
+  }
+
   return {
     loading,
     reserve,
@@ -61,6 +65,7 @@ export const useReserveDetails = () => {
     setModalVisible,
     evaluationEnabled,
     handleBack,
-    confirmCancel
+    confirmCancel,
+    handleReviewScreen
   };
 };

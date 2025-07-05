@@ -19,9 +19,8 @@ export default function CustomerTabLayout() {
             }}
          />
       ))}
-      
-      <Tabs.Screen name="hairdresser-profile/[id]" options={{ href: null }} />
       <Tabs.Screen name="service-booking" options={{ href: null }} />
+      <Tabs.Screen name="review/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
