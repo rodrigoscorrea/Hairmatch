@@ -200,7 +200,7 @@ export const useServiceBooking = () => {
   };
 
   const handleGoBack = () => {
-    router.back();
+    router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresserId}`);
   };
 
   return {
