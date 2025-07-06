@@ -247,4 +247,62 @@ export const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
   },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4, // Adjust spacing as needed
+  },
+  reviewTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+  },
+  reviewRatingText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginLeft: 4,
+      color: '#333',
+  },
+  reviewImage: {
+      width: '100%',
+      height: 180,
+      borderRadius: 8,
+      marginTop: 12,
+  },
+  imagePlaceholder: {
+      width: '100%',
+      height: 120,
+      borderRadius: 8,
+      marginTop: 12,
+      backgroundColor: '#f0f0f0',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+
+  // --- Styles for the Pop-up Menu ---
+  popupOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight overlay to indicate modal is active
+  },
+  popupMenu: {
+      position: 'absolute',
+      top: 300, // You may need to adjust this value based on your screen layout
+      right: 25, // You may need to adjust this value
+      backgroundColor: 'white',
+      borderRadius: 8,
+      paddingVertical: 5,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+  },
+  popupMenuItem: {
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+  },
+  popupMenuItemText: {
+      fontSize: 16,
+      color: '#333',
+  },
 });

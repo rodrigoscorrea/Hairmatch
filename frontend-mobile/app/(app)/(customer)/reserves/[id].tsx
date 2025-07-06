@@ -1,11 +1,12 @@
-// app/(app)/(customer)/reserves/[id].tsx
-import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import React, {useState} from 'react';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/customer/reservation/styles/ReservationDetailsStyles';
 import { useReserveDetails } from '@/hooks/customerHooks/useReserveDetails';
 import { formatDate} from '@/utils/date-formater';
 import { formatTime } from '@/utils/time-formater';
+import { API_BACKEND_URL } from '@/app/_layout';
+import ConfirmationModal from '@/components/modals/confirmationModal/ConfirmationModal';
 
 export default function ReserveInfoScreen() {
   const {
@@ -16,6 +17,12 @@ export default function ReserveInfoScreen() {
     evaluationEnabled,
     handleBack,
     confirmCancel,
+    handleReviewScreen,
+    menuVisible,
+    setMenuVisible,
+    handleDeleteReview,
+    setDeletionModalVisible,
+    deletionModalVisible
   } = useReserveDetails();
 
   if (loading) {
@@ -53,7 +60,7 @@ export default function ReserveInfoScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
-                <View style={styles.avatar} />
+                <Image source={{uri: `${API_BACKEND_URL}${reserve.service.hairdresser.user.profile_picture}`}} style={styles.avatar} />
                 <View style={styles.profileInfo}>
                     <View style={styles.nameContainer}>
                         <Text style={styles.name}>{`${hairdresser.user.first_name} ${hairdresser.user.last_name}`}</Text>
@@ -87,27 +94,80 @@ export default function ReserveInfoScreen() {
             <Text style={styles.infoLabel}>Telefone:</Text>
             <Text style={styles.infoValue}>{hairdresser.user.phone}</Text>
         </View>
+
+      {/*Review info, if there is*/}
+      {reserve.review && (
+          <View style={styles.infoCard}>
+              {/* Review Header */}
+              <View style={styles.reviewHeader}>
+                  <View style={styles.reviewTitleContainer}>
+                      <Text style={styles.infoLabel}>Avaliação</Text>
+                      <Ionicons name="star" size={16} color="#FF9F66" style={{ marginLeft: 8 }} />
+                      <Text style={styles.reviewRatingText}>{reserve.review.rating}/5</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                      <Ionicons name="ellipsis-vertical" size={24} color="#333" />
+                  </TouchableOpacity>
+              </View>
+
+              {/* Review Body */}
+              <Text style={styles.infoValue}>{reserve.review.comment}</Text>
+
+              {/* Review Image */}
+              {reserve.review.picture ? (
+                  <Image source={{ uri: `${API_BACKEND_URL}${reserve.review.picture}` }} style={styles.reviewImage} />
+              ) : (
+                  <View style={styles.imagePlaceholder}>
+                      <Ionicons name="camera" size={40} color="#ccc" />
+                  </View>
+              )}
+
+              {/* Popup Menu for Edit/Delete */}
+              <Modal
+                  visible={menuVisible}
+                  transparent={true}
+                  animationType="fade"
+                  onRequestClose={() => setMenuVisible(false)}
+              >
+                  <TouchableOpacity style={styles.popupOverlay} activeOpacity={1} onPressOut={() => setMenuVisible(false)}>
+                      <View style={styles.popupMenu}>
+                          <TouchableOpacity style={styles.popupMenuItem}>
+                              <Text style={styles.popupMenuItemText}>Editar avaliação</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.popupMenuItem} onPress={() => setDeletionModalVisible(true)}>
+                              <Text style={styles.popupMenuItemText}>Excluir avaliação</Text>
+                          </TouchableOpacity>
+                      </View>
+                  </TouchableOpacity>
+              </Modal>
+          </View>
+      )}
       </ScrollView>
       
       {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.cancelButton, evaluationEnabled && styles.disabledCancelButton]} 
-          onPress={() => setModalVisible(true)}
-          disabled={evaluationEnabled}
-        >
-          <Text style={styles.cancelButtonText}>Cancelar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.evaluateButton, !evaluationEnabled && styles.disabledButton]}
-          onPress={() => console.log('Navigate to evaluation screen...')}
-          disabled={!evaluationEnabled}
-        >
-          <Text style={[styles.evaluateButtonText, !evaluationEnabled && styles.disabledButtonText]}>
-            Fazer Avaliação
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* TODO REFACTOR AFTER STATUS PROPERTY ADDED FOR RESERVE*/}
+      {!reserve.review && ( 
+        <>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton, evaluationEnabled && styles.disabledCancelButton]} 
+              onPress={() => setModalVisible(true)}
+              disabled={evaluationEnabled}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar Agendamento</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.evaluateButton, !evaluationEnabled && styles.disabledButton]}
+              onPress={() => handleReviewScreen(reserve.id)}
+              disabled={!evaluationEnabled}
+            >
+              <Text style={[styles.evaluateButtonText, !evaluationEnabled && styles.disabledButtonText]}>
+                Fazer Avaliação
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
       
       {/* Cancellation Modal */}
       <Modal visible={modalVisible} transparent={true} animationType="slide">
@@ -126,6 +186,16 @@ export default function ReserveInfoScreen() {
             </View>
         </View>
       </Modal>
+
+      {/*Review deletion confirmation modal*/}
+      <ConfirmationModal
+        visible={deletionModalVisible}
+        title="Confirmar exclusão de avaliação"
+        description="Tem certeza de que deseja excluir esta avaliação?"
+        confirmText="Sim, excluir"
+        onConfirm={() => handleDeleteReview(reserve.review.id)}
+        onCancel={() => setDeletionModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

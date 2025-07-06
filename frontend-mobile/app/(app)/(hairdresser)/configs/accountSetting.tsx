@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'react-native';
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import Icon from 'react-native-vector-icons/FontAwesome'; // ou outra biblioteca de ícones
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
+import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
   const {hairdresser, handleGoBack} = useHairdresserProfile();
@@ -25,9 +26,15 @@ export default function AccountDetailsScreen() {
       </View>
 
       <View style={styles.profilePicContainer}>
-        <View style={styles.profilePic}>
-          <Icon name="camera" size={40} color="#888" />
-        </View>
+        <Image 
+            source={
+              hairdresser?.user?.profile_picture
+                  ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                  : require('../../../../assets/images/profile_picture_placeholder.png')
+            }
+            style={styles.profilePic}
+            resizeMode="cover"
+        />
       </View>
 
       <View style={styles.form}>
