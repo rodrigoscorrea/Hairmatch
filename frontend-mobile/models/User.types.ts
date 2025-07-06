@@ -21,6 +21,7 @@ export interface User {
     neighborhood: string,
     city: string,
     state: string
+    profile_picture?: string
 }
 
 /* export interface CustomerHomeHairdresserData {

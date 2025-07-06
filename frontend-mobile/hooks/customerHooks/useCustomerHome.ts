@@ -42,12 +42,7 @@ export const useCustomerHome = () => {
     fetchCustomerHomeInfo();
   }, [userInfo]);
 
-  const handleClickHairdresser = (hairdresser: Hairdresser, avatar: any) => {
-    // We can't pass complex objects like this directly with Expo Router.
-    // The best practice is to pass an ID and fetch the data on the next screen.
-    // For now, let's just pass the ID. We'll need to create this new page.
-    // NOTE: Your file structure shows a 'hairdresser-profile.tsx', let's assume it's dynamic.
-    // e.g., app/(app)/(customer)/hairdresser-profile/[id].tsx
+  const handleClickHairdresser = (hairdresser: Hairdresser) => {
     router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresser.id}`);
   };
 

@@ -1,4 +1,3 @@
-// app/(app)/(customer)/hairdresser-profile/[id].tsx
 import React from 'react';
 import {
   View,
@@ -9,21 +8,12 @@ import {
   FlatList,
   ActivityIndicator
 } from 'react-native';
-import { styles } from '@/styles/customer/reservation/styles/HairdresserProfileReservationStyle'; // Adjust path
+import { styles } from '@/styles/customer/reservation/styles/HairdresserProfileReservationStyle';
 import { Ionicons } from '@expo/vector-icons';
-import { Accordion } from '@/components/Accordion'; // Adjust path
-import { formatAvailability } from '@/utils/availability-formater'; // Adjust path
-import { useHairdresserProfile } from '@/hooks/customerHooks/useHairdresserReservation'; // <-- Our new hook!
-
-const galleryImages = [
-  require('../../../../assets/hairdressers/gallery/galery1.jpg'),
-  require('../../../../assets/hairdressers/gallery/galery2.jpg'),
-  // ... other images
-];
-
-// This is the demonstration avatar, we should probably handle this better,
-// but for now, we'll keep it. A real implementation would fetch the avatar URL.
-const defaultAvatar = require('../../../../assets/hairdressers/male/default.jpg'); 
+import { Accordion } from '@/components/Accordion';
+import { formatAvailability } from '@/utils/availability-formater';
+import { useHairdresserProfile } from '@/hooks/customerHooks/useHairdresserReservation';
+import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function HairdresserProfileReservationScreen() {
   const {
@@ -64,7 +54,11 @@ export default function HairdresserProfileReservationScreen() {
       {/* Profile */}
       <View style={styles.profile}>
         <Image
-          source={defaultAvatar} // Using a default for now
+          source={
+            hairdresser?.user?.profile_picture
+                ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                : require('../../../../assets/images/profile_picture_placeholder.png')
+          }
           style={styles.profileImage}
         />
         <View style={styles.profileText}>
@@ -81,7 +75,7 @@ export default function HairdresserProfileReservationScreen() {
       <Text style={styles.bio}>{hairdresser.resume}</Text>
 
       {/* Gallery */}
-      <Text style={styles.sectionTitle}>Galeria</Text>
+      {/* <Text style={styles.sectionTitle}>Galeria</Text>
       <FlatList
         data={galleryImages}
         keyExtractor={(_, index) => index.toString()}
@@ -89,7 +83,7 @@ export default function HairdresserProfileReservationScreen() {
         renderItem={({ item }) => <Image source={item} style={styles.galleryImage} />}
         contentContainerStyle={styles.gallery}
         showsHorizontalScrollIndicator={false}
-      />
+      /> */}
 
       {/* Techniques - Preferences */}
       <Accordion title='Técnicas'>

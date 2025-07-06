@@ -7,9 +7,10 @@ import ConfirmationModal from "@/components/modals/confirmationModal/Confirmatio
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
+import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function HairdresserSettingsScreen(){
-    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack } = useHairdresserSettings();
+    const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
 
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -19,9 +20,13 @@ export default function HairdresserSettingsScreen(){
             <View style={styles.profileInfo}>
             <View style={styles.profileImageContainer}>
                 <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1494790108755-2616c28c5ad2?w=64&h=64&fit=crop&crop=face' }}
-                style={styles.profileImage}
-                resizeMode="cover"
+                    source={
+                      hairdresser?.user?.profile_picture
+                          ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                          : require('../../../../assets/images/profile_picture_placeholder.png')
+                    }
+                    style={styles.profileImage}
+                    resizeMode="cover"
                 />
             </View>
             <View style={styles.profileDetails}>
@@ -40,12 +45,14 @@ export default function HairdresserSettingsScreen(){
             iconName="user"
             title="Dados da Conta"
             subtitle="Editar informações da sua conta"
+            onPress={handleAccountSettings}
           />
           
           <MenuItem
             iconName="map-pin"
             title="Endereço"
             subtitle="Alterar seu endereço"
+            onPress={handleAddressSettings}
           />
           
           <MenuItem

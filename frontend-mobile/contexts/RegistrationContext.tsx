@@ -13,6 +13,7 @@ interface IRegistrationData {
   confirmPassword?: string;
   password?: string;
   role?: string;
+  profile_picture: any;
   // From step 2 (address)
   address?: string;
   number?: string;
@@ -52,6 +53,7 @@ export const RegistrationProvider = ({ children }: { children: React.ReactNode }
     confirmPassword: '',
     password: '',
     role: '', // Or set a default like UserRole.CUSTOMER
+    profile_picture: null,
     
     // Step 2 fields
     address: '',

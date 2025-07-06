@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert } from 'react-native';
-
+import { Platform } from 'react-native';
 import { useRegistration } from '@/contexts/RegistrationContext';
 import { useAuth } from '@/app/_layout'; // Use the useAuth hook from our root layout
 import { listPreferences } from '@/services/preferences.service';
@@ -28,6 +28,7 @@ export const usePreferencesForm = () => {
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
+        console.log('indo fazer requisição');
         setIsFetchingPreferences(true);
         const response = await listPreferences();
         if (response && Array.isArray(response)) {
@@ -62,48 +63,59 @@ export const usePreferencesForm = () => {
 
   const finishRegistration = async (finalPreferences: number[]) => {
     setIsLoading(true);
-    try {
-      const payload = {
-        ...registrationData,
-        phone: stripNonDigits(registrationData.phone!),
-        postal_code: stripNonDigits(registrationData.postal_code!),
-        cpf: stripNonDigits(registrationData.cpf!),
-        cnpj: stripNonDigits(registrationData.cnpj!),
-        preferences: finalPreferences,
-        };
-
-      await signUp(
-        payload.first_name,
-        payload.last_name,
-        payload.phone,
-        payload.email,
-        payload.password,
-        payload.address,
-        payload.number,
-        payload.neighborhood,
-        payload.complement,
-        payload.postal_code,
-        payload.state,
-        payload.city,
-        payload.role,
-        5.0,
-        payload.cpf,
-        payload.cnpj,
-        finalPreferences 
-      );
-      Alert.alert(
-        "Cadastro concluído!",
-        "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
-      );
+    
+    const formData = new FormData();
+    
+    const allData: any = { ...registrationData, preferences: finalPreferences, rating: 5};
+    
+    allData.phone = stripNonDigits(allData.phone!);
+    allData.postal_code = stripNonDigits(allData.postal_code!);
+    if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
+    if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
   
-      router.replace('/(auth)/login'); 
-      
+    Object.keys(allData).forEach(key => {
+        if (key !== 'profile_picture' && allData[key] !== null && allData[key] !== undefined) {
+            if (key === 'preferences') {
+                formData.append(key, JSON.stringify(allData[key]));
+            } else {
+                formData.append(key, allData[key].toString());
+            }
+        }
+    });
+
+    if (registrationData.profile_picture) {
+        if (Platform.OS === 'web') {
+          registrationData.profile_picture.name = `${registrationData.email}/${registrationData.profile_picture.name}`;
+          const response = await fetch(registrationData.profile_picture.uri);
+          const blob = await response.blob();
+          formData.append('profile_picture', blob, registrationData.profile_picture.name);
+        } else {
+            const fileData = {
+              uri: registrationData.profile_picture.uri,
+              name: `${registrationData.email}/${registrationData.profile_picture.name}`,
+              type: registrationData.profile_picture.type,
+          };
+
+          formData.append('profile_picture', fileData as any);
+        }
+    } else {
+        console.log('No profile picture found in registrationData');
+    }
+
+    try {
+        await signUp(formData);
+    
+        Alert.alert(
+          "Cadastro concluído!",
+          "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
+        );
+        router.replace('/(auth)/login'); 
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || "Erro desconhecido";
       setErrorModal({ visible: true, message: errorMessage }); 
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
   

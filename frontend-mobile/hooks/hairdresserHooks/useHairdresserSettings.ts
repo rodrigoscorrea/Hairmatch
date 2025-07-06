@@ -21,6 +21,14 @@ export const useHairdresserSettings = () => {
 
   const handleBack = () => router.back();
 
+  const handleAccountSettings = () => {
+    router.push(`/(app)/(hairdresser)/configs/accountSetting`);
+  };
+
+  const handleAddressSettings = () => {
+    router.push(`/(app)/(hairdresser)/configs/addressSetting`);
+  };
+
   return {
     hairdresser: userInfo?.hairdresser,
     isModalVisible,
@@ -28,5 +36,7 @@ export const useHairdresserSettings = () => {
     confirmLogout,
     cancelLogout,
     handleBack,
+    handleAccountSettings,
+    handleAddressSettings
   };
 };

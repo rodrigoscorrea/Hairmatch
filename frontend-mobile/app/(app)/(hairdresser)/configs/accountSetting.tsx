@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'react-native';
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
-import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile";
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
+import Icon from 'react-native-vector-icons/FontAwesome'; // ou outra biblioteca de ícones
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
 import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
-  const {customer, handleGoBack} = useCustomerProfile();
+  const {hairdresser, handleGoBack} = useHairdresserProfile();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -26,41 +26,39 @@ export default function AccountDetailsScreen() {
       </View>
 
       <View style={styles.profilePicContainer}>
-        <View>
-          <Image 
+        <Image 
             source={
-              customer?.user?.profile_picture
-                  ? { uri: `${API_BACKEND_URL}${customer.user.profile_picture}` }
+              hairdresser?.user?.profile_picture
+                  ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
                   : require('../../../../assets/images/profile_picture_placeholder.png')
             }
             style={styles.profilePic}
             resizeMode="cover"
-          />
-        </View>
+        />
       </View>
 
       <View style={styles.form}>
         <FormInput
-          value={customer?.user?.first_name}
+          value={hairdresser?.user?.first_name}
           //onChangeText={setFirstName}
           placeholder="Nome"
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.user?.last_name}
+          value={hairdresser?.user?.last_name}
           //onChangeText={setLastName}
           placeholder="Sobrenome"
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.cpf}
+          value={hairdresser?.cnpj}
           //onChangeText={setCpf}
-          placeholder="CPF/CNPJ"
+          placeholder="CNPJ"
           keyboardType="numeric" // Facilita a digitação de números
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.user?.email}
+          value={hairdresser?.user?.email}
           //onChangeText={setEmail}
           placeholder="Email"
           keyboardType="email-address"
@@ -68,21 +66,21 @@ export default function AccountDetailsScreen() {
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.user?.phone}
+          value={hairdresser?.user?.phone}
           //onChangeText={setPhone}
           placeholder="+55 (DDD)"
           keyboardType="phone-pad"
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.user?.password}
+          value={hairdresser?.user?.password}
           //onChangeText={setPassword}
           placeholder="Senha"
           secureTextEntry // Oculta o texto da senha
           containerStyle={styles.inputContainer}
         />
         <FormInput
-          value={customer?.user?.confirmPassword}
+          value={hairdresser?.user?.confirmPassword}
           //onChangeText={setConfirmPassword}
           placeholder="Confirme sua senha"
           secureTextEntry

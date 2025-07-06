@@ -171,6 +171,11 @@ export const useServiceBooking = () => {
 
     try {
         await createReserve(reserveData);
+        setService(null);
+        setHairdresser(null);
+        setNonWorkingDays([]);
+        setSelectedDate(null);
+        setSelectedTime(null);
         setShowConfirmationModal(false);
         Alert.alert("Sucesso!", "Sua reserva foi concluída com sucesso :D");
         router.replace('/(app)/(customer)/reserves');

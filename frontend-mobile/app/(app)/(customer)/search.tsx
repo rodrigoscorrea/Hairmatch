@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Image,
   Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +15,7 @@ import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import BottomTabBar from "@/components/BottomBar";
 import { styles } from "@/styles/customer/styles/SearchStyle"; // Adjust path
 import { useSearch } from "@/hooks/customerHooks/useSearch"; // <-- Our new hook
+import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function SearchScreen() {
   const {
@@ -56,7 +58,7 @@ export default function SearchScreen() {
             {/* Render Hairdresser Results */}
             {hairdresserResults.length > 0 && hairdresserResults.map((result) => (
               <TouchableOpacity style={styles.card} key={`hairdresser-${result.id}`} onPress={() => handleNavigateToHairdresser(result.id!)}>
-                <View style={styles.avatar} />
+                <Image source={{uri: `${API_BACKEND_URL}${result.user.profile_picture}`}} style={styles.avatar} />
                 <View style={styles.info}>
                   <Text style={styles.name}>{`${result.user.first_name} ${result.user.last_name}`}</Text>
                   <View style={styles.ratingRow}>

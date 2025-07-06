@@ -16,6 +16,8 @@ from .serializers import SearchResultSerializer # Import our new serializer
 from .filters import HairdresserFilter
 from service.models import Service
 from itertools import chain
+from rest_framework.parsers import MultiPartParser, FormParser
+from preferences.models import Preferences
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -24,65 +26,83 @@ from itertools import chain
 
 # 1 - The following views are related to user authentication procedures
 class RegisterView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
     def post(self, request):    
-        data = json.loads(request.body)
-        if User.objects.filter(email=data['email']).exists():
+        email = request.data.get('email')
+        password = request.data.get('password')
+        phone = request.data.get('phone')
+        role = request.data.get('role')
+        if User.objects.filter(email=email).exists():
             return JsonResponse({'error': 'User already exists'}, status=400)
-        if User.objects.filter(phone=data['phone']).exists():
+        if User.objects.filter(phone=phone).exists():
             return JsonResponse({'error': 'Phone number already exists'}, status=400)
         
-        if data.get('role') is None or data['role'] is None or data['role'] == '':
+        if role is None or role is None or role == '':
             return JsonResponse({'error': 'No role assigned to user'}, status=400)
-        if data.get('email') is None or data['email'] is None or data['email'] == '':
+        if email is None or email is None or email == '':
             return JsonResponse({'error': 'No email assigned to user'}, status=400)
-        if data.get('password') is None or data['password'] is None or data['password'] == '':
+        if password is None or password is None or password == '':
             return JsonResponse({'error': 'No password assigned to user'}, status=400)
-        if data.get('phone') is None or data['phone'] is None or data['phone'] == '':
+        if phone is None or phone is None or phone == '':
             return JsonResponse({'error': 'No phone assigned to user'}, status=400)
-        if  len(data['phone']) < 10:
+        if  len(phone) < 10:
             return JsonResponse({'error': 'Phone number is too short'}, status=400)
 
-        raw_password = data['password'].replace(' ', '')
+        raw_password = password.replace(' ', '')
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-        preferences = data['preferences']
-        user = User.objects.create(
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            phone=data['phone'],
-            complement=data.get('complement'),
-            neighborhood=data['neighborhood'],
-            city=data['city'],
-            state=data['state'],
-            address=data['address'],
-            number=data.get('number'),
-            postal_code=data['postal_code'],
-            email=data['email'],
+
+        try:
+            user = User.objects.create(
+            first_name=request.data.get('first_name'),
+            last_name=request.data.get('last_name'),
+            phone=request.data.get('phone'),
+            complement=request.data.get('complement'),
+            neighborhood=request.data.get('neighborhood'),
+            city=request.data.get('city'),
+            state=request.data.get('state'),
+            address=request.data.get('address'),
+            number=request.data.get('number'),
+            postal_code=request.data.get('postal_code'),
+            email=request.data.get('email'),
             password=hashed_password.decode('utf-8'),
-            role=data['role'],
-            rating=data['rating']
-        )
-
-        if len(preferences) > 0:
-            for preference in preferences:
-                user.preferences.add(preference)
-
-        # Create profile based on user type
-        if data['role'] == 'customer':
-            Customer.objects.create(
-                user=user,
-                cpf=data['cpf'],
+            role=request.data.get('role'),
+            rating=request.data.get('rating'),
             )
-        elif data['role'] == 'hairdresser':
-            Hairdresser.objects.create(
-                user=user,
-                cnpj=data['cnpj'],
-                experience_time=data['experience_time'],
-                experiences=data['experiences'],
-                products=data['products'],
-                resume=data['resume']
-            )
+        
+            if 'profile_picture' in request.FILES:
+                user.profile_picture = request.FILES['profile_picture']
+                user.save() 
 
-        return JsonResponse({'message': f"{data['role']} user registered successfully"}, status=201)
+            preferences_str = request.data.get('preferences', '[]')
+            try:
+                preferences_ids = json.loads(preferences_str)
+                if isinstance(preferences_ids, list) and len(preferences_ids) > 0:
+                    user.preferences.clear()
+                    preferences_to_add = Preferences.objects.filter(id__in=preferences_ids)
+                    user.preferences.add(*preferences_to_add)
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+
+            # Create profile based on user type
+            if role == 'customer':
+                Customer.objects.create(
+                    user=user,
+                    cpf=request.data.get('cpf'),
+                )
+            elif role == 'hairdresser':
+                Hairdresser.objects.create(
+                    user=user,
+                    cnpj=request.data.get('cnpj'),
+                    experience_time=request.data.get('experience_time'),
+                    experiences=request.data.get('experiences'),
+                    products=request.data.get('products'),
+                    resume=request.data.get('resume')
+                )
+        except Exception as err:
+            return JsonResponse({'error': err}, status=500)
+        
+        return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
 
 
 class LoginView(APIView):
