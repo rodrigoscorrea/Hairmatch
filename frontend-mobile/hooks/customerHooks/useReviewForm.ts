@@ -66,6 +66,7 @@ export const useReviewForm = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      base64: false
     });
     if (result.canceled) {
         return;
@@ -123,7 +124,7 @@ export const useReviewForm = () => {
     try {      
       await createReview(formData);
       
-      Alert.alert('Success!', 'Your review has been submitted successfully.');
+      Alert.alert('Hairmatch', 'Sua avaliação foi registrada com sucesso.');
       router.push(`/(app)/(customer)/reserves/${id}`);
     } catch (error) {
       console.error('Error submitting review:', error);

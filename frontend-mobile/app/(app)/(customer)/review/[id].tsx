@@ -35,7 +35,7 @@ export default function ReviewScreen() {
   // Component to render the star rating selector
   const StarRating = () => (
     <View style={styles.starContainer}>
-      <Text style={styles.ratingLabel}>ruim</Text>
+      <Text style={styles.ratingLabel}>Ruim</Text>
       <View style={styles.stars}>
         {[1, 2, 3, 4, 5].map((star) => (
           <TouchableOpacity key={star} onPress={() => setRating(star)}>
@@ -48,7 +48,7 @@ export default function ReviewScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.ratingLabel}>ótimo</Text>
+      <Text style={styles.ratingLabel}>Ótimo</Text>
     </View>
   );
 

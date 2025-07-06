@@ -1,9 +1,9 @@
 import { StyleSheet } from "react-native";
-
+import { colors } from "@/assets/colors";
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFF7F5',
+  backgroundColor: colors.background,
   },
   container: {
     flexGrow: 1,
@@ -79,9 +79,9 @@ export const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButton: {
+    backgroundColor: colors.background,
     flex: 1,
     padding: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     alignItems: 'center',
     marginRight: 10,
@@ -91,12 +91,12 @@ export const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#555',
+    color: colors.details_purple,
   },
   submitButton: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#FF6F61', // An orange-coral color
+    backgroundColor: colors.primary,
     borderRadius: 12,
     alignItems: 'center',
     marginLeft: 10,

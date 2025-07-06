@@ -450,8 +450,8 @@ class RemoveReview(ReviewsTestCase):
         self.login_as_customer()
         response = self.client.delete(self.delete_url)
         
-        # A successful deletion with no content should return 204
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        # A successful deletion with no content should return 204 - but it will return 200 due to axios problems in the frontend
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Review.objects.count(), 0)
         
         # Assert that the review was unlinked from the reserve

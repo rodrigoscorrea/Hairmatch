@@ -69,13 +69,14 @@ export const useReserveDetails = () => {
         return;
     }
     try {
-        await deleteReview(reserve.review.id);
-        setReserve(currentReserve => {
-            if (!currentReserve) return null;
-            return { ...currentReserve, review: null };
-        });
-        setDeletionModalVisible(false);
-        setMenuVisible(false);
+        if(await deleteReview(reserve.review.id)) {
+          setReserve(currentReserve => {
+              if (!currentReserve) return null;
+              return { ...currentReserve, review: null };
+          });
+          setDeletionModalVisible(false);
+          setMenuVisible(false);
+        }
     } catch (error) {
         console.log('error to deletion review', error);
         Alert.alert("Erro", "Não foi possível excluir a avaliação. Tente novamente.");

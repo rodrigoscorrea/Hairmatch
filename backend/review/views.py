@@ -162,7 +162,7 @@ class RemoveReview(APIView):
                     review.delete()
             except Reserve.DoesNotExist:
                 return JsonResponse({'error': 'Related reserve not found'}, status=404)
-            return JsonResponse({'message': "Review deleted successfully"}, status=204)
+            return JsonResponse({'message': "Review deleted successfully"}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
