@@ -17,27 +17,34 @@ class Command(BaseCommand):
             return
 
         fake = Faker('pt_BR')
-        states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
-                 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 
-                 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
+        states = [
+                #'AC', 'AL', 'AP', 
+                'AM'
+                # 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
+                # 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 
+                # 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+                ]
         
         neighborhoods = {
             'AM': ['Adrianópolis', 'Aleixo', 'Chapada', 'Cidade Nova', 'Compensa', 'Flores', 'Parque 10'],
-            'SP': ['Pinheiros', 'Vila Madalena', 'Moema', 'Itaim Bibi', 'Jardins', 'Consolação', 'Tatuapé'],
-            'RJ': ['Copacabana', 'Ipanema', 'Leblon', 'Barra da Tijuca', 'Botafogo', 'Tijuca', 'Flamengo'],
-            'MG': ['Savassi', 'Lourdes', 'Funcionários', 'Buritis', 'Belvedere', 'Santa Efigênia', 'Pampulha'],
-            'RS': ['Moinhos de Vento', 'Bela Vista', 'Cidade Baixa', 'Menino Deus', 'Rio Branco', 'Petrópolis'],
+            #'SP': ['Pinheiros', 'Vila Madalena', 'Moema', 'Itaim Bibi', 'Jardins', 'Consolação', 'Tatuapé'],
+            #'RJ': ['Copacabana', 'Ipanema', 'Leblon', 'Barra da Tijuca', 'Botafogo', 'Tijuca', 'Flamengo'],
+            #'MG': ['Savassi', 'Lourdes', 'Funcionários', 'Buritis', 'Belvedere', 'Santa Efigênia', 'Pampulha'],
+            #'RS': ['Moinhos de Vento', 'Bela Vista', 'Cidade Baixa', 'Menino Deus', 'Rio Branco', 'Petrópolis'],
         }
         
         cities = {
             'AM': ['Manaus', 'Itacoatiara', 'Parintins', 'Manacapuru', 'Coari'],
-            'SP': ['São Paulo', 'Campinas', 'Santos', 'Guarulhos', 'Osasco'],
-            'RJ': ['Rio de Janeiro', 'Niterói', 'Duque de Caxias', 'Nova Iguaçu', 'Petrópolis'],
-            'MG': ['Belo Horizonte', 'Uberlândia', 'Contagem', 'Juiz de Fora', 'Betim'],
-            'RS': ['Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas', 'Santa Maria'],
+            #'SP': ['São Paulo', 'Campinas', 'Santos', 'Guarulhos', 'Osasco'],
+            #'RJ': ['Rio de Janeiro', 'Niterói', 'Duque de Caxias', 'Nova Iguaçu', 'Petrópolis'],
+            #'MG': ['Belo Horizonte', 'Uberlândia', 'Contagem', 'Juiz de Fora', 'Betim'],
+            #'RS': ['Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas', 'Santa Maria'],
         }
         
-        default_states = ['AM', 'SP', 'RJ', 'MG', 'RS']
+        default_states = [
+            'AM'
+            #, 'SP', 'RJ', 'MG', 'RS'
+            ]
         
         # Service data
         service_templates = [
