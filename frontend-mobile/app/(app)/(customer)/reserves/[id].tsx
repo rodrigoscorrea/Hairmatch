@@ -45,6 +45,8 @@ export default function ReserveInfoScreen() {
 
   const { service, start_time } = reserve;
   const { hairdresser } = service;
+  const hairdresser_image = `${API_BACKEND_URL}${reserve.service.hairdresser.user.profile_picture}`;
+  const reserve_image = `${API_BACKEND_URL}${reserve.review.picture}`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -60,7 +62,7 @@ export default function ReserveInfoScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
-                <Image source={{uri: `${API_BACKEND_URL}${reserve.service.hairdresser.user.profile_picture}`}} style={styles.avatar} />
+                <Image source={{uri: hairdresser_image}} style={styles.avatar} />
                 <View style={styles.profileInfo}>
                     <View style={styles.nameContainer}>
                         <Text style={styles.name}>{`${hairdresser.user.first_name} ${hairdresser.user.last_name}`}</Text>
@@ -115,7 +117,7 @@ export default function ReserveInfoScreen() {
 
               {/* Review Image */}
               {reserve.review.picture ? (
-                  <Image source={{ uri: `${API_BACKEND_URL}${reserve.review.picture}` }} style={styles.reviewImage} />
+                  <Image source={{ uri: reserve_image }} style={styles.reviewImage} />
               ) : (
                   <View style={styles.imagePlaceholder}>
                       <Ionicons name="camera" size={40} color="#ccc" />
@@ -193,7 +195,7 @@ export default function ReserveInfoScreen() {
         title="Confirmar exclusão de avaliação"
         description="Tem certeza de que deseja excluir esta avaliação?"
         confirmText="Sim, excluir"
-        onConfirm={() => handleDeleteReview(reserve.review.id)}
+        onConfirm={() => handleDeleteReview()}
         onCancel={() => setDeletionModalVisible(false)}
       />
     </SafeAreaView>

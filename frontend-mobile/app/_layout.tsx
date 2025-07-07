@@ -76,7 +76,6 @@ export default function RootLayout() {
     try {
       if(Platform.OS === 'web') {
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
-        console.log(response);
       } else {
         const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
           method: 'POST',

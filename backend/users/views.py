@@ -56,7 +56,7 @@ class RegisterView(APIView):
             user = User.objects.create(
             first_name=request.data.get('first_name'),
             last_name=request.data.get('last_name'),
-            phone=request.data.get('phone'),
+            phone=f"55{request.data.get('phone')}",
             complement=request.data.get('complement'),
             neighborhood=request.data.get('neighborhood'),
             city=request.data.get('city'),

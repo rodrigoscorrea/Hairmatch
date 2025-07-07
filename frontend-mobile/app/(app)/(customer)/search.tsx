@@ -49,7 +49,7 @@ export default function SearchScreen() {
             {/* Render Hairdresser Results */}
             {hairdresserResults.length > 0 && hairdresserResults.map((result) => (
               <TouchableOpacity style={styles.card} key={`hairdresser-${result.id}`} onPress={() => handleNavigateToHairdresser(result.id!)}>
-                <Image source={{uri: `${API_BACKEND_URL}${result.user.profile_picture}`}} style={styles.avatar} />
+                <Image source={{uri: `${result.user.profile_picture}`}} style={styles.avatar} />
                 <View style={styles.info}>
                   <Text style={styles.name}>{`${result.user.first_name} ${result.user.last_name}`}</Text>
                   <View style={styles.ratingRow}>

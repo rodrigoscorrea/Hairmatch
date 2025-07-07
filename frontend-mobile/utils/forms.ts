@@ -41,14 +41,19 @@ export const formatCEP = (value?: string): string => {
   };
 
 export const formatPhone = (value?: string): string => {
-  if(!value) return '';
-  return value
-    .replace(/\D/g, '')
-    .replace(/^(\d{2})(\d)/, '($1)$2')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .slice(0, 14);
-};
+  if (!value) return '';
 
+  const cleaned = value.replace(/\D/g, '').slice(0, 11);
+  const { length } = cleaned;
+
+  if (length > 10) {
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+
+  return cleaned
+    .replace(/^(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+};
 export const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email.trim());

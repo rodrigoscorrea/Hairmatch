@@ -23,6 +23,8 @@ export default function ProfileScreen(){
 
     const handleMenuPress = (item: string) => {
     };
+
+    const customer_image = `${API_BACKEND_URL}${customer.user.profile_picture}`;
     
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -34,7 +36,7 @@ export default function ProfileScreen(){
                       <Image 
                           source={
                             customer?.user?.profile_picture
-                              ? { uri: `${API_BACKEND_URL}${customer.user.profile_picture}` }
+                              ? { uri: customer_image }
                               : require('../../../assets/images/profile_picture_placeholder.png')
                           }
                           style={styles.profileImage}
