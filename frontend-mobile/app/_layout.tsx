@@ -71,11 +71,11 @@ export default function RootLayout() {
     }
   },
   signUp: async (formData: FormData) => {
-    setIsLoading(true);
+    //setIsLoading(true);
     try {
       if(Platform.OS === 'web') {
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
-        console.log(response);
+        //console.log(response);
       } else {
         const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
           method: 'POST',
@@ -87,11 +87,11 @@ export default function RootLayout() {
       }
         
     } catch (error: any) {
-      console.log(error)
-        console.error('Registration error:', error.response?.data || error.message);
+        //console.log(error)
+        console.error('Registration error:', error.response?.data);
         throw error.response?.data || new Error("An unknown error occurred during registration.");
     } finally {
-        setIsLoading(false);
+        //setIsLoading(false);
     }
   },
   signOut: async () => {

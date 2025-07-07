@@ -112,7 +112,7 @@ export const usePreferencesForm = () => {
         router.replace('/(auth)/login'); 
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Erro desconhecido";
+      const errorMessage = error.error || error.message || "Erro desconhecido";
       setErrorModal({ visible: true, message: errorMessage }); 
     } finally {
         setIsLoading(false);

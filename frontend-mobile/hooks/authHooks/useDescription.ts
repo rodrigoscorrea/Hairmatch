@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRegistration } from '@/contexts/RegistrationContext';
 import { useAuth } from '@/app/_layout';
 import { requestAiResume } from '@/services/auth-user.service';
@@ -13,7 +12,8 @@ export const useDescriptionForm = () => {
   const { signUp } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showAiDescriptionModal, setShowAiDescriptionModal] = useState(true); // Show modal on entry
+  const [showAiDescriptionModal, setShowAiDescriptionModal] = useState(true);
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
 
   const handleResumeChange = (text: string) => {
     setRegistrationData(prev => ({ ...prev, resume: text }));
@@ -51,8 +51,6 @@ export const useDescriptionForm = () => {
     if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
     if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
 
-    console.log(allData);
-  
     Object.keys(allData).forEach(key => {
         if (key !== 'profile_picture' && allData[key] !== null && allData[key] !== undefined) {
             if (key === 'preferences') {
@@ -75,7 +73,6 @@ export const useDescriptionForm = () => {
               name: `${registrationData.email}/${registrationData.profile_picture.name}`,
               type: registrationData.profile_picture.type,
           };
-
           formData.append('profile_picture', fileData as any);
         }
     } else {
@@ -86,15 +83,16 @@ export const useDescriptionForm = () => {
         await signUp(formData);
     
         Alert.alert(
-            'Success',
-            'Registration successful! Please log in to continue.',
-            [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+          "Cadastro concluído!",
+          "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
         );
+        router.replace('/(auth)/login');
 
     } catch (error: any) {
-        console.log(error);
-        console.error("Erro durante o processo de registro:", error);
-        Alert.alert("Erro no Cadastro", error.message || "Não foi possível completar o cadastro.");
+        console.error("Erro completo no cadastro:", error); 
+        
+        const errorMessage = error.error || error.message || "Erro desconhecido";
+        setErrorModal({ visible: true, message: errorMessage }); 
     } finally {
         setIsLoading(false);
     }
@@ -103,6 +101,15 @@ export const useDescriptionForm = () => {
   const handleBack = () => {
     router.back();
   };
+
+  // --- INÍCIO DA CORREÇÃO ---
+  // Função dedicada para fechar o modal e redirecionar.
+  // Garante que o usuário veja o erro antes de ser navegado.
+  const handleCloseErrorModal = () => {
+    setErrorModal({ visible: false, message: '' }); // Primeiro, esconde o modal
+    router.replace('/(auth)/login'); // Segundo, redireciona o usuário
+  };
+  // --- FIM DA CORREÇÃO ---
 
   return {
     isLoading,
@@ -113,5 +120,8 @@ export const useDescriptionForm = () => {
     handleRequestAiResume,
     handleFinish,
     handleBack,
+    errorModal,
+    // Garante que a prop `closeErrorModal` use a nova função corrigida
+    closeErrorModal: handleCloseErrorModal,
   };
 };
