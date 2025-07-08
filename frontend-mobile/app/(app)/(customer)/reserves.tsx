@@ -25,7 +25,7 @@ export default function ReservesScreen() {
               {reserves.map((reserve) => (
                 <View key={reserve.id} style={styles.reserveCard}>
                   <View style={styles.hairdresserInfoContainer}>
-                    <Image source={{uri: `${API_BACKEND_URL}${reserve.service.hairdresser.user.profile_picture}`}} style={styles.profileCircle} />
+                    <Image source={{uri: `${reserve.service.hairdresser.user.profile_picture}`}} style={styles.profileCircle} />
                     <View style={styles.hairdresserDetailsContainer}>
                       <View style={{display: 'flex', flexDirection: 'row'}}>
                         <Text style={styles.hairdresserFirstName}>

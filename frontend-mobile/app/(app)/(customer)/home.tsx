@@ -65,13 +65,14 @@ const CustomerHomeScreen = () => {
   };
 
   const renderForYouItem = ({ item }: any) => {
+    const user_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.card}>
           <Image
             source={
               item?.user?.profile_picture
-                  ? { uri: `${API_BACKEND_URL}${item.user.profile_picture}` }
+                  ? { uri: user_picture }
                   : require('../../../assets/images/profile_picture_placeholder.png')
             }
             resizeMode='cover' 
@@ -90,13 +91,14 @@ const CustomerHomeScreen = () => {
   };
 
   const renderHairdresserItem = ({ item }: any) => {
+    const hairdresser_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.circleItem}>
           <Image
             source={
               item?.user?.profile_picture
-                  ? { uri: `${API_BACKEND_URL}${item.user.profile_picture}` }
+                  ? { uri: hairdresser_picture }
                   : require('../../../assets/images/profile_picture_placeholder.png')
             }
             resizeMode='cover'

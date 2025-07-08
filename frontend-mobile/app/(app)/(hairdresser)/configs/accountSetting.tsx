@@ -9,7 +9,7 @@ import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
   const {hairdresser, handleGoBack} = useHairdresserProfile();
-
+  const hairdresser_image = `${API_BACKEND_URL}${hairdresser.user.profile_picture}`;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -29,7 +29,7 @@ export default function AccountDetailsScreen() {
         <Image 
             source={
               hairdresser?.user?.profile_picture
-                  ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                  ? { uri: hairdresser_image }
                   : require('../../../../assets/images/profile_picture_placeholder.png')
             }
             style={styles.profilePic}
