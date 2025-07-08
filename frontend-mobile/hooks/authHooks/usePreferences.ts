@@ -28,7 +28,6 @@ export const usePreferencesForm = () => {
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
-        console.log('indo fazer requisição');
         setIsFetchingPreferences(true);
         const response = await listPreferences();
         if (response && Array.isArray(response)) {

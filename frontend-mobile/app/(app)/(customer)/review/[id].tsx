@@ -56,7 +56,7 @@ export default function ReviewScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Avaliar Atendimento</Text>
-        <Text style={styles.subtitle}>Você pode enviar sua avaliação até 05/05/2025</Text>
+        <Text style={styles.subtitle}>Você pode enviar sua avaliação até 31/12/2025</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Como foi seu atendimento?</Text>

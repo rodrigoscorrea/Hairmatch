@@ -9,7 +9,7 @@ import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
   const {customer, handleGoBack} = useCustomerProfile();
-
+  const customer_image = `${API_BACKEND_URL}${customer.user.profile_picture}`;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -30,7 +30,7 @@ export default function AccountDetailsScreen() {
           <Image 
             source={
               customer?.user?.profile_picture
-                  ? { uri: `${API_BACKEND_URL}${customer.user.profile_picture}` }
+                  ? { uri: customer_image }
                   : require('../../../../assets/images/profile_picture_placeholder.png')
             }
             style={styles.profilePic}

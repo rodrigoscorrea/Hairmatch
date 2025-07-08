@@ -11,7 +11,7 @@ import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
-
+    const hairdresser_image = `${API_BACKEND_URL}${hairdresser.user.profile_picture}`;
     return (
     <SafeAreaView style={styles.safeArea}>        
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -22,7 +22,7 @@ export default function HairdresserSettingsScreen(){
                 <Image 
                     source={
                       hairdresser?.user?.profile_picture
-                          ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                          ? { uri: hairdresser_image }
                           : require('../../../../assets/images/profile_picture_placeholder.png')
                     }
                     style={styles.profileImage}

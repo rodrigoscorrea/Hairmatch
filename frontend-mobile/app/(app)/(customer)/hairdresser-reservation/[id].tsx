@@ -26,6 +26,8 @@ export default function HairdresserProfileReservationScreen() {
     handleBack,
   } = useHairdresserProfile();
 
+  const hairdresser_source = `${API_BACKEND_URL}${hairdresser?.user.profile_picture}`;
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -56,7 +58,7 @@ export default function HairdresserProfileReservationScreen() {
         <Image
           source={
             hairdresser?.user?.profile_picture
-                ? { uri: `${API_BACKEND_URL}${hairdresser.user.profile_picture}` }
+                ? { uri: hairdresser_source }
                 : require('../../../../assets/images/profile_picture_placeholder.png')
           }
           style={styles.profileImage}
