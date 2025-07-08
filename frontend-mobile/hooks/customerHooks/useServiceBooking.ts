@@ -1,6 +1,6 @@
 // hooks/useServiceBooking.ts
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Alert } from 'react-native';
 
 // Import Services
@@ -43,6 +43,23 @@ export const useServiceBooking = () => {
   });
 
   const initialDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+
+  // --- INÍCIO DA CORREÇÃO ---
+  // Este hook do Expo Router é executado toda vez que a tela entra em foco.
+  // É a maneira perfeita de garantir que o estado seja resetado para cada novo agendamento.
+  useFocusEffect(
+    useCallback(() => {
+      // A função de retorno (cleanup) é executada quando a tela perde o foco.
+      // Limpamos o estado aqui para garantir que, ao sair, nada seja mantido.
+      return () => {
+        setSelectedDate(null);
+        setSelectedTime(null);
+        setAvailableSlots([]); // Limpa também os horários disponíveis
+        setShowCalendar(false); // Esconde o calendário se estiver aberto
+      };
+    }, [])
+  );
 
   // --- Effect 1: Fetch initial core data (Service, Hairdresser, Non-working days) ---
   useEffect(() => {
@@ -182,6 +199,10 @@ export const useServiceBooking = () => {
     setErrorInfo({ visible: false, message: '' });
   };
 
+  const handleGoBack = () => {
+    router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresserId}`);
+  };
+
   return {
     loading,
     slotsLoading,
@@ -201,6 +222,7 @@ export const useServiceBooking = () => {
     handleBooking,
     formattedSelectedDate: selectedDate ? formatDate(selectedDate) : '',
     errorInfo,
-    closeErrorModal
+    closeErrorModal,
+    handleGoBack
   };
 };

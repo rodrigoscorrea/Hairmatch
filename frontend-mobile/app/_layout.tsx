@@ -7,7 +7,6 @@ import axios from 'axios';
 import axiosInstance from '../services/axios-instance';
 import { UserInfo, UserRole } from '../models/User.types';
 import { Preference } from '../models/Preferences.types';
-import { BottomTabProvider } from '../contexts/BottomTabContext';
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
 
@@ -72,7 +71,7 @@ export default function RootLayout() {
     }
   },
   signUp: async (formData: FormData) => {
-    setIsLoading(true);
+    //setIsLoading(true);
     try {
       if(Platform.OS === 'web') {
         const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
@@ -87,11 +86,11 @@ export default function RootLayout() {
       }
         
     } catch (error: any) {
-      console.log(error)
-        console.error('Registration error:', error.response?.data || error.message);
+        //console.log(error)
+        console.error('Registration error:', error.response?.data);
         throw error.response?.data || new Error("An unknown error occurred during registration.");
     } finally {
-        setIsLoading(false);
+        //setIsLoading(false);
     }
   },
   signOut: async () => {

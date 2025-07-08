@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity, KeyboardAvoidingView, ScrollView, Activit
 import { styles } from '../../../styles/register/styles/PreferencesStyle'; // Adjust path if needed
 import { usePreferencesForm } from '../../../hooks/authHooks/usePreferences'; // Adjust path
 import { UserRole } from '@/models/User.types';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
 
 export default function PreferencesScreen() {
   const {
@@ -18,6 +19,8 @@ export default function PreferencesScreen() {
     togglePreference,
     handleNext,
     handleSkip,
+    errorModal,
+    closeErrorModal,
   } = usePreferencesForm();
 
   return (
@@ -121,6 +124,11 @@ export default function PreferencesScreen() {
             )}
           </TouchableOpacity>
         </View>
+        <ErrorModal
+        visible={errorModal.visible}
+        onClose={closeErrorModal}
+        message={errorModal.message}
+      />
       </ScrollView>
     </KeyboardAvoidingView>
   );

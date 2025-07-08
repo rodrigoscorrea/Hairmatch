@@ -34,9 +34,9 @@ class RegisterView(APIView):
         phone = request.data.get('phone')
         role = request.data.get('role')
         if User.objects.filter(email=email).exists():
-            return JsonResponse({'error': 'User already exists'}, status=400)
+            return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
         if User.objects.filter(phone=phone).exists():
-            return JsonResponse({'error': 'Phone number already exists'}, status=400)
+            return JsonResponse({'error': 'O número de telefone inserido já está cadastrado na nossa base de dados'}, status=409)
         
         if role is None or role is None or role == '':
             return JsonResponse({'error': 'No role assigned to user'}, status=400)

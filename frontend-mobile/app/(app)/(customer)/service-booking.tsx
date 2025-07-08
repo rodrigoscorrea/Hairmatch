@@ -9,6 +9,7 @@ import { useServiceBooking } from '@/hooks/customerHooks/useServiceBooking'; // 
 import BottomTabBar from '@/components/BottomBar'; // Adjust path
 import { formatDate } from '@/utils/date-formater';
 import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
+import { Ionicons } from '@expo/vector-icons';
 
 LocaleConfig.locales["pt-br"] = ptBR;
 LocaleConfig.defaultLocale = "pt-br";
@@ -34,6 +35,7 @@ export default function ServiceBookingScreen() {
     formattedSelectedDate,
     errorInfo,
     closeErrorModal,
+    handleGoBack
   } = useServiceBooking();
 
   const getMaxDate = () => {
@@ -68,13 +70,21 @@ export default function ServiceBookingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.titleContainer}>  
-        <Text style={styles.title}>{service?.name}</Text>
-        <View style={styles.clockIconContainer}>
-          <FontAwesome6 style={styles.clockIcon} name="clock" size={18} color="black" />
-          <Text style={[styles.title, {marginLeft: 5, fontSize:18}]}>{serviceTimeFormater(service?.duration)}</Text>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={handleGoBack}>
+          <Ionicons name="chevron-back" size={26} color="#333" />
+        </TouchableOpacity>
+
+        <View style={styles.contentContainer}>
+          <Text style={styles.title} numberOfLines={2}> 
+            {service?.name}
+          </Text>
+
+          <View style={styles.durationContainer}>
+            <FontAwesome6 name="clock" size={16} color="black" />
+            <Text style={styles.durationText}>{serviceTimeFormater(service?.duration)}</Text>
+          </View>
         </View>
-        
       </View>
       
       <Text style={styles.description}>

@@ -79,6 +79,10 @@ export const useSearch = () => {
     });
   };
 
+  const handleGoBack = () => {
+    router.push('/(app)/(customer)/home');
+  };
+
   return {
     searchText,
     setSearchText,
@@ -87,5 +91,6 @@ export const useSearch = () => {
     serviceResults,
     handleNavigateToHairdresser,
     handleNavigateToService,
+    handleGoBack
   };
 };
