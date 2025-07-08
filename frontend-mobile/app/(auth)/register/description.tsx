@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useDescriptionForm } from '../../../hooks/authHooks/useDescription'; // Adjust path
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
+
 
 const DescriptionScreen = () => {
   const {
@@ -11,6 +13,8 @@ const DescriptionScreen = () => {
     handleResumeChange,
     handleRequestAiResume,
     handleFinish,
+    errorModal,
+    closeErrorModal,
     handleBack,
   } = useDescriptionForm();
 
@@ -73,6 +77,11 @@ const DescriptionScreen = () => {
             </View>
         </View>
       </Modal>
+      <ErrorModal
+        visible={errorModal.visible}
+        onClose={closeErrorModal}
+        message={errorModal.message}
+      />
     </ScrollView>
   );
 };

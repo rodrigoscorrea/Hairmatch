@@ -21,6 +21,8 @@ export const usePreferencesForm = () => {
   const [isFetchingPreferences, setIsFetchingPreferences] = useState(true);
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [showSkipModal, setShowSkipModal] = useState(false);
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
+
 
   // --- Fetch Preferences on Mount ---
   useEffect(() => {
@@ -104,15 +106,14 @@ export const usePreferencesForm = () => {
         await signUp(formData);
     
         Alert.alert(
-            'Success',
-            'Registration successful! Please log in to continue.',
-            [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+          "Cadastro concluído!",
+          "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
         );
+        router.replace('/(auth)/login'); 
 
     } catch (error: any) {
-        console.log(error);
-        console.error("Erro durante o processo de registro:", error);
-        Alert.alert("Erro no Cadastro", error.message || "Não foi possível completar o cadastro.");
+      const errorMessage = error.error || error.message || "Erro desconhecido";
+      setErrorModal({ visible: true, message: errorMessage }); 
     } finally {
         setIsLoading(false);
     }
@@ -149,5 +150,10 @@ export const usePreferencesForm = () => {
     togglePreference,
     handleNext,
     handleSkip,
+    errorModal,
+    closeErrorModal: () => {
+      setErrorModal({ ...errorModal, visible: false });
+      router.replace('/(auth)/login');
+    },
   };
 };

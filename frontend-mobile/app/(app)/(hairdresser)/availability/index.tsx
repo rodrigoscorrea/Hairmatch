@@ -24,14 +24,14 @@ export default function AvailabilityManagerScreen() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
-        <View style={styles.iconRow}>
-            <TouchableOpacity onPress={goBack}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-            </TouchableOpacity>
-            <Text style={styles.title}>Meus Horários de Atendimento</Text>
-            <View style={{width: 24}}/>{/* Spacer */}
-        </View>
-        
+      <View style={styles.iconRow}>
+        <TouchableOpacity onPress={goBack}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Meus Horários de Atendimento</Text>
+        <View style={{width: 24}}/>
+      </View>
+          
         {isLoading ? (
           <ActivityIndicator size="large" color="#000" />
         ) : availabilities && availabilities.length > 0 ? (

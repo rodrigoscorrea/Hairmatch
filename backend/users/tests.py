@@ -93,7 +93,22 @@ class RegisterViewTest(TestCase):
             self.register_url,
             data=self.valid_customer_payload,
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(User.objects.count(), 1)  # No new user created
+
+    def test_register_duplicate_phone(self):
+        # First registration
+        self.client.post(
+            self.register_url,
+            data=self.valid_customer_payload,
+        )
+        
+        # Duplicate registration attempt
+        response = self.client.post(
+            self.register_url,
+            data=self.valid_customer_payload,
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(User.objects.count(), 1)  # No new user created
 
     def test_register_missing_role(self):

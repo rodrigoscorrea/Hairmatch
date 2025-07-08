@@ -1,6 +1,6 @@
 // app/(app)/(hairdresser)/services/index.tsx
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Accordion } from '@/components/Accordion';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/hairdresser/service/styles/HairdresserServiceManager'; // Adjust path
@@ -21,13 +21,19 @@ export default function ServiceManagerScreen() {
     goToCreate,
     goToEdit,
     errorModal,
-    closeErrorModal
+    closeErrorModal,
+    handleGoBack,
   } = useServiceManager();
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
-        <View>
+        <View style={styles.headercontainer}>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+        )}
           <Text style={styles.title}>Seus Serviços</Text>
         </View>
         
