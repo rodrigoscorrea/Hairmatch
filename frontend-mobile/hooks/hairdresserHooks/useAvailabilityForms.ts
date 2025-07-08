@@ -6,7 +6,7 @@ import { formatTimeInput } from '@/utils/forms';
 import { createAvailability, updateAvailability, listAvailabilitiesByHairdresser } from '@/services/availability.service';
 
 const DAYS_OF_WEEK = [
-  { name: 'Domingo', weekday: 'sunday' }, // Mapped to match getDay()
+  { name: 'Domingo', weekday: 'sunday' },
   { name: 'Segunda-Feira', weekday: 'monday' },
   { name: 'Terça-Feira', weekday: 'tuesday' },
   { name: 'Quarta-Feira', weekday: 'wednesday' },
@@ -15,7 +15,6 @@ const DAYS_OF_WEEK = [
   { name: 'Sábado', weekday: 'saturday' },
 ];
 
-// This defines the shape of our form state for a single day
 type DayState = {
   info: typeof DAYS_OF_WEEK[0];
   active: boolean;
@@ -37,11 +36,14 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
   const router = useRouter();
   const { userInfo } = useAuth();
   const hairdresserId = userInfo?.hairdresser?.id;
+
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
+  
   const [initialPayload, setInitialPayload] = useState<object[] | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [days, setDays] = useState<DayState[]>(() => DAYS_OF_WEEK.map(day => ({
     info: day,
-    active: ![0, 6].includes(DAYS_OF_WEEK.indexOf(day)), // Default to Mon-Fri active
+    active: ![0, 6].includes(DAYS_OF_WEEK.indexOf(day)),
     start: '08:00',
     end: '18:00',
   })));
@@ -66,10 +68,8 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
               };
             });
             setDays(initialDaysState);
-            // Create and store the initial payload for comparison
             setInitialPayload(createPayloadFromDays(initialDaysState));
           } else {
-            // If no availabilities exist, the initial payload is an empty array
             setInitialPayload([]);
           }
         } catch (error) { console.error("Failed to fetch data for edit form", error); }
@@ -87,10 +87,19 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
     }
   }, [days, initialPayload, mode]);
 
-
   const handleTimeChange = (index: number, key: 'start' | 'end', value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
     const newDays = [...days];
-    newDays[index][key] = formatTimeInput(value);
+
+    // Se o valor numérico resultante estiver vazio (ex: o usuário digitou 'aaaa'),
+    // defina o campo como uma string vazia para que a validação de 'handleSubmit' possa pegá-lo.
+    // Caso contrário, formate o valor como antes.
+    if (numericValue) {
+        newDays[index][key] = formatTimeInput(numericValue);
+    } else {
+        newDays[index][key] = ''; // Define explicitamente como vazio
+    }
+    
     setDays(newDays);
   };
 
@@ -103,28 +112,28 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
   const handleModeChange = (newMode: 'all' | 'custom') => {
     setFormMode(newMode);
     if (newMode === 'all') {
-      setDays(currentDays => currentDays.map(day => ({
-        ...day,
-        active: true,    
-        start: allStart,  
-        end: allEnd,      
-      })));
+      setDays(currentDays => currentDays.map(day => ({ ...day, active: true, start: allStart, end: allEnd })));
     }
   };
 
   useEffect(() => {
-    // Only apply if we are already in 'all' mode
     if (formMode === 'all') {
-      setDays(currentDays => currentDays.map(day => ({
-        ...day,
-        active: true,
-        start: allStart,
-        end: allEnd,
-      })));
+      setDays(currentDays => currentDays.map(day => ({ ...day, active: true, start: allStart, end: allEnd })));
     }
-  }, [allStart, allEnd]); // Note: formMode is removed from dependency array
+  }, [allStart, allEnd]);
 
   const handleSubmit = async () => {
+    const isValidTime = (time: string): boolean => /^[0-9:]*$/.test(time);
+
+    for (const day of days) {
+      if (day.active) {
+        if (!isValidTime(day.start) || !isValidTime(day.end) || day.start.length < 5 || day.end.length < 5) {
+          setErrorModal({ visible: true, message: "Formato de horário inválido. Use HH:MM." });
+          return;
+        }
+      }
+    }
+
     if (!hairdresserId) return;
 
     const availabilitiesPayload = days
@@ -144,9 +153,9 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
       router.back();
     } catch (error) {
       console.error("Error saving availability:", error);
+      setErrorModal({ visible: true, message: "Ocorreu um erro ao salvar. Tente novamente." });
     }
   };
-
 
   const isAtLeastOneDayActive = days.some(day => day.active);
 
@@ -163,5 +172,7 @@ export const useAvailabilityForm = (mode: 'create' | 'edit') => {
     handleTimeChange,
     handleSubmit,
     goBack: () => router.back(),
+    errorModal,
+    closeErrorModal: () => setErrorModal({ visible: false, message: '' }),
   };
 };

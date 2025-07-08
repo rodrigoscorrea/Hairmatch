@@ -3,9 +3,12 @@ import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useAvailabilityForm } from '@/hooks/hairdresserHooks/useAvailabilityForms';
 import { AvailabilityForm } from '@/components/AvailabilityForms';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
+
 
 export default function AvailabilityEditScreen() {
-  const form = useAvailabilityForm('edit'); // Use the hook in 'edit' mode
+  // 'form' já contém 'errorModal' e 'closeErrorModal' vindos do hook
+  const form = useAvailabilityForm('edit'); 
 
   if (form.loading) {
     return <ActivityIndicator size="large" style={{flex: 1}} />;
@@ -17,6 +20,12 @@ export default function AvailabilityEditScreen() {
         Editar Horários
       </Text>
       <AvailabilityForm {...form} />
+      
+      <ErrorModal
+        visible={form.errorModal.visible}
+        message={form.errorModal.message}
+        onClose={form.closeErrorModal}
+      />
     </ScrollView>
   );
 }

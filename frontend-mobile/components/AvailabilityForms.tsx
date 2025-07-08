@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { styles } from '@/styles/hairdresser/availability/styles/AvailabilityCreateStyle'; // Use styles from create screen
 import { formatTimeInput } from '@/utils/forms';
+
 // The form now accepts props from the hook
 export const AvailabilityForm = ({
   days,
@@ -38,9 +39,23 @@ export const AvailabilityForm = ({
       {formMode === 'all' ? (
         <View style={styles.timeContainer}>
           <Text style={styles.label}>Horário de início</Text>
-          <TextInput style={styles.input} value={allStart} onChangeText={setAllStart} onBlur={()=>{setAllStart(formatTimeInput(allStart))}}  />
+          <TextInput 
+            style={styles.input} 
+            value={allStart} 
+            onChangeText={setAllStart} 
+            onBlur={()=>{setAllStart(formatTimeInput(allStart))}}
+            keyboardType="numeric" // <-- Adicionado
+            maxLength={5}           // <-- Adicionado
+          />
           <Text style={[styles.label, { marginTop: 20 }]}>Horário de fim</Text>
-          <TextInput style={styles.input} value={allEnd} onChangeText={setAllEnd} onBlur={()=>{setAllEnd(formatTimeInput(allEnd))}}/>
+          <TextInput 
+            style={styles.input} 
+            value={allEnd} 
+            onChangeText={setAllEnd} 
+            onBlur={()=>{setAllEnd(formatTimeInput(allEnd))}}
+            keyboardType="numeric" // <-- Adicionado
+            maxLength={5}           // <-- Adicionado
+          />
         </View>
       ) : (
         <View style={{ marginTop: 20 }}>
@@ -50,9 +65,21 @@ export const AvailabilityForm = ({
               <Text style={styles.dayLabel}>{day.info.name}</Text>
               {day.active ? (
                 <View style={styles.timeInputs}>
-                  <TextInput style={styles.smallInput} value={day.start} onChangeText={(v) => handleTimeChange(index, 'start', v)} />
+                  <TextInput 
+                    style={styles.smallInput} 
+                    value={day.start} 
+                    onChangeText={(v) => handleTimeChange(index, 'start', v)} 
+                    keyboardType="numeric" // <-- Adicionado
+                    maxLength={5}           // <-- Adicionado
+                  />
                   <Text>às</Text>
-                  <TextInput style={styles.smallInput} value={day.end} onChangeText={(v) => handleTimeChange(index, 'end', v)} />
+                  <TextInput 
+                    style={styles.smallInput} 
+                    value={day.end} 
+                    onChangeText={(v) => handleTimeChange(index, 'end', v)} 
+                    keyboardType="numeric" // <-- Adicionado
+                    maxLength={5}           // <-- Adicionado
+                  />
                 </View>
               ) : (
                 <Text style={{ marginLeft: 10, color: 'gray' }}>Fechado</Text>
