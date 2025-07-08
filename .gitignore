@@ -1,6 +1,6 @@
 .env
 .expo
 __pycache__
-backend/media/*
+backend/media/reviews
 android
 node_modules
