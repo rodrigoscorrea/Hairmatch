@@ -1,9 +1,14 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 export const formatTime = (dateString: string) : string => {
   try {
-    const date = new Date(dateString);
-    return format(date, "HH:mm'h'", { locale: ptBR });
+    return dayjs.utc(dateString).format("HH:mm[h]");;
+    //return format(date, "HH:mm'h'", { locale: ptBR });
   } catch (e) {
     return 'Invalid hour';
   }

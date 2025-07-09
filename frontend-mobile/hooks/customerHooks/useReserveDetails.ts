@@ -4,6 +4,9 @@ import { Alert } from 'react-native';
 import { getReserveById } from '@/services/reserve.service'; 
 import { ReserveWithService } from '@/models/Reserve.types';
 import { deleteReview } from '@/services/review.service';
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
+dayjs.locale('pt-br');
 
 export const useReserveDetails = () => {
   const router = useRouter();

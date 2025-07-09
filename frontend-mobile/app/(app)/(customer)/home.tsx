@@ -1,15 +1,15 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
-  Image,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle';
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome';
 import { formatText } from '@/utils/text-formater'; 
@@ -64,7 +64,7 @@ const CustomerHomeScreen = () => {
     }
   };
 
-  const renderForYouItem = ({ item }: any) => {
+  const renderForYouItem = useCallback(({ item }: any) => {
     const user_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
@@ -88,9 +88,9 @@ const CustomerHomeScreen = () => {
         </View>
       </TouchableOpacity>
     );
-  };
+  }, []);
 
-  const renderHairdresserItem = ({ item }: any) => {
+  const renderHairdresserItem = useCallback(({ item }: any) => {
     const hairdresser_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
@@ -109,7 +109,7 @@ const CustomerHomeScreen = () => {
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [])
 
   if (loading) {
     return (
