@@ -1,0 +1,6 @@
+.env
+.expo
+__pycache__
+backend/media/reviews
+android
+node_modules

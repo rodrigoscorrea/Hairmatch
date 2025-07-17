@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    container_name: hairmatch_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  django:
+    build: ./backend
+    container_name: hairmatch_backend
+    command: /app/entrypoint.sh
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      #angular:
+      #  condition: service_started
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE_NAME=${EVOLUTION_INSTANCE_NAME}
+      - BACKEND_ALLOWED_HOST=${BACKEND_ALLOWED_HOST}
+      - BACKEND_ALLOWED_CORS=${BACKEND_ALLOWED_CORS}
+    restart: always
+    networks:
+      - app_network
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: hairmatch_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app_network
+    depends_on:
+      - db
+    restart: always
+
+  evolution-api:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.1.1
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - app_network
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+  #angular:
+  #  build: ./frontend/
+  #  container_name: angular_frontend
+  #  command: npm start -- --host 0.0.0.0
+  #  volumes:
+  #    - ./frontend:/app
+  #  ports:
+  #    - "4200:4200"
+  #  networks:
+  #    - app_network
+  #  restart: always
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  evolution_instances:

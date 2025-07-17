@@ -1,0 +1,11 @@
+Django==4.2.20
+djangorestframework==3.15.0
+django-cors-headers==3.14.0
+psycopg2-binary
+bcrypt
+PyJWT
+Pillow
+Faker
+google.generativeai
+coverage
+django-filter
