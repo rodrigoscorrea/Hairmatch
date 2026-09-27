@@ -1,11 +1,9 @@
 // app/(auth)/register/_layout.tsx
 import { Stack } from 'expo-router';
-import { RegistrationProvider } from '../../../contexts/RegistrationContext';
 
+// O RegistrationProvider fica em app/(auth)/_layout.tsx, para a tela de login também usar o contexto.
 export default function RegisterLayout() {
   return (
-    <RegistrationProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </RegistrationProvider>
+    <Stack screenOptions={{ headerShown: false }} />
   );
 }

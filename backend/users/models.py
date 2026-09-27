@@ -32,6 +32,7 @@ class User(AbstractUser):
     )
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     role = models.CharField(max_length=12, choices=ROLES_CHOICES, default='CUSTOMER')
+    google_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.email

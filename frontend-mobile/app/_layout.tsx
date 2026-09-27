@@ -7,6 +7,11 @@ import axios from 'axios';
 import axiosInstance from '../services/axios-instance';
 import { UserInfo, UserRole } from '../models/User.types';
 import { Preference } from '../models/Preferences.types';
+import * as WebBrowser from 'expo-web-browser';
+
+// Fecha o popup do login com Google no web. Precisa rodar na inicialização: no build de produção, o
+// expo-router só avalia a tela de login depois do redirect, tarde demais para capturar o retorno do popup.
+WebBrowser.maybeCompleteAuthSession();
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
 
@@ -47,21 +52,17 @@ export default function RootLayout() {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  const authContext = React.useMemo(() => ({
-  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const authContext = React.useMemo(() => {
+  // Carrega a sessão a partir do cookie `jwt` já definido pelo backend.
+  const loadSession = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
-        email,
-        password
-      }, { withCredentials: true });
-
       const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
 
       if (authResponse.data.authenticated) {
         const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
         setUserInfo(userResponse.data);
-        setUserToken('authenticated'); 
-        return { success: true }; 
+        setUserToken('authenticated');
+        return { success: true };
       } else {
         return { success: false, error: 'Authentication failed. Please check your credentials.' };
       }
@@ -69,29 +70,50 @@ export default function RootLayout() {
         const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
       return { success: false, error: errorMessage };
     }
+  };
+
+  return {
+  loadSession,
+  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
+        email,
+        password
+      }, { withCredentials: true });
+    } catch (error: any) {
+        const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
+      return { success: false, error: errorMessage };
+    }
+
+    return loadSession();
   },
   signUp: async (formData: FormData) => {
-    //setIsLoading(true);
-    try {
-      if(Platform.OS === 'web') {
-        const response = await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData);
-      } else {
-        const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          body: formData,
-        });
-      }
-        
-    } catch (error: any) {
-        //console.log(error)
+    if(Platform.OS === 'web') {
+      try {
+        // withCredentials: o navegador guarda o cookie de sessão do 201 (cadastro Google).
+        return await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData, { withCredentials: true });
+      } catch (error: any) {
         console.error('Registration error:', error.response?.data);
         throw error.response?.data || new Error("An unknown error occurred during registration.");
-    } finally {
-        //setIsLoading(false);
+      }
     }
+
+    const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      // O fetch não lança em 4xx/5xx: repassa o JSON de erro ({ error }) para o wizard.
+      const errorData = await response.json().catch(() => null);
+      console.error('Registration error:', errorData);
+      throw errorData || new Error("An unknown error occurred during registration.");
+    }
+
+    return response;
   },
   signOut: async () => {
     setIsLoading(true);
@@ -110,7 +132,8 @@ export default function RootLayout() {
   userInfo,
   userToken,
   isLoading
-}), [userToken, userInfo, isLoading]);
+  };
+}, [userToken, userInfo, isLoading]);
 
   const fetchUserInfo = async (token: string) => {
     try {

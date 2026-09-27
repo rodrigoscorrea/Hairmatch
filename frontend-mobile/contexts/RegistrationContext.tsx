@@ -29,20 +29,22 @@ interface IRegistrationData {
   experiences?: string;
   products?: string;
   resume?: string;
+
+  // Cadastro via Google: token de cadastro pendente devolvido por /api/auth/google
+  google_signup_token?: string;
 }
 
 // Define what our context will provide
 interface IRegistrationContext {
   registrationData: IRegistrationData;
   setRegistrationData: Dispatch<SetStateAction<IRegistrationData>>;
+  resetRegistration: () => void;
 }
 
 // Create the context with a default value
 const RegistrationContext = createContext<IRegistrationContext | undefined>(undefined);
 
-// Create the Provider component
-export const RegistrationProvider = ({ children }: { children: React.ReactNode }) => {
-  const [registrationData, setRegistrationData] = useState<IRegistrationData>({
+export const INITIAL_REGISTRATION_DATA: IRegistrationData = {
     // Step 1 fields
     first_name: '',
     last_name: '',
@@ -71,10 +73,18 @@ export const RegistrationProvider = ({ children }: { children: React.ReactNode }
     experiences: '',
     products: '',
     resume: '',
-  });
+
+    google_signup_token: '',
+};
+
+// Create the Provider component
+export const RegistrationProvider = ({ children }: { children: React.ReactNode }) => {
+  const [registrationData, setRegistrationData] = useState<IRegistrationData>(INITIAL_REGISTRATION_DATA);
+
+  const resetRegistration = () => setRegistrationData(INITIAL_REGISTRATION_DATA);
 
   return (
-    <RegistrationContext.Provider value={{ registrationData, setRegistrationData }}>
+    <RegistrationContext.Provider value={{ registrationData, setRegistrationData, resetRegistration }}>
       {children}
     </RegistrationContext.Provider>
   );

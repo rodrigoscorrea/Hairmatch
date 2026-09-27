@@ -9,3 +9,5 @@ Faker
 google.generativeai
 coverage
 django-filter
+google-auth>=2.14.1,<3
+requests>=2.31,<3

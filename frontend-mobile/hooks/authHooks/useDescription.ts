@@ -9,7 +9,8 @@ import { stripNonDigits } from '@/utils/forms';
 export const useDescriptionForm = () => {
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
-  const { signUp } = useAuth();
+  const { signUp, loadSession } = useAuth();
+  const isGoogleMode = !!registrationData.google_signup_token;
 
   const [isLoading, setIsLoading] = useState(false);
   const [showAiDescriptionModal, setShowAiDescriptionModal] = useState(true);
@@ -51,6 +52,15 @@ export const useDescriptionForm = () => {
     if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
     if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
 
+    // Modo Google: sem senha e sem e-mail (o backend usa o e-mail do token), mas com o token de cadastro.
+    if (isGoogleMode) {
+        delete allData.password;
+        delete allData.confirmPassword;
+        delete allData.email;
+    } else {
+        delete allData.google_signup_token;
+    }
+
     Object.keys(allData).forEach(key => {
         if (key !== 'profile_picture' && allData[key] !== null && allData[key] !== undefined) {
             if (key === 'preferences') {
@@ -81,6 +91,15 @@ export const useDescriptionForm = () => {
 
     try {
         await signUp(formData);
+
+        if (isGoogleMode) {
+          // O 201 já trouxe o cookie de sessão: o RootLayoutNav leva à agenda (GAUTH-26).
+          const session = await loadSession();
+          if (!session.success) {
+            setErrorModal({ visible: true, message: session.error || 'Erro desconhecido' });
+          }
+          return;
+        }
     
         Alert.alert(
           "Cadastro concluído!",
@@ -107,7 +126,10 @@ export const useDescriptionForm = () => {
   // Garante que o usuário veja o erro antes de ser navegado.
   const handleCloseErrorModal = () => {
     setErrorModal({ visible: false, message: '' }); // Primeiro, esconde o modal
-    router.replace('/(auth)/login'); // Segundo, redireciona o usuário
+    // Em modo Google, o erro do envio final mantém o usuário no wizard (GAUTH-27).
+    if (!isGoogleMode) {
+      router.replace('/(auth)/login'); // Segundo, redireciona o usuário
+    }
   };
   // --- FIM DA CORREÇÃO ---
 

@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -9,8 +9,21 @@ import bcrypt
 from .models import User, Customer, Hairdresser
 from preferences.models import Preferences
 from service.models import Service
+import base64
 from unittest.mock import patch
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import JsonResponse
+from .auth_tokens import (
+    issue_session_token,
+    set_session_cookie,
+    create_signup_token,
+    decode_signup_token,
+    InvalidSignupToken,
+    SIGNUP_TOKEN_TTL,
+)
+from .google_auth import verify_google_id_token, GoogleTokenError
+from google.auth.exceptions import GoogleAuthError
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -1687,3 +1700,653 @@ class HairdresserInfoViewIntegrationTest(TestCase):
         self.assertIsInstance(hairdresser_data, dict)
         self.assertIn('id', hairdresser_data)
         self.assertEqual(hairdresser_data['id'], self.hairdresser.id)
+
+
+def _create_plain_user(**overrides):
+    fields = {
+        'first_name': 'Plain',
+        'last_name': 'User',
+        'phone': '5511999990000',
+        'neighborhood': 'Centro',
+        'city': 'Manaus',
+        'state': 'AM',
+        'address': 'Rua A',
+        'postal_code': '69000000',
+        'email': 'plain@example.com',
+        'role': 'customer',
+    }
+    fields.update(overrides)
+    return User.objects.create(**fields)
+
+
+class AuthTokensTest(TestCase):
+    def setUp(self):
+        self.user = _create_plain_user()
+
+    def _frozen_datetime(self, frozen_now):
+        patcher = patch('users.auth_tokens.datetime')
+        mock_datetime = patcher.start()
+        self.addCleanup(patcher.stop)
+        mock_datetime.timedelta = datetime.timedelta
+        mock_datetime.timezone = datetime.timezone
+        mock_datetime.datetime.now.return_value = frozen_now
+        return mock_datetime
+
+    def test_session_token_payload_matches_login_session(self):
+        token = issue_session_token(self.user)
+
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], self.user.id)
+        self.assertEqual(payload['exp'] - payload['iat'], 3600)
+
+    def test_set_session_cookie_attributes(self):
+        response = set_session_cookie(JsonResponse({}), self.user)
+
+        cookie = response.cookies['jwt']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], self.user.id)
+
+    def test_signup_token_claims_and_30_minute_expiry(self):
+        frozen_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        self._frozen_datetime(frozen_now)
+
+        token = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        claims = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        self.assertEqual(claims['email'], 'ana@gmail.com')
+        self.assertEqual(claims['sub'], 'google-sub-123')
+        self.assertEqual(claims['purpose'], 'google_signup')
+        self.assertEqual(claims['iat'], int(frozen_now.timestamp()))
+        self.assertEqual(claims['exp'], int((frozen_now + datetime.timedelta(minutes=30)).timestamp()))
+        self.assertEqual(SIGNUP_TOKEN_TTL, datetime.timedelta(minutes=30))
+
+    def test_decode_signup_token_returns_claims(self):
+        claims = decode_signup_token(create_signup_token('ana@gmail.com', 'google-sub-123'))
+
+        self.assertEqual(claims['email'], 'ana@gmail.com')
+        self.assertEqual(claims['sub'], 'google-sub-123')
+
+    def test_decode_rejects_expired_signup_token(self):
+        issued_at = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=31)
+        mock_datetime = self._frozen_datetime(issued_at)
+        token = create_signup_token('ana@gmail.com', 'google-sub-123')
+        mock_datetime.datetime.now.return_value = datetime.datetime.now(datetime.timezone.utc)
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+    def test_decode_rejects_tampered_signup_token(self):
+        header, _, signature = create_signup_token('ana@gmail.com', 'google-sub-123').split('.')
+        forged_claims = {
+            'email': 'attacker@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'google_signup',
+            'exp': int((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)).timestamp()),
+        }
+        forged_payload = base64.urlsafe_b64encode(json.dumps(forged_claims).encode()).rstrip(b'=').decode()
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(f'{header}.{forged_payload}.{signature}')
+
+    def test_decode_rejects_token_signed_with_session_key(self):
+        token = jwt.encode({
+            'email': 'ana@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'google_signup',
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
+        }, 'secret', algorithm='HS256')
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+    def test_decode_rejects_token_with_other_purpose(self):
+        token = jwt.encode({
+            'email': 'ana@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'session',
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
+        }, settings.SECRET_KEY, algorithm='HS256')
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+
+@override_settings(GOOGLE_OAUTH_CLIENT_IDS=['web-client-id', 'ios-client-id'])
+class GoogleAuthVerifierTest(SimpleTestCase):
+    def setUp(self):
+        patcher = patch('users.google_auth.id_token.verify_oauth2_token')
+        self.mock_verify = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _claims(self, **overrides):
+        claims = {
+            'aud': 'ios-client-id',
+            'sub': 'google-sub-123',
+            'email': 'ana@gmail.com',
+            'email_verified': True,
+            'given_name': 'Ana',
+            'family_name': 'Souza',
+        }
+        claims.update(overrides)
+        return claims
+
+    def test_valid_token_with_listed_audience_returns_identity(self):
+        self.mock_verify.return_value = self._claims()
+
+        identity = verify_google_id_token('google-id-token')
+
+        self.assertEqual(identity, {
+            'sub': 'google-sub-123',
+            'email': 'ana@gmail.com',
+            'email_verified': True,
+            'given_name': 'Ana',
+            'family_name': 'Souza',
+        })
+        args, kwargs = self.mock_verify.call_args
+        self.assertEqual(args[0], 'google-id-token')
+        self.assertIsNone(kwargs['audience'])
+
+    def test_value_error_becomes_google_token_error(self):
+        self.mock_verify.side_effect = ValueError('Token expired')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_google_auth_error_becomes_google_token_error(self):
+        self.mock_verify.side_effect = GoogleAuthError('Could not fetch certificates')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_audience_outside_list_is_rejected(self):
+        self.mock_verify.return_value = self._claims(aud='someone-elses-client-id')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=[])
+    def test_empty_client_id_list_rejects_everything(self):
+        self.mock_verify.return_value = self._claims(aud='web-client-id')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_email_verified_is_normalized_to_bool(self):
+        cases = [(True, True), ('true', True), ('false', False), (False, False)]
+        for raw_value, expected in cases:
+            with self.subTest(email_verified=raw_value):
+                self.mock_verify.return_value = self._claims(email_verified=raw_value)
+                self.assertIs(verify_google_id_token('google-id-token')['email_verified'], expected)
+
+        with self.subTest(email_verified='missing'):
+            claims = self._claims()
+            del claims['email_verified']
+            self.mock_verify.return_value = claims
+            self.assertIs(verify_google_id_token('google-id-token')['email_verified'], False)
+
+    def test_missing_names_default_to_empty_string(self):
+        claims = self._claims()
+        del claims['given_name']
+        del claims['family_name']
+        self.mock_verify.return_value = claims
+
+        identity = verify_google_id_token('google-id-token')
+
+        self.assertEqual(identity['given_name'], '')
+        self.assertEqual(identity['family_name'], '')
+
+
+class LoginViewGoogleAccountTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.login_url = reverse('login')
+        self.user_auth_url = reverse('user_auth')
+
+    def test_password_login_on_google_only_account_returns_403(self):
+        _create_plain_user(email='google-only@example.com', password=None, google_id='google-sub-123')
+
+        response = self.client.post(
+            self.login_url,
+            data=json.dumps({'email': 'google-only@example.com', 'password': 'any_password'}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.json()['error'],
+            'Esta conta usa login com Google. Use o botão Entrar com Google.'
+        )
+        self.assertNotIn('jwt', response.cookies)
+
+    def test_auth_user_with_signup_token_cookie_is_not_authenticated(self):
+        self.client.cookies['jwt'] = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        response = self.client.get(self.user_auth_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_auth_user_with_invalid_signature_is_not_authenticated(self):
+        user = _create_plain_user()
+        self.client.cookies['jwt'] = jwt.encode({
+            'id': user.id,
+            'exp': datetime.datetime.now() + datetime.timedelta(minutes=60),
+            'iat': datetime.datetime.now(),
+        }, 'not-the-session-secret', algorithm='HS256')
+
+        response = self.client.get(self.user_auth_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+
+class GoogleAuthViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.google_auth_url = reverse('google_auth')
+        self.user_auth_url = reverse('user_auth')
+        patcher = patch('users.views.verify_google_id_token')
+        self.mock_verify = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _identity(self, **overrides):
+        identity = {
+            'sub': 'google-sub-123',
+            'email': 'ana@gmail.com',
+            'email_verified': True,
+            'given_name': 'Ana',
+            'family_name': 'Souza',
+        }
+        identity.update(overrides)
+        return identity
+
+    def _post(self, body=None):
+        return self.client.post(
+            self.google_auth_url,
+            data=json.dumps({'id_token': 'google-id-token'} if body is None else body),
+            content_type='application/json'
+        )
+
+    def _users_snapshot(self):
+        return list(User.objects.order_by('id').values_list('id', 'email', 'google_id', 'password'))
+
+    def _assert_session_cookie_for(self, response, user):
+        cookie = response.cookies['jwt']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['exp'] - payload['iat'], 3600)
+
+        self.client.cookies['jwt'] = cookie.value
+        auth_response = self.client.get(self.user_auth_url)
+        self.assertEqual(auth_response.json(), {'authenticated': True})
+
+    def test_linked_google_account_is_authenticated(self):
+        user = _create_plain_user(email='ana@gmail.com', google_id='google-sub-123')
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'status': 'authenticated'})
+        self.mock_verify.assert_called_once_with('google-id-token')
+        self._assert_session_cookie_for(response, user)
+
+    def test_existing_email_with_different_case_is_linked_and_authenticated(self):
+        user = _create_plain_user(email='ana@gmail.com', password='hashed', google_id=None)
+        self.mock_verify.return_value = self._identity(email='Ana@Gmail.com')
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'status': 'authenticated'})
+        user.refresh_from_db()
+        self.assertEqual(user.google_id, 'google-sub-123')
+        self.assertEqual(user.password, 'hashed')
+        self.assertEqual(User.objects.count(), 1)
+        self._assert_session_cookie_for(response, user)
+
+    def test_missing_or_empty_id_token_returns_400(self):
+        for body in ({}, {'id_token': ''}):
+            with self.subTest(body=body):
+                response = self._post(body)
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('error', response.json())
+                self.assertNotIn('jwt', response.cookies)
+        self.mock_verify.assert_not_called()
+
+    def test_invalid_google_token_returns_401_without_changes(self):
+        _create_plain_user(email='ana@gmail.com', google_id=None)
+        before = self._users_snapshot()
+        self.mock_verify.side_effect = GoogleTokenError('bad token')
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('error', response.json())
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(self._users_snapshot(), before)
+
+    def test_unverified_email_returns_403_without_changes(self):
+        _create_plain_user(email='ana@gmail.com', google_id=None)
+        before = self._users_snapshot()
+        self.mock_verify.return_value = self._identity(email_verified=False)
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('error', response.json())
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(self._users_snapshot(), before)
+
+    def test_email_linked_to_another_google_account_returns_409(self):
+        _create_plain_user(email='ana@gmail.com', google_id='another-google-sub')
+        before = self._users_snapshot()
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('error', response.json())
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(self._users_snapshot(), before)
+
+    def test_new_account_returns_signup_required_without_creating_rows(self):
+        _create_plain_user(email='someone-else@example.com')
+        users_before = User.objects.count()
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(body['status'], 'signup_required')
+        self.assertIsInstance(body['signup_token'], str)
+        self.assertEqual(body['prefill'], {
+            'email': 'ana@gmail.com',
+            'first_name': 'Ana',
+            'last_name': 'Souza',
+        })
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(User.objects.count(), users_before)
+        self.assertEqual(Customer.objects.count(), 0)
+        self.assertEqual(Hairdresser.objects.count(), 0)
+
+    def test_signup_token_carries_email_and_sub_for_30_minutes(self):
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        claims = decode_signup_token(response.json()['signup_token'])
+        self.assertEqual(claims['email'], 'ana@gmail.com')
+        self.assertEqual(claims['sub'], 'google-sub-123')
+        self.assertEqual(claims['exp'] - claims['iat'], 1800)
+
+    def test_new_account_calling_again_is_still_signup_required(self):
+        self.mock_verify.return_value = self._identity()
+
+        first = self._post()
+        second = self._post()
+
+        self.assertEqual(first.json()['status'], 'signup_required')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.json()['status'], 'signup_required')
+        self.assertNotIn('jwt', second.cookies)
+        self.assertEqual(User.objects.count(), 0)
+
+
+class GoogleRegisterTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        self.user_auth_url = reverse('user_auth')
+        self.user_info_auth_url = reverse('user_info_auth')
+        self.signup_token = create_signup_token('ana@gmail.com', 'google-sub-123')
+        self.customer_payload = {
+            'google_signup_token': self.signup_token,
+            'first_name': 'Ana',
+            'last_name': 'Souza',
+            'phone': '92991234567',
+            'number': '10',
+            'complement': 'Casa',
+            'neighborhood': 'Centro',
+            'city': 'Manaus',
+            'state': 'AM',
+            'address': 'Rua A',
+            'postal_code': '69000000',
+            'role': 'customer',
+            'cpf': '12345678900',
+            'preferences': json.dumps([]),
+        }
+        self.hairdresser_payload = {
+            **self.customer_payload,
+            'role': 'hairdresser',
+            'cnpj': '12345678000190',
+            'experience_time': '5 anos',
+            'experiences': 'Coloração e cortes',
+            'products': 'Produtos veganos',
+            'resume': 'Especialista em cachos',
+        }
+        del self.hairdresser_payload['cpf']
+
+    def _assert_no_new_rows(self, users=0):
+        self.assertEqual(User.objects.count(), users)
+        self.assertEqual(Customer.objects.count(), 0)
+        self.assertEqual(Hairdresser.objects.count(), 0)
+        self.assertEqual(User.preferences.through.objects.count(), 0)
+
+    def _assert_session_cookie_for(self, response, user):
+        cookie = response.cookies['jwt']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['exp'] - payload['iat'], 3600)
+
+        self.client.cookies['jwt'] = cookie.value
+        auth_response = self.client.get(self.user_auth_url)
+        self.assertEqual(auth_response.json(), {'authenticated': True})
+
+    def test_google_customer_signup_creates_user_customer_and_session(self):
+        pref1 = Preferences.objects.create(name='Coloração')
+        pref2 = Preferences.objects.create(name='Cachos')
+        payload = {**self.customer_payload, 'preferences': json.dumps([pref1.id, pref2.id])}
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.email, 'ana@gmail.com')
+        self.assertIsNone(user.password)
+        self.assertEqual(user.google_id, 'google-sub-123')
+        self.assertEqual(user.role, 'customer')
+        self.assertEqual(user.phone, '5592991234567')
+        self.assertEqual(Customer.objects.get(user=user).cpf, '12345678900')
+        self.assertEqual(Hairdresser.objects.count(), 0)
+        self.assertCountEqual(user.preferences.values_list('id', flat=True), [pref1.id, pref2.id])
+        self._assert_session_cookie_for(response, user)
+
+    def test_google_hairdresser_signup_creates_user_hairdresser_and_session(self):
+        response = self.client.post(self.register_url, data=self.hairdresser_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.email, 'ana@gmail.com')
+        self.assertIsNone(user.password)
+        self.assertEqual(user.google_id, 'google-sub-123')
+        self.assertEqual(user.role, 'hairdresser')
+        hairdresser = Hairdresser.objects.get(user=user)
+        self.assertEqual(hairdresser.cnpj, '12345678000190')
+        self.assertEqual(hairdresser.experience_time, '5 anos')
+        self.assertEqual(hairdresser.experiences, 'Coloração e cortes')
+        self.assertEqual(hairdresser.products, 'Produtos veganos')
+        self.assertEqual(hairdresser.resume, 'Especialista em cachos')
+        self.assertEqual(Customer.objects.count(), 0)
+        self._assert_session_cookie_for(response, user)
+
+    def test_form_email_and_password_are_ignored(self):
+        payload = {
+            **self.customer_payload,
+            'email': 'someone-else@example.com',
+            'password': 'form_password',
+            'confirmPassword': 'form_password',
+        }
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.email, 'ana@gmail.com')
+        self.assertIsNone(user.password)
+        self.assertFalse(User.objects.filter(email='someone-else@example.com').exists())
+
+    def test_expired_or_tampered_signup_token_returns_401(self):
+        issued_at = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=31)
+        with patch('users.auth_tokens.datetime') as mock_datetime:
+            mock_datetime.timedelta = datetime.timedelta
+            mock_datetime.timezone = datetime.timezone
+            mock_datetime.datetime.now.return_value = issued_at
+            expired_token = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        header, _, signature = self.signup_token.split('.')
+        forged_claims = {
+            'email': 'attacker@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'google_signup',
+            'exp': int((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)).timestamp()),
+        }
+        forged_payload = base64.urlsafe_b64encode(json.dumps(forged_claims).encode()).rstrip(b'=').decode()
+        tampered_token = f'{header}.{forged_payload}.{signature}'
+
+        for label, token in (('expired', expired_token), ('tampered', tampered_token)):
+            with self.subTest(token=label):
+                payload = {**self.customer_payload, 'google_signup_token': token}
+
+                response = self.client.post(self.register_url, data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                self.assertIn('error', response.json())
+                self.assertNotIn('jwt', response.cookies)
+                self._assert_no_new_rows()
+
+    def test_phone_already_registered_with_country_prefix_returns_409(self):
+        _create_plain_user(email='other@example.com', phone='5592991234567')
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('error', response.json())
+        self.assertNotIn('jwt', response.cookies)
+        self._assert_no_new_rows(users=1)
+
+    def test_email_or_google_sub_already_registered_returns_409(self):
+        existing_accounts = (
+            ('email', {'email': 'ANA@gmail.com', 'phone': '5511911110000'}),
+            ('sub', {'email': 'other@example.com', 'phone': '5511922220000', 'google_id': 'google-sub-123'}),
+        )
+        for label, fields in existing_accounts:
+            with self.subTest(existing=label):
+                existing = _create_plain_user(**fields)
+
+                response = self.client.post(self.register_url, data=self.customer_payload)
+
+                self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+                self.assertIn('error', response.json())
+                self.assertNotIn('jwt', response.cookies)
+                self._assert_no_new_rows(users=1)
+                existing.delete()
+
+    def test_missing_required_field_or_invalid_role_returns_400(self):
+        customer_fields = ['role', 'first_name', 'last_name', 'phone', 'address',
+                           'neighborhood', 'city', 'state', 'postal_code', 'cpf']
+        cases = [(f'customer without {field}', self.customer_payload, field) for field in customer_fields]
+        cases.append(('hairdresser without cnpj', self.hairdresser_payload, 'cnpj'))
+
+        for label, base_payload, missing_field in cases:
+            with self.subTest(case=label):
+                payload = {k: v for k, v in base_payload.items() if k != missing_field}
+
+                response = self.client.post(self.register_url, data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('error', response.json())
+                self._assert_no_new_rows()
+
+        invalid_values = (('invalid role', {'role': 'admin'}), ('short phone', {'phone': '929912345'}))
+        for label, override in invalid_values:
+            with self.subTest(case=label):
+                response = self.client.post(self.register_url, data={**self.customer_payload, **override})
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('error', response.json())
+                self._assert_no_new_rows()
+
+    def test_invalid_preferences_json_rolls_back_everything(self):
+        for label, base_payload in (('customer', self.customer_payload), ('hairdresser', self.hairdresser_payload)):
+            with self.subTest(role=label):
+                payload = {**base_payload, 'preferences': 'not-json'}
+
+                response = self.client.post(self.register_url, data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('error', response.json())
+                self.assertNotIn('jwt', response.cookies)
+                self._assert_no_new_rows()
+
+    def test_error_after_preferences_are_linked_rolls_back_everything(self):
+        preference = Preferences.objects.create(name='Cachos')
+        payload = {**self.customer_payload, 'preferences': json.dumps([preference.id])}
+
+        with patch.object(Customer.objects, 'create', side_effect=RuntimeError('database failure')):
+            response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.json(), {'error': 'Erro ao criar a conta.'})
+        self.assertNotIn('jwt', response.cookies)
+        self._assert_no_new_rows()
+
+    def test_end_to_end_google_signup_then_authenticated_profile(self):
+        cases = (
+            ('customer', self.customer_payload, 'google-sub-customer', 'cliente@gmail.com', '92990000001'),
+            ('hairdresser', self.hairdresser_payload, 'google-sub-hairdresser', 'profissional@gmail.com', '92990000002'),
+        )
+        for role, base_payload, sub, email, phone in cases:
+            with self.subTest(role=role):
+                client = APIClient()
+                identity = {
+                    'sub': sub,
+                    'email': email,
+                    'email_verified': True,
+                    'given_name': 'Ana',
+                    'family_name': 'Souza',
+                }
+                with patch('users.views.verify_google_id_token', return_value=identity):
+                    google_response = client.post(
+                        reverse('google_auth'),
+                        data=json.dumps({'id_token': 'google-id-token'}),
+                        content_type='application/json'
+                    )
+                self.assertEqual(google_response.json()['status'], 'signup_required')
+
+                payload = {
+                    **base_payload,
+                    'google_signup_token': google_response.json()['signup_token'],
+                    'phone': phone,
+                }
+                register_response = client.post(self.register_url, data=payload)
+                self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+
+                client.cookies['jwt'] = register_response.cookies['jwt'].value
+                profile_response = client.get(self.user_info_auth_url)
+
+                self.assertEqual(profile_response.status_code, status.HTTP_200_OK)
+                profile = profile_response.json()[role]
+                self.assertEqual(profile['user']['email'], email)
+                self.assertEqual(profile['user']['role'], role)

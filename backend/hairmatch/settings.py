@@ -34,6 +34,11 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 EVOLUTION_API_URL=os.getenv('EVOLUTION_API_URL')
 EVOLUTION_API_KEY=os.getenv('EVOLUTION_API_KEY')
 EVOLUTION_INSTANCE_NAME=os.getenv('EVOLUTION_INSTANCE_NAME')
+GOOGLE_OAUTH_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('GOOGLE_OAUTH_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
 
 # Application definition
 

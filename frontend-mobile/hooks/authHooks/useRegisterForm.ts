@@ -17,6 +17,8 @@ export const useRegisterForm = () => {
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Modo Google: o e-mail vem do Google e a conta não tem senha (GAUTH-25).
+  const isGoogleMode = !!registrationData.google_signup_token;
 
   const handlePickImage = async () => {
     // 1. Request permissions
@@ -69,7 +71,7 @@ export const useRegisterForm = () => {
     
     if (!registrationData.first_name) { newErrors.first_name = true; errorList.push(ERROR_MESSAGES.first_name_required); }
     if (!registrationData.last_name) { newErrors.last_name = true; errorList.push(ERROR_MESSAGES.last_name_required); }
-    if (!registrationData.password) { newErrors.password = true; errorList.push(ERROR_MESSAGES.password_required); }
+    if (!isGoogleMode && !registrationData.password) { newErrors.password = true; errorList.push(ERROR_MESSAGES.password_required); }
     if (role === UserRole.CUSTOMER) {
         if(!registrationData.cpf) {
             newErrors.cpf = true;
@@ -109,18 +111,20 @@ export const useRegisterForm = () => {
         errorList.push(ERROR_MESSAGES.phone_invalid);
       }
     }
-    if (!registrationData.password) { newErrors.password = true; errorList.push(ERROR_MESSAGES.password_required); }
-    else if (!validatePassword(registrationData.password)) {
-      newErrors.password = true;
-      errorList.push(ERROR_MESSAGES.password_invalid);
-    }
-    if (!registrationData.confirmPassword) {
-      newErrors.confirmPassword = true;
-      errorList.push(ERROR_MESSAGES.confirm_password_required);
-    } else if (registrationData.confirmPassword !== registrationData.password) {
-      newErrors.confirmPassword = true;
-      newErrors.password = true; // Optionally mark password as well
-      errorList.push(ERROR_MESSAGES.passwords_not_match);
+    if (!isGoogleMode) {
+      if (!registrationData.password) { newErrors.password = true; errorList.push(ERROR_MESSAGES.password_required); }
+      else if (!validatePassword(registrationData.password)) {
+        newErrors.password = true;
+        errorList.push(ERROR_MESSAGES.password_invalid);
+      }
+      if (!registrationData.confirmPassword) {
+        newErrors.confirmPassword = true;
+        errorList.push(ERROR_MESSAGES.confirm_password_required);
+      } else if (registrationData.confirmPassword !== registrationData.password) {
+        newErrors.confirmPassword = true;
+        newErrors.password = true; // Optionally mark password as well
+        errorList.push(ERROR_MESSAGES.passwords_not_match);
+      }
     }
 
     setErrors(newErrors);
@@ -149,6 +153,7 @@ export const useRegisterForm = () => {
     setRole,
     errors,
     handleRegister,
+    isGoogleMode,
     errorModal,
     closeErrorModal: () => setErrorModal({ ...errorModal, visible: false }),
     passwordVisibility: {
