@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/app/_layout';
 import { ERROR_MESSAGES } from '@/constants/errorMessages';
+import { useRegistration } from '@/contexts/RegistrationContext';
 
 export const useLogin = () => {
     const router = useRouter();
     const { signIn } = useAuth();
+    const { resetRegistration } = useRegistration();
 
     const [formData, setFormData] = useState({
         email: '',
@@ -25,6 +27,8 @@ export const useLogin = () => {
     };
 
     const handleGoRegister = () => {
+        // Cadastro novo pelo link: descarta o modo Google e os dados de uma tentativa anterior (GAUTH-30).
+        resetRegistration();
         router.push('/(auth)/register');
     };
 
