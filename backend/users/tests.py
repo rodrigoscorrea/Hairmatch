@@ -1901,3 +1901,49 @@ class GoogleAuthVerifierTest(SimpleTestCase):
         self.assertEqual(identity['family_name'], '')
 
 
+
+
+class LoginViewGoogleAccountTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.login_url = reverse('login')
+        self.user_auth_url = reverse('user_auth')
+
+    def test_password_login_on_google_only_account_returns_403(self):
+        _create_plain_user(email='google-only@example.com', password=None, google_id='google-sub-123')
+
+        response = self.client.post(
+            self.login_url,
+            data=json.dumps({'email': 'google-only@example.com', 'password': 'any_password'}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.json()['error'],
+            'Esta conta usa login com Google. Use o botão Entrar com Google.'
+        )
+        self.assertNotIn('jwt', response.cookies)
+
+    def test_auth_user_with_signup_token_cookie_is_not_authenticated(self):
+        self.client.cookies['jwt'] = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        response = self.client.get(self.user_auth_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_auth_user_with_invalid_signature_is_not_authenticated(self):
+        user = _create_plain_user()
+        self.client.cookies['jwt'] = jwt.encode({
+            'id': user.id,
+            'exp': datetime.datetime.now() + datetime.timedelta(minutes=60),
+            'iat': datetime.datetime.now(),
+        }, 'not-the-session-secret', algorithm='HS256')
+
+        response = self.client.get(self.user_auth_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+

@@ -8,7 +8,7 @@ import bcrypt
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-import jwt, datetime
+import jwt
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
@@ -18,6 +18,7 @@ from service.models import Service
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
+from .auth_tokens import set_session_cookie
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -113,28 +114,15 @@ class LoginView(APIView):
         
         user = User.objects.filter(email=email).first()
         if user:
+            if user.password is None:
+                return JsonResponse({'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'}, status=403)
+
             stored_password = user.password.encode('utf-8')
 
             if bcrypt.checkpw(password.encode('utf-8'), stored_password):
-
-                payload = {
-                    'id': user.id,
-                    'exp': datetime.datetime.now() + datetime.timedelta(minutes=60),
-                    'iat': datetime.datetime.now()
-                }
-
-                token = jwt.encode(payload, 'secret', algorithm='HS256')
-
-                response = JsonResponse({'message': 'Login successful'}, status=200)
-                response.set_cookie(
-                    key='jwt', 
-                    value=token, 
-                    httponly=True,
-                    samesite='None',
-                    secure=True
-                )
+                response = set_session_cookie(JsonResponse({'message': 'Login successful'}, status=200), user)
                 response.data = {
-                    'jwt': token
+                    'jwt': response.cookies['jwt'].value
                 }
 
                 return response
@@ -149,7 +137,7 @@ class LoginView(APIView):
 
         try:
             payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
+        except jwt.InvalidTokenError:
             return JsonResponse({'authenticated': False}, status=200)
         
         user = User.objects.filter(id=payload['id']).first()
