@@ -8,6 +8,8 @@ import { useRegisterForm } from '@/hooks/authHooks/useRegisterForm';
 import { formatCPF, formatCNPJ, formatPhone } from '@/app/../utils/forms';
 import { useRegistration } from '@/contexts/RegistrationContext';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
+import { useGoogleAuth } from '@/hooks/authHooks/useGoogleAuth';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 export default function RegisterScreen() {
   const { registrationData, setRegistrationData } = useRegistration();
@@ -19,12 +21,19 @@ export default function RegisterScreen() {
     setRole,
     errors,
     handleRegister,
+    isGoogleMode,
     handleGoBack, 
     errorModal,
     closeErrorModal,
     passwordVisibility,
     confirmPasswordVisibility,
   } = useRegisterForm();
+  const { handleGoogle, isGoogleLoading, ready, googleError, closeGoogleError } = useGoogleAuth();
+
+  const closeModals = () => {
+    closeErrorModal();
+    closeGoogleError();
+  };
 
 
   return (
@@ -38,6 +47,15 @@ export default function RegisterScreen() {
         <Image source={require('../../../assets/images/HairmatchLogo.png')}></Image>
       </View>
       <Text style={styles.subtitle}>Cadastre-se</Text>
+
+      {!isGoogleMode && (
+        <GoogleSignInButton
+          label="Cadastrar com Google"
+          onPress={handleGoogle}
+          disabled={!ready}
+          loading={isGoogleLoading}
+        />
+      )}
 
       <View style={styles.toggleContainer}>
         <TouchableOpacity
@@ -125,9 +143,10 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Email"
-        style={[styles.input, errors.email && styles.inputError]}
+        style={[styles.input, errors.email && styles.inputError, isGoogleMode && { opacity: 0.6 }]}
         keyboardType="email-address"
         autoCapitalize="none"
+        editable={!isGoogleMode}
         value={registrationData.email}
         onChangeText={text => handleInputChange('email', text)}
       />
@@ -139,6 +158,8 @@ export default function RegisterScreen() {
         onChangeText={text => handleInputChange('phone', formatPhone(text))}
       />
 
+      {!isGoogleMode && (
+      <>
       <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
         <TextInput
           placeholder="Senha"
@@ -172,15 +193,17 @@ export default function RegisterScreen() {
             />
         </TouchableOpacity>
       </View>
+      </>
+      )}
 
       <TouchableOpacity style={styles.button} onPress={handleRegister}>
         <Text style={styles.buttonText}>Próximo</Text>
       </TouchableOpacity>
       </View>
       <ErrorModal
-        visible={errorModal.visible}
-        message={errorModal.message}
-        onClose={closeErrorModal}
+        visible={errorModal.visible || googleError.visible}
+        message={googleError.visible ? googleError.message : errorModal.message}
+        onClose={closeModals}
       />
     </ScrollView>
   );
