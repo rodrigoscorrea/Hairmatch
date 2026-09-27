@@ -7,6 +7,12 @@ import axios from 'axios';
 import axiosInstance from '../services/axios-instance';
 import { UserInfo, UserRole } from '../models/User.types';
 import { Preference } from '../models/Preferences.types';
+import * as WebBrowser from 'expo-web-browser';
+
+// Fecha o popup do login com Google no web. Precisa rodar na inicialização: no build de produção, o
+// expo-router só avalia a tela de login depois do redirect, tarde demais para capturar o retorno do popup.
+WebBrowser.maybeCompleteAuthSession();
+
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
 
 const AuthContext = React.createContext<any>(null);
