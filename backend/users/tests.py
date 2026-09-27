@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -22,6 +22,8 @@ from .auth_tokens import (
     InvalidSignupToken,
     SIGNUP_TOKEN_TTL,
 )
+from .google_auth import verify_google_id_token, GoogleTokenError
+from google.auth.exceptions import GoogleAuthError
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -1810,5 +1812,92 @@ class AuthTokensTest(TestCase):
 
         with self.assertRaises(InvalidSignupToken):
             decode_signup_token(token)
+
+
+
+
+@override_settings(GOOGLE_OAUTH_CLIENT_IDS=['web-client-id', 'ios-client-id'])
+class GoogleAuthVerifierTest(SimpleTestCase):
+    def setUp(self):
+        patcher = patch('users.google_auth.id_token.verify_oauth2_token')
+        self.mock_verify = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _claims(self, **overrides):
+        claims = {
+            'aud': 'ios-client-id',
+            'sub': 'google-sub-123',
+            'email': 'ana@gmail.com',
+            'email_verified': True,
+            'given_name': 'Ana',
+            'family_name': 'Souza',
+        }
+        claims.update(overrides)
+        return claims
+
+    def test_valid_token_with_listed_audience_returns_identity(self):
+        self.mock_verify.return_value = self._claims()
+
+        identity = verify_google_id_token('google-id-token')
+
+        self.assertEqual(identity, {
+            'sub': 'google-sub-123',
+            'email': 'ana@gmail.com',
+            'email_verified': True,
+            'given_name': 'Ana',
+            'family_name': 'Souza',
+        })
+        args, kwargs = self.mock_verify.call_args
+        self.assertEqual(args[0], 'google-id-token')
+        self.assertIsNone(kwargs['audience'])
+
+    def test_value_error_becomes_google_token_error(self):
+        self.mock_verify.side_effect = ValueError('Token expired')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_google_auth_error_becomes_google_token_error(self):
+        self.mock_verify.side_effect = GoogleAuthError('Could not fetch certificates')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_audience_outside_list_is_rejected(self):
+        self.mock_verify.return_value = self._claims(aud='someone-elses-client-id')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_IDS=[])
+    def test_empty_client_id_list_rejects_everything(self):
+        self.mock_verify.return_value = self._claims(aud='web-client-id')
+
+        with self.assertRaises(GoogleTokenError):
+            verify_google_id_token('google-id-token')
+
+    def test_email_verified_is_normalized_to_bool(self):
+        cases = [(True, True), ('true', True), ('false', False), (False, False)]
+        for raw_value, expected in cases:
+            with self.subTest(email_verified=raw_value):
+                self.mock_verify.return_value = self._claims(email_verified=raw_value)
+                self.assertIs(verify_google_id_token('google-id-token')['email_verified'], expected)
+
+        with self.subTest(email_verified='missing'):
+            claims = self._claims()
+            del claims['email_verified']
+            self.mock_verify.return_value = claims
+            self.assertIs(verify_google_id_token('google-id-token')['email_verified'], False)
+
+    def test_missing_names_default_to_empty_string(self):
+        claims = self._claims()
+        del claims['given_name']
+        del claims['family_name']
+        self.mock_verify.return_value = claims
+
+        identity = verify_google_id_token('google-id-token')
+
+        self.assertEqual(identity['given_name'], '')
+        self.assertEqual(identity['family_name'], '')
 
 
