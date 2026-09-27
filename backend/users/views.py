@@ -18,7 +18,8 @@ from service.models import Service
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
-from .auth_tokens import set_session_cookie
+from .auth_tokens import set_session_cookie, create_signup_token
+from .google_auth import verify_google_id_token, GoogleTokenError
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -143,6 +144,42 @@ class LoginView(APIView):
         user = User.objects.filter(id=payload['id']).first()
         
         return JsonResponse({"authenticated":True}, status=200)
+
+class GoogleAuthView(APIView):
+    def post(self, request):
+        google_id_token = request.data.get('id_token')
+        if not google_id_token:
+            return JsonResponse({'error': 'Token do Google não informado.'}, status=400)
+
+        try:
+            identity = verify_google_id_token(google_id_token)
+        except GoogleTokenError:
+            return JsonResponse({'error': 'Não foi possível validar sua conta Google. Tente novamente.'}, status=401)
+
+        if not identity['email_verified']:
+            return JsonResponse({'error': 'Seu e-mail do Google não está verificado.'}, status=403)
+
+        user = User.objects.filter(google_id=identity['sub']).first()
+        if user is None:
+            user = User.objects.filter(email__iexact=identity['email']).first()
+            if user is not None:
+                if user.google_id:
+                    return JsonResponse({'error': 'Este e-mail já está vinculado a outra conta Google.'}, status=409)
+                user.google_id = identity['sub']
+                user.save(update_fields=['google_id'])
+
+        if user is not None:
+            return set_session_cookie(JsonResponse({'status': 'authenticated'}, status=200), user)
+
+        return JsonResponse({
+            'status': 'signup_required',
+            'signup_token': create_signup_token(identity['email'], identity['sub']),
+            'prefill': {
+                'email': identity['email'],
+                'first_name': identity['given_name'],
+                'last_name': identity['family_name'],
+            },
+        }, status=200)
 
 class LogoutView(APIView):
     def post(self, request):
