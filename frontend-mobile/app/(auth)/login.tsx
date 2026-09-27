@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { styles } from '../../styles/register/styles/LoginStyle';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorModal } from '../../components/modals/ErrorModal/ErrorModal';
-import { useLogin } from '@/hooks/authHooks/useLogin'; 
+import { useLogin } from '@/hooks/authHooks/useLogin';
+import { useGoogleAuth } from '@/hooks/authHooks/useGoogleAuth';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 const LoginScreen = () => {
   const {
@@ -24,6 +27,12 @@ const LoginScreen = () => {
     closeErrorModal,
     passwordVisibility,
   } = useLogin();
+  const { handleGoogle, isGoogleLoading, ready, googleError, closeGoogleError } = useGoogleAuth();
+
+  const closeModals = () => {
+    closeErrorModal();
+    closeGoogleError();
+  };
 
 
   return (
@@ -70,6 +79,19 @@ const LoginScreen = () => {
           <Text style={styles.loginButtonText}>Entrar</Text>
         </TouchableOpacity>
 
+        <View style={googleStyles.divider}>
+          <View style={googleStyles.dividerLine} />
+          <Text style={googleStyles.dividerText}>ou</Text>
+          <View style={googleStyles.dividerLine} />
+        </View>
+
+        <GoogleSignInButton
+          label="Entrar com Google"
+          onPress={handleGoogle}
+          disabled={!ready}
+          loading={isGoogleLoading}
+        />
+
         <TouchableOpacity onPress={handleGoRegister}>
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Não possui uma conta? </Text>
@@ -79,12 +101,30 @@ const LoginScreen = () => {
       </View>
 
       <ErrorModal
-        visible={errorModal.visible}
-        onClose={closeErrorModal}
-        message={errorModal.message}
+        visible={errorModal.visible || googleError.visible}
+        onClose={closeModals}
+        message={googleError.visible ? googleError.message : errorModal.message}
       />
     </SafeAreaView>
   );
 };
+
+const googleStyles = StyleSheet.create({
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#828282',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#828282',
+    fontSize: 14,
+  },
+});
 
 export default LoginScreen;
