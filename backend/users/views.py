@@ -18,8 +18,15 @@ from service.models import Service
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
-from .auth_tokens import set_session_cookie, create_signup_token
+from django.db import transaction
+from .auth_tokens import set_session_cookie, create_signup_token, decode_signup_token, InvalidSignupToken
 from .google_auth import verify_google_id_token, GoogleTokenError
+
+GOOGLE_SIGNUP_REQUIRED_FIELDS = [
+    'first_name', 'last_name', 'phone', 'address',
+    'neighborhood', 'city', 'state', 'postal_code',
+]
+ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -31,6 +38,9 @@ class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):    
+        if request.data.get('google_signup_token'):
+            return self._register_with_google(request)
+
         email = request.data.get('email')
         password = request.data.get('password')
         phone = request.data.get('phone')
@@ -76,35 +86,99 @@ class RegisterView(APIView):
                 user.profile_picture = request.FILES['profile_picture']
                 user.save() 
 
-            preferences_str = request.data.get('preferences', '[]')
             try:
-                preferences_ids = json.loads(preferences_str)
-                if isinstance(preferences_ids, list) and len(preferences_ids) > 0:
-                    user.preferences.clear()
-                    preferences_to_add = Preferences.objects.filter(id__in=preferences_ids)
-                    user.preferences.add(*preferences_to_add)
+                _create_role_profile(user, request.data)
             except json.JSONDecodeError:
                 return JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
-
-            # Create profile based on user type
-            if role == 'customer':
-                Customer.objects.create(
-                    user=user,
-                    cpf=request.data.get('cpf'),
-                )
-            elif role == 'hairdresser':
-                Hairdresser.objects.create(
-                    user=user,
-                    cnpj=request.data.get('cnpj'),
-                    experience_time=request.data.get('experience_time'),
-                    experiences=request.data.get('experiences'),
-                    products=request.data.get('products'),
-                    resume=request.data.get('resume')
-                )
         except Exception as err:
             return JsonResponse({'error': err}, status=500)
         
         return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
+
+    def _register_with_google(self, request):
+        data = request.data
+        try:
+            claims = decode_signup_token(data.get('google_signup_token'))
+        except InvalidSignupToken:
+            return JsonResponse({'error': 'Sua sessão de cadastro com o Google expirou. Entre com o Google novamente.'}, status=401)
+
+        role = data.get('role')
+        if not role:
+            return JsonResponse({'error': 'Campo obrigatório ausente: role'}, status=400)
+        if role not in ROLE_DOCUMENT_FIELD:
+            return JsonResponse({'error': 'Papel de usuário inválido.'}, status=400)
+        for field in GOOGLE_SIGNUP_REQUIRED_FIELDS + [ROLE_DOCUMENT_FIELD[role]]:
+            if not data.get(field):
+                return JsonResponse({'error': f'Campo obrigatório ausente: {field}'}, status=400)
+        phone = data.get('phone')
+        if len(phone) < 10:
+            return JsonResponse({'error': 'O número de telefone informado é muito curto.'}, status=400)
+
+        # The e-mail comes from the signup token; form email/password fields are ignored.
+        email = claims['email']
+        google_id = claims['sub']
+        if User.objects.filter(email__iexact=email).exists():
+            return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
+        if User.objects.filter(google_id=google_id).exists():
+            return JsonResponse({'error': 'Esta conta Google já está cadastrada na nossa base de dados'}, status=409)
+        if User.objects.filter(phone=f"55{phone}").exists():
+            return JsonResponse({'error': 'O número de telefone inserido já está cadastrado na nossa base de dados'}, status=409)
+
+        try:
+            with transaction.atomic():
+                user = User.objects.create(
+                    first_name=data.get('first_name'),
+                    last_name=data.get('last_name'),
+                    phone=f"55{phone}",
+                    complement=data.get('complement'),
+                    neighborhood=data.get('neighborhood'),
+                    city=data.get('city'),
+                    state=data.get('state'),
+                    address=data.get('address'),
+                    number=data.get('number'),
+                    postal_code=data.get('postal_code'),
+                    email=email,
+                    password=None,
+                    google_id=google_id,
+                    role=role,
+                    rating=data.get('rating'),
+                )
+                if 'profile_picture' in request.FILES:
+                    user.profile_picture = request.FILES['profile_picture']
+                    user.save()
+                _create_role_profile(user, data)
+        except ValueError:
+            return JsonResponse({'error': 'As preferências enviadas são inválidas.'}, status=400)
+        except Exception:
+            return JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+
+        return set_session_cookie(JsonResponse({'message': f"{role} user registered successfully"}, status=201), user)
+
+
+def _create_role_profile(user, data):
+    # Raises json.JSONDecodeError (a ValueError) when preferences is not valid JSON.
+    preferences_ids = json.loads(data.get('preferences', '[]'))
+    if isinstance(preferences_ids, list) and len(preferences_ids) > 0:
+        user.preferences.clear()
+        preferences_to_add = Preferences.objects.filter(id__in=preferences_ids)
+        user.preferences.add(*preferences_to_add)
+
+    # Create profile based on user type
+    role = data.get('role')
+    if role == 'customer':
+        Customer.objects.create(
+            user=user,
+            cpf=data.get('cpf'),
+        )
+    elif role == 'hairdresser':
+        Hairdresser.objects.create(
+            user=user,
+            cnpj=data.get('cnpj'),
+            experience_time=data.get('experience_time'),
+            experiences=data.get('experiences'),
+            products=data.get('products'),
+            resume=data.get('resume')
+        )
 
 
 class LoginView(APIView):
