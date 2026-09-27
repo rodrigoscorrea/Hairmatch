@@ -14,7 +14,8 @@ import { stripNonDigits } from '@/utils/forms';
 export const usePreferencesForm = () => {
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
-  const { signUp } = useAuth(); // Get signUp from the AuthContext
+  const { signUp, loadSession } = useAuth(); // Get signUp from the AuthContext
+  const isGoogleMode = !!registrationData.google_signup_token;
 
   // --- State for the UI ---
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +72,15 @@ export const usePreferencesForm = () => {
     allData.postal_code = stripNonDigits(allData.postal_code!);
     if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
     if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
+
+    // Modo Google: sem senha e sem e-mail (o backend usa o e-mail do token), mas com o token de cadastro.
+    if (isGoogleMode) {
+        delete allData.password;
+        delete allData.confirmPassword;
+        delete allData.email;
+    } else {
+        delete allData.google_signup_token;
+    }
   
     Object.keys(allData).forEach(key => {
         if (key !== 'profile_picture' && allData[key] !== null && allData[key] !== undefined) {
@@ -103,6 +113,15 @@ export const usePreferencesForm = () => {
 
     try {
         await signUp(formData);
+
+        if (isGoogleMode) {
+          // O 201 já trouxe o cookie de sessão: o RootLayoutNav leva à home do papel (GAUTH-26).
+          const session = await loadSession();
+          if (!session.success) {
+            setErrorModal({ visible: true, message: session.error || 'Erro desconhecido' });
+          }
+          return;
+        }
     
         Alert.alert(
           "Cadastro concluído!",
@@ -152,7 +171,10 @@ export const usePreferencesForm = () => {
     errorModal,
     closeErrorModal: () => {
       setErrorModal({ ...errorModal, visible: false });
-      router.replace('/(auth)/login');
+      // Em modo Google, o erro do envio final mantém o usuário no wizard (GAUTH-27).
+      if (!isGoogleMode) {
+        router.replace('/(auth)/login');
+      }
     },
   };
 };
