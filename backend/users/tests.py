@@ -9,8 +9,19 @@ import bcrypt
 from .models import User, Customer, Hairdresser
 from preferences.models import Preferences
 from service.models import Service
+import base64
 from unittest.mock import patch
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import JsonResponse
+from .auth_tokens import (
+    issue_session_token,
+    set_session_cookie,
+    create_signup_token,
+    decode_signup_token,
+    InvalidSignupToken,
+    SIGNUP_TOKEN_TTL,
+)
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -1687,3 +1698,117 @@ class HairdresserInfoViewIntegrationTest(TestCase):
         self.assertIsInstance(hairdresser_data, dict)
         self.assertIn('id', hairdresser_data)
         self.assertEqual(hairdresser_data['id'], self.hairdresser.id)
+
+
+def _create_plain_user(**overrides):
+    fields = {
+        'first_name': 'Plain',
+        'last_name': 'User',
+        'phone': '5511999990000',
+        'neighborhood': 'Centro',
+        'city': 'Manaus',
+        'state': 'AM',
+        'address': 'Rua A',
+        'postal_code': '69000000',
+        'email': 'plain@example.com',
+        'role': 'customer',
+    }
+    fields.update(overrides)
+    return User.objects.create(**fields)
+
+
+class AuthTokensTest(TestCase):
+    def setUp(self):
+        self.user = _create_plain_user()
+
+    def _frozen_datetime(self, frozen_now):
+        patcher = patch('users.auth_tokens.datetime')
+        mock_datetime = patcher.start()
+        self.addCleanup(patcher.stop)
+        mock_datetime.timedelta = datetime.timedelta
+        mock_datetime.timezone = datetime.timezone
+        mock_datetime.datetime.now.return_value = frozen_now
+        return mock_datetime
+
+    def test_session_token_payload_matches_login_session(self):
+        token = issue_session_token(self.user)
+
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], self.user.id)
+        self.assertEqual(payload['exp'] - payload['iat'], 3600)
+
+    def test_set_session_cookie_attributes(self):
+        response = set_session_cookie(JsonResponse({}), self.user)
+
+        cookie = response.cookies['jwt']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(payload['id'], self.user.id)
+
+    def test_signup_token_claims_and_30_minute_expiry(self):
+        frozen_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        self._frozen_datetime(frozen_now)
+
+        token = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        claims = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        self.assertEqual(claims['email'], 'ana@gmail.com')
+        self.assertEqual(claims['sub'], 'google-sub-123')
+        self.assertEqual(claims['purpose'], 'google_signup')
+        self.assertEqual(claims['iat'], int(frozen_now.timestamp()))
+        self.assertEqual(claims['exp'], int((frozen_now + datetime.timedelta(minutes=30)).timestamp()))
+        self.assertEqual(SIGNUP_TOKEN_TTL, datetime.timedelta(minutes=30))
+
+    def test_decode_signup_token_returns_claims(self):
+        claims = decode_signup_token(create_signup_token('ana@gmail.com', 'google-sub-123'))
+
+        self.assertEqual(claims['email'], 'ana@gmail.com')
+        self.assertEqual(claims['sub'], 'google-sub-123')
+
+    def test_decode_rejects_expired_signup_token(self):
+        issued_at = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=31)
+        mock_datetime = self._frozen_datetime(issued_at)
+        token = create_signup_token('ana@gmail.com', 'google-sub-123')
+        mock_datetime.datetime.now.return_value = datetime.datetime.now(datetime.timezone.utc)
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+    def test_decode_rejects_tampered_signup_token(self):
+        header, _, signature = create_signup_token('ana@gmail.com', 'google-sub-123').split('.')
+        forged_claims = {
+            'email': 'attacker@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'google_signup',
+            'exp': int((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)).timestamp()),
+        }
+        forged_payload = base64.urlsafe_b64encode(json.dumps(forged_claims).encode()).rstrip(b'=').decode()
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(f'{header}.{forged_payload}.{signature}')
+
+    def test_decode_rejects_token_signed_with_session_key(self):
+        token = jwt.encode({
+            'email': 'ana@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'google_signup',
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
+        }, 'secret', algorithm='HS256')
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+    def test_decode_rejects_token_with_other_purpose(self):
+        token = jwt.encode({
+            'email': 'ana@gmail.com',
+            'sub': 'google-sub-123',
+            'purpose': 'session',
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
+        }, settings.SECRET_KEY, algorithm='HS256')
+
+        with self.assertRaises(InvalidSignupToken):
+            decode_signup_token(token)
+
+
