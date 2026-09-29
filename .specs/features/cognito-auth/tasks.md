@@ -63,6 +63,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | App | Tarefas do `frontend-mobile` | `cd frontend-mobile && npx tsc --noEmit` |
 | Build | Fim de fase e T24 | Full + App + as verificações de container do T24 |
 
+> **Gate do app:** `npx tsc --noEmit` já falha em `develop` (`b93baa5`) com 4 erros que não têm relação com a auth (`app/(app)/(customer)/_layout.tsx`, `app/(app)/(customer)/hairdresser-reservation/[id].tsx`, `app/(app)/(hairdresser)/_layout.tsx` e `components/BottomBar.tsx`). O gate passa quando a saída não ganha nenhum erro novo em relação a esses 4.
+
 **Baseline de testes do backend**, contado com `git grep -c "def test_" -- '*tests.py'` em `develop` (`b93baa5`):
 - **330** métodos `test_` no projeto.
 - Por app: `users` 150, `hairmatch` 39, `availability` 32, `service` 28, `preferences` 25, `review` 17, `chatbot` 16, `reserve` 14, `agenda` 9.
@@ -800,10 +802,10 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `setSessionExpiredHandler` exportado
-- [ ] 401 em rota de `AUTH_EXCLUDED` não dispara refresh
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
-- [ ] Comportamento verificado no roteiro do T24 (passos 6 e 7)
+- [x] `setSessionExpiredHandler` exportado
+- [x] 401 em rota de `AUTH_EXCLUDED` não dispara refresh
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Comportamento verificado no roteiro do T24 (passos 6 e 7)
 
 **Tests**: none
 **Gate**: app
