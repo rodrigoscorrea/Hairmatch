@@ -211,8 +211,8 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] `python manage.py makemigrations --check --dry-run` sem pendências depois da migration gerada
-- [ ] Gate check passes (Full): a suíte inteira passa com 330 testes ou mais
+- [x] `python manage.py makemigrations --check --dry-run` sem pendências depois da migration gerada
+- [x] Gate check passes (Full): a suíte inteira passa com 330 testes ou mais
 
 **Tests**: none
 **Gate**: full
