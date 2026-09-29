@@ -553,8 +553,8 @@ class ChangePasswordViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.json()['authenticated'])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
     def test_change_password_with_expired_token(self):
         # Create an expired token
@@ -578,8 +578,8 @@ class ChangePasswordViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.json()['authenticated'])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
 
 class UserInfoCookieViewTest(TestCase):
@@ -691,7 +691,8 @@ class UserInfoCookieViewTest(TestCase):
         self.client.cookies.clear()
         
         response = self.client.get(self.user_info_auth_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
     def test_delete_user(self):
         self.client.cookies['jwt'] = self.customer_token
@@ -707,7 +708,8 @@ class UserInfoCookieViewTest(TestCase):
         self.client.cookies.clear()
         
         response = self.client.delete(self.user_info_auth_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         
         # Verify no users were deleted
         self.assertEqual(User.objects.count(), 2)
@@ -3242,3 +3244,88 @@ class AuthenticationTest(TestCase):
         session = authenticate_request(self._request(token))
 
         self.assertEqual(session.user, self.user)
+
+
+class SessionReadersTest(TestCase):
+    """The `users` views that read the session cookie go through the central authenticator."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.fake = get_cognito().client
+        self.user = _create_plain_user(
+            email='cog@example.com', cognito_sub='sub-cognito-1', role='customer'
+        )
+        Customer.objects.create(user=self.user, cpf='12345678900')
+        self.access_token = self.fake.make_access_token('sub-cognito-1')
+
+    def _forged_session(self):
+        now = datetime.datetime.now()
+        return jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            'not-the-server-key', algorithm='HS256',
+        )
+
+    def test_check_authentication_accepts_a_cognito_access_token(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': True})
+
+    def test_check_authentication_is_false_for_the_google_signup_token(self):
+        self.client.cookies['jwt'] = create_signup_token('cog@example.com', 'google-sub-1')
+
+        response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_check_authentication_is_false_for_garbage_and_forged_tokens(self):
+        for token in ('not-a-jwt', self._forged_session()):
+            with self.subTest(token=token):
+                self.client.cookies['jwt'] = token
+                response = self.client.get(reverse('user_auth'))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_check_authentication_is_false_when_the_jwks_is_unreachable(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_user_info_accepts_a_cognito_access_token(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        response = self.client.get(reverse('user_info_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['customer']['user']['email'], 'cog@example.com')
+
+    def test_protected_routes_answer_401_without_a_cookie_or_with_a_forged_signature(self):
+        routes = [
+            ('get', reverse('user_info_auth')),
+            ('put', reverse('user_info_auth')),
+            ('delete', reverse('user_info_auth')),
+            ('put', reverse('password_change')),
+        ]
+        for token in (None, self._forged_session()):
+            for method, url in routes:
+                with self.subTest(method=method, url=url, forged=token is not None):
+                    self.client.cookies.clear()
+                    if token:
+                        self.client.cookies['jwt'] = token
+                    extra = {}
+                    if method == 'put':
+                        extra = {
+                            'data': json.dumps({'email': 'cog@example.com', 'password': 'x'}),
+                            'content_type': 'application/json',
+                        }
+                    response = getattr(self.client, method)(url, **extra)
+                    self.assertEqual(response.status_code, 401)
+                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())

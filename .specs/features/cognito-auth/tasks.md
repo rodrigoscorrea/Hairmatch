@@ -302,11 +302,11 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] `grep -n "jwt.decode" backend/users/views.py` não encontra nada
-- [ ] `GET /api/auth/user`: token do fake → `true`; `signup_token` no cookie → `false` (GAUTH-14 continua passando); lixo → `false`, nunca 500
-- [ ] `UserInfoCookieView` e `ChangePasswordView` sem cookie ou com token inválido → 401 com a mensagem do spec. Assinatura inválida, que antes dava 500, tem teste próprio.
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: ≥ contagem do T5 em `users`, sem remoções
+- [x] `grep -n "jwt.decode" backend/users/views.py` não encontra nada
+- [x] `GET /api/auth/user`: token do fake → `true`; `signup_token` no cookie → `false` (GAUTH-14 continua passando); lixo → `false`, nunca 500
+- [x] `UserInfoCookieView` e `ChangePasswordView` sem cookie ou com token inválido → 401 com a mensagem do spec. Assinatura inválida, que antes dava 500, tem teste próprio.
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: ≥ contagem do T5 em `users`, sem remoções
 
 **Tests**: integration
 **Gate**: quick

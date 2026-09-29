@@ -9,7 +9,6 @@ import bcrypt
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-import jwt
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
@@ -21,6 +20,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
 from django.db import transaction
 from .auth_tokens import set_session_cookie, create_signup_token, decode_signup_token, InvalidSignupToken
+from .authentication import authenticate_request, authenticated_user
+from .cognito import CognitoUnavailable
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
@@ -213,19 +214,11 @@ class LoginView(APIView):
         return JsonResponse({'error': 'Usuário não cadastrado na base de dados'}, status=400)
     
     def get(self, request):
-        token = request.COOKIES.get('jwt')
-
-        if not token: 
-            return JsonResponse({'authenticated': False}, status=200)
-
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.InvalidTokenError:
-            return JsonResponse({'authenticated': False}, status=200)
-        
-        user = User.objects.filter(id=payload['id']).first()
-        
-        return JsonResponse({"authenticated":True}, status=200)
+            session = authenticate_request(request)
+        except CognitoUnavailable:
+            session = None
+        return JsonResponse({'authenticated': session is not None}, status=200)
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -291,25 +284,17 @@ class LogoutView(APIView):
 class ChangePasswordView(APIView):
     
     def put(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token: 
-            return JsonResponse({'authenticated': False}, status=200)
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'authenticated': False}, status=200)
-        
-        user = User.objects.filter(id=payload['id']).first()
-        if user:
-            data = json.loads(request.body)
-            raw_password = data['password'].replace(' ', '')
-            hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-            user.password = hashed_password.decode('utf-8')
-            user.save()
-            return JsonResponse({'message': 'Password updated successfully'}, status=200)
-
-        return JsonResponse({'error': 'User not found'}, status=404)
+        user = session.user
+        data = json.loads(request.body)
+        raw_password = data['password'].replace(' ', '')
+        hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
+        user.password = hashed_password.decode('utf-8')
+        user.save()
+        return JsonResponse({'message': 'Password updated successfully'}, status=200)
         
 # 2 - The following views are related to the User Info
 # Those views only works if cookies are present in the request       
@@ -317,21 +302,11 @@ class ChangePasswordView(APIView):
 
 class UserInfoCookieView(APIView):
     def get(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        
-        try:
-            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'user not found'}, status=400)
-
+        user = session.user
         if user.role == 'customer':
             customer = Customer.objects.filter(user=user).first()
             customer_data = CustomerSerializer(customer).data
@@ -344,44 +319,24 @@ class UserInfoCookieView(APIView):
             return JsonResponse({'error': 'error retrieving user with role'}, status=500)
 
     def delete(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        
-        try:
-            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()  
-            user.delete()
-            response = JsonResponse({'message': 'user deleted'}, status=200)
-            response.delete_cookie('jwt')
-            return response
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=400)
+        session.user.delete()
+        response = JsonResponse({'message': 'user deleted'}, status=200)
+        response.delete_cookie('jwt')
+        return response
 
     #This function does not handle password update procedure
     def put(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        user = session.user
         data = json.loads(request.body)
-        token = request.COOKIES.get('jwt')
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-
-        user = User.objects.filter(id=payload['id'], is_active=True).first()
-
-        if not user:
-            return JsonResponse({'error': 'User not found'}, status=404)
-
-        
         existing_email = User.objects.filter(email=data['email']).first()
          
         # if there is another user with the email you want to switch, you cannot proceed 
