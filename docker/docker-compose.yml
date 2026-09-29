@@ -1,5 +1,7 @@
 version: '3.8'
 
+name: hairmatch
+
 services:
   db:
     image: postgres:13
@@ -21,11 +23,13 @@ services:
       retries: 5
 
   django:
-    build: ./backend
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
     container_name: hairmatch_backend
     command: /app/entrypoint.sh
     volumes:
-      - .:/app
+      - ..:/app
     ports:
       - "8000:8000"
     depends_on:
@@ -75,7 +79,7 @@ services:
     networks:
       - app_network
     env_file:
-      - .env
+      - ../.env
     volumes:
       - evolution_instances:/evolution/instances
   #angular:
