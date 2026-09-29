@@ -9,6 +9,7 @@ from faker import Faker
 
 from availability.models import Availability
 from service.models import Service
+from hairmatch.images import to_webp
 from users.models import Hairdresser, User
 
 PLACEHOLDERS_DIR = os.path.join(os.path.dirname(__file__), "seed_assets", "profile_pics")
@@ -28,16 +29,20 @@ class Command(BaseCommand):
         keeping their keys. Runs on every boot because the dev bucket
         (LocalStack) is ephemeral while the database is not.
         """
-        seed_files = set(os.listdir(PLACEHOLDERS_DIR))
+        seed_files = {os.path.splitext(f)[0]: f for f in os.listdir(PLACEHOLDERS_DIR)}
         restored = 0
         hairdressers = User.objects.filter(role="hairdresser").exclude(profile_picture="")
         for user in hairdressers.exclude(profile_picture__isnull=True):
             key = user.profile_picture.name
-            file_name = os.path.basename(key)
-            if file_name not in seed_files or default_storage.exists(key):
+            stem = os.path.splitext(os.path.basename(key))[0]
+            file_name = seed_files.get(stem)
+            if file_name is None or default_storage.exists(key):
                 continue
             with open(os.path.join(PLACEHOLDERS_DIR, file_name), "rb") as f:
-                default_storage.save(key, File(f))
+                # New keys are .webp, so the placeholder is converted like a real upload.
+                # Keys seeded before the WebP conversion (.jpg) get the original bytes back.
+                content = to_webp(File(f)) if key.endswith(".webp") else File(f)
+                default_storage.save(key, content)
             restored += 1
         if restored:
             self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded pictures to the media bucket."))

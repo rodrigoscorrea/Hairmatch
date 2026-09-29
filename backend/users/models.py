@@ -4,6 +4,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
 
+from hairmatch.images import WebPImageField
+
 
 def user_profile_picture_path(instance, filename):
     # Each user gets its own directory in the media bucket
@@ -36,7 +38,7 @@ class User(AbstractUser):
         ('CUSTOMER','customer'),
         ('HAIRDRESSER','hairdresser')
     )
-    profile_picture = models.ImageField(upload_to=user_profile_picture_path, null=True, blank=True)
+    profile_picture = WebPImageField(upload_to=user_profile_picture_path, null=True, blank=True)
     role = models.CharField(max_length=12, choices=ROLES_CHOICES, default='CUSTOMER')
     google_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 

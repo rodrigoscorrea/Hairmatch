@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from rest_framework.parsers import MultiPartParser, FormParser
 import jwt, datetime
 from django.db import transaction
+from hairmatch.images import InvalidImage
 
 # 2 - Cookie-based views (authenticated user)
 class CreateReview(APIView):
@@ -78,6 +79,8 @@ class CreateReview(APIView):
                 reserve.save()
             
             return JsonResponse({'message': "Review registered successfully"}, status=201)
+        except InvalidImage:
+            return JsonResponse({'error': 'Imagem inválida.'}, status=400)
         except Exception as error:
             return JsonResponse({'error': str(error)}, status=500)
 

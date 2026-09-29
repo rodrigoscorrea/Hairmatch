@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import User, Customer, Hairdresser
+from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
 import bcrypt
@@ -67,34 +68,37 @@ class RegisterView(APIView):
         hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
 
         try:
-            user = User.objects.create(
-            first_name=request.data.get('first_name'),
-            last_name=request.data.get('last_name'),
-            phone=f"55{request.data.get('phone')}",
-            complement=request.data.get('complement'),
-            neighborhood=request.data.get('neighborhood'),
-            city=request.data.get('city'),
-            state=request.data.get('state'),
-            address=request.data.get('address'),
-            number=request.data.get('number'),
-            postal_code=request.data.get('postal_code'),
-            email=request.data.get('email'),
-            password=hashed_password.decode('utf-8'),
-            role=request.data.get('role'),
-            rating=request.data.get('rating'),
-            )
-        
-            if 'profile_picture' in request.FILES:
-                user.profile_picture = request.FILES['profile_picture']
-                user.save() 
+            with transaction.atomic():
+                user = User.objects.create(
+                    first_name=request.data.get('first_name'),
+                    last_name=request.data.get('last_name'),
+                    phone=f"55{request.data.get('phone')}",
+                    complement=request.data.get('complement'),
+                    neighborhood=request.data.get('neighborhood'),
+                    city=request.data.get('city'),
+                    state=request.data.get('state'),
+                    address=request.data.get('address'),
+                    number=request.data.get('number'),
+                    postal_code=request.data.get('postal_code'),
+                    email=request.data.get('email'),
+                    password=hashed_password.decode('utf-8'),
+                    role=request.data.get('role'),
+                    rating=request.data.get('rating'),
+                )
 
-            try:
-                _create_role_profile(user, request.data)
-            except json.JSONDecodeError:
-                return JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+                if 'profile_picture' in request.FILES:
+                    user.profile_picture = request.FILES['profile_picture']
+                    user.save()
+
+                try:
+                    _create_role_profile(user, request.data)
+                except json.JSONDecodeError:
+                    return JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+        except InvalidImage:
+            return JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
         except Exception as err:
             return JsonResponse({'error': err}, status=500)
-        
+
         return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
 
     def _register_with_google(self, request):
@@ -149,6 +153,8 @@ class RegisterView(APIView):
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
                 _create_role_profile(user, data)
+        except InvalidImage:  # before ValueError, which it subclasses
+            return JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
         except ValueError:
             return JsonResponse({'error': 'As preferências enviadas são inválidas.'}, status=400)
         except Exception:
