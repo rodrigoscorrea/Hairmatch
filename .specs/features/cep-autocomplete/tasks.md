@@ -266,11 +266,11 @@ Remover também o literal solto `69020405` de `validateFields`.
 
 **Done when**:
 
-- [ ] `applyCepAddress` nunca escreve em `number` nem em `complement`
-- [ ] Um valor `""` na resposta limpa o campo se ele ainda é igual a `lastAutofillRef`, e mantém o campo se o usuário digitou outro valor (CEP-13)
-- [ ] `handlePostalCodeChange` chama `lookup` sempre que o campo chega a 8 dígitos, sem dedupe por "último CEP consultado", e chama `cancel` abaixo de 8
-- [ ] `validateFields` não muda de regra. Só o literal solto sai.
-- [ ] Gate check passes: App gate ≤ baseline
+- [x] `applyCepAddress` nunca escreve em `number` nem em `complement`
+- [x] Um valor `""` na resposta limpa o campo se ele ainda é igual a `lastAutofillRef`, e mantém o campo se o usuário digitou outro valor (CEP-13)
+- [x] `handlePostalCodeChange` chama `lookup` sempre que o campo chega a 8 dígitos, sem dedupe por "último CEP consultado", e chama `cancel` abaixo de 8
+- [x] `validateFields` não muda de regra. Só o literal solto sai.
+- [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
 **Gate**: App
