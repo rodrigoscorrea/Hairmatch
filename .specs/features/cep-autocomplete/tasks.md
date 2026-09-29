@@ -234,10 +234,10 @@ Comportamento conforme `design.md`.
 
 **Done when**:
 
-- [ ] Uma resposta com `digits !== latestCepRef.current` não chama `onFound` nem altera `loading` ou `message`
-- [ ] `error.response?.status === 404` → `message = ERROR_MESSAGES.cep_not_found`. Qualquer outro erro, inclusive sem `response`, → `cep_lookup_failed`
-- [ ] Nenhum caminho abre `ErrorModal`
-- [ ] Gate check passes: App gate ≤ baseline
+- [x] Uma resposta com `digits !== latestCepRef.current` não chama `onFound` nem altera `loading` ou `message`
+- [x] `error.response?.status === 404` → `message = ERROR_MESSAGES.cep_not_found`. Qualquer outro erro, inclusive sem `response`, → `cep_lookup_failed`
+- [x] Nenhum caminho abre `ErrorModal`
+- [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
 **Gate**: App
