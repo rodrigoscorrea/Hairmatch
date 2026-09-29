@@ -572,11 +572,11 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `DELETE /api/user/authenticated` → 200 `{"message": "user deleted"}`, usuário fora do fake e do Postgres, dois cookies expirados. Com o usuário já ausente no fake → 200 (COG-35).
-- [ ] `DELETE /api/user/<email>` de conta Cognito → sai do fake e do Postgres. Com `fail_next(..., EndpointConnectionError)` → 503 e a linha continua (COG-36).
-- [ ] Conta Google (sem `cognito_sub`) → apagada sem chamada no fake
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T13 + novos, sem remoções
+- [x] `DELETE /api/user/authenticated` → 200 `{"message": "user deleted"}`, usuário fora do fake e do Postgres, dois cookies expirados. Com o usuário já ausente no fake → 200 (COG-35).
+- [x] `DELETE /api/user/<email>` de conta Cognito → sai do fake e do Postgres. Com `fail_next(..., EndpointConnectionError)` → 503 e a linha continua (COG-36).
+- [x] Conta Google (sem `cognito_sub`) → apagada sem chamada no fake
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T13 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

@@ -408,10 +408,14 @@ class UserInfoCookieView(APIView):
         if error:
             return error
 
-        session.user.delete()
-        response = JsonResponse({'message': 'user deleted'}, status=200)
-        response.delete_cookie('jwt')
-        return response
+        user = session.user
+        if user.cognito_sub:
+            try:
+                get_cognito().admin_delete_user(user.email)
+            except CognitoError as err:
+                return _cognito_error_response(err)
+        user.delete()
+        return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
 
     #This function does not handle password update procedure
     def put(self, request):
@@ -506,6 +510,11 @@ class UserInfoView(APIView):
             
         user = User.objects.filter(email=email).filter(is_active=True).first()  
         if user:
+            if user.cognito_sub:
+                try:
+                    get_cognito().admin_delete_user(user.email)
+                except CognitoError as err:
+                    return _cognito_error_response(err)
             user.delete()
             response = JsonResponse({'message': 'user deleted'}, status=200)
 

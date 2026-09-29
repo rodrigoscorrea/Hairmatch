@@ -3811,3 +3811,82 @@ class CognitoChangePasswordTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.json(), {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'})
         self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+
+class CognitoDeleteAccountTest(TestCase):
+    UNAVAILABLE = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('user_info_auth')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.by_email_url = reverse('user_info', args=['nova@example.com'])
+
+    def test_deleting_the_own_account_removes_the_cognito_user_the_row_and_the_cookies(self):
+        response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'user deleted'})
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+        for key in ('jwt', 'refresh_token'):
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+
+    def test_a_user_already_missing_from_cognito_does_not_block_the_deletion(self):
+        del self.fake.users['nova@example.com']
+
+        response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_deleting_by_email_removes_the_cognito_user_and_the_row(self):
+        response = self.client.delete(self.by_email_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_deleting_by_email_of_a_user_missing_from_cognito_still_succeeds(self):
+        del self.fake.users['nova@example.com']
+
+        response = self.client.delete(self.by_email_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_cognito_outage_answers_503_and_keeps_both_the_row_and_the_cognito_user(self):
+        for name, delete in (
+            ('own account', lambda: self.client.delete(self.own_url)),
+            ('by email', lambda: self.client.delete(self.by_email_url)),
+        ):
+            with self.subTest(route=name):
+                self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+                response = delete()
+
+                self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+                self.assertEqual(response.json(), self.UNAVAILABLE)
+                self.assertTrue(User.objects.filter(email='nova@example.com').exists())
+                self.assertIn('nova@example.com', self.fake.users)
+
+    def test_google_accounts_are_deleted_without_calling_cognito(self):
+        _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        self.fake.calls.clear()
+
+        response = self.client.delete(reverse('user_info', args=['goo@example.com']))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='goo@example.com').exists())
+
+        other_google = _create_plain_user(email='goo2@example.com', google_id='google-sub-2')
+        self.client.cookies['jwt'] = issue_session_token(other_google)
+        own_response = self.client.delete(self.own_url)
+        self.assertEqual(own_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='goo2@example.com').exists())
+        self.assertEqual(self.fake.calls, [])
