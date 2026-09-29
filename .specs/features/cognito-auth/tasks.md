@@ -832,9 +832,9 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `grep -n "from 'axios'" frontend-mobile/services/review.service.ts frontend-mobile/services/google-auth.service.ts` não encontra nada
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
-- [ ] Criar review com foto funciona no web e no Android (T24, passo 5)
+- [x] `grep -n "from 'axios'" frontend-mobile/services/review.service.ts frontend-mobile/services/google-auth.service.ts` não encontra nada
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Criar review com foto funciona no web e no Android (T24, passo 5)
 
 **Tests**: none
 **Gate**: app
