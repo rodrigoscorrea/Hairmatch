@@ -60,7 +60,7 @@ export const useSearch = () => {
 
   // --- Navigation Handlers ---
   const handleNavigateToHairdresser = (hairdresserId: number) => {
-    router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresserId}`);
+    router.push(`/(app)/customer/hairdresser-reservation/${hairdresserId}`);
   };
 
   const handleNavigateToService = (service: ServiceResponseWithHairdresser) => {
@@ -70,7 +70,7 @@ export const useSearch = () => {
       return;
     }
     router.push({
-      pathname: '/(app)/(customer)/service-booking',
+      pathname: '/(app)/customer/service-booking',
       params: {
         serviceId: service.id,
         hairdresserId: service.hairdresser.id,
@@ -80,7 +80,7 @@ export const useSearch = () => {
   };
 
   const handleGoBack = () => {
-    router.push('/(app)/(customer)/home');
+    router.push('/(app)/customer/home');
   };
 
   return {

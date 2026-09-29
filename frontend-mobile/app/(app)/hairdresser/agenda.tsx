@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/agenda.tsx
+// app/(app)/hairdresser/agenda.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, FlatList, Modal, StatusBar } from 'react-native';
 import { Calendar } from 'react-native-big-calendar';

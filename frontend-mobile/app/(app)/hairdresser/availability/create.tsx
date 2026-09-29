@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/availability/create.tsx
+// app/(app)/hairdresser/availability/create.tsx
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useAvailabilityForm } from '@/hooks/hairdresserHooks/useAvailabilityForms';

@@ -22,15 +22,15 @@ export const useCustomerProfile = () => {
   };
 
   const handleAccountSettings = () => {
-    router.push(`/(app)/(customer)/configs/accountSetting`);
+    router.push(`/(app)/customer/configs/accountSetting`);
   };
 
   const handleAddressSettings = () => {
-    router.push(`/(app)/(customer)/configs/addressSetting`);
+    router.push(`/(app)/customer/configs/addressSetting`);
   };
 
   const handleGoBack = () => {
-    router.push('/(app)/(customer)/profile');
+    router.push('/(app)/customer/profile');
   };
 
   return {

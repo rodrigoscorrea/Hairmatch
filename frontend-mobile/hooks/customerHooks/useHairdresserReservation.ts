@@ -65,7 +65,7 @@ export const useHairdresserProfile = () => {
     if (!hairdresser || !userInfo?.customer?.id) return;
     
     router.push({
-      pathname: '/(app)/(customer)/service-booking',
+      pathname: '/(app)/customer/service-booking',
       params: { 
         serviceId: service.id, 
         customerId: userInfo.customer.id,

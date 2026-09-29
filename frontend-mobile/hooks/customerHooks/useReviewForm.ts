@@ -49,7 +49,7 @@ export const useReviewForm = () => {
   }, [id]);
 
   const handleGoBack = () => {
-    router.push(`/(app)/(customer)/reserves/${id}`);
+    router.push(`/(app)/customer/reserves/${id}`);
   }
 
   const handleImagePick = useCallback(async () => {
@@ -125,7 +125,7 @@ export const useReviewForm = () => {
       await createReview(formData);
       
       Alert.alert('Hairmatch', 'Sua avaliação foi registrada com sucesso.');
-      router.push(`/(app)/(customer)/reserves/${id}`);
+      router.push(`/(app)/customer/reserves/${id}`);
     } catch (error) {
       console.error('Error submitting review:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');

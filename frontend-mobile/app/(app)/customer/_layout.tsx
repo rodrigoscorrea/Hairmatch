@@ -1,8 +1,17 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { useAuth } from '@/app/_layout';
+import { HAIRDRESSER_HOME } from '@/utils/routes';
 import BottomTabBar from '@/components/BottomBar';
 import { customerTabs } from '@/constants/tabsConfig'; 
 
 export default function CustomerTabLayout() {
+  const { userInfo } = useAuth();
+
+  // A user of the other role only lands here through a typed URL or an old link.
+  if (userInfo && !userInfo.customer) {
+    return <Redirect href={HAIRDRESSER_HOME} />;
+  }
+
   return (
     // Use the `tabBar` prop to provide your custom component
     <Tabs 

@@ -69,12 +69,12 @@ export const useServiceManager = () => {
     }
   };
 
-  const goToCreate = () => router.push('/(app)/(hairdresser)/services/create');
+  const goToCreate = () => router.push('/(app)/hairdresser/services/create');
   
-  const goToEdit = (serviceId: number) => router.push(`/(app)/(hairdresser)/services/edit/${serviceId}`);
+  const goToEdit = (serviceId: number) => router.push(`/(app)/hairdresser/services/edit/${serviceId}`);
 
   const handleGoBack = () => {
-    router.push('/(app)/(hairdresser)/profile');
+    router.push('/(app)/hairdresser/profile');
   };
   return {
     isLoading,

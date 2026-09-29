@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/services/create.tsx
+// app/(app)/hairdresser/services/create.tsx
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import Slider from '@react-native-community/slider';

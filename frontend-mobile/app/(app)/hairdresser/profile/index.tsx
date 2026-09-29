@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/profile/index.tsx
+// app/(app)/hairdresser/profile/index.tsx
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

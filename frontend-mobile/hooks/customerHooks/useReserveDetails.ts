@@ -45,7 +45,7 @@ export const useReserveDetails = () => {
   }, [reserve]);
 
   const handleBack = () => {
-    router.push('/(app)/(customer)/reserves');
+    router.push('/(app)/customer/reserves');
   };
 
   const confirmCancel = async () => {

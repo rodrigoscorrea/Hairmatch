@@ -4,7 +4,8 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 import axiosInstance, { setSessionExpiredHandler } from '../services/axios-instance';
-import { UserInfo, UserRole } from '../models/User.types';
+import { UserInfo } from '../models/User.types';
+import { homeRouteFor } from '../utils/routes';
 import { Preference } from '../models/Preferences.types';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -31,12 +32,8 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
     if (userToken && inAuthGroup) {
-      if (userInfo?.customer?.user?.role === UserRole.CUSTOMER) {
-        router.replace('/(app)/(customer)/home');
-      } else if (userInfo?.hairdresser?.user?.role === UserRole.HAIRDRESSER) {
-        router.replace('/(app)/(hairdresser)/agenda');
-      }
-      
+      const home = homeRouteFor(userInfo);
+      if (home) router.replace(home);
     } else if (!userToken && !inAuthGroup) {
       router.replace('/(auth)/login');
     }

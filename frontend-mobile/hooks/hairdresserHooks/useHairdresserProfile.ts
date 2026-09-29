@@ -30,11 +30,11 @@ export const useHairdresserProfile = () => {
   }, [hairdresser?.user?.id]);
 
   // Navigation Handlers
-  const goToSettings = () => router.push('/(app)/(hairdresser)/profile/settings');
-  const goToServices = () => router.push('/(app)/(hairdresser)/services'); // Navigates to the services tab
-  const goToAvailability = () => router.push('/(app)/(hairdresser)/availability'); // You'll create this screen
+  const goToSettings = () => router.push('/(app)/hairdresser/profile/settings');
+  const goToServices = () => router.push('/(app)/hairdresser/services'); // Navigates to the services tab
+  const goToAvailability = () => router.push('/(app)/hairdresser/availability'); // You'll create this screen
   const handleGoBack = () => {
-    router.push('/(app)/(hairdresser)/profile/settings');
+    router.push('/(app)/hairdresser/profile/settings');
   };
 
   return {

@@ -22,11 +22,11 @@ export const useHairdresserSettings = () => {
   const handleBack = () => router.back();
 
   const handleAccountSettings = () => {
-    router.push(`/(app)/(hairdresser)/configs/accountSetting`);
+    router.push(`/(app)/hairdresser/configs/accountSetting`);
   };
 
   const handleAddressSettings = () => {
-    router.push(`/(app)/(hairdresser)/configs/addressSetting`);
+    router.push(`/(app)/hairdresser/configs/addressSetting`);
   };
 
   return {

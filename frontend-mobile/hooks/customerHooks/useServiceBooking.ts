@@ -178,7 +178,7 @@ export const useServiceBooking = () => {
         setSelectedTime(null);
         setShowConfirmationModal(false);
         Alert.alert("Sucesso!", "Sua reserva foi concluída com sucesso :D");
-        router.replace('/(app)/(customer)/reserves');
+        router.replace('/(app)/customer/reserves');
     } catch (err: any) {
         setShowConfirmationModal(false);
         if (err.response && err.response.data && err.response.data.error) {
@@ -200,7 +200,7 @@ export const useServiceBooking = () => {
   };
 
   const handleGoBack = () => {
-    router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresserId}`);
+    router.push(`/(app)/customer/hairdresser-reservation/${hairdresserId}`);
   };
 
   return {
