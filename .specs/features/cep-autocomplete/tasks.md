@@ -204,8 +204,8 @@ T8
 
 **Done when**:
 
-- [ ] Os dois textos batem, caractere por caractere, com CEP-17 e CEP-18 do spec
-- [ ] Gate check passes: App gate ≤ baseline
+- [x] Os dois textos batem, caractere por caractere, com CEP-17 e CEP-18 do spec
+- [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
 **Gate**: App

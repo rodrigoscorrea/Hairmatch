@@ -20,5 +20,7 @@ export const ERROR_MESSAGES = {
   neighborhood_required: "Bairro é obrigatório",
   number_invalid: "Número inválido. Deve conter até 6 dígitos",
   postal_code_invalid: "CEP inválido. Formato esperado: XXXXX-XXX",
+  cep_not_found: "CEP não encontrado. Confira o número ou preencha o endereço manualmente.",
+  cep_lookup_failed: "Não foi possível buscar o CEP. Preencha o endereço manualmente.",
 
 };
