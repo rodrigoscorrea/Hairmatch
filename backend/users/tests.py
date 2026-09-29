@@ -18,6 +18,9 @@ from django.http import JsonResponse
 from .auth_tokens import (
     issue_session_token,
     set_session_cookie,
+    set_cognito_cookies,
+    set_access_cookie,
+    clear_auth_cookies,
     create_signup_token,
     decode_signup_token,
     InvalidSignupToken,
@@ -38,6 +41,7 @@ from .management.commands import populate_hairdressers
 from . import cognito_fake
 from .cognito import (
     CognitoService,
+    Tokens,
     CognitoUnavailable,
     InvalidCredentials,
     InvalidPassword,
@@ -1864,6 +1868,48 @@ class AuthTokensTest(TestCase):
         self.assertTrue(cookie['secure'])
         payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
         self.assertEqual(payload['id'], self.user.id)
+
+    def test_set_cognito_cookies_sets_jwt_and_refresh_token_with_spec_attributes(self):
+        response = set_cognito_cookies(JsonResponse({}), Tokens('access-abc', 'refresh-xyz'))
+
+        jwt_cookie = response.cookies['jwt']
+        self.assertEqual(jwt_cookie.value, 'access-abc')
+        self.assertEqual(jwt_cookie['max-age'], 3600)
+        self.assertEqual(jwt_cookie['path'], '/')
+        self.assertTrue(jwt_cookie['httponly'])
+        self.assertEqual(jwt_cookie['samesite'], 'None')
+        self.assertTrue(jwt_cookie['secure'])
+        refresh_cookie = response.cookies['refresh_token']
+        self.assertEqual(refresh_cookie.value, 'refresh-xyz')
+        self.assertEqual(refresh_cookie['max-age'], 2592000)
+        self.assertEqual(refresh_cookie['path'], '/api/auth/')
+        self.assertTrue(refresh_cookie['httponly'])
+        self.assertEqual(refresh_cookie['samesite'], 'None')
+        self.assertTrue(refresh_cookie['secure'])
+
+    def test_set_access_cookie_sets_only_jwt(self):
+        response = set_access_cookie(JsonResponse({}), 'access-new')
+
+        self.assertEqual(list(response.cookies.keys()), ['jwt'])
+        cookie = response.cookies['jwt']
+        self.assertEqual(cookie.value, 'access-new')
+        self.assertEqual(cookie['max-age'], 3600)
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+
+    def test_clear_auth_cookies_expires_both_cookies_on_their_original_paths(self):
+        response = clear_auth_cookies(JsonResponse({}))
+
+        for key, path in (('jwt', '/'), ('refresh_token', '/api/auth/')):
+            with self.subTest(cookie=key):
+                cookie = response.cookies[key]
+                self.assertEqual(cookie.value, '')
+                self.assertEqual(cookie['max-age'], 0)
+                self.assertEqual(cookie['path'], path)
+                self.assertTrue(cookie['httponly'])
+                self.assertEqual(cookie['samesite'], 'None')
+                self.assertTrue(cookie['secure'])
 
     def test_signup_token_claims_and_30_minute_expiry(self):
         frozen_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)

@@ -236,9 +236,9 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] `AuthTokensTest` ganha testes com os atributos exatos de cada cookie (`max-age`, `path`, `httponly`, `samesite`, `secure`) e confirma que `clear_auth_cookies` expira os dois com o mesmo `path`
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T2 + novos, sem remoções
+- [x] `AuthTokensTest` ganha testes com os atributos exatos de cada cookie (`max-age`, `path`, `httponly`, `samesite`, `secure`) e confirma que `clear_auth_cookies` expira os dois com o mesmo `path`
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T2 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: quick
