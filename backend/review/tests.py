@@ -4,6 +4,8 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
+from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest.mock import patch
 from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
@@ -201,6 +203,41 @@ class CreateReviewTest(ReviewsTestCase):
         self.assertEqual(review.picture.name, 'reviews/images/review_photo.webp')
         with default_storage.open(review.picture.name) as stored:
             self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+
+    def _post_review_with_picture(self, picture):
+        return self.client.post(self.create_url, data={
+            'rating': 5,
+            'comment': 'With photo',
+            'hairdresser': self.hairdresser.id,
+            'reserve': self.reserve.id,
+            'picture': picture,
+        })
+
+    def _assert_rejected_with_no_review(self, response):
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Imagem inválida.'})
+        self.assertEqual(Review.objects.count(), 0)
+        self.reserve.refresh_from_db()
+        self.assertIsNone(self.reserve.review)
+
+    def test_create_review_with_a_file_that_is_not_an_image_returns_400(self):
+        """WEBP-12: nothing is created and the reservation stays unreviewed."""
+        self.login_as_customer()
+
+        response = self._post_review_with_picture(
+            SimpleUploadedFile('notes.jpg', b'just some notes', content_type='image/jpeg')
+        )
+
+        self._assert_rejected_with_no_review(response)
+
+    def test_create_review_with_an_image_over_the_pixel_limit_returns_400(self):
+        """WEBP-13: a decompression bomb gets the same answer as an invalid image."""
+        self.login_as_customer()
+
+        with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
+            response = self._post_review_with_picture(make_upload('big.jpg'))
+
+        self._assert_rejected_with_no_review(response)
 
     def test_create_review_missing_reserve_id(self):
         """Test that providing no reserve ID results in a 400 Bad Request."""

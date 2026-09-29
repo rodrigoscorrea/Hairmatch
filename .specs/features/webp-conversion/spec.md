@@ -168,8 +168,8 @@ Os preços são de referência (S3 Standard e Lambda em us-east) e devem ser con
 | WEBP-09 | P1: Fotos viram WebP, AC9 | Tasks | Done |
 | WEBP-10 | P1: Upload inválido, AC1 | Tasks | Done |
 | WEBP-11 | P1: Upload inválido, AC2 | Tasks | Done |
-| WEBP-12 | P1: Upload inválido, AC3 | Tasks | Pending |
-| WEBP-13 | P1: Upload inválido, AC4 | Tasks | Pending |
+| WEBP-12 | P1: Upload inválido, AC3 | Tasks | Done |
+| WEBP-13 | P1: Upload inválido, AC4 | Tasks | Done |
 | WEBP-14 | P2: Seed em WebP, AC1 | Tasks | Done |
 | WEBP-15 | P2: Seed em WebP, AC2 | Tasks | Done |
 | WEBP-16 | P2: Seed em WebP, AC3 | Tasks | Done |

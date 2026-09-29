@@ -339,15 +339,16 @@ T9
 
 **Done when**:
 
-- [ ] Review com `picture` = texto → 400 `{"error": "Imagem inválida."}`, `Review.objects.count()` inalterado e `reserve.review` ainda nulo depois de `refresh_from_db()` (WEBP-12)
-- [ ] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)` → 400 com a mesma mensagem (WEBP-13)
-- [ ] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ contagem de T7 + novos testes em `review`, sem remoções
+- [x] Review com `picture` = texto → 400 `{"error": "Imagem inválida."}`, `Review.objects.count()` inalterado e `reserve.review` ainda nulo depois de `refresh_from_db()` (WEBP-12)
+- [x] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)` → 400 com a mesma mensagem (WEBP-13)
+- [x] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ contagem de T7 + novos testes em `review`, sem remoções
 
 **Tests**: integration
 **Gate**: full
 
 **Commit**: `fix(review): reject invalid review pictures with 400`
+**Status**: ✅ Complete
 
 ---
 
