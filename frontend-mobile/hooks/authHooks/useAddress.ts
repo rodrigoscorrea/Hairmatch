@@ -39,16 +39,18 @@ export const useAddress = () =>{
     const fields = ['address', 'neighborhood', 'city', 'state'] as const;
     const current = registrationDataRef.current;
     const merged: Partial<CepAddress> = {};
+    const written: Partial<CepAddress> = {};
     fields.forEach(field => {
       if (found[field]) {
-        merged[field] = found[field];
+        merged[field] = written[field] = found[field];
       } else if (current[field] === lastAutofillRef.current[field]) {
-        merged[field] = '';
+        merged[field] = written[field] = '';
       } else {
         merged[field] = current[field];
       }
     });
-    lastAutofillRef.current = merged;
+    // Only what the lookup wrote counts as autofill; kept user input must not be recorded.
+    lastAutofillRef.current = { ...lastAutofillRef.current, ...written };
     setRegistrationData(prev => ({ ...prev, ...merged }));
     setErrors(prev => {
       const next = { ...prev };
