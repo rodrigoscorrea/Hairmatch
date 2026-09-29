@@ -3615,3 +3615,68 @@ class CognitoLoginTest(TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.json(), {'error': 'Muitas tentativas. Aguarde e tente novamente.'})
         self._assert_no_cookies(response)
+
+
+class CognitoRefreshTest(TestCase):
+    SESSION_EXPIRED = {'error': 'Sessão expirada. Entre novamente.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.refresh_url = reverse('refresh')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self.login_response = self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.refresh_token = self.login_response.cookies['refresh_token'].value
+        self.fake.calls.clear()
+
+    def test_refresh_sets_a_new_access_cookie_that_the_authenticator_accepts(self):
+        del self.client.cookies['jwt']  # the access token expired
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Session refreshed'})
+        self.assertEqual([k['AuthFlow'] for n, k in self.fake.calls if n == 'initiate_auth'], ['REFRESH_TOKEN_AUTH'])
+        self.assertEqual(response.cookies['jwt']['max-age'], 3600)
+        self.assertNotIn('refresh_token', response.cookies)
+        self.assertEqual(self.client.get(reverse('user_auth')).json(), {'authenticated': True})
+
+    def test_refresh_without_the_cookie_answers_401_without_calling_cognito(self):
+        self.client.cookies.clear()
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_revoked_refresh_token_answers_401_and_expires_both_cookies(self):
+        self.fake.revoke_token(Token=self.refresh_token, ClientId=cognito_fake.CLIENT_ID)
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        for key in ('jwt', 'refresh_token'):
+            self.assertEqual(response.cookies[key].value, '')
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+
+    def test_cognito_failures_answer_503_and_429_without_touching_the_cookies(self):
+        cases = [
+            (EndpointConnectionError(endpoint_url='http://x'), 503,
+             {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}),
+            ('TooManyRequestsException', 429, {'error': 'Muitas tentativas. Aguarde e tente novamente.'}),
+        ]
+        for failure, expected_status, body in cases:
+            with self.subTest(status=expected_status):
+                self.fake.fail_next('initiate_auth', failure)
+
+                response = self.client.post(self.refresh_url)
+
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json(), body)
+                self.assertEqual(len(response.cookies), 0)

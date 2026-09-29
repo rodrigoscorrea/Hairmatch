@@ -466,11 +466,11 @@ As duas views mudam juntas porque todos os testes do projeto se autenticam por r
 
 **Done when**:
 
-- [ ] Depois do login, `POST /api/auth/refresh` → 200 `{"message": "Session refreshed"}`, com um `jwt` novo aceito por `GET /api/auth/user` (COG-25)
-- [ ] Sem cookie → 401 "Sessão expirada. Entre novamente.", sem chamada no fake (COG-26)
-- [ ] Refresh revogado no fake → 401 e os dois cookies expirados na resposta (COG-27)
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T10 + novos, sem remoções
+- [x] Depois do login, `POST /api/auth/refresh` → 200 `{"message": "Session refreshed"}`, com um `jwt` novo aceito por `GET /api/auth/user` (COG-25)
+- [x] Sem cookie → 401 "Sessão expirada. Entre novamente.", sem chamada no fake (COG-26)
+- [x] Refresh revogado no fake → 401 e os dois cookies expirados na resposta (COG-27)
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T10 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

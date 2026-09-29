@@ -18,7 +18,7 @@ from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
 from django.db import transaction
-from .auth_tokens import set_session_cookie, set_cognito_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
+from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
     AUTH_UNAVAILABLE_MESSAGE,
     authenticate_request,
@@ -269,6 +269,23 @@ class LoginView(APIView):
         except CognitoUnavailable:
             session = None
         return JsonResponse({'authenticated': session is not None}, status=200)
+
+class RefreshView(APIView):
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        session_expired = {'error': 'Sessão expirada. Entre novamente.'}
+        if not refresh_token:
+            return JsonResponse(session_expired, status=401)
+
+        try:
+            access_token = get_cognito().refresh(refresh_token)
+        except InvalidCredentials:
+            return clear_auth_cookies(JsonResponse(session_expired, status=401))
+        except CognitoError as err:
+            return _cognito_error_response(err)
+
+        return set_access_cookie(JsonResponse({'message': 'Session refreshed'}, status=200), access_token)
+
 
 class GoogleAuthView(APIView):
     def post(self, request):
