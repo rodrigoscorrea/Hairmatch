@@ -426,11 +426,9 @@ class UserInfoCookieView(APIView):
         user = session.user
         data = json.loads(request.body)
 
-        existing_email = User.objects.filter(email=data['email']).first()
-         
-        # if there is another user with the email you want to switch, you cannot proceed 
-        if existing_email and (existing_email != user): 
-            return JsonResponse({'error': 'This email is already taken'}, status=403)
+        # The e-mail is the Cognito username, and changing it there needs a verification step.
+        if 'email' in data and data['email'] != user.email:
+            return JsonResponse({'error': 'A troca de e-mail não é suportada.'}, status=400)
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',

@@ -600,11 +600,11 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `PUT` com outro e-mail + `first_name` novo → 400, e nenhum campo muda no banco
-- [ ] `PUT` com o mesmo e-mail + `first_name` novo → 200 e o nome muda
-- [ ] Os testes existentes que trocavam e-mail são ajustados para o novo contrato, sem remoção
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T14 + novos, sem remoções
+- [x] `PUT` com outro e-mail + `first_name` novo → 400, e nenhum campo muda no banco
+- [x] `PUT` com o mesmo e-mail + `first_name` novo → 200 e o nome muda
+- [x] Os testes existentes que trocavam e-mail são ajustados para o novo contrato, sem remoção
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T14 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

@@ -720,7 +720,6 @@ class UserInfoCookieViewTest(TestCase):
         update_payload = {
             'first_name': 'Updated',
             'last_name': 'Customer',
-            'email': 'updated_customer@example.com',
             'cpf': '98765432100'
         }
         
@@ -733,7 +732,7 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Verify user info was updated
-        updated_user = User.objects.get(email='updated_customer@example.com')
+        updated_user = User.objects.get(email='customer@example.com')
         self.assertEqual(updated_user.first_name, 'Updated')
         self.assertEqual(updated_user.last_name, 'Customer')
         
@@ -747,7 +746,6 @@ class UserInfoCookieViewTest(TestCase):
         update_payload = {
             'first_name': 'Updated',
             'last_name': 'Hairdresser',
-            'email': 'updated_hairdresser@example.com',
             'experience_years': 10,
             'resume': 'Updated resume',
             'cnpj': '98765432000190'
@@ -762,7 +760,7 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Verify user info was updated
-        updated_user = User.objects.get(email='updated_hairdresser@example.com')
+        updated_user = User.objects.get(email='hairdresser@example.com')
         self.assertEqual(updated_user.first_name, 'Updated')
         self.assertEqual(updated_user.last_name, 'Hairdresser')
         
@@ -786,8 +784,8 @@ class UserInfoCookieViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('error', response.json())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
 
 
 class UserInfoViewTest(TestCase):
@@ -3890,3 +3888,36 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertEqual(own_response.status_code, status.HTTP_200_OK)
         self.assertFalse(User.objects.filter(email='goo2@example.com').exists())
         self.assertEqual(self.fake.calls, [])
+
+
+class UpdateProfileEmailTest(TestCase):
+    """PUT /api/user/authenticated does not change the e-mail (it is the Cognito username)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('user_info_auth')
+        self.client.post(reverse('register'), data=_register_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+    def _put(self, body):
+        return self.client.put(self.own_url, data=json.dumps(body), content_type='application/json')
+
+    def test_a_different_email_answers_400_and_changes_no_field(self):
+        before = User.objects.values().get(email='nova@example.com')
+
+        response = self._put({'email': 'outro@example.com', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
+        self.assertEqual(User.objects.values().get(email='nova@example.com'), before)
+        self.assertFalse(User.objects.filter(email='outro@example.com').exists())
+
+    def test_the_same_email_still_updates_the_other_fields(self):
+        response = self._put({'email': 'nova@example.com', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
