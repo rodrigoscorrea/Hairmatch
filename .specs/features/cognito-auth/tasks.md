@@ -706,9 +706,9 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `bash -n docker/ministack/init/01-cognito.sh` sem erro
-- [ ] Rodado duas vezes contra o MiniStack (`docker run --rm -p 4567:4566 ministackorg/ministack` + `AWS_ENDPOINT_URL=http://localhost:4567`), `list-user-pools` mostra um único `hairmatch-dev`, e `describe-user-pool` mostra `RequireSymbols=false`
-- [ ] Gate: verificação manual acima (camada infra = none)
+- [x] `bash -n docker/ministack/init/01-cognito.sh` sem erro
+- [x] Rodado duas vezes contra o MiniStack (`docker run --rm -p 4567:4566 ministackorg/ministack` + `AWS_ENDPOINT_URL=http://localhost:4567`), `list-user-pools` mostra um único `hairmatch-dev`, e `describe-user-pool` mostra `RequireSymbols=false`
+- [x] Gate: verificação manual acima (camada infra = none)
 
 **Tests**: none
 **Gate**: build
