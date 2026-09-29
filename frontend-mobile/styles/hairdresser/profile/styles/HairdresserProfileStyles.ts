@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFEEDD', // cor clara parecida com a da imagem
+    backgroundColor: '#FFEEDD', // light color similar to the one in the image
     paddingTop: 20,
     paddingHorizontal: 16,
   },

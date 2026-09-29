@@ -69,7 +69,7 @@ export const formatTimeInput = (value: string): string => {
   let hour = parseInt(digits.slice(0, 2), 10);
   let minute = parseInt(digits.slice(2, 4), 10);
 
-  // Limitar valores máximos válidos
+  // Clamp to valid maximum values
   hour = Math.min(hour, 23);
   minute = Math.min(minute, 59);
 

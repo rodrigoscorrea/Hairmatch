@@ -1,4 +1,4 @@
-// Versão nativa (Android). No web, o Metro resolve useGoogleIdToken.web.ts.
+// Native version (Android). On web, Metro resolves useGoogleIdToken.web.ts.
 import type { UseGoogleIdTokenResult } from './useGoogleIdToken.web';
 
 type GoogleSigninModule = typeof import('@react-native-google-signin/google-signin');
@@ -8,7 +8,7 @@ const EXPO_GO_MESSAGE = 'Login com Google indisponível no Expo Go. Use o build 
 
 let isConfigured = false;
 
-// O módulo nativo só existe no build do app. No Expo Go, importar no topo derrubaria a tela de login.
+// The native module only exists in the app build. On Expo Go, importing it at the top would crash the login screen.
 function loadGoogleSignin(): GoogleSigninModule {
   try {
     return require('@react-native-google-signin/google-signin') as GoogleSigninModule;
@@ -33,7 +33,7 @@ export function useGoogleIdToken(): UseGoogleIdTokenResult {
       return null;
     }
     if (!response.data.idToken) {
-      // Sucesso sem idToken (ex.: webClientId inválido) não é cancelamento: deixa o erro subir para o modal.
+      // Success without an idToken (e.g. invalid webClientId) is not a cancellation: let the error bubble up to the modal.
       throw new Error('O Google não devolveu o id_token.');
     }
     return response.data.idToken;

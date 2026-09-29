@@ -79,8 +79,8 @@ const CustomerHomeScreen = () => {
             style={styles.imageCard} 
           />
           <View style={{ display: 'flex', flexDirection: 'row', marginBottom: 3 }}>
-            <Text style={styles.nomeProfissional}>{item.user.first_name || 'Nome'}</Text>
-            <Text style={styles.sobrenomeProfissional}>{item.user.last_name || ''}</Text>
+            <Text style={styles.professionalName}>{item.user.first_name || 'Nome'}</Text>
+            <Text style={styles.professionalSurname}>{item.user.last_name || ''}</Text>
           </View>
           <Text style={styles.description}>
             {formatText(item.resume) || 'Lorem Ipsum...'}

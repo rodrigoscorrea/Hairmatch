@@ -11,7 +11,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 import jwt, datetime
 from django.db import transaction
 
-# 2 - Cookie-based views (usuário autenticado)
+# 2 - Cookie-based views (authenticated user)
 class CreateReview(APIView):
     # Add parsers to handle multipart/form-data
     parser_classes = (MultiPartParser, FormParser)

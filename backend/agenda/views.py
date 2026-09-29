@@ -16,7 +16,7 @@ class CreateAgenda(APIView):
         data = json.loads(request.body)
 
         try:
-            # Converter os horários para objetos datetime para manipulação adequada
+            # Convert the schedule times to datetime objects for proper handling
             start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
         except ValueError:
             return JsonResponse({'error': 'Invalid start_time format'}, status=400)
@@ -31,7 +31,7 @@ class CreateAgenda(APIView):
         except Service.DoesNotExist:
             return JsonResponse({'error': 'Service not found'}, status=500)
         
-        # Calcular end_time se não fornecido
+        # Calculate end_time if not provided
         if 'end_time' not in data or not data['end_time']:
             end_time = calculate_end_time(data['start_time'], service_instance.duration)
         else:
@@ -40,22 +40,22 @@ class CreateAgenda(APIView):
             except ValueError:
                 return JsonResponse({'error': 'Invalid end_time format'}, status=400)
         
-        # Verificação completa de sobreposição:
-        # Verifica se existem agendamentos que se sobrepõem ao novo agendamento
+        # Full overlap check:
+        # Checks whether there are appointments that overlap with the new appointment
         overlapping_agendas = Agenda.objects.filter(
             hairdresser=data['hairdresser'],
-            # O start_time do agendamento existente é antes do end_time do novo
+            # The existing appointment's start_time is before the new one's end_time
             start_time__lt=end_time,
-            # E o end_time do agendamento existente é depois do start_time do novo
+            # And the existing appointment's end_time is after the new one's start_time
             end_time__gt=start_time
         )
-        
+
         if overlapping_agendas.exists():
             return JsonResponse({
                 'error': 'This time slot overlaps with an existing appointment'
             }, status=400)
-        
-        # Agora é seguro criar o agendamento
+
+        # It's now safe to create the appointment
         Agenda.objects.create(
             service=service_instance,
             hairdresser=hairdresser_instance,

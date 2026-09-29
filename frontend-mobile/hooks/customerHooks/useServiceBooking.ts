@@ -45,18 +45,18 @@ export const useServiceBooking = () => {
   const initialDate = useMemo(() => new Date().toISOString().split('T')[0], []);
 
 
-  // --- INÍCIO DA CORREÇÃO ---
-  // Este hook do Expo Router é executado toda vez que a tela entra em foco.
-  // É a maneira perfeita de garantir que o estado seja resetado para cada novo agendamento.
+  // --- FIX START ---
+  // This Expo Router hook runs every time the screen comes into focus.
+  // It's the perfect way to ensure the state is reset for each new booking.
   useFocusEffect(
     useCallback(() => {
-      // A função de retorno (cleanup) é executada quando a tela perde o foco.
-      // Limpamos o estado aqui para garantir que, ao sair, nada seja mantido.
+      // The cleanup function runs when the screen loses focus.
+      // We clear the state here to ensure nothing is kept when leaving.
       return () => {
         setSelectedDate(null);
         setSelectedTime(null);
-        setAvailableSlots([]); // Limpa também os horários disponíveis
-        setShowCalendar(false); // Esconde o calendário se estiver aberto
+        setAvailableSlots([]); // Also clears the available time slots
+        setShowCalendar(false); // Hides the calendar if it's open
       };
     }, [])
   );

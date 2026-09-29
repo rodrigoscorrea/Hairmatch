@@ -53,11 +53,11 @@ export const styles = StyleSheet.create({
       height: 100,
       borderRadius: 10,
     },
-    nomeProfissional: {
+    professionalName: {
       fontWeight: 'bold',
       marginTop: 5,
     },
-    sobrenomeProfissional: {
+    professionalSurname: {
       fontWeight: 'bold',
       marginTop: 5,
       marginLeft: 6

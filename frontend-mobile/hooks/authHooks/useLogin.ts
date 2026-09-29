@@ -27,7 +27,7 @@ export const useLogin = () => {
     };
 
     const handleGoRegister = () => {
-        // Cadastro novo pelo link: descarta o modo Google e os dados de uma tentativa anterior (GAUTH-30).
+        // New sign-up via the link: discards Google mode and data from a previous attempt (GAUTH-30).
         resetRegistration();
         router.push('/(auth)/register');
     };

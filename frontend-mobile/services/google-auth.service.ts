@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_BACKEND_URL } from '@/app/_layout';
 
-// Contrato de POST /api/auth/google (erros 400/401/403/409 chegam como { error } no axios)
+// Contract of POST /api/auth/google (400/401/403/409 errors arrive as { error } in axios)
 export type GoogleAuthResponse =
   | { status: 'authenticated' }
   | {

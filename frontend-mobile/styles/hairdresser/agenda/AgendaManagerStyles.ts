@@ -35,11 +35,11 @@ export const calendarTheme = {
       contrastText: '#fff',
     },
     gray: {
-      100: '#f5f5f5', // Fundos claros
-      200: '#e0e0e0', // Bordas
+      100: '#f5f5f5', // Light backgrounds
+      200: '#e0e0e0', // Borders
       300: '#bdbdbd',
-      500: '#757575', // Textos secundários
-      800: '#424242', // Textos principais
+      500: '#757575', // Secondary text
+      800: '#424242', // Primary text
     },
   },
 };

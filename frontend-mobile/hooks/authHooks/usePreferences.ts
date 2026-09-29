@@ -73,7 +73,7 @@ export const usePreferencesForm = () => {
     if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
     if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
 
-    // Modo Google: sem senha e sem e-mail (o backend usa o e-mail do token), mas com o token de cadastro.
+    // Google mode: no password and no email (the backend uses the token's email), but with the signup token.
     if (isGoogleMode) {
         delete allData.password;
         delete allData.confirmPassword;
@@ -115,7 +115,7 @@ export const usePreferencesForm = () => {
         await signUp(formData);
 
         if (isGoogleMode) {
-          // O 201 já trouxe o cookie de sessão: o RootLayoutNav leva à home do papel (GAUTH-26).
+          // The 201 already brought the session cookie: RootLayoutNav leads to the role's home (GAUTH-26).
           const session = await loadSession();
           if (!session.success) {
             setErrorModal({ visible: true, message: session.error || 'Erro desconhecido' });
@@ -171,7 +171,7 @@ export const usePreferencesForm = () => {
     errorModal,
     closeErrorModal: () => {
       setErrorModal({ ...errorModal, visible: false });
-      // Em modo Google, o erro do envio final mantém o usuário no wizard (GAUTH-27).
+      // In Google mode, the final submission error keeps the user on the wizard (GAUTH-27).
       if (!isGoogleMode) {
         router.replace('/(auth)/login');
       }

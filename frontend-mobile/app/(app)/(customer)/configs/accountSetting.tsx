@@ -21,7 +21,7 @@ export default function AccountDetailsScreen() {
       </View>
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        {/* Adicione o ícone de voltar se estiver usando react-navigation */}
+        {/* Add the back icon if using react-navigation */}
         <Text style={styles.headerTitle}>Dados da Conta</Text>
       </View>
 
@@ -56,7 +56,7 @@ export default function AccountDetailsScreen() {
           value={customer?.cpf}
           //onChangeText={setCpf}
           placeholder="CPF/CNPJ"
-          keyboardType="numeric" // Facilita a digitação de números
+          keyboardType="numeric" // Makes it easier to type numbers
           containerStyle={styles.inputContainer}
         />
         <FormInput
@@ -78,7 +78,7 @@ export default function AccountDetailsScreen() {
           value={customer?.user?.password}
           //onChangeText={setPassword}
           placeholder="Senha"
-          secureTextEntry // Oculta o texto da senha
+          secureTextEntry // Hides the password text
           containerStyle={styles.inputContainer}
         />
         <FormInput

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, SafeAreaView, ScrollView } fro
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
-import Icon from 'react-native-vector-icons/FontAwesome'; // ou outra biblioteca de ícones
+import Icon from 'react-native-vector-icons/FontAwesome'; // or another icon library
 import { styles } from '@/styles/customer/styles/AddressConfigStyles';
 import { useAddress } from '@/hooks/authHooks/useAddress';
 
@@ -21,17 +21,17 @@ export default function AccountDetailsScreen() {
         <Text style={styles.buttonTitle}>Perfil</Text>
       </View>
 
-      {/* 2. ÁREA DE ROLAGEM: Envolve apenas o conteúdo que precisa rolar */}
+      {/* 2. SCROLL AREA: Wraps only the content that needs to scroll */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-        {/* Adicione o ícone de voltar se estiver usando react-navigation */}
+        {/* Add the back icon if using react-navigation */}
         <Text style={styles.headerTitle}>Endereço</Text>
       </View>
-        {/* O <View style={styles.form}> agora está dentro do ScrollView e SEM flex:1 */}
+        {/* The <View style={styles.form}> is now inside the ScrollView and WITHOUT flex:1 */}
         <View style={styles.form}>
           <View style={styles.row}>
             <TextInput
@@ -81,7 +81,7 @@ export default function AccountDetailsScreen() {
           </View>
         </View>
 
-        {/* 3. BOTÃO SALVAR: Também dentro do scroll, mas o flexGrow no container o empurrará para baixo */}
+        {/* 3. SAVE BUTTON: Also inside the scroll, but flexGrow on the container will push it down */}
         <TouchableOpacity style={styles.saveButton}>
           <Text style={styles.saveButtonText}>Salvar</Text>
         </TouchableOpacity>
