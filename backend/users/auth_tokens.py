@@ -12,19 +12,23 @@ class InvalidSignupToken(Exception):
 
 
 def issue_session_token(user):
-    now = datetime.datetime.now()
+    """Session of a Google account, the only accounts the backend still signs sessions for."""
+    now = datetime.datetime.now(datetime.timezone.utc)
     payload = {
         'id': user.id,
-        'exp': now + datetime.timedelta(minutes=60),
+        'iss': 'hairmatch',
+        'token_use': 'session',
         'iat': now,
+        'exp': now + datetime.timedelta(minutes=60),
     }
-    return jwt.encode(payload, 'secret', algorithm='HS256')
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
 
 def set_session_cookie(response, user):
     response.set_cookie(
         key='jwt',
         value=issue_session_token(user),
+        max_age=ACCESS_COOKIE_MAX_AGE,
         httponly=True,
         samesite='None',
         secure=True,

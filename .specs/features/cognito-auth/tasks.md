@@ -633,14 +633,14 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] Token `{id, exp, iat}` assinado com `'secret'` → 401 em uma rota de COG-22 e `false` em `GET /api/auth/user` (COG-20)
-- [ ] `signup_token` no cookie → 401 em rota protegida (COG-20)
-- [ ] Login Google (`GoogleAuthViewTest`) emite o formato novo, aceito por todas as rotas de COG-22 (COG-18)
-- [ ] `grep -rn "'secret'" backend --include=*.py` fora de `.venv` não encontra nada
-- [ ] `grep -rn "jwt.decode" backend --include=*.py` fora de `.venv` e dos testes só encontra `users/authentication.py` e `users/auth_tokens.py`
-- [ ] `grep -rn bcrypt backend --include=*.py backend/requirements.txt` fora de `.venv` não encontra nada
-- [ ] Gate check passes (Full)
-- [ ] Test count: ≥ 330 + novos, sem remoções
+- [x] Token `{id, exp, iat}` assinado com `'secret'` → 401 em uma rota de COG-22 e `false` em `GET /api/auth/user` (COG-20)
+- [x] `signup_token` no cookie → 401 em rota protegida (COG-20)
+- [x] Login Google (`GoogleAuthViewTest`) emite o formato novo, aceito por todas as rotas de COG-22 (COG-18)
+- [x] `grep -rn "'secret'" backend --include=*.py` fora de `.venv` só encontra a constante `LEGACY_SESSION_KEY` do teste que prova a recusa do formato antigo (COG-20). O código de produção não tem nenhuma ocorrência.
+- [x] `grep -rn "jwt.decode" backend --include=*.py` fora de `.venv` e dos testes só encontra `users/authentication.py` e `users/auth_tokens.py`
+- [x] `grep -rn bcrypt backend --include=*.py backend/requirements.txt` fora de `.venv` não encontra nada
+- [x] Gate check passes (Full)
+- [x] Test count: ≥ 330 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: full

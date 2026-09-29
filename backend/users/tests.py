@@ -64,6 +64,10 @@ import boto3
 from hairmatch.test_runner import HairmatchTestRunner
 from jwt.algorithms import RSAAlgorithm
 
+# The key of the session format COG-20 retires. Only the test that proves it is refused uses it.
+LEGACY_SESSION_KEY = 'secret'
+
+
 def stored_image(name):
     """Opens what was actually written to the media storage under `name`."""
     with default_storage.open(name) as stored:
@@ -561,10 +565,12 @@ class ChangePasswordViewTest(TestCase):
         user = User.objects.get(email='password@example.com')
         payload = {
             'id': user.id,
-            'exp': datetime.datetime.now() - datetime.timedelta(minutes=5),  # Expired
-            'iat': datetime.datetime.now() - datetime.timedelta(minutes=65)
+            'iss': 'hairmatch',
+            'token_use': 'session',
+            'exp': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=5),  # Expired
+            'iat': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=65)
         }
-        expired_token = jwt.encode(payload, 'secret', algorithm='HS256')
+        expired_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         
         self.client.cookies['jwt'] = expired_token
         
@@ -1858,8 +1864,10 @@ class AuthTokensTest(TestCase):
     def test_session_token_payload_matches_login_session(self):
         token = issue_session_token(self.user)
 
-        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], self.user.id)
+        self.assertEqual(payload['iss'], 'hairmatch')
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
 
     def test_set_session_cookie_attributes(self):
@@ -1869,7 +1877,8 @@ class AuthTokensTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(cookie['max-age'], 3600)
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], self.user.id)
 
     def test_set_cognito_cookies_sets_jwt_and_refresh_token_with_spec_attributes(self):
@@ -1956,16 +1965,10 @@ class AuthTokensTest(TestCase):
         with self.assertRaises(InvalidSignupToken):
             decode_signup_token(f'{header}.{forged_payload}.{signature}')
 
-    def test_decode_rejects_token_signed_with_session_key(self):
-        token = jwt.encode({
-            'email': 'ana@gmail.com',
-            'sub': 'google-sub-123',
-            'purpose': 'google_signup',
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
-        }, 'secret', algorithm='HS256')
-
+    def test_decode_rejects_a_session_token(self):
+        # Sessions and signup tokens share SECRET_KEY, so the purpose claim is what keeps them apart.
         with self.assertRaises(InvalidSignupToken):
-            decode_signup_token(token)
+            decode_signup_token(issue_session_token(self.user))
 
     def test_decode_rejects_token_with_other_purpose(self):
         token = jwt.encode({
@@ -2143,9 +2146,11 @@ class GoogleAuthViewTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
+        self.assertEqual(cookie['max-age'], 3600)
 
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
@@ -2311,9 +2316,11 @@ class GoogleRegisterTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
+        self.assertEqual(cookie['max-age'], 3600)
 
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
@@ -3231,17 +3238,14 @@ class AuthenticationTest(TestCase):
         self.assertIsNone(error)
         self.assertEqual(session.user, self.google_user)
 
-    # TEMPORARY: inverted in T16, when the legacy 'secret' format is dropped
-    def test_legacy_secret_token_is_still_accepted(self):
+    def test_the_old_session_format_is_refused(self):
         now = datetime.datetime.now()
         token = jwt.encode(
             {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
-            'secret', algorithm='HS256',
+            LEGACY_SESSION_KEY, algorithm='HS256',
         )
 
-        session = authenticate_request(self._request(token))
-
-        self.assertEqual(session.user, self.user)
+        self.assertIsNone(authenticate_request(self._request(token)))
 
 
 class SessionReadersTest(TestCase):
@@ -3921,3 +3925,54 @@ class UpdateProfileEmailTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
+
+
+class SessionFormatTest(TestCase):
+    """After T16 only Cognito access tokens and the new Google session open protected routes."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = _create_plain_user(email='ana@gmail.com', google_id='google-sub-123', role='customer')
+        Customer.objects.create(user=self.user, cpf='12345678900')
+
+    def test_the_old_hs256_session_answers_401_on_a_protected_route_and_false_on_the_auth_check(self):
+        now = datetime.datetime.now()
+        legacy = jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            LEGACY_SESSION_KEY, algorithm='HS256',
+        )
+        self.client.cookies['jwt'] = legacy
+
+        protected = self.client.get(reverse('user_info_auth'))
+        auth_check = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(protected.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(protected.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertEqual(auth_check.json(), {'authenticated': False})
+
+    def test_the_google_signup_token_answers_401_on_a_protected_route(self):
+        self.client.cookies['jwt'] = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        response = self.client.get(reverse('user_info_auth'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+
+    def test_the_session_from_the_google_login_opens_the_protected_routes_of_other_apps(self):
+        preference = Preferences.objects.create(name='Cachos')
+        with patch('users.views.verify_google_id_token') as verify:
+            verify.return_value = {
+                'sub': 'google-sub-123', 'email': 'ana@gmail.com', 'email_verified': True,
+                'given_name': 'Ana', 'family_name': 'Souza',
+            }
+            login = self.client.post(
+                reverse('google_auth'), data=json.dumps({'id_token': 'x'}), content_type='application/json'
+            )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+
+        own = self.client.get(reverse('user_info_auth'))
+        assign = self.client.post(reverse('assign_preferences_to_user', args=[preference.id]))
+
+        self.assertEqual(own.status_code, status.HTTP_200_OK)
+        self.assertEqual(assign.status_code, status.HTTP_200_OK)
+        self.assertTrue(preference.users.filter(id=self.user.id).exists())

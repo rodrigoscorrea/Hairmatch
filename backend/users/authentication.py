@@ -44,10 +44,7 @@ def authenticate_token(token):
     issuer = claims.get('iss')
     if issuer == SESSION_ISSUER:
         return _authenticate_google(token, header)
-    # TEMPORARY: removed in T16
-    if issuer is None:
-        return _authenticate_legacy(token, header)
-    if issuer == get_cognito().issuer:
+    if isinstance(issuer, str) and issuer == get_cognito().issuer:
         return _authenticate_cognito(token, header)
     return None
 
@@ -103,20 +100,6 @@ def _authenticate_google(token, header):
         return None
     user = User.objects.filter(id=claims['id'], is_active=True).first()
     return SessionUser(user, 'google', token) if user else None
-
-
-# TEMPORARY: removed in T16
-def _authenticate_legacy(token, header):
-    if header.get('alg') != 'HS256':
-        return None
-    try:
-        claims = jwt.decode(token, 'secret', algorithms=['HS256'], options={'require': ['exp', 'id']})
-    except jwt.InvalidTokenError:
-        return None
-    if not isinstance(claims['id'], int):
-        return None
-    user = User.objects.filter(id=claims['id'], is_active=True).first()
-    return SessionUser(user, 'legacy', token) if user else None
 
 
 def _signing_key(kid):
