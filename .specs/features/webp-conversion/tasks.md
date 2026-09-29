@@ -109,28 +109,29 @@ T9
 
 **Done when**:
 
-- [ ] Baseline confirmado: `python manage.py test` passa com 292 testes antes da mudança
-- [ ] No container: `python -c "from PIL import features; print(features.check('webp'))"` imprime `True`
-- [ ] `WebpNameTest`: `'dir/FOTO.JPG'` → `'dir/FOTO.webp'`, `'foto'` → `'foto.webp'`, `'a.b.png'` → `'a.b.webp'`
-- [ ] `ToWebpTest` cobre:
-  - [ ] JPEG RGB → saída com `format == 'WEBP'` (WEBP-01 no nível do conversor)
-  - [ ] JPEG 20×10 com `Orientation=6` → 10×20 (WEBP-05)
-  - [ ] JPEG 6000×4000 com `Orientation=6` → 720×1080 (WEBP-05 + WEBP-09)
-  - [ ] 4000×6000 → 720×1080; 6000×4000 → 1080×720; 1080×500 → 1080×500; 800×600 → 800×600 (WEBP-09)
-  - [ ] PNG `RGBA`, PNG `LA` e PNG `P` com transparência → `RGBA`; JPEG `CMYK`, PNG `L` e JPEG `RGB` → `RGB` (WEBP-06)
-  - [ ] JPEG com EXIF (inclusive GPS) → `getexif()` do WebP vazio; WebP de entrada com EXIF → saída sem EXIF (WEBP-07)
-  - [ ] JPEG com perfil ICC → o WebP mantém `info['icc_profile']` idêntico (decisão de Assumptions)
-  - [ ] `quality=80` passado ao encoder, verificado com `patch.object(Image.Image, 'save', wraps=...)` ou comparando o tamanho com uma codificação de referência q80 (WEBP-07)
-  - [ ] GIF com 3 quadros → `n_frames == 1` (WEBP-08)
-  - [ ] `b"file_content"`, texto com nome `.jpg` e JPEG truncado → `InvalidImage` (WEBP-10 a WEBP-12 no nível do conversor)
-  - [ ] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)`, uma imagem 20×10 → `InvalidImage` (WEBP-13)
-- [ ] Gate check passes: `cd backend && python manage.py test hairmatch`
-- [ ] Test count: ≥ 16 + novos testes em `hairmatch`, sem remoções
+- [x] Baseline confirmado: `python manage.py test` passa com 292 testes antes da mudança
+- [x] No container: `python -c "from PIL import features; print(features.check('webp'))"` imprime `True`
+- [x] `WebpNameTest`: `'dir/FOTO.JPG'` → `'dir/FOTO.webp'`, `'foto'` → `'foto.webp'`, `'a.b.png'` → `'a.b.webp'`
+- [x] `ToWebpTest` cobre:
+  - [x] JPEG RGB → saída com `format == 'WEBP'` (WEBP-01 no nível do conversor)
+  - [x] JPEG 20×10 com `Orientation=6` → 10×20 (WEBP-05)
+  - [x] JPEG 6000×4000 com `Orientation=6` → 720×1080 (WEBP-05 + WEBP-09)
+  - [x] 4000×6000 → 720×1080; 6000×4000 → 1080×720; 1080×500 → 1080×500; 800×600 → 800×600 (WEBP-09)
+  - [x] PNG `RGBA`, PNG `LA` e PNG `P` com transparência → `RGBA`; JPEG `CMYK`, PNG `L` e JPEG `RGB` → `RGB` (WEBP-06)
+  - [x] JPEG com EXIF (inclusive GPS) → `getexif()` do WebP vazio; WebP de entrada com EXIF → saída sem EXIF (WEBP-07)
+  - [x] JPEG com perfil ICC → o WebP mantém `info['icc_profile']` idêntico (decisão de Assumptions)
+  - [x] `quality=80` passado ao encoder, verificado com `patch.object(Image.Image, 'save', wraps=...)` ou comparando o tamanho com uma codificação de referência q80 (WEBP-07)
+  - [x] GIF com 3 quadros → `n_frames == 1` (WEBP-08)
+  - [x] `b"file_content"`, texto com nome `.jpg` e JPEG truncado → `InvalidImage` (WEBP-10 a WEBP-12 no nível do conversor)
+  - [x] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)`, uma imagem 20×10 → `InvalidImage` (WEBP-13)
+- [x] Gate check passes: `cd backend && python manage.py test hairmatch`
+- [x] Test count: ≥ 16 + novos testes em `hairmatch`, sem remoções
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(backend): add WebP image converter`
+**Status**: ✅ Complete
 
 ---
 

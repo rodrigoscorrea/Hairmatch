@@ -1,11 +1,16 @@
 # Create your tests here.
 # hairmatch/ai_clients/tests/test_gemini_client.py
+import io
+import os
 from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
 from django.core.files.base import ContentFile
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.http import JsonResponse
+from PIL import Image, ImageCms
 
+from hairmatch.image_fixtures import make_image_bytes
+from hairmatch.images import InvalidImage, to_webp, webp_name
 from hairmatch.storage import S3MediaStorage
 
 from users.models import Hairdresser, User
@@ -209,3 +214,123 @@ class S3MediaStorageTest(SimpleTestCase):
             Bucket='test-bucket', Key='profile_pics/a.jpg'
         )
 
+
+def noise_image(size):
+    """Incompressible RGB image, so encoded sizes react to encoder settings."""
+    return Image.frombytes('RGB', size, os.urandom(size[0] * size[1] * 3))
+
+
+class WebpNameTest(SimpleTestCase):
+
+    def test_swaps_extension_and_lowercases_it(self):
+        self.assertEqual(webp_name('dir/FOTO.JPG'), 'dir/FOTO.webp')
+
+    def test_adds_extension_when_missing(self):
+        self.assertEqual(webp_name('foto'), 'foto.webp')
+
+    def test_only_replaces_the_last_extension(self):
+        self.assertEqual(webp_name('a.b.png'), 'a.b.webp')
+
+
+class ToWebpTest(SimpleTestCase):
+
+    def convert(self, data):
+        return Image.open(to_webp(ContentFile(data)))
+
+    def test_jpeg_becomes_webp(self):
+        result = self.convert(make_image_bytes(fmt='JPEG'))
+        self.assertEqual(result.format, 'WEBP')
+        self.assertEqual(result.size, (20, 10))
+
+    def test_applies_exif_orientation_to_the_pixels(self):
+        result = self.convert(make_image_bytes(size=(20, 10), orientation=6))
+        self.assertEqual(result.size, (10, 20))
+
+    def test_rotates_before_resizing(self):
+        result = self.convert(make_image_bytes(size=(6000, 4000), orientation=6))
+        self.assertEqual(result.size, (720, 1080))
+
+    def test_limits_the_longest_side_to_1080_without_upscaling(self):
+        cases = {
+            (4000, 6000): (720, 1080),
+            (6000, 4000): (1080, 720),
+            (1080, 500): (1080, 500),
+            (800, 600): (800, 600),
+        }
+        for size, expected in cases.items():
+            with self.subTest(size=size):
+                self.assertEqual(self.convert(make_image_bytes(size=size)).size, expected)
+
+    def test_output_mode_keeps_alpha_only_when_the_source_has_it(self):
+        cases = [
+            ('RGBA', 'PNG', 'RGBA'),
+            ('LA', 'PNG', 'RGBA'),
+            ('P', 'PNG', 'RGBA'),
+            ('CMYK', 'JPEG', 'RGB'),
+            ('L', 'PNG', 'RGB'),
+            ('RGB', 'JPEG', 'RGB'),
+        ]
+        for mode, fmt, expected in cases:
+            with self.subTest(mode=mode, fmt=fmt):
+                result = self.convert(make_image_bytes(mode=mode, fmt=fmt))
+                self.assertEqual(result.mode, expected)
+
+    def test_strips_exif_including_gps(self):
+        source = make_image_bytes(orientation=6, gps=True)
+        self.assertTrue(Image.open(io.BytesIO(source)).getexif())
+        self.assertEqual(len(self.convert(source).getexif()), 0)
+
+    def test_recodes_webp_input_and_strips_its_exif(self):
+        source = make_image_bytes(fmt='WEBP', orientation=1, gps=True)
+        self.assertTrue(Image.open(io.BytesIO(source)).getexif())
+        result = self.convert(source)
+        self.assertEqual(result.format, 'WEBP')
+        self.assertEqual(len(result.getexif()), 0)
+
+    def test_keeps_the_icc_profile(self):
+        icc = ImageCms.ImageCmsProfile(ImageCms.createProfile('sRGB')).tobytes()
+        result = self.convert(make_image_bytes(icc_profile=icc))
+        self.assertEqual(result.info['icc_profile'], icc)
+
+    def test_drops_an_icc_profile_that_is_not_rgb(self):
+        icc = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile('sRGB')).tobytes())
+        icc[16:20] = b'CMYK'
+        result = self.convert(make_image_bytes(mode='CMYK', icc_profile=bytes(icc)))
+        self.assertNotIn('icc_profile', result.info)
+
+    def test_encodes_with_quality_80(self):
+        noise = noise_image((200, 150))
+        source = io.BytesIO()
+        noise.save(source, 'PNG')
+        reference = io.BytesIO()
+        noise.save(reference, 'WEBP', quality=80, method=4)
+        self.assertEqual(
+            len(to_webp(ContentFile(source.getvalue())).read()), len(reference.getvalue())
+        )
+
+    def test_animated_input_keeps_only_the_first_frame(self):
+        for fmt in ('GIF', 'WEBP'):
+            with self.subTest(fmt=fmt):
+                source = make_image_bytes(fmt=fmt, frames=3)
+                self.assertEqual(Image.open(io.BytesIO(source)).n_frames, 3)
+                result = self.convert(source)
+                self.assertEqual(result.format, 'WEBP')
+                self.assertEqual(getattr(result, 'n_frames', 1), 1)
+
+    def test_rejects_files_that_are_not_decodable_images(self):
+        noisy_jpeg = io.BytesIO()
+        noise_image((300, 300)).save(noisy_jpeg, 'JPEG')
+        cases = {
+            'garbage': b'file_content',
+            'text with image name': b'just some notes\n' * 20,
+            'truncated jpeg': noisy_jpeg.getvalue()[: len(noisy_jpeg.getvalue()) // 2],
+        }
+        for label, data in cases.items():
+            with self.subTest(case=label):
+                with self.assertRaises(InvalidImage):
+                    to_webp(ContentFile(data))
+
+    def test_rejects_images_over_the_pixel_limit(self):
+        with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
+            with self.assertRaises(InvalidImage):
+                to_webp(ContentFile(make_image_bytes(size=(20, 10))))
