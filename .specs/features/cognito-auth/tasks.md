@@ -863,9 +863,9 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `grep -n "AsyncStorage\|Bearer" frontend-mobile/app/_layout.tsx` não encontra nada
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
-- [ ] Comportamento verificado no roteiro do T24 (passos 3, 8 e 9)
+- [x] `grep -n "AsyncStorage\|Bearer" frontend-mobile/app/_layout.tsx` não encontra nada
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Comportamento verificado no roteiro do T24 (passos 3, 8 e 9)
 
 **Tests**: none
 **Gate**: app
