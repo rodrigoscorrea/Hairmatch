@@ -10,7 +10,7 @@ from .models import User, Customer, Hairdresser
 from preferences.models import Preferences
 from service.models import Service
 import base64
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import JsonResponse
@@ -24,6 +24,9 @@ from .auth_tokens import (
 )
 from .google_auth import verify_google_id_token, GoogleTokenError
 from google.auth.exceptions import GoogleAuthError
+import requests as http_requests
+from django.core.cache import cache
+from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -2350,3 +2353,143 @@ class GoogleRegisterTest(TestCase):
                 profile = profile_response.json()[role]
                 self.assertEqual(profile['user']['email'], email)
                 self.assertEqual(profile['user']['role'], role)
+
+
+class CepLookupServiceTest(TestCase):
+    VIACEP_OK = {
+        'cep': '69057-000', 'logradouro': 'Avenida Mário Ypiranga', 'complemento': 'até 436/437',
+        'bairro': 'Adrianópolis', 'localidade': 'Manaus', 'uf': 'AM', 'ibge': '1302603',
+    }
+    BRASILAPI_OK = {
+        'cep': '69057000', 'state': 'AM', 'city': 'Manaus', 'neighborhood': 'Adrianópolis',
+        'street': 'Avenida Mário Ypiranga', 'location': {'coordinates': {}},
+    }
+    EXPECTED = {
+        'postal_code': '69057000', 'address': 'Avenida Mário Ypiranga',
+        'neighborhood': 'Adrianópolis', 'city': 'Manaus', 'state': 'AM',
+    }
+
+    def setUp(self):
+        cache.clear()
+        patcher = patch('users.cep_lookup.requests.get')
+        self.mock_get = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @staticmethod
+    def _response(status_code=200, json_data=None, json_error=False):
+        response = MagicMock()
+        response.status_code = status_code
+        if json_error:
+            response.json.side_effect = ValueError('invalid json')
+        else:
+            response.json.return_value = json_data
+        return response
+
+    def _viacep_ok(self):
+        return self._response(200, self.VIACEP_OK)
+
+    def test_viacep_found_returns_exact_normalized_dict(self):
+        self.mock_get.return_value = self._viacep_ok()
+        self.assertEqual(lookup_cep('69057-000'), self.EXPECTED)
+
+    def test_response_has_only_the_five_keys(self):
+        self.mock_get.return_value = self._viacep_ok()
+        self.assertEqual(
+            set(lookup_cep('69057000').keys()),
+            {'postal_code', 'address', 'neighborhood', 'city', 'state'},
+        )
+
+    def test_invalid_cep_raises_without_calling_provider(self):
+        for raw in ['123', '123456789', '']:
+            with self.subTest(raw=raw):
+                with self.assertRaises(InvalidCep):
+                    lookup_cep(raw)
+        self.mock_get.assert_not_called()
+
+    def _assert_falls_back_to_brasilapi(self, viacep_side_effect):
+        self.mock_get.side_effect = [viacep_side_effect, self._response(200, self.BRASILAPI_OK)]
+        self.assertEqual(lookup_cep('69057000'), self.EXPECTED)
+        self.assertEqual(self.mock_get.call_count, 2)
+        self.assertIn('brasilapi.com.br', self.mock_get.call_args_list[1].args[0])
+
+    def test_viacep_timeout_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(http_requests.Timeout())
+
+    def test_viacep_connection_error_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(http_requests.ConnectionError())
+
+    def test_viacep_status_500_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(self._response(500, None))
+
+    def test_viacep_invalid_json_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(self._response(200, json_error=True))
+
+    def test_viacep_erro_string_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(self._response(200, {'erro': 'true'}))
+
+    def test_viacep_erro_boolean_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(self._response(200, {'erro': True}))
+
+    def test_viacep_erro_and_brasilapi_404_raises_not_found(self):
+        self.mock_get.side_effect = [self._response(200, {'erro': 'true'}), self._response(404, {})]
+        with self.assertRaises(CepNotFound):
+            lookup_cep('00000000')
+
+    def test_viacep_timeout_and_brasilapi_404_raises_not_found(self):
+        self.mock_get.side_effect = [http_requests.Timeout(), self._response(404, {})]
+        with self.assertRaises(CepNotFound):
+            lookup_cep('00000000')
+
+    def test_both_providers_failing_raises_service_unavailable(self):
+        self.mock_get.side_effect = [http_requests.Timeout(), self._response(500, None)]
+        with self.assertRaises(CepServiceUnavailable):
+            lookup_cep('69057000')
+
+    def test_every_provider_call_uses_timeout_3(self):
+        self.mock_get.side_effect = [http_requests.Timeout(), self._response(200, self.BRASILAPI_OK)]
+        lookup_cep('69057000')
+        self.assertEqual(self.mock_get.call_count, 2)
+        for call in self.mock_get.call_args_list:
+            self.assertEqual(call.kwargs['timeout'], 3)
+
+    def test_brasilapi_null_fields_become_empty_strings(self):
+        data = dict(self.BRASILAPI_OK, street=None, neighborhood=None)
+        self.mock_get.side_effect = [http_requests.Timeout(), self._response(200, data)]
+        result = lookup_cep('78175000')
+        self.assertEqual(result['address'], '')
+        self.assertEqual(result['neighborhood'], '')
+
+    def test_viacep_city_wide_cep_returns_empty_street_and_neighborhood(self):
+        data = {'cep': '78175-000', 'logradouro': '', 'bairro': '', 'localidade': 'Poconé', 'uf': 'MT'}
+        self.mock_get.return_value = self._response(200, data)
+        self.assertEqual(lookup_cep('78175-000'), {
+            'postal_code': '78175000', 'address': '', 'neighborhood': '',
+            'city': 'Poconé', 'state': 'MT',
+        })
+
+    def test_found_cep_is_cached_for_24h(self):
+        self.mock_get.return_value = self._viacep_ok()
+        with patch('users.cep_lookup.cache.set', wraps=cache.set) as spy_set:
+            lookup_cep('69057000')
+        spy_set.assert_called_once_with('cep:69057000', self.EXPECTED, 86400)
+        self.mock_get.reset_mock()
+        self.assertEqual(lookup_cep('69057-000'), self.EXPECTED)
+        self.mock_get.assert_not_called()
+
+    def test_not_found_is_not_cached(self):
+        self.mock_get.side_effect = [
+            self._response(200, {'erro': 'true'}), self._response(404, {}),
+            self._response(200, {'erro': 'true'}), self._response(404, {}),
+        ]
+        for _ in range(2):
+            with self.assertRaises(CepNotFound):
+                lookup_cep('00000000')
+        self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_provider_failure_logs_warning_with_provider_name(self):
+        self.mock_get.side_effect = [http_requests.Timeout(), self._response(500, None)]
+        with self.assertLogs('users.cep_lookup', 'WARNING') as logs:
+            with self.assertRaises(CepServiceUnavailable):
+                lookup_cep('69057000')
+        self.assertTrue(any('viacep' in line for line in logs.output))
+        self.assertTrue(any('brasilapi' in line for line in logs.output))
