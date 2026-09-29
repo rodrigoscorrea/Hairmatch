@@ -36,6 +36,12 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 EVOLUTION_API_URL=os.getenv('EVOLUTION_API_URL')
 EVOLUTION_API_KEY=os.getenv('EVOLUTION_API_KEY')
 EVOLUTION_INSTANCE_NAME=os.getenv('EVOLUTION_INSTANCE_NAME')
+# Cognito user pool and app client. Empty in dev: the backend looks them up by name (hairmatch-dev / hairmatch-backend).
+COGNITO_USER_POOL_ID = os.getenv('COGNITO_USER_POOL_ID', '')
+COGNITO_APP_CLIENT_ID = os.getenv('COGNITO_APP_CLIENT_ID', '')
+# Tests use an in-memory Cognito so they need no emulator.
+COGNITO_USE_FAKE = 'test' in sys.argv
+TEST_RUNNER = 'hairmatch.test_runner.HairmatchTestRunner'
 GOOGLE_OAUTH_CLIENT_IDS = [
     client_id.strip()
     for client_id in os.getenv('GOOGLE_OAUTH_CLIENT_IDS', '').split(',')

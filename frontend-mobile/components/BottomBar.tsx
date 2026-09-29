@@ -12,7 +12,7 @@ import { customerTabs, hairdresserTabs } from '@/constants/tabsConfig'; // <-- O
 
 const BottomTabBar: React.FC = () => {
   const router = useRouter();
-  const segments = useSegments(); // Gets the current URL path segments, e.g., ['(app)', '(customer)', 'home']
+  const segments = useSegments(); // Gets the current URL path segments, e.g., ['(app)', 'customer', 'home']
   const { userInfo } = useAuth();
 
   // Determine which set of tabs to display

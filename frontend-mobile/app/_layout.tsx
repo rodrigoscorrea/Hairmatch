@@ -2,10 +2,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import axiosInstance from '../services/axios-instance';
-import { UserInfo, UserRole } from '../models/User.types';
+import axiosInstance, { setSessionExpiredHandler } from '../services/axios-instance';
+import { UserInfo } from '../models/User.types';
+import { homeRouteFor } from '../utils/routes';
 import { Preference } from '../models/Preferences.types';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -32,12 +32,8 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
     if (userToken && inAuthGroup) {
-      if (userInfo?.customer?.user?.role === UserRole.CUSTOMER) {
-        router.replace('/(app)/(customer)/home');
-      } else if (userInfo?.hairdresser?.user?.role === UserRole.HAIRDRESSER) {
-        router.replace('/(app)/(hairdresser)/agenda');
-      }
-      
+      const home = homeRouteFor(userInfo);
+      if (home) router.replace(home);
     } else if (!userToken && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
@@ -48,13 +44,13 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  const authContext = React.useMemo(() => {
   // Loads the session from the `jwt` cookie already set by the backend.
-  const loadSession = async (): Promise<{ success: boolean; error?: string }> => {
+  const loadSession = React.useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     try {
       const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
 
@@ -70,13 +66,14 @@ export default function RootLayout() {
         const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
       return { success: false, error: errorMessage };
     }
-  };
+  }, []);
 
+  const authContext = React.useMemo(() => {
   return {
   loadSession,
   signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      await axios.post(`${API_BACKEND_URL}/api/auth/login`, {
+      await axiosInstance.post(`${API_BACKEND_URL}/api/auth/login`, {
         email,
         password
       }, { withCredentials: true });
@@ -118,14 +115,13 @@ export default function RootLayout() {
   signOut: async () => {
     setIsLoading(true);
     try {
-      await axios.post(`${API_BACKEND_URL}/api/auth/logout`);
-      await AsyncStorage.removeItem('userToken');
-      setUserToken(null);
-      setUserInfo(null);
-      delete axios.defaults.headers.common['Authorization'];
+      await axiosInstance.post(`${API_BACKEND_URL}/api/auth/logout`, {}, { withCredentials: true });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // The local session ends even when the backend could not be reached.
+      setUserToken(null);
+      setUserInfo(null);
       setIsLoading(false);
     }
   },
@@ -133,31 +129,30 @@ export default function RootLayout() {
   userToken,
   isLoading
   };
-}, [userToken, userInfo, isLoading]);
-
-  const fetchUserInfo = async (token: string) => {
-    try {
-      // Set the token in headers
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_BACKEND_URL}/api/user`, { headers });
-      setUserInfo(response.data.user);
-    } catch (error) {
-      console.error('Error fetching user info:', error);
-    }
-  };
+}, [userToken, userInfo, isLoading, loadSession]);
 
   useEffect(() => {
-    // Check if user is logged in
+    // When the backend cannot refresh the session anymore, go back to the login without an error modal.
+    setSessionExpiredHandler(() => {
+      setUserToken(null);
+      setUserInfo(null);
+      router.replace('/(auth)/login');
+    });
+  }, []);
+
+  useEffect(() => {
+    // Restores the session from the cookies: the access token first, then a refresh if it is gone.
     const bootstrapAsync = async () => {
       try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (token) {
-          setUserToken(token);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          fetchUserInfo(token);
+        let session = await loadSession();
+        if (!session.success) {
+          try {
+            await axiosInstance.post(`${API_BACKEND_URL}/api/auth/refresh`, {}, { withCredentials: true });
+            session = await loadSession();
+          } catch (refreshError) {
+            // No valid refresh token: stay on the login screen.
+          }
         }
-      } catch (e) {
-        console.error('Failed to restore token:', e);
       } finally {
         setIsLoading(false);
       }

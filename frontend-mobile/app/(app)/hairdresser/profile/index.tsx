@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/profile/index.tsx
+// app/(app)/hairdresser/profile/index.tsx
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { Accordion } from '@/components/Accordion';
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
   const hairdresser_image = hairdresser.user.profile_picture;
-  console.log('oiii')
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>

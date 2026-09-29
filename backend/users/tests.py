@@ -5,7 +5,6 @@ from rest_framework import status
 import json
 import jwt
 import datetime
-import bcrypt
 from .models import User, Customer, Hairdresser, user_profile_picture_path
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
@@ -18,6 +17,9 @@ from django.http import JsonResponse
 from .auth_tokens import (
     issue_session_token,
     set_session_cookie,
+    set_cognito_cookies,
+    set_access_cookie,
+    clear_auth_cookies,
     create_signup_token,
     decode_signup_token,
     InvalidSignupToken,
@@ -35,6 +37,36 @@ from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 from .management.commands import populate_hairdressers
+from . import cognito_fake
+from .cognito import (
+    CognitoService,
+    Tokens,
+    CognitoUnavailable,
+    InvalidCredentials,
+    InvalidPassword,
+    TooManyRequests,
+    UserAlreadyExists,
+    get_cognito,
+    reset_cognito,
+)
+from botocore.exceptions import (
+    ClientError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
+from types import SimpleNamespace
+from django.test import RequestFactory
+from . import authentication
+from .authentication import authenticate_request, authenticated_user
+import unittest
+import boto3
+from hairmatch.test_runner import HairmatchTestRunner
+from jwt.algorithms import RSAAlgorithm
+
+# The key of the session format COG-20 retires. Only the test that proves it is refused uses it.
+LEGACY_SESSION_KEY = 'secret'
+
 
 def stored_image(name):
     """Opens what was actually written to the media storage under `name`."""
@@ -58,7 +90,7 @@ class RegisterViewTest(TestCase):
             'address': 'Main Street',
             'postal_code': '12345',
             'email': 'john@example.com',
-            'password': 'secure_password',
+            'password': 'Secure_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -76,7 +108,7 @@ class RegisterViewTest(TestCase):
             'address': 'Hair Street',
             'postal_code': '54321',
             'email': 'jane@example.com',
-            'password': 'secure_password',
+            'password': 'Secure_password1',
             'role': 'hairdresser',
             'rating': 4,
             'resume': 'Experienced hairdresser',
@@ -327,7 +359,7 @@ class LoginViewTest(TestCase):
             'address': 'Test Street',
             'postal_code': '12345',
             'email': 'test@example.com',
-            'password': 'test_password',
+            'password': 'Test_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -343,7 +375,7 @@ class LoginViewTest(TestCase):
     def test_login_valid(self):
         login_payload = {
             'email': 'test@example.com',
-            'password': 'test_password'
+            'password': 'Test_password1'
         }
         
         response = self.client.post(
@@ -358,7 +390,7 @@ class LoginViewTest(TestCase):
     def test_login_invalid_credentials(self):
         login_payload = {
             'email': 'test@example.com',
-            'password': 'wrong_password'
+            'password': 'Wrong_password1'
         }
         
         response = self.client.post(
@@ -366,13 +398,13 @@ class LoginViewTest(TestCase):
             data=json.dumps(login_payload),
             content_type='application/json'
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('error', response.json())
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'E-mail ou senha inválidos.'})
 
     def test_login_nonexistent_user(self):
         login_payload = {
             'email': 'nonexistent@example.com',
-            'password': 'test_password'
+            'password': 'Test_password1'
         }
         
         response = self.client.post(
@@ -380,14 +412,14 @@ class LoginViewTest(TestCase):
             data=json.dumps(login_payload),
             content_type='application/json'
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response.json())
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'E-mail ou senha inválidos.'})
 
     def test_check_authentication_with_token(self):
         # First login to get token
         login_payload = {
             'email': 'test@example.com',
-            'password': 'test_password'
+            'password': 'Test_password1'
         }
         
         login_response = self.client.post(
@@ -455,7 +487,7 @@ class ChangePasswordViewTest(TestCase):
             'address': 'Password Street',
             'postal_code': '12345',
             'email': 'password@example.com',
-            'password': 'old_password',
+            'password': 'Old_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -471,7 +503,7 @@ class ChangePasswordViewTest(TestCase):
         # Login to get token
         login_payload = {
             'email': 'password@example.com',
-            'password': 'old_password'
+            'password': 'Old_password1'
         }
         
         login_response = self.client.post(
@@ -486,7 +518,8 @@ class ChangePasswordViewTest(TestCase):
         self.client.cookies['jwt'] = self.token
         
         change_payload = {
-            'password': 'new_password'
+            'old_password': 'Old_password1',
+            'password': 'New_password1'
         }
         
         response = self.client.put(
@@ -500,7 +533,7 @@ class ChangePasswordViewTest(TestCase):
         # Verify we can login with new password
         login_payload = {
             'email': 'password@example.com',
-            'password': 'new_password'
+            'password': 'New_password1'
         }
         
         login_response = self.client.post(
@@ -515,7 +548,7 @@ class ChangePasswordViewTest(TestCase):
         self.client.cookies.clear()
         
         change_payload = {
-            'password': 'new_password'
+            'password': 'New_password1'
         }
         
         response = self.client.put(
@@ -524,23 +557,25 @@ class ChangePasswordViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.json()['authenticated'])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
     def test_change_password_with_expired_token(self):
         # Create an expired token
         user = User.objects.get(email='password@example.com')
         payload = {
             'id': user.id,
-            'exp': datetime.datetime.now() - datetime.timedelta(minutes=5),  # Expired
-            'iat': datetime.datetime.now() - datetime.timedelta(minutes=65)
+            'iss': 'hairmatch',
+            'token_use': 'session',
+            'exp': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=5),  # Expired
+            'iat': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=65)
         }
-        expired_token = jwt.encode(payload, 'secret', algorithm='HS256')
+        expired_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         
         self.client.cookies['jwt'] = expired_token
         
         change_payload = {
-            'password': 'new_password'
+            'password': 'New_password1'
         }
         
         response = self.client.put(
@@ -549,8 +584,8 @@ class ChangePasswordViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.json()['authenticated'])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
 
 class UserInfoCookieViewTest(TestCase):
@@ -573,7 +608,7 @@ class UserInfoCookieViewTest(TestCase):
             'address': 'Customer Street',
             'postal_code': '12345',
             'email': 'customer@example.com',
-            'password': 'customer_password',
+            'password': 'Customer_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -593,7 +628,7 @@ class UserInfoCookieViewTest(TestCase):
             'address': 'Hairdresser Street',
             'postal_code': '54321',
             'email': 'hairdresser@example.com',
-            'password': 'hairdresser_password',
+            'password': 'Hairdresser_password1',
             'role': 'hairdresser',
             'rating': 4,
             'resume': 'Professional hairdresser',
@@ -618,8 +653,8 @@ class UserInfoCookieViewTest(TestCase):
         )
         
         # Helper method to login and get token
-        self.customer_token = self._get_token('customer@example.com', 'customer_password')
-        self.hairdresser_token = self._get_token('hairdresser@example.com', 'hairdresser_password')
+        self.customer_token = self._get_token('customer@example.com', 'Customer_password1')
+        self.hairdresser_token = self._get_token('hairdresser@example.com', 'Hairdresser_password1')
 
     def _get_token(self, email, password):
         login_payload = {
@@ -662,7 +697,8 @@ class UserInfoCookieViewTest(TestCase):
         self.client.cookies.clear()
         
         response = self.client.get(self.user_info_auth_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 
     def test_delete_user(self):
         self.client.cookies['jwt'] = self.customer_token
@@ -678,7 +714,8 @@ class UserInfoCookieViewTest(TestCase):
         self.client.cookies.clear()
         
         response = self.client.delete(self.user_info_auth_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         
         # Verify no users were deleted
         self.assertEqual(User.objects.count(), 2)
@@ -689,7 +726,6 @@ class UserInfoCookieViewTest(TestCase):
         update_payload = {
             'first_name': 'Updated',
             'last_name': 'Customer',
-            'email': 'updated_customer@example.com',
             'cpf': '98765432100'
         }
         
@@ -702,7 +738,7 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Verify user info was updated
-        updated_user = User.objects.get(email='updated_customer@example.com')
+        updated_user = User.objects.get(email='customer@example.com')
         self.assertEqual(updated_user.first_name, 'Updated')
         self.assertEqual(updated_user.last_name, 'Customer')
         
@@ -716,7 +752,6 @@ class UserInfoCookieViewTest(TestCase):
         update_payload = {
             'first_name': 'Updated',
             'last_name': 'Hairdresser',
-            'email': 'updated_hairdresser@example.com',
             'experience_years': 10,
             'resume': 'Updated resume',
             'cnpj': '98765432000190'
@@ -731,7 +766,7 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Verify user info was updated
-        updated_user = User.objects.get(email='updated_hairdresser@example.com')
+        updated_user = User.objects.get(email='hairdresser@example.com')
         self.assertEqual(updated_user.first_name, 'Updated')
         self.assertEqual(updated_user.last_name, 'Hairdresser')
         
@@ -755,8 +790,8 @@ class UserInfoCookieViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('error', response.json())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
 
 
 class UserInfoViewTest(TestCase):
@@ -777,7 +812,7 @@ class UserInfoViewTest(TestCase):
             'address': 'Customer Street',
             'postal_code': '12345',
             'email': 'customer@example.com',
-            'password': 'customer_password',
+            'password': 'Customer_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -796,7 +831,7 @@ class UserInfoViewTest(TestCase):
             'address': 'Hairdresser Street',
             'postal_code': '54321',
             'email': 'hairdresser@example.com',
-            'password': 'hairdresser_password',
+            'password': 'Hairdresser_password1',
             'role': 'hairdresser',
             'rating': 4,
             'resume': 'Professional hairdresser',
@@ -889,7 +924,7 @@ class CustomerHomeViewTest(TestCase):
             'address': 'Customer Street',
             'postal_code': '12345',
             'email': 'customer@example.com',
-            'password': 'customer_password',
+            'password': 'Customer_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678900',
@@ -909,7 +944,7 @@ class CustomerHomeViewTest(TestCase):
             'address': 'Hairdresser Street',
             'postal_code': '54321',
             'email': 'hairdresser1@example.com',
-            'password': 'hairdresser_password',
+            'password': 'Hairdresser_password1',
             'role': 'hairdresser',
             'rating': 4,
             'resume': 'Professional hairdresser 1',
@@ -933,7 +968,7 @@ class CustomerHomeViewTest(TestCase):
             'address': 'Hairdresser Street 2',
             'postal_code': '54322',
             'email': 'hairdresser2@example.com',
-            'password': 'hairdresser_password',
+            'password': 'Hairdresser_password1',
             'role': 'hairdresser',
             'rating': 5,
             'resume': 'Professional hairdresser 2',
@@ -1064,7 +1099,7 @@ class CustomerHomeViewTest(TestCase):
             'address': 'Customer Street',
             'postal_code': '12346',
             'email': 'nomatch@example.com',
-            'password': 'customer_password',
+            'password': 'Customer_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678901',
@@ -1107,7 +1142,7 @@ class CustomerHomeViewTest(TestCase):
             'address': 'Customer Street',
             'postal_code': '12347',
             'email': 'empty@example.com',
-            'password': 'customer_password',
+            'password': 'Customer_password1',
             'role': 'customer',
             'rating': 5,
             'cpf': '12345678902',
@@ -1829,8 +1864,10 @@ class AuthTokensTest(TestCase):
     def test_session_token_payload_matches_login_session(self):
         token = issue_session_token(self.user)
 
-        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], self.user.id)
+        self.assertEqual(payload['iss'], 'hairmatch')
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
 
     def test_set_session_cookie_attributes(self):
@@ -1840,8 +1877,51 @@ class AuthTokensTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        self.assertEqual(cookie['max-age'], 3600)
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], self.user.id)
+
+    def test_set_cognito_cookies_sets_jwt_and_refresh_token_with_spec_attributes(self):
+        response = set_cognito_cookies(JsonResponse({}), Tokens('access-abc', 'refresh-xyz'))
+
+        jwt_cookie = response.cookies['jwt']
+        self.assertEqual(jwt_cookie.value, 'access-abc')
+        self.assertEqual(jwt_cookie['max-age'], 3600)
+        self.assertEqual(jwt_cookie['path'], '/')
+        self.assertTrue(jwt_cookie['httponly'])
+        self.assertEqual(jwt_cookie['samesite'], 'None')
+        self.assertTrue(jwt_cookie['secure'])
+        refresh_cookie = response.cookies['refresh_token']
+        self.assertEqual(refresh_cookie.value, 'refresh-xyz')
+        self.assertEqual(refresh_cookie['max-age'], 2592000)
+        self.assertEqual(refresh_cookie['path'], '/api/auth/')
+        self.assertTrue(refresh_cookie['httponly'])
+        self.assertEqual(refresh_cookie['samesite'], 'None')
+        self.assertTrue(refresh_cookie['secure'])
+
+    def test_set_access_cookie_sets_only_jwt(self):
+        response = set_access_cookie(JsonResponse({}), 'access-new')
+
+        self.assertEqual(list(response.cookies.keys()), ['jwt'])
+        cookie = response.cookies['jwt']
+        self.assertEqual(cookie.value, 'access-new')
+        self.assertEqual(cookie['max-age'], 3600)
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'None')
+        self.assertTrue(cookie['secure'])
+
+    def test_clear_auth_cookies_expires_both_cookies_on_their_original_paths(self):
+        response = clear_auth_cookies(JsonResponse({}))
+
+        for key, path in (('jwt', '/'), ('refresh_token', '/api/auth/')):
+            with self.subTest(cookie=key):
+                cookie = response.cookies[key]
+                self.assertEqual(cookie.value, '')
+                self.assertEqual(cookie['max-age'], 0)
+                self.assertEqual(cookie['path'], path)
+                self.assertTrue(cookie['httponly'])
+                self.assertEqual(cookie['samesite'], 'None')
+                self.assertTrue(cookie['secure'])
 
     def test_signup_token_claims_and_30_minute_expiry(self):
         frozen_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
@@ -1885,16 +1965,10 @@ class AuthTokensTest(TestCase):
         with self.assertRaises(InvalidSignupToken):
             decode_signup_token(f'{header}.{forged_payload}.{signature}')
 
-    def test_decode_rejects_token_signed_with_session_key(self):
-        token = jwt.encode({
-            'email': 'ana@gmail.com',
-            'sub': 'google-sub-123',
-            'purpose': 'google_signup',
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30),
-        }, 'secret', algorithm='HS256')
-
+    def test_decode_rejects_a_session_token(self):
+        # Sessions and signup tokens share SECRET_KEY, so the purpose claim is what keeps them apart.
         with self.assertRaises(InvalidSignupToken):
-            decode_signup_token(token)
+            decode_signup_token(issue_session_token(self.user))
 
     def test_decode_rejects_token_with_other_purpose(self):
         token = jwt.encode({
@@ -2072,9 +2146,11 @@ class GoogleAuthViewTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
+        self.assertEqual(cookie['max-age'], 3600)
 
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
@@ -2240,9 +2316,11 @@ class GoogleRegisterTest(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'None')
         self.assertTrue(cookie['secure'])
-        payload = jwt.decode(cookie.value, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(cookie.value, settings.SECRET_KEY, algorithms=['HS256'], issuer='hairmatch')
         self.assertEqual(payload['id'], user.id)
+        self.assertEqual(payload['token_use'], 'session')
         self.assertEqual(payload['exp'] - payload['iat'], 3600)
+        self.assertEqual(cookie['max-age'], 3600)
 
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
@@ -2754,9 +2832,1234 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self.assertFalse(default_storage.exists(key))
 
+    def _login_status(self, email, password='Senha123'):
+        return APIClient().post(
+            reverse('login'), data=json.dumps({'email': email, 'password': password}),
+            content_type='application/json',
+        ).status_code
+
+    def test_seeded_hairdressers_exist_in_cognito_without_a_local_password_and_can_log_in(self):
+        fake = get_cognito().client
+
+        self._run()
+
+        hairdressers = User.objects.filter(role='hairdresser')
+        self.assertEqual(hairdressers.count(), 40)
+        for user in hairdressers:
+            self.assertIsNone(user.password)
+            self.assertEqual(user.cognito_sub, fake.users[user.email.lower()]['sub'])
+            self.assertTrue(fake.users[user.email.lower()]['confirmed'])
+        self.assertEqual(self._login_status(hairdressers.first().email), 200)
+
+    def test_recreates_users_missing_from_cognito_and_fills_a_missing_sub_without_new_rows(self):
+        fake = get_cognito().client
+        self._run()
+        no_sub, lost_in_cognito = User.objects.filter(role='hairdresser').order_by('id')[:2]
+        User.objects.filter(pk=no_sub.pk).update(cognito_sub=None)
+        del fake.users[lost_in_cognito.email.lower()]
+
+        self._run()
+
+        self.assertEqual(User.objects.filter(role='hairdresser').count(), 40)
+        for user in (no_sub, lost_in_cognito):
+            user.refresh_from_db()
+            self.assertEqual(user.cognito_sub, fake.users[user.email.lower()]['sub'])
+            self.assertEqual(self._login_status(user.email), 200)
+
+    def test_does_not_touch_users_outside_the_seed_pattern(self):
+        fake = get_cognito().client
+        plain = User.objects.create(
+            email='someone@seed.test', first_name='A', last_name='B', phone='1', neighborhood='n',
+            city='c', state='AM', address='a', postal_code='1', role='hairdresser',
+        )
+        google = User.objects.create(
+            email='hairdresser7_ana@gmail.com', first_name='A', last_name='B', phone='2', neighborhood='n',
+            city='c', state='AM', address='a', postal_code='1', role='hairdresser', google_id='google-1',
+        )
+
+        self._run()
+
+        for user in (plain, google):
+            user.refresh_from_db()
+            self.assertIsNone(user.cognito_sub)
+        self.assertEqual(fake.users, {})
+
+    def test_running_again_creates_no_cognito_user_and_keeps_every_sub(self):
+        fake = get_cognito().client
+        self._run()
+        subs = dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub'))
+        fake.calls.clear()
+
+        self._run()
+
+        self.assertEqual([name for name, _ in fake.calls if name == 'sign_up'], [])
+        self.assertEqual(dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub')), subs)
+
 class UserProfilePicturePathTest(SimpleTestCase):
     def test_path_is_scoped_by_user_id(self):
         self.assertEqual(
             user_profile_picture_path(User(pk=42), 'screen.png'),
             'profile_pics/42/screen.png',
         )
+
+
+class FakeCognitoIdpTest(SimpleTestCase):
+    def setUp(self):
+        self.cognito = cognito_fake.FakeCognitoIdp()
+
+    def _sign_up_confirmed(self, email='a@x.com', password='Senha123'):
+        sub = self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, Password=password
+        )['UserSub']
+        self.cognito.admin_confirm_sign_up(
+            UserPoolId=cognito_fake.POOL_ID, Username=email
+        )
+        return sub
+
+    def _login(self, email='a@x.com', password='Senha123'):
+        return self.cognito.initiate_auth(
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters={'USERNAME': email, 'PASSWORD': password},
+            ClientId=cognito_fake.CLIENT_ID,
+        )['AuthenticationResult']
+
+    def test_sign_up_with_compliant_password_returns_user_sub(self):
+        response = self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+        )
+        self.assertEqual(response['UserSub'], self.cognito.users['a@x.com']['sub'])
+        self.assertFalse(response['UserConfirmed'])
+
+    def test_sign_up_rejects_passwords_outside_the_policy(self):
+        for password in ('senha123', 'SENHA123', 'Senhaabc', 'Se1'):
+            with self.subTest(password=password):
+                with self.assertRaises(ClientError) as ctx:
+                    self.cognito.sign_up(
+                        ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password=password
+                    )
+                self.assertEqual(
+                    ctx.exception.response['Error']['Code'], 'InvalidPasswordException'
+                )
+        self.assertEqual(self.cognito.users, {})
+
+    def test_sign_up_treats_emails_that_differ_in_case_as_the_same_user(self):
+        self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='A@x.com', Password='Senha123'
+        )
+        with self.assertRaises(ClientError) as ctx:
+            self.cognito.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+            )
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'UsernameExistsException')
+
+    def test_login_is_case_insensitive_on_the_email(self):
+        self._sign_up_confirmed(email='A@x.com')
+        self.assertIn('AccessToken', self._login(email='a@X.com'))
+
+    def test_login_returns_tokens_verifiable_with_the_published_jwks(self):
+        sub = self._sign_up_confirmed()
+        tokens = self._login()
+
+        jwk = self.cognito.jwks()['keys'][0]
+        key = RSAAlgorithm.from_jwk(json.dumps(jwk))
+        claims = jwt.decode(
+            tokens['AccessToken'],
+            key,
+            algorithms=['RS256'],
+            issuer=cognito_fake.issuer(),
+        )
+        self.assertEqual(jwt.get_unverified_header(tokens['AccessToken'])['kid'], jwk['kid'])
+        self.assertEqual(claims['sub'], sub)
+        self.assertEqual(claims['token_use'], 'access')
+        self.assertEqual(claims['client_id'], cognito_fake.CLIENT_ID)
+        self.assertEqual(claims['exp'] - claims['iat'], 3600)
+        self.assertIn('RefreshToken', tokens)
+
+    def test_login_with_wrong_password_is_not_authorized(self):
+        self._sign_up_confirmed()
+        with self.assertRaises(ClientError) as ctx:
+            self._login(password='Errada123')
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'NotAuthorizedException')
+
+    def test_refresh_after_revoke_is_not_authorized(self):
+        self._sign_up_confirmed()
+        refresh_token = self._login()['RefreshToken']
+        refresh = lambda: self.cognito.initiate_auth(
+            AuthFlow='REFRESH_TOKEN_AUTH',
+            AuthParameters={'REFRESH_TOKEN': refresh_token},
+            ClientId=cognito_fake.CLIENT_ID,
+        )
+
+        self.assertIn('AccessToken', refresh()['AuthenticationResult'])
+        self.cognito.revoke_token(Token=refresh_token, ClientId=cognito_fake.CLIENT_ID)
+        with self.assertRaises(ClientError) as ctx:
+            refresh()
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'NotAuthorizedException')
+
+    def test_fail_next_raises_exactly_once(self):
+        self._sign_up_confirmed()
+        self.cognito.fail_next('initiate_auth', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertRaises(EndpointConnectionError):
+            self._login()
+        self.assertIn('AccessToken', self._login())
+
+
+class CognitoServiceTest(SimpleTestCase):
+    def setUp(self):
+        self.fake = cognito_fake.FakeCognitoIdp()
+        self.service = CognitoService(self.fake)
+
+    def _sign_up(self, password='Senha123'):
+        return self.service.sign_up_confirmed('a@x.com', password)
+
+    def test_boto_errors_become_domain_errors(self):
+        cases = [
+            ('InvalidPasswordException', InvalidPassword),
+            ('UsernameExistsException', UserAlreadyExists),
+            ('NotAuthorizedException', InvalidCredentials),
+            ('UserNotFoundException', InvalidCredentials),
+            ('TooManyRequestsException', TooManyRequests),
+            ('LimitExceededException', TooManyRequests),
+            ('InternalErrorException', CognitoUnavailable),
+            ('SomethingCognitoAddedLater', CognitoUnavailable),
+            (EndpointConnectionError(endpoint_url='http://x'), CognitoUnavailable),
+            (ConnectTimeoutError(endpoint_url='http://x'), CognitoUnavailable),
+            (ReadTimeoutError(endpoint_url='http://x'), CognitoUnavailable),
+        ]
+        for error, expected in cases:
+            with self.subTest(error=error):
+                self.fake.fail_next('sign_up', error)
+                with self.assertRaises(expected) as ctx:
+                    self._sign_up()
+                self.assertIs(type(ctx.exception), expected)
+
+    def test_failures_are_logged_with_operation_and_code_but_never_the_password(self):
+        with self.assertLogs('users.cognito', 'WARNING') as logs:
+            with self.assertRaises(InvalidPassword):
+                self._sign_up(password='senha123')
+            self.fake.fail_next('initiate_auth', EndpointConnectionError(endpoint_url='http://x'))
+            with self.assertRaises(CognitoUnavailable):
+                self.service.authenticate('a@x.com', 'Senha123')
+
+        self.assertEqual(logs.records[0].levelname, 'WARNING')
+        self.assertIn('sign_up', logs.output[0])
+        self.assertIn('InvalidPasswordException', logs.output[0])
+        self.assertIn('initiate_auth', logs.output[1])
+        self.assertIn('EndpointConnectionError', logs.output[1])
+        for line in logs.output:
+            self.assertNotIn('senha123', line.lower())
+            self.assertNotIn('a@x.com', line)
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-from-env', COGNITO_APP_CLIENT_ID='client-from-env')
+    def test_ids_from_settings_are_used_without_any_listing_call(self):
+        self.assertEqual(self.service.pool_id, 'pool-from-env')
+        self.assertEqual(self.service.client_id, 'client-from-env')
+        self.assertEqual(self.service.issuer, 'https://cognito-idp.us-east-2.amazonaws.com/pool-from-env')
+        self.assertEqual(self.fake.calls, [])
+
+    @override_settings(COGNITO_USER_POOL_ID='', COGNITO_APP_CLIENT_ID='')
+    def test_empty_ids_are_resolved_by_name(self):
+        self.assertEqual(self.service.pool_id, cognito_fake.POOL_ID)
+        self.assertEqual(self.service.client_id, cognito_fake.CLIENT_ID)
+        self.assertEqual(
+            [name for name, _ in self.fake.calls], ['list_user_pools', 'list_user_pool_clients']
+        )
+        self.assertEqual(
+            self.service.issuer,
+            f'https://cognito-idp.us-east-2.amazonaws.com/{cognito_fake.POOL_ID}',
+        )
+
+    @override_settings(COGNITO_USER_POOL_ID='', COGNITO_APP_CLIENT_ID='')
+    def test_missing_pool_is_reported_as_unavailable(self):
+        self.fake.list_user_pools = lambda **kwargs: {'UserPools': [{'Id': 'x', 'Name': 'other'}]}
+        with self.assertRaises(CognitoUnavailable):
+            self.service.pool_id
+
+    def test_cognito_calls_use_the_cognito_endpoint_while_s3_keeps_its_own(self):
+        env = {
+            'AWS_DEFAULT_REGION': 'us-east-2',
+            'AWS_ACCESS_KEY_ID': 'test',
+            'AWS_SECRET_ACCESS_KEY': 'test',
+            'AWS_ENDPOINT_URL': 'http://localstack:4566',
+            'AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER': 'http://ministack:4566',
+        }
+        with patch.dict(os.environ, env):
+            cognito_endpoint = CognitoService().client.meta.endpoint_url
+            s3_endpoint = boto3.client('s3').meta.endpoint_url
+        self.assertEqual(cognito_endpoint, 'http://ministack:4566')
+        self.assertEqual(s3_endpoint, 'http://localstack:4566')
+
+    def test_failed_confirmation_deletes_the_user_and_propagates(self):
+        self.fake.fail_next('admin_confirm_sign_up', 'InternalErrorException')
+
+        with self.assertRaises(CognitoUnavailable):
+            self._sign_up()
+
+        self.assertIn('admin_delete_user', [name for name, _ in self.fake.calls])
+        self.assertEqual(self.fake.users, {})
+
+    def test_deleting_a_user_that_does_not_exist_is_not_an_error(self):
+        self.service.admin_delete_user('nobody@x.com')
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-1')
+    def test_fetch_jwks_reports_network_errors_and_bad_status_as_unavailable(self):
+        service = CognitoService(SimpleNamespace(meta=self.fake.meta))
+        bad_status = MagicMock(status_code=500)
+        for outcome in (
+            {'side_effect': http_requests.ConnectionError('down')},
+            {'return_value': bad_status},
+        ):
+            with self.subTest(outcome=outcome):
+                with patch('users.cognito.requests.get', **outcome):
+                    with self.assertRaises(CognitoUnavailable):
+                        service.fetch_jwks()
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-1')
+    def test_fetch_jwks_reads_the_pool_jwks_endpoint(self):
+        service = CognitoService(SimpleNamespace(meta=self.fake.meta))
+        response = MagicMock(status_code=200)
+        response.json.return_value = {'keys': []}
+        with patch('users.cognito.requests.get', return_value=response) as get:
+            self.assertEqual(service.fetch_jwks(), {'keys': []})
+        get.assert_called_once_with(
+            'https://cognito-idp.us-east-2.amazonaws.com/pool-1/.well-known/jwks.json',
+            timeout=5,
+        )
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-1', COGNITO_APP_CLIENT_ID='client-1')
+    def test_usernames_reach_cognito_in_lower_case(self):
+        client = MagicMock()
+        client.sign_up.return_value = {'UserSub': 'sub-1'}
+        client.initiate_auth.return_value = {
+            'AuthenticationResult': {'AccessToken': 'a', 'RefreshToken': 'r'}
+        }
+        client.admin_get_user.return_value = {'UserAttributes': [{'Name': 'sub', 'Value': 'sub-1'}]}
+        service = CognitoService(client)
+
+        service.sign_up_confirmed('Ana@Example.com', 'Senha123')
+        service.authenticate('ANA@example.com', 'Senha123')
+        service.admin_get_sub('Ana@example.COM')
+        service.admin_delete_user('ANA@EXAMPLE.COM')
+
+        self.assertEqual(client.sign_up.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(
+            client.sign_up.call_args.kwargs['UserAttributes'], [{'Name': 'email', 'Value': 'ana@example.com'}]
+        )
+        self.assertEqual(client.admin_confirm_sign_up.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(client.initiate_auth.call_args.kwargs['AuthParameters']['USERNAME'], 'ana@example.com')
+        self.assertEqual(client.admin_get_user.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(client.admin_delete_user.call_args.kwargs['Username'], 'ana@example.com')
+
+    def test_test_runner_gives_every_test_a_clean_cognito(self):
+        class Registers(unittest.TestCase):
+            def test_a(self):
+                get_cognito().client.sign_up(
+                    ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+                )
+
+        class SeesNothing(unittest.TestCase):
+            def test_b(self):
+                self.assertEqual(get_cognito().client.users, {})
+
+        runner = HairmatchTestRunner()
+        suite = unittest.TestSuite(
+            [Registers('test_a'), SeesNothing('test_b')]
+        )
+        result = unittest.TextTestRunner(
+            stream=StringIO(), resultclass=runner.get_resultclass()
+        ).run(suite)
+        self.assertTrue(result.wasSuccessful(), result.failures)
+
+
+class AuthenticationTest(TestCase):
+    def setUp(self):
+        self.fake = get_cognito().client
+        self.user = _create_plain_user(email='cog@example.com', cognito_sub='sub-cognito-1')
+        self.google_user = _create_plain_user(email='goo@example.com', google_id='google-1')
+
+    def _request(self, token=None):
+        request = RequestFactory().get('/')
+        if token is not None:
+            request.COOKIES['jwt'] = token
+        return request
+
+    def _access_token(self, **kwargs):
+        return self.fake.make_access_token(self.user.cognito_sub, **kwargs)
+
+    def _google_session(self, user=None, key=None, **claims):
+        now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        payload = {
+            'id': (user or self.google_user).id,
+            'iss': 'hairmatch',
+            'token_use': 'session',
+            'iat': now,
+            'exp': now + 3600,
+        }
+        payload.update(claims)
+        return jwt.encode(payload, key or settings.SECRET_KEY, algorithm='HS256')
+
+    def _pool_issuer(self):
+        return cognito_fake.issuer()
+
+    def test_cognito_access_token_authenticates_the_user_with_that_sub(self):
+        token = self._access_token()
+
+        session = authenticate_request(self._request(token))
+
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(session.provider, 'cognito')
+        self.assertEqual(session.access_token, token)
+
+    def test_google_session_authenticates_the_user_with_that_id(self):
+        session = authenticate_request(self._request(self._google_session()))
+
+        self.assertEqual(session.user, self.google_user)
+        self.assertEqual(session.provider, 'google')
+
+    def test_invalid_sessions_are_rejected(self):
+        now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        other_rsa_key = cognito_fake.new_rsa_key()
+        cases = {
+            'no cookie': None,
+            'not a jwt': 'not-a-jwt',
+            'signed by another RSA key': self._access_token(signing_key=other_rsa_key),
+            'expired access token': self._access_token(iat=now - 7200, exp=now - 60),
+            'issuer of another pool': self._access_token(
+                iss='https://cognito-idp.us-east-2.amazonaws.com/us-east-2_OtherPool'
+            ),
+            'client_id of another app': self._access_token(client_id='another-client'),
+            'id token': self._access_token(token_use='id'),
+            'refresh token': self.fake.make_refresh_token(self.user.cognito_sub),
+            'HS256 with the Cognito issuer': jwt.encode(
+                {'sub': self.user.cognito_sub, 'iss': self._pool_issuer(), 'token_use': 'access',
+                 'client_id': cognito_fake.CLIENT_ID, 'exp': now + 3600},
+                settings.SECRET_KEY, algorithm='HS256',
+            ),
+            'RS256 with the hairmatch issuer': jwt.encode(
+                {'id': self.google_user.id, 'iss': 'hairmatch', 'token_use': 'session', 'exp': now + 3600},
+                other_rsa_key, algorithm='RS256',
+            ),
+            'alg none with the Cognito issuer': jwt.encode(
+                {'sub': self.user.cognito_sub, 'iss': self._pool_issuer(), 'token_use': 'access',
+                 'client_id': cognito_fake.CLIENT_ID, 'exp': now + 3600},
+                None, algorithm='none',
+            ),
+            'alg none with the hairmatch issuer': jwt.encode(
+                {'id': self.google_user.id, 'iss': 'hairmatch', 'token_use': 'session', 'exp': now + 3600},
+                None, algorithm='none',
+            ),
+            'sub without a user': self.fake.make_access_token('sub-nobody'),
+            'google session signed with another key': self._google_session(key='another-key-0123456789abcdef0123'),
+            'expired google session': self._google_session(iat=now - 7200, exp=now - 60),
+            'google session of a missing user': self._google_session(id=999999),
+            'google session with token_use signup': self._google_session(token_use='google_signup'),
+            'signup token': create_signup_token('goo@example.com', 'google-1'),
+        }
+        for name, token in cases.items():
+            with self.subTest(case=name):
+                self.assertIsNone(authenticate_request(self._request(token)))
+
+    def test_authenticated_user_answers_401_with_the_spec_message_for_invalid_sessions(self):
+        for token in (None, 'not-a-jwt', self._access_token(token_use='id')):
+            with self.subTest(token=token):
+                session, error = authenticated_user(self._request(token))
+                self.assertIsNone(session)
+                self.assertEqual(error.status_code, 401)
+                self.assertEqual(json.loads(error.content), {'error': 'Sessão inválida ou expirada.'})
+
+    def test_authenticated_user_returns_the_session_without_an_error(self):
+        session, error = authenticated_user(self._request(self._access_token()))
+
+        self.assertIsNone(error)
+        self.assertEqual(session.user, self.user)
+
+    def test_unknown_kid_refetches_the_jwks_once_and_answers_401(self):
+        authenticate_request(self._request(self._access_token()))  # primes the key cache
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks', wraps=service.fetch_jwks) as fetch:
+            session, error = authenticated_user(
+                self._request(self._access_token(headers={'kid': 'unknown-kid'}))
+            )
+
+        self.assertIsNone(session)
+        self.assertEqual(error.status_code, 401)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_kid_missing_from_a_stale_cache_is_found_after_refetching(self):
+        authentication._jwks_keys.update({'rotated-out': object()})
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks', wraps=service.fetch_jwks) as fetch:
+            session = authenticate_request(self._request(self._access_token()))
+
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_cached_keys_are_reused_without_fetching_again(self):
+        authenticate_request(self._request(self._access_token()))
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks') as fetch:
+            session = authenticate_request(self._request(self._access_token()))
+
+        self.assertEqual(session.user, self.user)
+        fetch.assert_not_called()
+
+    def test_unreachable_jwks_answers_503(self):
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            session, error = authenticated_user(self._request(self._access_token()))
+
+        self.assertIsNone(session)
+        self.assertEqual(error.status_code, 503)
+        self.assertEqual(
+            json.loads(error.content),
+            {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'},
+        )
+
+    def test_google_session_does_not_need_the_jwks(self):
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            session, error = authenticated_user(self._request(self._google_session()))
+
+        self.assertIsNone(error)
+        self.assertEqual(session.user, self.google_user)
+
+    def test_the_old_session_format_is_refused(self):
+        now = datetime.datetime.now()
+        token = jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            LEGACY_SESSION_KEY, algorithm='HS256',
+        )
+
+        self.assertIsNone(authenticate_request(self._request(token)))
+
+
+class SessionReadersTest(TestCase):
+    """The `users` views that read the session cookie go through the central authenticator."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.fake = get_cognito().client
+        self.user = _create_plain_user(
+            email='cog@example.com', cognito_sub='sub-cognito-1', role='customer'
+        )
+        Customer.objects.create(user=self.user, cpf='12345678900')
+        self.access_token = self.fake.make_access_token('sub-cognito-1')
+
+    def _forged_session(self):
+        now = datetime.datetime.now()
+        return jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            'not-the-server-key', algorithm='HS256',
+        )
+
+    def test_check_authentication_accepts_a_cognito_access_token(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': True})
+
+    def test_check_authentication_is_false_for_the_google_signup_token(self):
+        self.client.cookies['jwt'] = create_signup_token('cog@example.com', 'google-sub-1')
+
+        response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_check_authentication_is_false_for_garbage_and_forged_tokens(self):
+        for token in ('not-a-jwt', self._forged_session()):
+            with self.subTest(token=token):
+                self.client.cookies['jwt'] = token
+                response = self.client.get(reverse('user_auth'))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_check_authentication_is_false_when_the_jwks_is_unreachable(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            response = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authenticated': False})
+
+    def test_user_info_accepts_a_cognito_access_token(self):
+        self.client.cookies['jwt'] = self.access_token
+
+        response = self.client.get(reverse('user_info_auth'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['customer']['user']['email'], 'cog@example.com')
+
+    def test_protected_routes_answer_401_without_a_cookie_or_with_a_forged_signature(self):
+        routes = [
+            ('get', reverse('user_info_auth')),
+            ('put', reverse('user_info_auth')),
+            ('delete', reverse('user_info_auth')),
+            ('put', reverse('password_change')),
+        ]
+        for token in (None, self._forged_session()):
+            for method, url in routes:
+                with self.subTest(method=method, url=url, forged=token is not None):
+                    self.client.cookies.clear()
+                    if token:
+                        self.client.cookies['jwt'] = token
+                    extra = {}
+                    if method == 'put':
+                        extra = {
+                            'data': json.dumps({'email': 'cog@example.com', 'password': 'x'}),
+                            'content_type': 'application/json',
+                        }
+                    response = getattr(self.client, method)(url, **extra)
+                    self.assertEqual(response.status_code, 401)
+                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+
+def _register_payload(**overrides):
+    payload = {
+        'first_name': 'Nova',
+        'last_name': 'Conta',
+        'phone': '92991234567',
+        'number': '10',
+        'complement': 'Casa',
+        'neighborhood': 'Centro',
+        'city': 'Manaus',
+        'state': 'AM',
+        'address': 'Rua A',
+        'postal_code': '69000000',
+        'email': 'nova@example.com',
+        'password': 'Senha123',
+        'role': 'customer',
+        'rating': 5,
+        'cpf': '12345678900',
+        'preferences': json.dumps([]),
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _hairdresser_payload(**overrides):
+    payload = _register_payload(
+        role='hairdresser', email='cabelo@example.com', cnpj='12345678000190',
+        experience_time='5 anos', experiences='Cortes', products='Veganos', resume='Cachos',
+        **overrides,
+    )
+    del payload['cpf']
+    return payload
+
+
+class CognitoRegisterTest(TestCase):
+    """Register by e-mail/password: Cognito holds the password, Postgres holds the profile."""
+
+    POLICY_ERROR = {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'}
+    UNAVAILABLE_ERROR = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('register')
+        self.fake = get_cognito().client
+
+    def _called(self, operation):
+        return [kwargs for name, kwargs in self.fake.calls if name == operation]
+
+    def _assert_no_rows(self):
+        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(Customer.objects.count(), 0)
+        self.assertEqual(Hairdresser.objects.count(), 0)
+        self.assertEqual(User.preferences.through.objects.count(), 0)
+
+    def test_customer_and_hairdresser_are_created_with_the_cognito_sub_and_no_password(self):
+        for payload, model in ((_register_payload(), Customer), (_hairdresser_payload(), Hairdresser)):
+            with self.subTest(role=payload['role']):
+                response = self.client.post(self.register_url, data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(response.json(), {'message': f"{payload['role']} user registered successfully"})
+                self.assertEqual(len(response.cookies), 0)
+                user = User.objects.get(email=payload['email'])
+                self.assertEqual(user.cognito_sub, self.fake.users[payload['email']]['sub'])
+                self.assertIsNone(user.password)
+                self.assertTrue(model.objects.filter(user=user).exists())
+                self.assertTrue(self.fake.users[payload['email']]['confirmed'])
+
+    def test_password_reaches_cognito_exactly_as_typed(self):
+        response = self.client.post(self.register_url, data=_register_payload(password='Senha 123'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.fake.users['nova@example.com']['password'], 'Senha 123')
+
+    def test_local_validation_failures_answer_as_before_without_calling_cognito(self):
+        User.objects.create(
+            first_name='A', last_name='B', phone='9299123456799', neighborhood='C', city='D',
+            state='AM', address='E', postal_code='69000000', email='taken@example.com', role='customer',
+        )
+        cases = [
+            (_register_payload(email='taken@example.com'), 409, 'Usuário já está cadastrado na nossa base de dados'),
+            (_register_payload(phone='9299123456799'), 409, 'O número de telefone inserido já está cadastrado na nossa base de dados'),
+            (_register_payload(role=''), 400, 'No role assigned to user'),
+            (_register_payload(email=''), 400, 'No email assigned to user'),
+            (_register_payload(password=''), 400, 'No password assigned to user'),
+            (_register_payload(phone=''), 400, 'No phone assigned to user'),
+            (_register_payload(phone='123456789'), 400, 'Phone number is too short'),
+        ]
+        for payload, expected_status, message in cases:
+            with self.subTest(message=message):
+                response = self.client.post(self.register_url, data=payload)
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json(), {'error': message})
+        self.assertEqual(self._called('sign_up'), [])
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_password_outside_the_policy_answers_400_and_creates_nothing(self):
+        response = self.client.post(self.register_url, data=_register_payload(password='senha123'))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), self.POLICY_ERROR)
+        self._assert_no_rows()
+        self.assertEqual(self.fake.users, {})
+
+    def test_email_that_only_exists_in_cognito_answers_409_and_creates_nothing(self):
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Senha123')
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.json(), {'error': 'Usuário já está cadastrado na nossa base de dados'})
+        self._assert_no_rows()
+
+    def _assert_cognito_user_was_deleted(self, email='nova@example.com'):
+        self.assertEqual([call['Username'] for call in self._called('admin_delete_user')], [email])
+        self.assertNotIn(email, self.fake.users)
+        self._assert_no_rows()
+
+    def test_invalid_picture_after_sign_up_deletes_the_cognito_user(self):
+        picture = SimpleUploadedFile('p.jpg', b'not an image', content_type='image/jpeg')
+
+        response = self.client.post(self.register_url, data={**_register_payload(), 'profile_picture': picture})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Imagem de perfil inválida.'})
+        self._assert_cognito_user_was_deleted()
+
+    def test_invalid_preferences_json_after_sign_up_deletes_the_cognito_user(self):
+        response = self.client.post(self.register_url, data=_register_payload(preferences='not json'))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Invalid Preferences JSON'})
+        self._assert_cognito_user_was_deleted()
+
+    def test_insert_failure_after_sign_up_deletes_the_cognito_user_and_can_be_retried(self):
+        with patch('users.views._create_role_profile', side_effect=RuntimeError('boom')):
+            response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self._assert_cognito_user_was_deleted()
+        retry = self.client.post(self.register_url, data=_register_payload())
+        self.assertEqual(retry.status_code, status.HTTP_201_CREATED)
+
+    def test_failed_confirmation_answers_503_and_leaves_no_cognito_user_or_rows(self):
+        self.fake.fail_next('admin_confirm_sign_up', 'InternalErrorException')
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        self._assert_cognito_user_was_deleted()
+
+    def test_google_signup_makes_no_cognito_call(self):
+        payload = _register_payload(google_signup_token=create_signup_token('ana@gmail.com', 'google-sub-1'))
+        del payload['email'], payload['password']
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.fake.calls, [])
+        self.assertIsNone(User.objects.get().cognito_sub)
+
+    def test_connection_error_answers_503_and_creates_nothing(self):
+        self.fake.fail_next('sign_up', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        self._assert_no_rows()
+
+    def test_throttling_answers_429_and_creates_nothing(self):
+        for code in ('TooManyRequestsException', 'LimitExceededException'):
+            with self.subTest(code=code):
+                self.fake.fail_next('sign_up', code)
+
+                response = self.client.post(self.register_url, data=_register_payload())
+
+                self.assertEqual(response.status_code, 429)
+                self.assertEqual(response.json(), {'error': 'Muitas tentativas. Aguarde e tente novamente.'})
+                self._assert_no_rows()
+
+
+class CognitoLoginTest(TestCase):
+    INVALID_CREDENTIALS = {'error': 'E-mail ou senha inválidos.'}
+    UNAVAILABLE_ERROR = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.login_url = reverse('login')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self.fake.calls.clear()
+        self.client.cookies.clear()
+
+    def _login(self, email='nova@example.com', password='Senha123'):
+        return self.client.post(
+            self.login_url, data=json.dumps({'email': email, 'password': password}),
+            content_type='application/json',
+        )
+
+    def _assert_no_cookies(self, response):
+        self.assertNotIn('jwt', response.cookies)
+        self.assertNotIn('refresh_token', response.cookies)
+
+    def test_login_sets_the_access_and_refresh_cookies_and_the_session_is_accepted(self):
+        response = self._login()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Login successful'})
+        self.assertEqual([c['AuthFlow'] for c in [k for n, k in self.fake.calls if n == 'initiate_auth']], ['USER_PASSWORD_AUTH'])
+        jwt_cookie, refresh_cookie = response.cookies['jwt'], response.cookies['refresh_token']
+        self.assertEqual(response.data['jwt'], jwt_cookie.value)
+        self.assertEqual(jwt_cookie['max-age'], 3600)
+        self.assertEqual(refresh_cookie['max-age'], 2592000)
+        self.assertEqual(refresh_cookie['path'], '/api/auth/')
+        for cookie in (jwt_cookie, refresh_cookie):
+            self.assertTrue(cookie['httponly'])
+            self.assertEqual(cookie['samesite'], 'None')
+            self.assertTrue(cookie['secure'])
+        self.assertEqual(self.client.get(reverse('user_auth')).json(), {'authenticated': True})
+
+    def test_login_is_case_insensitive_on_the_email(self):
+        self.assertEqual(self._login(email='NOVA@example.com').status_code, status.HTTP_200_OK)
+
+    def test_wrong_password_and_unknown_email_answer_401_without_cookies(self):
+        for email, password in (('nova@example.com', 'Errada123'), ('ninguem@example.com', 'Senha123')):
+            with self.subTest(email=email):
+                response = self._login(email, password)
+
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                self.assertEqual(response.json(), self.INVALID_CREDENTIALS)
+                self._assert_no_cookies(response)
+
+    def test_google_account_answers_403_without_calling_cognito(self):
+        _create_plain_user(email='google-only@example.com', google_id='google-sub-9')
+
+        response = self._login('google-only@example.com', 'Senha123')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json(), {'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'})
+        self.assertEqual(self.fake.calls, [])
+
+    def test_cognito_user_without_a_postgres_user_answers_401_without_cookies(self):
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='orfao@example.com', Password='Senha123')
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='orfao@example.com')
+
+        response = self._login('orfao@example.com', 'Senha123')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), self.INVALID_CREDENTIALS)
+        self._assert_no_cookies(response)
+
+    def test_missing_or_empty_email_and_password_answer_400_without_calling_cognito(self):
+        bodies = [{}, {'email': 'nova@example.com'}, {'password': 'Senha123'},
+                  {'email': '', 'password': 'Senha123'}, {'email': 'nova@example.com', 'password': ''}]
+        for body in bodies:
+            with self.subTest(body=body):
+                response = self.client.post(
+                    self.login_url, data=json.dumps(body), content_type='application/json'
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(response.json(), {'error': 'Informe e-mail e senha.'})
+        self.assertEqual(self.fake.calls, [])
+
+    def test_connection_error_answers_503_logs_the_operation_and_sets_no_cookie(self):
+        self.fake.fail_next('initiate_auth', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs('users.cognito', 'WARNING') as logs:
+            response = self._login()
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        self._assert_no_cookies(response)
+        self.assertIn('initiate_auth', logs.output[0])
+        self.assertNotIn('Senha123', ''.join(logs.output))
+
+    def test_throttling_answers_429_without_cookies(self):
+        self.fake.fail_next('initiate_auth', 'TooManyRequestsException')
+
+        response = self._login()
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json(), {'error': 'Muitas tentativas. Aguarde e tente novamente.'})
+        self._assert_no_cookies(response)
+
+
+class CognitoRefreshTest(TestCase):
+    SESSION_EXPIRED = {'error': 'Sessão expirada. Entre novamente.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.refresh_url = reverse('refresh')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self.login_response = self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.refresh_token = self.login_response.cookies['refresh_token'].value
+        self.fake.calls.clear()
+
+    def test_refresh_sets_a_new_access_cookie_that_the_authenticator_accepts(self):
+        del self.client.cookies['jwt']  # the access token expired
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Session refreshed'})
+        self.assertEqual([k['AuthFlow'] for n, k in self.fake.calls if n == 'initiate_auth'], ['REFRESH_TOKEN_AUTH'])
+        self.assertEqual(response.cookies['jwt']['max-age'], 3600)
+        self.assertNotIn('refresh_token', response.cookies)
+        self.assertEqual(self.client.get(reverse('user_auth')).json(), {'authenticated': True})
+
+    def test_refresh_without_the_cookie_answers_401_without_calling_cognito(self):
+        self.client.cookies.clear()
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_revoked_refresh_token_answers_401_and_expires_both_cookies(self):
+        self.fake.revoke_token(Token=self.refresh_token, ClientId=cognito_fake.CLIENT_ID)
+
+        response = self.client.post(self.refresh_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        for key in ('jwt', 'refresh_token'):
+            self.assertEqual(response.cookies[key].value, '')
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+
+    def test_cognito_failures_answer_503_and_429_without_touching_the_cookies(self):
+        cases = [
+            (EndpointConnectionError(endpoint_url='http://x'), 503,
+             {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}),
+            ('TooManyRequestsException', 429, {'error': 'Muitas tentativas. Aguarde e tente novamente.'}),
+        ]
+        for failure, expected_status, body in cases:
+            with self.subTest(status=expected_status):
+                self.fake.fail_next('initiate_auth', failure)
+
+                response = self.client.post(self.refresh_url)
+
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json(), body)
+                self.assertEqual(len(response.cookies), 0)
+
+
+class CognitoLogoutTest(TestCase):
+    LOGGED_OUT = {'message': 'User logged out'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.logout_url = reverse('logout')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        login = self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.refresh_token = login.cookies['refresh_token'].value
+
+    def _assert_both_cookies_expired(self, response):
+        for key, path in (('jwt', '/'), ('refresh_token', '/api/auth/')):
+            self.assertEqual(response.cookies[key].value, '')
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+            self.assertEqual(response.cookies[key]['path'], path)
+
+    def test_logout_revokes_the_refresh_token_and_expires_both_cookies(self):
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'revoke_token'], ['revoke_token'])
+        self.assertNotIn(self.refresh_token, self.fake.refresh_tokens)
+        self.client.cookies['refresh_token'] = self.refresh_token
+        self.assertEqual(self.client.post(reverse('refresh')).status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_succeeds_even_when_the_revocation_fails(self):
+        self.fake.fail_next('revoke_token', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+
+    def test_logout_without_a_refresh_token_cookie_still_succeeds(self):
+        del self.client.cookies['refresh_token']
+        self.fake.calls.clear()
+
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+        self.assertEqual(self.fake.calls, [])
+
+
+class CognitoChangePasswordTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.change_url = reverse('password_change')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self._login('Senha123')  # leaves the session cookies on the client
+        self.fake.calls.clear()
+
+    def _login(self, password):
+        return self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': password}),
+            content_type='application/json',
+        )
+
+    def _change(self, body):
+        return self.client.put(self.change_url, data=json.dumps(body), content_type='application/json')
+
+    def _fresh_login_status(self, password):
+        return APIClient().post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': password}),
+            content_type='application/json',
+        ).status_code
+
+    def test_valid_change_moves_the_password_in_cognito_and_never_stores_it_locally(self):
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Password updated successfully'})
+        self.assertEqual(self._fresh_login_status('NovaSenha456'), 200)
+        self.assertEqual(self._fresh_login_status('Senha123'), 401)
+        self.assertIsNone(User.objects.get(email='nova@example.com').password)
+
+    def test_wrong_current_password_answers_400_and_keeps_the_password(self):
+        response = self._change({'old_password': 'Errada123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Senha atual incorreta.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+    def test_new_password_outside_the_policy_answers_400(self):
+        response = self._change({'old_password': 'Senha123', 'password': 'abc'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+    def test_missing_old_or_new_password_answers_400_without_calling_cognito(self):
+        for body in ({'password': 'NovaSenha456'}, {'old_password': 'Senha123'}, {}, {'old_password': '', 'password': 'NovaSenha456'}):
+            with self.subTest(body=body):
+                response = self._change(body)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(response.json(), {'error': 'Informe a senha atual e a nova senha.'})
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
+
+    def test_google_session_answers_403_without_calling_cognito(self):
+        google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        self.client.cookies.clear()
+        self.client.cookies['jwt'] = issue_session_token(google_user)
+
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json(), {'error': 'Esta conta usa login com Google e não tem senha.'})
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
+
+    def test_connection_error_answers_503_and_keeps_the_password(self):
+        self.fake.fail_next('change_password', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+
+class CognitoDeleteAccountTest(TestCase):
+    UNAVAILABLE = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('user_info_auth')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.by_email_url = reverse('user_info', args=['nova@example.com'])
+
+    def test_deleting_the_own_account_removes_the_cognito_user_the_row_and_the_cookies(self):
+        response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'user deleted'})
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+        for key in ('jwt', 'refresh_token'):
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+
+    def test_a_user_already_missing_from_cognito_does_not_block_the_deletion(self):
+        del self.fake.users['nova@example.com']
+
+        response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_deleting_by_email_removes_the_cognito_user_and_the_row(self):
+        response = self.client.delete(self.by_email_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_deleting_by_email_of_a_user_missing_from_cognito_still_succeeds(self):
+        del self.fake.users['nova@example.com']
+
+        response = self.client.delete(self.by_email_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
+
+    def test_cognito_outage_answers_503_and_keeps_both_the_row_and_the_cognito_user(self):
+        for name, delete in (
+            ('own account', lambda: self.client.delete(self.own_url)),
+            ('by email', lambda: self.client.delete(self.by_email_url)),
+        ):
+            with self.subTest(route=name):
+                self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+                response = delete()
+
+                self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+                self.assertEqual(response.json(), self.UNAVAILABLE)
+                self.assertTrue(User.objects.filter(email='nova@example.com').exists())
+                self.assertIn('nova@example.com', self.fake.users)
+
+    def test_google_accounts_are_deleted_without_calling_cognito(self):
+        _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        self.fake.calls.clear()
+
+        response = self.client.delete(reverse('user_info', args=['goo@example.com']))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='goo@example.com').exists())
+
+        other_google = _create_plain_user(email='goo2@example.com', google_id='google-sub-2')
+        self.client.cookies['jwt'] = issue_session_token(other_google)
+        own_response = self.client.delete(self.own_url)
+        self.assertEqual(own_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='goo2@example.com').exists())
+        self.assertEqual(self.fake.calls, [])
+
+
+class UpdateProfileEmailTest(TestCase):
+    """PUT /api/user/authenticated does not change the e-mail (it is the Cognito username)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('user_info_auth')
+        self.client.post(reverse('register'), data=_register_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+    def _put(self, body):
+        return self.client.put(self.own_url, data=json.dumps(body), content_type='application/json')
+
+    def test_a_different_email_answers_400_and_changes_no_field(self):
+        before = User.objects.values().get(email='nova@example.com')
+
+        response = self._put({'email': 'outro@example.com', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
+        self.assertEqual(User.objects.values().get(email='nova@example.com'), before)
+        self.assertFalse(User.objects.filter(email='outro@example.com').exists())
+
+    def test_the_same_email_still_updates_the_other_fields(self):
+        response = self._put({'email': 'nova@example.com', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
+
+
+class SessionFormatTest(TestCase):
+    """After T16 only Cognito access tokens and the new Google session open protected routes."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = _create_plain_user(email='ana@gmail.com', google_id='google-sub-123', role='customer')
+        Customer.objects.create(user=self.user, cpf='12345678900')
+
+    def test_the_old_hs256_session_answers_401_on_a_protected_route_and_false_on_the_auth_check(self):
+        now = datetime.datetime.now()
+        legacy = jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            LEGACY_SESSION_KEY, algorithm='HS256',
+        )
+        self.client.cookies['jwt'] = legacy
+
+        protected = self.client.get(reverse('user_info_auth'))
+        auth_check = self.client.get(reverse('user_auth'))
+
+        self.assertEqual(protected.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(protected.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertEqual(auth_check.json(), {'authenticated': False})
+
+    def test_the_google_signup_token_answers_401_on_a_protected_route(self):
+        self.client.cookies['jwt'] = create_signup_token('ana@gmail.com', 'google-sub-123')
+
+        response = self.client.get(reverse('user_info_auth'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+
+    def test_the_session_from_the_google_login_opens_the_protected_routes_of_other_apps(self):
+        preference = Preferences.objects.create(name='Cachos')
+        with patch('users.views.verify_google_id_token') as verify:
+            verify.return_value = {
+                'sub': 'google-sub-123', 'email': 'ana@gmail.com', 'email_verified': True,
+                'given_name': 'Ana', 'family_name': 'Souza',
+            }
+            login = self.client.post(
+                reverse('google_auth'), data=json.dumps({'id_token': 'x'}), content_type='application/json'
+            )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+
+        own = self.client.get(reverse('user_info_auth'))
+        assign = self.client.post(reverse('assign_preferences_to_user', args=[preference.id]))
+
+        self.assertEqual(own.status_code, status.HTTP_200_OK)
+        self.assertEqual(assign.status_code, status.HTTP_200_OK)
+        self.assertTrue(preference.users.filter(id=self.user.id).exists())

@@ -50,7 +50,7 @@ export const useReserves = () => {
   };
 
   const handleNavigateToDetails = (reserveId: number) => {
-    router.push(`/(app)/(customer)/reserves/${reserveId}`);
+    router.push(`/(app)/customer/reserves/${reserveId}`);
   };
 
   return {

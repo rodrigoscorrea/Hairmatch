@@ -1,4 +1,4 @@
-// app/(app)/(customer)/reserves.tsx
+// app/(app)/customer/reserves.tsx
 
 import { ActivityIndicator, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native'
 import { styles } from '@/styles/customer/styles/ReserveStyle'; // Adjust path

@@ -1,4 +1,4 @@
-// app/(app)/(customer)/search.tsx
+// app/(app)/customer/search.tsx
 import React from "react";
 import {
   View,

@@ -1,4 +1,4 @@
-// app/(app)/(hairdresser)/services/index.tsx
+// app/(app)/hairdresser/services/index.tsx
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Accordion } from '@/components/Accordion';

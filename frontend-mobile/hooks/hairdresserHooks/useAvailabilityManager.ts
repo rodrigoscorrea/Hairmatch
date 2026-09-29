@@ -34,8 +34,8 @@ export const useAvailabilityManager = () => {
     }, [hairdresserId])
   );
 
-  const goToCreate = () => router.push('/(app)/(hairdresser)/availability/create');
-  const goToEdit = () => router.push(`/(app)/(hairdresser)/availability/edit/${hairdresserId}`);
+  const goToCreate = () => router.push('/(app)/hairdresser/availability/create');
+  const goToEdit = () => router.push(`/(app)/hairdresser/availability/edit/${hairdresserId}`);
   const goBack = () => router.back();
 
   return {

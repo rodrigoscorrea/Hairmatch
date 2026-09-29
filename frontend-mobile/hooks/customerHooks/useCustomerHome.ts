@@ -43,7 +43,7 @@ export const useCustomerHome = () => {
   }, [userInfo]);
 
   const handleClickHairdresser = (hairdresser: Hairdresser) => {
-    router.push(`/(app)/(customer)/hairdresser-reservation/${hairdresser.id}`);
+    router.push(`/(app)/customer/hairdresser-reservation/${hairdresser.id}`);
   };
 
   const inferGenderFromName = (firstName: string): 'male' | 'female' | 'unknown' => {

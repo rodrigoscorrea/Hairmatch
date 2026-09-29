@@ -39,6 +39,8 @@ services:
         condition: service_healthy
       localstack:
         condition: service_healthy
+      ministack:
+        condition: service_healthy
     environment:
       - DB_HOST=${DB_HOST}
       - DB_NAME=${DB_NAME}
@@ -58,6 +60,11 @@ services:
       # boto3 calls go through the docker network; media URLs sent to clients use the host endpoint (.env)
       - AWS_ENDPOINT_URL=http://localstack:4566
       - S3_PUBLIC_ENDPOINT_URL=${AWS_ENDPOINT_URL}
+      # Cognito is not in the LocalStack free plan, so it runs on MiniStack. boto3 reads the per-service endpoint.
+      - AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER=http://ministack:4566
+      # Empty in dev: the backend looks up the hairmatch-dev pool and hairmatch-backend client by name.
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
+      - COGNITO_APP_CLIENT_ID=${COGNITO_APP_CLIENT_ID:-}
     restart: always
     networks:
       - app_network
@@ -117,6 +124,33 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  ministack:
+    image: ministackorg/ministack:${MINISTACK_IMAGE_TAG:-latest}
+    container_name: hairmatch_ministack
+    ports:
+      # 4566 on the host belongs to LocalStack. The app never talks to Cognito, so this port is only for debugging.
+      - "4567:4566"
+    environment:
+      MINISTACK_REGION: ${AWS_DEFAULT_REGION:-us-east-2}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-2}
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      PERSIST_STATE: 1
+      STATE_DIR: /var/lib/ministack
+    volumes:
+      # Users, pool, client and signing key survive restarts; the init script only creates what is missing.
+      - ministack_state:/var/lib/ministack
+      - ./ministack/init:/etc/localstack/init/ready.d:ro
+    networks:
+      - app_network
+    healthcheck:
+      # Healthy only after the init script has created the pool
+      test: ["CMD-SHELL", "awslocal cognito-idp list-user-pools --max-results 60 | grep -q hairmatch-dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
   #angular:
   #  build: ./frontend/
   #  container_name: angular_frontend
@@ -136,3 +170,4 @@ volumes:
   postgres_data:
   pgadmin_data:
   evolution_instances:
+  ministack_state:

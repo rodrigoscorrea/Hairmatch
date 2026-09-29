@@ -10,9 +10,12 @@ from faker import Faker
 from availability.models import Availability
 from service.models import Service
 from hairmatch.images import to_webp
+from users.cognito import CognitoError, get_cognito
 from users.models import Hairdresser, User
 
 PLACEHOLDERS_DIR = os.path.join(os.path.dirname(__file__), "seed_assets", "profile_pics")
+SEED_PASSWORD = "Senha123"
+SEED_EMAIL_REGEX = r"^hairdresser[0-9]+_"
 
 
 class Command(BaseCommand):
@@ -47,12 +50,39 @@ class Command(BaseCommand):
         if restored:
             self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded pictures to the media bucket."))
 
+    def restore_missing_cognito_users(self):
+        """
+        Recreates the Cognito user of every seeded hairdresser that lost it, and keeps
+        cognito_sub in sync. Runs on every boot because the dev Cognito can be reset
+        (volume removed) while the database is not.
+        """
+        cognito = get_cognito()
+        seeded = User.objects.filter(
+            role="hairdresser", google_id__isnull=True, email__regex=SEED_EMAIL_REGEX
+        )
+        restored = 0
+        for user in seeded:
+            try:
+                sub = cognito.admin_get_sub(user.email)
+                if sub is None:
+                    sub = cognito.sign_up_confirmed(user.email, SEED_PASSWORD)
+                    restored += 1
+            except CognitoError as error:
+                self.stdout.write(self.style.ERROR(f"Could not restore Cognito users: {error.code}"))
+                return
+            if sub != user.cognito_sub:
+                user.cognito_sub = sub
+                user.save(update_fields=["cognito_sub"])
+        if restored:
+            self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded users to Cognito."))
+
     def handle(self, *args, **kwargs):
         if not os.path.isdir(PLACEHOLDERS_DIR):
             self.stdout.write(self.style.ERROR(f"Placeholder picture directory not found at: {PLACEHOLDERS_DIR}"))
             return
 
         self.restore_missing_pictures()
+        self.restore_missing_cognito_users()
 
         if User.objects.filter(role="hairdresser").exists():
             self.stdout.write(
@@ -200,11 +230,12 @@ class Command(BaseCommand):
                     profile_pic_name = random.choice(female_pics)
 
                 # Create user data dictionary
+                email = f"hairdresser{i+1}_{fake.user_name()}@{fake.free_email_domain()}"
                 user_data = {
-                    'email': f"hairdresser{i+1}_{fake.user_name()}@{fake.free_email_domain()}",
+                    'email': email,
                     'first_name': first_name,
                     'last_name': fake.last_name(),
-                    'password': 'senha123', # Remember to set password correctly
+                    'cognito_sub': get_cognito().sign_up_confirmed(email, SEED_PASSWORD),
                     'phone': fake.phone_number(),
                     'state': state,
                     'complement': f"apt {random.randint(101, 999)}",
@@ -219,7 +250,6 @@ class Command(BaseCommand):
                 
                 # Create the user first, without the picture
                 user = User.objects.create(**user_data)
-                user.set_password('senha123') # Use set_password to hash it
 
                 # Upload the picture like a regular signup: profile_pics/<user_id>/<file>
                 with open(os.path.join(PLACEHOLDERS_DIR, profile_pic_name), "rb") as f:

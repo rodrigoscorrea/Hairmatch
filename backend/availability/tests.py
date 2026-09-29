@@ -7,6 +7,9 @@ from availability.models import Availability
 from datetime import time, datetime, timedelta
 import jwt
 import json
+from django.conf import settings
+from users.cognito import get_cognito
+from users.cognito_fake import new_rsa_key
 
 class CreateAvailabilityTest(TestCase):
     def setUp(self):
@@ -18,7 +21,7 @@ class CreateAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -49,7 +52,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         response = self.client.post(
@@ -86,7 +89,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         response = self.client.post(
@@ -121,7 +124,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         self.client.post(
@@ -155,8 +158,62 @@ class CreateAvailabilityTest(TestCase):
             content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         self.assertEqual(Availability.objects.count(), 0)
+
+
+class CreateAvailabilitySessionTest(TestCase):
+    """CreateAvailability authenticates through the central authenticator."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.fake = get_cognito().client
+        self.user = User.objects.create(
+            first_name='Ana', last_name='Silva', phone='5592999990000',
+            neighborhood='Centro', city='Manaus', state='AM', address='Rua A',
+            postal_code='69000000', email='ana@example.com', role='hairdresser',
+            cognito_sub='sub-hairdresser-1',
+        )
+        self.hairdresser = Hairdresser.objects.create(user=self.user, cnpj='12345678901212')
+        self.payload = json.dumps({'weekday': 'monday', 'start_time': '09:00:00', 'end_time': '17:00:00'})
+
+    def _post(self):
+        return self.client.post(
+            reverse('create_availability'), data=self.payload, content_type='application/json'
+        )
+
+    def test_cognito_access_token_creates_the_availability_for_that_hairdresser(self):
+        self.client.cookies['jwt'] = self.fake.make_access_token('sub-hairdresser-1')
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.get().hairdresser, self.hairdresser)
+
+    def test_google_session_creates_the_availability_for_that_hairdresser(self):
+        now = int(datetime.now().timestamp())
+        self.client.cookies['jwt'] = jwt.encode(
+            {'id': self.user.id, 'iss': 'hairmatch', 'token_use': 'session', 'iat': now, 'exp': now + 3600},
+            settings.SECRET_KEY, algorithm='HS256',
+        )
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Availability.objects.get().hairdresser, self.hairdresser)
+
+    def test_token_signed_with_another_key_is_refused_with_401(self):
+        self.client.cookies['jwt'] = self.fake.make_access_token(
+            'sub-hairdresser-1', signing_key=new_rsa_key()
+        )
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertEqual(Availability.objects.count(), 0)
+
 
 class CreateMultipleAvailabilityTest(TestCase):
     def setUp(self):
@@ -169,7 +226,7 @@ class CreateMultipleAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -199,7 +256,7 @@ class CreateMultipleAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
         self.client.post(
             self.login_url,
@@ -365,7 +422,7 @@ class ListAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -452,7 +509,7 @@ class RemoveAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -519,7 +576,7 @@ class UpdateAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -690,7 +747,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -719,7 +776,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
         self.client.post(
             self.login_url,

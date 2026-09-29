@@ -14,6 +14,9 @@ from reserve.models import Reserve
 from service.models import Service
 import jwt
 import json
+import datetime
+from django.conf import settings
+from users.cognito import get_cognito
 
 class ReviewsTestCase(TestCase):
     def setUp(self):
@@ -27,7 +30,7 @@ class ReviewsTestCase(TestCase):
             "email": "customer@example.com",
             "first_name": "Test",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984501111",
             "complement": "Apt 101",
             "neighborhood": "Downtown",
@@ -46,7 +49,7 @@ class ReviewsTestCase(TestCase):
             "email": "customer2@example.com",
             "first_name": "Test2",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984501181",
             "complement": "Apt 101",
             "neighborhood": "Downtown",
@@ -66,7 +69,7 @@ class ReviewsTestCase(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Test",
             "last_name": "Hairdresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502222",
             "complement": "Apt 202",
             "neighborhood": "Uptown",
@@ -272,7 +275,16 @@ class CreateReviewTest(ReviewsTestCase):
         # Create a second customer and log them in
         #other_user = self.customer2_user
         #Customer.objects.create(user=other_user, cpf="11122233344")
-        self.client.login(email=self.customer2_user.email, password=self.customer2_user.password)
+        # (Django's client.login sets no jwt cookie, so this used to run unauthenticated and only
+        # passed on the old 403 for a missing cookie. Log in through the API to reach the permission check.)
+        self.client.post(
+            self.login_url,
+            data=json.dumps({
+                'email': self.customer2_payload['email'],
+                'password': self.customer2_payload['password'],
+            }),
+            content_type='application/json',
+        )
 
         # Try to review the first customer's reservation
         review_data = {
@@ -286,7 +298,7 @@ class CreateReviewTest(ReviewsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_review_no_token(self):
-        """Test review creation fails when not authenticated (403 Forbidden)."""
+        """Test review creation fails when not authenticated (401 Unauthorized)."""
         # Note: self.client is not logged in
         review_data = {
             'rating': 4,
@@ -295,7 +307,8 @@ class CreateReviewTest(ReviewsTestCase):
             'reserve': self.reserve.id
         }
         response = self.client.post(self.create_url, data=review_data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
 class ListReviewTest(ReviewsTestCase):
     def setUp(self):
         super().setUp()
@@ -411,7 +424,8 @@ class UpdateReviewTest(ReviewsTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         
         # Verify data was not updated
         self.review.refresh_from_db()
@@ -425,7 +439,7 @@ class UpdateReviewTest(ReviewsTestCase):
             "email": "customer2@example.com",
             "first_name": "Second",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984503333",
             "complement": "Apt 303",
             "neighborhood": "Midtown",
@@ -524,14 +538,13 @@ class RemoveReview(ReviewsTestCase):
         
         response = self.client.delete(self.delete_url)
         
-        # The view should return 403 FORBIDDEN, not 200
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # The view should return 401 UNAUTHORIZED, not 200
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         self.assertEqual(Review.objects.count(), 1) # The review should NOT be deleted
 
     def test_delete_non_existent_review(self):
         """Test that trying to delete a review that doesn't exist returns 404."""
-        self.client.login(email=self.customer_user.email, password="senha123")
-        
         # Use an ID that does not exist
         invalid_delete_url = reverse('remove_review', args=[9999])
         response = self.client.delete(invalid_delete_url)
@@ -562,3 +575,63 @@ class RemoveAdminDeleteReview(ReviewsTestCase):
         response = self.client.delete(invalid_url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+class ReviewSessionTest(ReviewsTestCase):
+    """The three cookie-based review routes authenticate through the central authenticator."""
+
+    def setUp(self):
+        super().setUp()
+        self.customer_user.cognito_sub = 'sub-customer'
+        self.customer_user.save()
+        self.fake = get_cognito().client
+
+    def _cognito_token(self):
+        return self.fake.make_access_token('sub-customer')
+
+    def _google_token(self):
+        now = int(datetime.datetime.now().timestamp())
+        return jwt.encode(
+            {'id': self.customer_user.id, 'iss': 'hairmatch', 'token_use': 'session',
+             'iat': now, 'exp': now + 3600},
+            settings.SECRET_KEY, algorithm='HS256',
+        )
+
+    def _call(self, route, token):
+        self.client.cookies.clear()
+        if token:
+            self.client.cookies['jwt'] = token
+        if route == 'create':
+            reserve = Reserve.objects.create(customer=self.customer, service=self.service)
+            return self.client.post(self.create_url, data={
+                'rating': 4, 'comment': 'ok', 'hairdresser': self.hairdresser.id, 'reserve': reserve.id,
+            })
+        review = Review.objects.create(
+            rating=4, comment='Good', customer=self.customer, hairdresser=self.hairdresser
+        )
+        Reserve.objects.create(customer=self.customer, service=self.service, review=review)
+        if route == 'update':
+            return self.client.put(
+                reverse('update_review', args=[review.id]),
+                data=json.dumps({'rating': 5}), content_type='application/json',
+            )
+        return self.client.delete(reverse('remove_review', args=[review.id]))
+
+    def test_routes_accept_a_cognito_access_token_and_a_google_session(self):
+        expected = {'create': 201, 'update': 200, 'delete': 200}
+        for token_kind in ('cognito', 'google'):
+            for route, status_code in expected.items():
+                with self.subTest(token=token_kind, route=route):
+                    token = self._cognito_token() if token_kind == 'cognito' else self._google_token()
+                    self.assertEqual(self._call(route, token).status_code, status_code)
+
+    def test_routes_refuse_a_missing_cookie_and_a_cognito_refresh_token_with_401(self):
+        refresh_token = self.fake.make_refresh_token('sub-customer')
+        for route in ('create', 'update', 'delete'):
+            for token in (None, refresh_token):
+                with self.subTest(route=route, refresh=token is not None):
+                    before = Review.objects.count()
+                    response = self._call(route, token)
+                    self.assertEqual(response.status_code, 401)
+                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+                    # _call itself adds one review for update/delete, and the route must not change it
+                    self.assertEqual(Review.objects.count(), before + (0 if route == 'create' else 1))

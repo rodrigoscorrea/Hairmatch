@@ -5,11 +5,9 @@ from .models import User, Customer, Hairdresser
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
-import bcrypt
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-import jwt
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
@@ -20,7 +18,22 @@ from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
 from django.db import transaction
-from .auth_tokens import set_session_cookie, create_signup_token, decode_signup_token, InvalidSignupToken
+from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
+from .authentication import (
+    AUTH_UNAVAILABLE_MESSAGE,
+    authenticate_request,
+    authenticate_token,
+    authenticated_user,
+)
+from .cognito import (
+    CognitoError,
+    CognitoUnavailable,
+    InvalidCredentials,
+    InvalidPassword,
+    TooManyRequests,
+    UserAlreadyExists,
+    get_cognito,
+)
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
@@ -30,6 +43,23 @@ GOOGLE_SIGNUP_REQUIRED_FIELDS = [
     'neighborhood', 'city', 'state', 'postal_code',
 ]
 ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
+PASSWORD_POLICY_MESSAGE = 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'
+EMAIL_TAKEN_MESSAGE = 'Usuário já está cadastrado na nossa base de dados'
+
+
+def _cognito_error_response(error):
+    if isinstance(error, TooManyRequests):
+        return JsonResponse({'error': 'Muitas tentativas. Aguarde e tente novamente.'}, status=429)
+    return JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+
+
+def _discard_cognito_user(email):
+    """Undoes a sign-up whose Postgres rows could not be created."""
+    try:
+        get_cognito().admin_delete_user(email)
+    except CognitoError:
+        pass  # already logged by the service; the original error is what the caller reports
+
 
 # In this file, there are 3 types of views:
 # 1 - authentication views
@@ -49,7 +79,7 @@ class RegisterView(APIView):
         phone = request.data.get('phone')
         role = request.data.get('role')
         if User.objects.filter(email=email).exists():
-            return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
+            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
         if User.objects.filter(phone=phone).exists():
             return JsonResponse({'error': 'O número de telefone inserido já está cadastrado na nossa base de dados'}, status=409)
         
@@ -64,8 +94,14 @@ class RegisterView(APIView):
         if  len(phone) < 10:
             return JsonResponse({'error': 'Phone number is too short'}, status=400)
 
-        raw_password = password.replace(' ', '')
-        hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
+        try:
+            cognito_sub = get_cognito().sign_up_confirmed(email, password)
+        except InvalidPassword:
+            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+        except UserAlreadyExists:
+            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
+        except CognitoError as err:
+            return _cognito_error_response(err)
 
         try:
             with transaction.atomic():
@@ -81,7 +117,8 @@ class RegisterView(APIView):
                     number=request.data.get('number'),
                     postal_code=request.data.get('postal_code'),
                     email=request.data.get('email'),
-                    password=hashed_password.decode('utf-8'),
+                    password=None,
+                    cognito_sub=cognito_sub,
                     role=request.data.get('role'),
                     rating=request.data.get('rating'),
                 )
@@ -90,16 +127,18 @@ class RegisterView(APIView):
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
 
-                try:
-                    _create_role_profile(user, request.data)
-                except json.JSONDecodeError:
-                    return JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+                _create_role_profile(user, request.data)
         except InvalidImage:
-            return JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
-        except Exception as err:
-            return JsonResponse({'error': err}, status=500)
+            failure = JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
+        except json.JSONDecodeError:
+            failure = JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+        except Exception:
+            failure = JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+        else:
+            return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
 
-        return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
+        _discard_cognito_user(email)
+        return failure
 
     def _register_with_google(self, request):
         data = request.data
@@ -190,42 +229,63 @@ def _create_role_profile(user, data):
 
 
 class LoginView(APIView):
-    def post(self,request):
-        data = json.loads(request.body)
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            data = {}
         email = data.get('email')
         password = data.get('password')
-        
-        user = User.objects.filter(email=email).first()
-        if user:
-            if user.password is None:
-                return JsonResponse({'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'}, status=403)
+        if not isinstance(email, str) or not isinstance(password, str) or not email or not password:
+            return JsonResponse({'error': 'Informe e-mail e senha.'}, status=400)
 
-            stored_password = user.password.encode('utf-8')
+        if User.objects.filter(
+            email__iexact=email, cognito_sub__isnull=True
+        ).exclude(google_id__isnull=True).exists():
+            return JsonResponse({'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'}, status=403)
 
-            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
-                response = set_session_cookie(JsonResponse({'message': 'Login successful'}, status=200), user)
-                response.data = {
-                    'jwt': response.cookies['jwt'].value
-                }
+        invalid_credentials = JsonResponse({'error': 'E-mail ou senha inválidos.'}, status=401)
+        try:
+            tokens = get_cognito().authenticate(email, password)
+            session = authenticate_token(tokens.access_token)
+        except InvalidCredentials:
+            return invalid_credentials
+        except CognitoError as err:
+            return _cognito_error_response(err)
+        if session is None:
+            return invalid_credentials
 
-                return response
-            return JsonResponse({'error': 'Credenciais inválidas, verifique seus dados e tente novamente'}, status=403)
-        return JsonResponse({'error': 'Usuário não cadastrado na base de dados'}, status=400)
-    
+        response = set_cognito_cookies(JsonResponse({'message': 'Login successful'}, status=200), tokens)
+        response.data = {
+            'jwt': tokens.access_token
+        }
+        return response
+
     def get(self, request):
-        token = request.COOKIES.get('jwt')
+        try:
+            session = authenticate_request(request)
+        except CognitoUnavailable:
+            session = None
+        return JsonResponse({'authenticated': session is not None}, status=200)
 
-        if not token: 
-            return JsonResponse({'authenticated': False}, status=200)
+class RefreshView(APIView):
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        session_expired = {'error': 'Sessão expirada. Entre novamente.'}
+        if not refresh_token:
+            return JsonResponse(session_expired, status=401)
 
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.InvalidTokenError:
-            return JsonResponse({'authenticated': False}, status=200)
-        
-        user = User.objects.filter(id=payload['id']).first()
-        
-        return JsonResponse({"authenticated":True}, status=200)
+            access_token = get_cognito().refresh(refresh_token)
+        except InvalidCredentials:
+            return clear_auth_cookies(JsonResponse(session_expired, status=401))
+        except CognitoError as err:
+            return _cognito_error_response(err)
+
+        return set_access_cookie(JsonResponse({'message': 'Session refreshed'}, status=200), access_token)
+
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -282,34 +342,44 @@ class CepLookupView(APIView):
 
 class LogoutView(APIView):
     def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {"message": "User logged out"}
-    
-        return response
+        refresh_token = request.COOKIES.get('refresh_token')
+        if refresh_token:
+            try:
+                get_cognito().revoke(refresh_token)
+            except CognitoError:
+                pass  # the cookies are cleared either way; the failure is already logged by the service
+        return clear_auth_cookies(JsonResponse({'message': 'User logged out'}, status=200))
 
 class ChangePasswordView(APIView):
     
     def put(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token: 
-            return JsonResponse({'authenticated': False}, status=200)
+        if session.provider != 'cognito':
+            return JsonResponse({'error': 'Esta conta usa login com Google e não tem senha.'}, status=403)
+
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'authenticated': False}, status=200)
-        
-        user = User.objects.filter(id=payload['id']).first()
-        if user:
             data = json.loads(request.body)
-            raw_password = data['password'].replace(' ', '')
-            hashed_password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
-            user.password = hashed_password.decode('utf-8')
-            user.save()
-            return JsonResponse({'message': 'Password updated successfully'}, status=200)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            data = {}
+        old_password = data.get('old_password')
+        new_password = data.get('password')
+        if not isinstance(old_password, str) or not isinstance(new_password, str) or not old_password or not new_password:
+            return JsonResponse({'error': 'Informe a senha atual e a nova senha.'}, status=400)
 
-        return JsonResponse({'error': 'User not found'}, status=404)
+        try:
+            get_cognito().change_password(session.access_token, old_password, new_password)
+        except InvalidCredentials:
+            return JsonResponse({'error': 'Senha atual incorreta.'}, status=400)
+        except InvalidPassword:
+            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+        except CognitoError as err:
+            return _cognito_error_response(err)
+        return JsonResponse({'message': 'Password updated successfully'}, status=200)
         
 # 2 - The following views are related to the User Info
 # Those views only works if cookies are present in the request       
@@ -317,21 +387,11 @@ class ChangePasswordView(APIView):
 
 class UserInfoCookieView(APIView):
     def get(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        
-        try:
-            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'user not found'}, status=400)
-
+        user = session.user
         if user.role == 'customer':
             customer = Customer.objects.filter(user=user).first()
             customer_data = CustomerSerializer(customer).data
@@ -344,49 +404,31 @@ class UserInfoCookieView(APIView):
             return JsonResponse({'error': 'error retrieving user with role'}, status=500)
 
     def delete(self, request):
-        token = request.COOKIES.get('jwt')
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        
-        try:
-            user = User.objects.filter(id=payload['id']).filter(is_active=True).first()  
-            user.delete()
-            response = JsonResponse({'message': 'user deleted'}, status=200)
-            response.delete_cookie('jwt')
-            return response
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=400)
+        user = session.user
+        if user.cognito_sub:
+            try:
+                get_cognito().admin_delete_user(user.email)
+            except CognitoError as err:
+                return _cognito_error_response(err)
+        user.delete()
+        return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
 
     #This function does not handle password update procedure
     def put(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        user = session.user
         data = json.loads(request.body)
-        token = request.COOKIES.get('jwt')
 
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-
-        user = User.objects.filter(id=payload['id'], is_active=True).first()
-
-        if not user:
-            return JsonResponse({'error': 'User not found'}, status=404)
-
-        
-        existing_email = User.objects.filter(email=data['email']).first()
-         
-        # if there is another user with the email you want to switch, you cannot proceed 
-        if existing_email and (existing_email != user): 
-            return JsonResponse({'error': 'This email is already taken'}, status=403)
+        # The e-mail is the Cognito username, and changing it there needs a verification step.
+        if 'email' in data and data['email'] != user.email:
+            return JsonResponse({'error': 'A troca de e-mail não é suportada.'}, status=400)
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',
@@ -466,6 +508,11 @@ class UserInfoView(APIView):
             
         user = User.objects.filter(email=email).filter(is_active=True).first()  
         if user:
+            if user.cognito_sub:
+                try:
+                    get_cognito().admin_delete_user(user.email)
+                except CognitoError as err:
+                    return _cognito_error_response(err)
             user.delete()
             response = JsonResponse({'message': 'user deleted'}, status=200)
 
@@ -474,14 +521,6 @@ class UserInfoView(APIView):
             return response
         else:
             return JsonResponse({'error': 'User not found'}, status=400)
-class LogoutView(APIView):
-    def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {"message": "User logged out"}
-    
-        return response
-    
 class CustomerHomeView(APIView):
     """
     API view for customer home page that returns:
