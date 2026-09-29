@@ -300,9 +300,9 @@ Se precisar de estilo para a mensagem, acrescentar `cepHint` em `styles/register
 
 **Done when**:
 
-- [ ] O CEP é o primeiro `TextInput` do formulário
-- [ ] Nenhum `TextInput` da tela tem `editable={false}`, e o botão "Próximo" não fica desabilitado durante a consulta
-- [ ] Gate check passes: App gate ≤ baseline
+- [x] O CEP é o primeiro `TextInput` do formulário
+- [x] Nenhum `TextInput` da tela tem `editable={false}`, e o botão "Próximo" não fica desabilitado durante a consulta
+- [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
 **Gate**: App
