@@ -5,7 +5,6 @@ import { styles } from '@/styles/customer/reservation/styles/ReservationDetailsS
 import { useReserveDetails } from '@/hooks/customerHooks/useReserveDetails';
 import { formatDate} from '@/utils/date-formater';
 import { formatTime } from '@/utils/time-formater';
-import { API_BACKEND_URL } from '@/app/_layout';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import ConfirmationModal from '@/components/modals/confirmationModal/ConfirmationModal';
@@ -47,8 +46,8 @@ export default function ReserveInfoScreen() {
 
   const { service, start_time } = reserve;
   const { hairdresser } = service;
-  const hairdresser_image = `${API_BACKEND_URL}${reserve.service.hairdresser.user.profile_picture}`;
-  const reserve_image = `${API_BACKEND_URL}${reserve?.review?.picture}`;
+  const hairdresser_image = reserve.service.hairdresser.user.profile_picture;
+  const reserve_image = reserve?.review?.picture;
 
   return (
     <SafeAreaView style={styles.container}>

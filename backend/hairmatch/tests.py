@@ -1,8 +1,12 @@
 # Create your tests here.
 # hairmatch/ai_clients/tests/test_gemini_client.py
 from unittest.mock import patch, MagicMock
-from django.test import TestCase, override_settings
+from botocore.exceptions import ClientError
+from django.core.files.base import ContentFile
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.http import JsonResponse
+
+from hairmatch.storage import S3MediaStorage
 
 from users.models import Hairdresser, User
 from preferences.models import Preferences
@@ -145,4 +149,63 @@ class GeminiClientTest(TestCase):
         """Test completion function with a generic unexpected error."""
         response = hairdresser_profile_ai_completion({'preferences': []})
         self.assertEqual(response.status_code, 500)
+
+
+@override_settings(S3_BUCKET_NAME='test-bucket')
+class S3MediaStorageTest(SimpleTestCase):
+
+    def setUp(self):
+        patcher = patch('hairmatch.storage.boto3.client')
+        self.mock_client = patcher.start().return_value
+        self.addCleanup(patcher.stop)
+        self.storage = S3MediaStorage()
+
+    @override_settings(S3_PUBLIC_ENDPOINT_URL='http://localhost:4566/')
+    def test_url_uses_public_endpoint_path_style(self):
+        self.assertEqual(
+            self.storage.url('profile_pics/foto 1.jpg'),
+            'http://localhost:4566/test-bucket/profile_pics/foto%201.jpg',
+        )
+
+    @override_settings(S3_PUBLIC_ENDPOINT_URL=None)
+    def test_url_without_public_endpoint_uses_aws(self):
+        self.mock_client.meta.region_name = 'us-east-2'
+        self.assertEqual(
+            self.storage.url('profile_pics/a.jpg'),
+            'https://test-bucket.s3.us-east-2.amazonaws.com/profile_pics/a.jpg',
+        )
+
+    def test_exists_returns_false_on_404(self):
+        self.mock_client.head_object.side_effect = ClientError(
+            {'Error': {'Code': '404'}}, 'HeadObject'
+        )
+        self.assertFalse(self.storage.exists('missing.jpg'))
+
+    def test_exists_reraises_other_errors(self):
+        self.mock_client.head_object.side_effect = ClientError(
+            {'Error': {'Code': '403'}}, 'HeadObject'
+        )
+        with self.assertRaises(ClientError):
+            self.storage.exists('forbidden.jpg')
+
+    def test_exists_returns_true_when_object_found(self):
+        self.assertTrue(self.storage.exists('found.jpg'))
+        self.mock_client.head_object.assert_called_once_with(Bucket='test-bucket', Key='found.jpg')
+
+    def test_save_uploads_with_content_type(self):
+        self.mock_client.head_object.side_effect = ClientError(
+            {'Error': {'Code': '404'}}, 'HeadObject'
+        )
+        name = self.storage.save('profile_pics/a.png', ContentFile(b'data'))
+
+        self.assertEqual(name, 'profile_pics/a.png')
+        args, kwargs = self.mock_client.upload_fileobj.call_args
+        self.assertEqual(args[1:], ('test-bucket', 'profile_pics/a.png'))
+        self.assertEqual(kwargs['ExtraArgs'], {'ContentType': 'image/png'})
+
+    def test_delete_removes_object(self):
+        self.storage.delete('profile_pics/a.jpg')
+        self.mock_client.delete_object.assert_called_once_with(
+            Bucket='test-bucket', Key='profile_pics/a.jpg'
+        )
 

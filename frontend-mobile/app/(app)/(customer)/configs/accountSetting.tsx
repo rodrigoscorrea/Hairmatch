@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
-import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
   const {customer, handleGoBack} = useCustomerProfile();
-  const customer_image = `${API_BACKEND_URL}${customer.user.profile_picture}`;
+  const customer_image = customer.user.profile_picture;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}

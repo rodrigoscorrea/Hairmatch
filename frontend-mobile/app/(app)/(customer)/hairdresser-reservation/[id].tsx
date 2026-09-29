@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Accordion } from '@/components/Accordion';
 import { formatAvailability } from '@/utils/availability-formater';
 import { useHairdresserProfile } from '@/hooks/customerHooks/useHairdresserReservation';
-import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function HairdresserProfileReservationScreen() {
   const {
@@ -26,7 +25,7 @@ export default function HairdresserProfileReservationScreen() {
     handleBack,
   } = useHairdresserProfile();
 
-  const hairdresser_source = `${API_BACKEND_URL}${hairdresser?.user.profile_picture}`;
+  const hairdresser_source = hairdresser?.user.profile_picture;
 
   if (loading) {
     return (

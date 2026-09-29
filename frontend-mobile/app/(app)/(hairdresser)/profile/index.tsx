@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import { Accordion } from '@/components/Accordion';
-import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
-  const hairdresser_image = `${API_BACKEND_URL}${hairdresser.user.profile_picture}`;
+  const hairdresser_image = hairdresser.user.profile_picture;
   console.log('oiii')
   return (
     <SafeAreaView style={styles.container}>

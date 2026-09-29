@@ -37,6 +37,8 @@ services:
       #  condition: service_started
       db:
         condition: service_healthy
+      localstack:
+        condition: service_healthy
     environment:
       - DB_HOST=${DB_HOST}
       - DB_NAME=${DB_NAME}
@@ -49,6 +51,13 @@ services:
       - BACKEND_ALLOWED_HOST=${BACKEND_ALLOWED_HOST}
       - BACKEND_ALLOWED_CORS=${BACKEND_ALLOWED_CORS}
       - GOOGLE_OAUTH_CLIENT_IDS=${GOOGLE_OAUTH_CLIENT_IDS}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      # boto3 calls go through the docker network; media URLs sent to clients use the host endpoint (.env)
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - S3_PUBLIC_ENDPOINT_URL=${AWS_ENDPOINT_URL}
     restart: always
     networks:
       - app_network
@@ -102,7 +111,8 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      # Healthy only after the ready.d init scripts (bucket, CORS, policy) have finished
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/init/ready | grep -q '\"completed\": *true'"]
       interval: 10s
       timeout: 5s
       retries: 10

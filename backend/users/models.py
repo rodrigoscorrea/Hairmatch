@@ -4,6 +4,12 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
 
+
+def user_profile_picture_path(instance, filename):
+    # Each user gets its own directory in the media bucket
+    return f"profile_pics/{instance.pk}/{filename}"
+
+
 class User(AbstractUser):
     first_name = models.CharField(max_length=100, blank=False, null=False)
     last_name = models.CharField(max_length=100,  blank=False, null=False)
@@ -30,7 +36,7 @@ class User(AbstractUser):
         ('CUSTOMER','customer'),
         ('HAIRDRESSER','hairdresser')
     )
-    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    profile_picture = models.ImageField(upload_to=user_profile_picture_path, null=True, blank=True)
     role = models.CharField(max_length=12, choices=ROLES_CHOICES, default='CUSTOMER')
     google_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
