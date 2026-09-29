@@ -24,7 +24,7 @@ from .templates import Templates
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# TODO fazer models
+# TODO create models
 user_states = {}
 user_chats = {}
 user_preferences = {}

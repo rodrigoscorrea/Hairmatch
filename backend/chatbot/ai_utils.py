@@ -190,10 +190,10 @@ class AiUtils():
             return UserFullInfoSerializer(hairdresser).data
             
         except ObjectDoesNotExist:
-            print(f"Nenhum cabeleireiro encontrado com o ID: {hairdresser_id}")
+            print(f"No hairdresser found with ID: {hairdresser_id}")
             return None
         except Exception as e:
-            print(f"Ocorreu um erro ao buscar o cabeleireiro: {e}")
+            print(f"An error occurred while fetching the hairdresser: {e}")
             return None
     
     @staticmethod
