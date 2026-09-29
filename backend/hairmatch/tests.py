@@ -4,15 +4,18 @@ import io
 import mimetypes
 import os
 import runpy
+import warnings
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
+from django.core.files.storage import Storage
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.http import JsonResponse
 from PIL import Image, ImageCms
 
 from hairmatch.image_fixtures import make_image_bytes
-from hairmatch.images import InvalidImage, to_webp, webp_name
+from hairmatch.images import InvalidImage, WebPImageField, to_webp, webp_name
 from hairmatch.storage import S3MediaStorage
 
 from users.models import Hairdresser, User
@@ -228,7 +231,9 @@ class S3MediaStorageTest(SimpleTestCase):
             mimetypes.types_map.pop('.webp', None)
             self.assertIsNone(mimetypes.guess_type('a.webp')[0])
 
-            runpy.run_module('hairmatch.storage')
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', RuntimeWarning)  # runpy: module is already imported
+                runpy.run_module('hairmatch.storage')
 
             self.assertEqual(mimetypes.guess_type('a.webp'), ('image/webp', None))
 
@@ -358,3 +363,63 @@ class ToWebpTest(SimpleTestCase):
         with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
             with self.assertRaises(InvalidImage):
                 to_webp(ContentFile(make_image_bytes(size=(20, 10))))
+
+
+class WebPImageFieldFileTest(SimpleTestCase):
+
+    def setUp(self):
+        self.field = WebPImageField(upload_to='webp_field_tests/')
+        self.field.set_attributes_from_name('photo')
+        self.instance = SimpleNamespace(photo=None)
+
+    def field_file(self):
+        return self.field.attr_class(self.instance, self.field, None)
+
+    def stored_image(self, name):
+        return Image.open(io.BytesIO(self.field.storage.open(name).read()))
+
+    def test_save_stores_a_webp_named_after_the_original_stem(self):
+        field_file = self.field_file()
+        field_file.save('foto_png.png', ContentFile(make_image_bytes(fmt='PNG')), save=False)
+
+        self.assertEqual(field_file.name, 'webp_field_tests/foto_png.webp')
+        self.assertEqual(self.stored_image(field_file.name).format, 'WEBP')
+
+    def test_save_sends_one_webp_to_the_storage_and_never_reads_it_back(self):
+        storage = MagicMock(spec=Storage)
+        storage.generate_filename.side_effect = lambda name: name
+        storage.save.side_effect = lambda name, content, max_length=None: name
+        self.field.storage = storage
+        original = make_image_bytes(fmt='JPEG')
+
+        self.field_file().save('foto_mock.jpg', ContentFile(original), save=False)
+
+        storage.save.assert_called_once()
+        name, content = storage.save.call_args.args
+        self.assertEqual(name, 'webp_field_tests/foto_mock.webp')
+        sent = content.read()
+        self.assertEqual(Image.open(io.BytesIO(sent)).format, 'WEBP')
+        self.assertNotEqual(sent, original)
+        storage.open.assert_not_called()
+
+    def test_save_rejects_an_invalid_file_and_stores_nothing(self):
+        storage = MagicMock(spec=Storage)
+        self.field.storage = storage
+
+        with self.assertRaises(InvalidImage):
+            self.field_file().save('notes.jpg', File(io.BytesIO(b'not an image')), save=False)
+
+        storage.save.assert_not_called()
+
+    def test_save_of_a_name_that_exists_gets_a_suffix_and_stays_webp(self):
+        first = self.field_file()
+        first.save('collision.jpg', ContentFile(make_image_bytes()), save=False)
+        second = self.field_file()
+        second.save('collision.png', ContentFile(make_image_bytes(fmt='PNG')), save=False)
+
+        self.assertEqual(first.name, 'webp_field_tests/collision.webp')
+        self.assertNotEqual(second.name, first.name)
+        self.assertTrue(second.name.endswith('.webp'))
+
+    def test_field_deconstructs_to_its_own_import_path(self):
+        self.assertEqual(WebPImageField().deconstruct()[1], 'hairmatch.images.WebPImageField')

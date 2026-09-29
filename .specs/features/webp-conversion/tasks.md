@@ -178,19 +178,20 @@ T9
 
 **Done when**:
 
-- [ ] `WebPImageFieldFileTest` usa uma instância de `User` não salva (ou um model de teste) e cobre:
-  - [ ] `field_file.save('foto.png', File(png))` → nome termina em `foto.webp` e o conteúdo gravado no storage tem `format == 'WEBP'` (WEBP-01)
-  - [ ] Com o storage do campo trocado por um mock: `save` é chamado **uma** vez, com nome `.webp` e bytes WebP, e `_open`/`open` nunca é chamado (WEBP-04: o original nunca vai ao storage e não há leitura para converter)
-  - [ ] Um arquivo inválido levanta `InvalidImage`, e nada é gravado no storage
-  - [ ] Dois saves de `foto.jpg` no mesmo diretório → o segundo nome é diferente e ainda termina em `.webp` (edge case de colisão)
-- [ ] `WebPImageField().deconstruct()` devolve o path `hairmatch.images.WebPImageField`
-- [ ] Gate check passes: `cd backend && python manage.py test hairmatch`
-- [ ] Test count: ≥ contagem de T2 + novos testes em `hairmatch`, sem remoções
+- [x] `WebPImageFieldFileTest` usa uma instância de `User` não salva (ou um model de teste) e cobre:
+  - [x] `field_file.save('foto.png', File(png))` → nome termina em `foto.webp` e o conteúdo gravado no storage tem `format == 'WEBP'` (WEBP-01)
+  - [x] Com o storage do campo trocado por um mock: `save` é chamado **uma** vez, com nome `.webp` e bytes WebP, e `_open`/`open` nunca é chamado (WEBP-04: o original nunca vai ao storage e não há leitura para converter)
+  - [x] Um arquivo inválido levanta `InvalidImage`, e nada é gravado no storage
+  - [x] Dois saves de `foto.jpg` no mesmo diretório → o segundo nome é diferente e ainda termina em `.webp` (edge case de colisão)
+- [x] `WebPImageField().deconstruct()` devolve o path `hairmatch.images.WebPImageField`
+- [x] Gate check passes: `cd backend && python manage.py test hairmatch`
+- [x] Test count: ≥ contagem de T2 + novos testes em `hairmatch`, sem remoções
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(backend): add WebPImageField that stores uploads as WebP`
+**Status**: ✅ Complete
 
 ---
 

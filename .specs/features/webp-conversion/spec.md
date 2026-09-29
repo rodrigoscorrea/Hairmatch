@@ -160,7 +160,7 @@ Os preços são de referência (S3 Standard e Lambda em us-east) e devem ser con
 | WEBP-01 | P1: Fotos viram WebP, AC1 | Tasks | Pending |
 | WEBP-02 | P1: Fotos viram WebP, AC2 | Tasks | Pending |
 | WEBP-03 | P1: Fotos viram WebP, AC3 | Tasks | Pending |
-| WEBP-04 | P1: Fotos viram WebP, AC4 | Tasks | Pending |
+| WEBP-04 | P1: Fotos viram WebP, AC4 | Tasks | Done |
 | WEBP-05 | P1: Fotos viram WebP, AC5 | Tasks | Done |
 | WEBP-06 | P1: Fotos viram WebP, AC6 | Tasks | Done |
 | WEBP-07 | P1: Fotos viram WebP, AC7 | Tasks | Done |

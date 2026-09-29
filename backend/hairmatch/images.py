@@ -2,6 +2,8 @@ import io
 import os
 
 from django.core.files.base import ContentFile
+from django.db import models
+from django.db.models.fields.files import ImageFieldFile
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 MAX_SIDE = 1080
@@ -51,3 +53,15 @@ def to_webp(content):
     except (UnidentifiedImageError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
         raise InvalidImage(str(exc)) from exc
     return ContentFile(buffer.getvalue())
+
+
+class WebPImageFieldFile(ImageFieldFile):
+    def save(self, name, content, save=True):
+        # Converts before the storage sees the file, so the original is never uploaded.
+        super().save(webp_name(name), to_webp(content), save)
+
+
+class WebPImageField(models.ImageField):
+    """ImageField that stores every uploaded image as WebP."""
+
+    attr_class = WebPImageFieldFile
