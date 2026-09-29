@@ -735,9 +735,9 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `docker compose -f docker/docker-compose.yml --env-file docker/.env config` sem erro
-- [ ] `docker compose up`: `hairmatch_ministack` fica `healthy`, e o `django` só sobe depois
-- [ ] Gate: verificação manual acima. O fluxo completo é validado no T24.
+- [x] `docker compose -f docker/docker-compose.yml --env-file docker/.env config` sem erro
+- [x] `docker compose up`: `hairmatch_ministack` fica `healthy`, e o `django` só sobe depois
+- [x] Gate: verificação manual acima. O fluxo completo é validado no T24.
 
 **Tests**: none
 **Gate**: build
