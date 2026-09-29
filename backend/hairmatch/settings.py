@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,8 +27,9 @@ SECRET_KEY = 'django-insecure-b$7)-^_%c!#6^bsob1w^c*hz1ie&3*bny&(on%2%0=+0sm53%h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+# Host used in media URLs returned to clients; the backend itself talks to S3 via AWS_ENDPOINT_URL.
+S3_PUBLIC_ENDPOINT_URL = os.getenv('S3_PUBLIC_ENDPOINT_URL', os.getenv('AWS_ENDPOINT_URL'))
 BACKEND_ALLOWED_HOST = os.getenv('BACKEND_ALLOWED_HOST')
 BACKEND_ALLOWED_CORS = os.getenv('BACKEND_ALLOWED_CORS')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -143,6 +145,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files live in S3; tests use an in-memory storage so they need no bucket.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.InMemoryStorage'
+        if 'test' in sys.argv
+        else 'hairmatch.storage.S3MediaStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
