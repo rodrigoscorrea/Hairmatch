@@ -342,11 +342,13 @@ class CepLookupView(APIView):
 
 class LogoutView(APIView):
     def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {"message": "User logged out"}
-    
-        return response
+        refresh_token = request.COOKIES.get('refresh_token')
+        if refresh_token:
+            try:
+                get_cognito().revoke(refresh_token)
+            except CognitoError:
+                pass  # the cookies are cleared either way; the failure is already logged by the service
+        return clear_auth_cookies(JsonResponse({'message': 'User logged out'}, status=200))
 
 class ChangePasswordView(APIView):
     
@@ -494,14 +496,6 @@ class UserInfoView(APIView):
             return response
         else:
             return JsonResponse({'error': 'User not found'}, status=400)
-class LogoutView(APIView):
-    def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {"message": "User logged out"}
-    
-        return response
-    
 class CustomerHomeView(APIView):
     """
     API view for customer home page that returns:

@@ -3680,3 +3680,56 @@ class CognitoRefreshTest(TestCase):
                 self.assertEqual(response.status_code, expected_status)
                 self.assertEqual(response.json(), body)
                 self.assertEqual(len(response.cookies), 0)
+
+
+class CognitoLogoutTest(TestCase):
+    LOGGED_OUT = {'message': 'User logged out'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.logout_url = reverse('logout')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        login = self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.refresh_token = login.cookies['refresh_token'].value
+
+    def _assert_both_cookies_expired(self, response):
+        for key, path in (('jwt', '/'), ('refresh_token', '/api/auth/')):
+            self.assertEqual(response.cookies[key].value, '')
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+            self.assertEqual(response.cookies[key]['path'], path)
+
+    def test_logout_revokes_the_refresh_token_and_expires_both_cookies(self):
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'revoke_token'], ['revoke_token'])
+        self.assertNotIn(self.refresh_token, self.fake.refresh_tokens)
+        self.client.cookies['refresh_token'] = self.refresh_token
+        self.assertEqual(self.client.post(reverse('refresh')).status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_succeeds_even_when_the_revocation_fails(self):
+        self.fake.fail_next('revoke_token', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+
+    def test_logout_without_a_refresh_token_cookie_still_succeeds(self):
+        del self.client.cookies['refresh_token']
+        self.fake.calls.clear()
+
+        response = self.client.post(self.logout_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), self.LOGGED_OUT)
+        self._assert_both_cookies_expired(response)
+        self.assertEqual(self.fake.calls, [])

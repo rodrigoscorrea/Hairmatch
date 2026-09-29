@@ -499,11 +499,11 @@ As duas views mudam juntas porque todos os testes do projeto se autenticam por r
 
 **Done when**:
 
-- [ ] Logout depois do login → 200, dois cookies expirados e `revoke_token` em `fake.calls`. Depois disso, o refresh com o mesmo refresh token → 401 (COG-28).
-- [ ] `fail_next('revoke_token', EndpointConnectionError(...))` → ainda 200 e cookies expirados. Sem cookie (sessão Google) → 200 (COG-29).
-- [ ] `grep -c "class LogoutView" backend/users/views.py` → 1
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T11 + novos, sem remoções
+- [x] Logout depois do login → 200, dois cookies expirados e `revoke_token` em `fake.calls`. Depois disso, o refresh com o mesmo refresh token → 401 (COG-28).
+- [x] `fail_next('revoke_token', EndpointConnectionError(...))` → ainda 200 e cookies expirados. Sem cookie (sessão Google) → 200 (COG-29).
+- [x] `grep -c "class LogoutView" backend/users/views.py` → 1
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T11 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick
