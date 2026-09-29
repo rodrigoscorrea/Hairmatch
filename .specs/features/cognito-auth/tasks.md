@@ -672,13 +672,13 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] `PopulateHairdressersCommandTest`:
-  - [ ] Depois de `call_command`, todo cabeleireiro tem `cognito_sub`, `password is None`, e `POST /api/auth/login` com um e-mail do seed e `Senha123` → 200 (COG-38)
-  - [ ] Zerar o `cognito_sub` de um usuário e apagar outro do fake → novo `call_command` recria os dois, sem novas linhas `User` (COG-39)
-  - [ ] Um usuário fora do padrão `hairdresser<N>_` não é tocado (COG-39)
-  - [ ] Segundo `call_command` sem mudanças → nenhum `sign_up` novo em `fake.calls` e `cognito_sub` inalterado (COG-40)
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T16 + novos, sem remoções
+- [x] `PopulateHairdressersCommandTest`:
+  - [x] Depois de `call_command`, todo cabeleireiro tem `cognito_sub`, `password is None`, e `POST /api/auth/login` com um e-mail do seed e `Senha123` → 200 (COG-38)
+  - [x] Zerar o `cognito_sub` de um usuário e apagar outro do fake → novo `call_command` recria os dois, sem novas linhas `User` (COG-39)
+  - [x] Um usuário fora do padrão `hairdresser<N>_` não é tocado (COG-39)
+  - [x] Segundo `call_command` sem mudanças → nenhum `sign_up` novo em `fake.calls` e `cognito_sub` inalterado (COG-40)
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T16 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

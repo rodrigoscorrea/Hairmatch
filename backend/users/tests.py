@@ -2832,6 +2832,69 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self.assertFalse(default_storage.exists(key))
 
+    def _login_status(self, email, password='Senha123'):
+        return APIClient().post(
+            reverse('login'), data=json.dumps({'email': email, 'password': password}),
+            content_type='application/json',
+        ).status_code
+
+    def test_seeded_hairdressers_exist_in_cognito_without_a_local_password_and_can_log_in(self):
+        fake = get_cognito().client
+
+        self._run()
+
+        hairdressers = User.objects.filter(role='hairdresser')
+        self.assertEqual(hairdressers.count(), 40)
+        for user in hairdressers:
+            self.assertIsNone(user.password)
+            self.assertEqual(user.cognito_sub, fake.users[user.email.lower()]['sub'])
+            self.assertTrue(fake.users[user.email.lower()]['confirmed'])
+        self.assertEqual(self._login_status(hairdressers.first().email), 200)
+
+    def test_recreates_users_missing_from_cognito_and_fills_a_missing_sub_without_new_rows(self):
+        fake = get_cognito().client
+        self._run()
+        no_sub, lost_in_cognito = User.objects.filter(role='hairdresser').order_by('id')[:2]
+        User.objects.filter(pk=no_sub.pk).update(cognito_sub=None)
+        del fake.users[lost_in_cognito.email.lower()]
+
+        self._run()
+
+        self.assertEqual(User.objects.filter(role='hairdresser').count(), 40)
+        for user in (no_sub, lost_in_cognito):
+            user.refresh_from_db()
+            self.assertEqual(user.cognito_sub, fake.users[user.email.lower()]['sub'])
+            self.assertEqual(self._login_status(user.email), 200)
+
+    def test_does_not_touch_users_outside_the_seed_pattern(self):
+        fake = get_cognito().client
+        plain = User.objects.create(
+            email='someone@seed.test', first_name='A', last_name='B', phone='1', neighborhood='n',
+            city='c', state='AM', address='a', postal_code='1', role='hairdresser',
+        )
+        google = User.objects.create(
+            email='hairdresser7_ana@gmail.com', first_name='A', last_name='B', phone='2', neighborhood='n',
+            city='c', state='AM', address='a', postal_code='1', role='hairdresser', google_id='google-1',
+        )
+
+        self._run()
+
+        for user in (plain, google):
+            user.refresh_from_db()
+            self.assertIsNone(user.cognito_sub)
+        self.assertEqual(fake.users, {})
+
+    def test_running_again_creates_no_cognito_user_and_keeps_every_sub(self):
+        fake = get_cognito().client
+        self._run()
+        subs = dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub'))
+        fake.calls.clear()
+
+        self._run()
+
+        self.assertEqual([name for name, _ in fake.calls if name == 'sign_up'], [])
+        self.assertEqual(dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub')), subs)
+
 class UserProfilePicturePathTest(SimpleTestCase):
     def test_path_is_scoped_by_user_id(self):
         self.assertEqual(
