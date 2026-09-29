@@ -7,6 +7,7 @@ import jwt
 import datetime
 import bcrypt
 from .models import User, Customer, Hairdresser, user_profile_picture_path
+from hairmatch.image_fixtures import make_image_bytes
 from preferences.models import Preferences
 from service.models import Service
 import base64
@@ -29,7 +30,8 @@ from django.core.cache import cache
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 import os
 import tempfile
-from io import StringIO
+from io import BytesIO, StringIO
+from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 from .management.commands import populate_hairdressers
@@ -2566,7 +2568,8 @@ class PopulateHairdressersCommandTest(TestCase):
         self.addCleanup(tmp_dir.cleanup)
         for file_name in self.PLACEHOLDERS:
             with open(os.path.join(tmp_dir.name, file_name), 'wb') as f:
-                f.write(b'fake image')
+                f.write(make_image_bytes(size=(64, 48), fmt='JPEG'))
+        self.tmp_dir = tmp_dir.name
 
         patcher = patch.object(populate_hairdressers, 'PLACEHOLDERS_DIR', tmp_dir.name)
         patcher.start()
@@ -2611,6 +2614,40 @@ class PopulateHairdressersCommandTest(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.profile_picture.name, key)
 
+
+    def _seeded_hairdresser(self, key_name):
+        user = User.objects.create(
+            email=f'{key_name}@seed.test', first_name='Seed', last_name='Hairdresser', phone='1',
+            neighborhood='n', city='c', state='AM', address='a', postal_code='1', role='hairdresser',
+        )
+        user.profile_picture = f'profile_pics/{user.id}/{key_name}'
+        user.save()
+        return user.profile_picture.name
+
+    def test_restores_a_missing_webp_key_with_the_converted_placeholder(self):
+        key = self._seeded_hairdresser('1_hairdresser_placeholder_male.webp')
+
+        self._run()
+
+        with default_storage.open(key) as stored:
+            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+
+    def test_restores_a_missing_legacy_jpg_key_with_the_original_bytes(self):
+        key = self._seeded_hairdresser('1_hairdresser_placeholder_male.jpg')
+
+        self._run()
+
+        with open(os.path.join(self.tmp_dir, '1_hairdresser_placeholder_male.jpg'), 'rb') as original:
+            expected = original.read()
+        with default_storage.open(key) as stored:
+            self.assertEqual(stored.read(), expected)
+
+    def test_ignores_a_key_whose_stem_is_not_a_placeholder(self):
+        key = self._seeded_hairdresser('not_a_placeholder.webp')
+
+        self._run()
+
+        self.assertFalse(default_storage.exists(key))
 
 class UserProfilePicturePathTest(SimpleTestCase):
     def test_path_is_scoped_by_user_id(self):

@@ -171,8 +171,8 @@ Os preços são de referência (S3 Standard e Lambda em us-east) e devem ser con
 | WEBP-12 | P1: Upload inválido, AC3 | Tasks | Pending |
 | WEBP-13 | P1: Upload inválido, AC4 | Tasks | Pending |
 | WEBP-14 | P2: Seed em WebP, AC1 | Tasks | Pending |
-| WEBP-15 | P2: Seed em WebP, AC2 | Tasks | Pending |
-| WEBP-16 | P2: Seed em WebP, AC3 | Tasks | Pending |
+| WEBP-15 | P2: Seed em WebP, AC2 | Tasks | Done |
+| WEBP-16 | P2: Seed em WebP, AC3 | Tasks | Done |
 | WEBP-17 | P2: Seed em WebP, AC4 | Tasks | Pending |
 
 **Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.

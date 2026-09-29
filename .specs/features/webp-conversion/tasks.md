@@ -212,17 +212,18 @@ T9
 
 **Done when**:
 
-- [ ] Os três testes atuais de `PopulateHairdressersCommandTest` continuam passando, agora com JPEGs reais (o campo ainda é `ImageField` nesta tarefa)
-- [ ] Novo teste: usuário cabeleireiro com `profile_picture.name = 'profile_pics/<id>/1_hairdresser_placeholder_male.webp'` e sem objeto no storage → depois do comando, a chave existe e o conteúdo tem `format == 'WEBP'` (WEBP-15)
-- [ ] Novo teste: mesma situação com a chave `.jpg` → a chave existe e os bytes são idênticos ao placeholder (WEBP-16)
-- [ ] Novo teste: chave com stem que não existe nos placeholders → nada é gravado e o comando não falha
-- [ ] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ 138 + novos testes em `users`, sem remoções
+- [x] Os três testes atuais de `PopulateHairdressersCommandTest` continuam passando, agora com JPEGs reais (o campo ainda é `ImageField` nesta tarefa)
+- [x] Novo teste: usuário cabeleireiro com `profile_picture.name = 'profile_pics/<id>/1_hairdresser_placeholder_male.webp'` e sem objeto no storage → depois do comando, a chave existe e o conteúdo tem `format == 'WEBP'` (WEBP-15)
+- [x] Novo teste: mesma situação com a chave `.jpg` → a chave existe e os bytes são idênticos ao placeholder (WEBP-16)
+- [x] Novo teste: chave com stem que não existe nos placeholders → nada é gravado e o comando não falha
+- [x] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ 138 + novos testes em `users`, sem remoções
 
 **Tests**: integration
 **Gate**: full
 
 **Commit**: `feat(seed): restore seeded pictures as WebP when the key is .webp`
+**Status**: ✅ Complete
 
 ---
 
