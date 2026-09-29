@@ -9,7 +9,7 @@ import { Accordion } from '@/components/Accordion';
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
   const hairdresser_image = hairdresser.user.profile_picture;
-  console.log('oiii')
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
