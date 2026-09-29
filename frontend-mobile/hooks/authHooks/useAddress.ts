@@ -22,6 +22,10 @@ export const useAddress = () =>{
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const { loading: cepLoading, message: cepMessage, lookup, cancel } = useCepLookup();
   const numberInputRef = useRef<TextInput>(null);
+  // Other address fields stay locked until the CEP first reaches 8 digits; never re-locks.
+  const [addressUnlocked, setAddressUnlocked] = useState(
+    stripNonDigits(registrationData.postal_code ?? '').length === 8
+  );
   // Latest form state for the async lookup callback, which would otherwise see a stale closure.
   const registrationDataRef = useRef(registrationData);
   registrationDataRef.current = registrationData;
@@ -65,6 +69,7 @@ export const useAddress = () =>{
     handleInputChange('postal_code', masked);
     const digits = stripNonDigits(masked);
     if (digits.length === 8) {
+      setAddressUnlocked(true);
       lookup(digits, applyCepAddress);
     } else {
       cancel();
@@ -111,6 +116,7 @@ export const useAddress = () =>{
     cepLoading,
     cepMessage,
     numberInputRef,
+    addressUnlocked,
     errors,
     errorModal,
     setErrorModal,

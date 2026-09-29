@@ -119,7 +119,7 @@ Política de uso: ViaCEP e BrasilAPI proíbem uso massivo e varredura da base, e
 5. **CEP-16** IF a resposta de uma consulta chegar depois que o campo CEP mudou para outro valor THEN o app SHALL descartar essa resposta, sem alterar campos nem mensagens.
 6. **CEP-17** IF o endpoint responder 404 THEN o app SHALL mostrar abaixo do CEP o texto "CEP não encontrado. Confira o número ou preencha o endereço manualmente." e SHALL não abrir o `ErrorModal`.
 7. **CEP-18** IF o endpoint responder 400, 429 ou 503, ou a requisição falhar por rede ou timeout, THEN o app SHALL mostrar abaixo do CEP o texto "Não foi possível buscar o CEP. Preencha o endereço manualmente." e SHALL não abrir o `ErrorModal`.
-8. **CEP-19** The app SHALL manter editáveis os campos preenchidos pela consulta, e a validação de "Próximo" (`useAddress.validateFields`) SHALL continuar sendo a única regra para avançar.
+8. **CEP-19** The app SHALL manter editáveis, depois de liberados (CEP-22), os campos preenchidos pela consulta, e a validação de "Próximo" (`useAddress.validateFields`) SHALL continuar sendo a única regra para avançar.
 
 **Independent Test**: No cadastro, digitar `69057-000` preenche "Avenida Mário Ypiranga", "Adrianópolis", "Manaus" e "AM", e deixa Número e Complemento vazios. Digitar `00000-000` mostra o texto de CEP não encontrado.
 
@@ -135,6 +135,7 @@ Política de uso: ViaCEP e BrasilAPI proíbem uso massivo e varredura da base, e
 
 1. **CEP-20** The tela de endereço SHALL mostrar o campo CEP como primeiro campo do formulário, acima de Endereço e Número.
 2. **CEP-21** WHEN uma consulta de CEP responde 200 e a resposta não foi descartada (CEP-16) THEN o app SHALL mover o foco para o campo Número.
+3. **CEP-22** WHILE o CEP nunca teve 8 dígitos na tela de endereço, o app SHALL manter Endereço, Número, Complemento, Bairro, Cidade e UF desabilitados (`editable={false}`, com estilo cinza). WHEN o CEP chega a 8 dígitos THEN o app SHALL habilitar esses campos, independente do resultado da consulta (200, 404 ou falha), e SHALL não desabilitá-los de novo nessa visita à tela. IF a tela abre com `postal_code` de 8 dígitos já no `RegistrationContext` THEN os campos SHALL começar habilitados.
 
 **Independent Test**: Abrir a tela de endereço mostra o CEP no topo. Após uma consulta bem-sucedida, o teclado fica no campo Número.
 
@@ -177,8 +178,9 @@ Política de uso: ViaCEP e BrasilAPI proíbem uso massivo e varredura da base, e
 | CEP-19 | P1: Preenchimento automático, AC8 | Tasks | Pending |
 | CEP-20 | P2: Ergonomia, AC1 | Tasks | Pending |
 | CEP-21 | P2: Ergonomia, AC2 | Tasks | Pending |
+| CEP-22 | P2: Ergonomia, AC3 | Tasks | Pending |
 
-**Coverage:** 21 total, 21 mapped to tasks, 0 unmapped.
+**Coverage:** 22 total, 22 mapped to tasks, 0 unmapped.
 
 ---
 

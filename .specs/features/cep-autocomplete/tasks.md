@@ -74,6 +74,7 @@ T3 → T5
 T4 → T5
 T5 → T6
 T6 → T7
+T7 → T9
 ```
 
 ### Phase 3: Fechamento
@@ -301,7 +302,7 @@ Se precisar de estilo para a mensagem, acrescentar `cepHint` em `styles/register
 **Done when**:
 
 - [x] O CEP é o primeiro `TextInput` do formulário
-- [x] Nenhum `TextInput` da tela tem `editable={false}`, e o botão "Próximo" não fica desabilitado durante a consulta
+- [x] Nenhum `TextInput` da tela tem `editable={false}` (revisto em T9: campos travados até o CEP ter 8 dígitos), e o botão "Próximo" não fica desabilitado durante a consulta
 - [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
@@ -311,15 +312,41 @@ Se precisar de estilo para a mensagem, acrescentar `cepHint` em `styles/register
 
 ---
 
+#### T9: Travar os campos de endereço até o CEP ser preenchido
+
+**What**: Em `useAddress`, criar `addressUnlocked` (inicial: CEP já com 8 dígitos no contexto; vira `true` no 8º dígito, nunca volta a `false`) e retorná-lo. Em `address.tsx`, aplicar `editable={addressUnlocked}` e o estilo `inputDisabled` a Endereço, Número, Complemento, Bairro, Cidade e UF.
+**Where**: `frontend-mobile/hooks/authHooks/useAddress.ts`, `frontend-mobile/app/(auth)/register/address.tsx`, `frontend-mobile/styles/register/styles/AdressStyle.ts` (estilo `inputDisabled`)
+**Depends on**: T7
+**Reuses**: `formatCEP` e `stripNonDigits` já importados em `useAddress`
+**Requirement**: CEP-19, CEP-22
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Os 6 campos não-CEP têm `editable={addressUnlocked}`, e o CEP nunca é desabilitado
+- [x] `addressUnlocked` só passa a `true` (sem caminho de volta) e libera também em 404 e falha de rede
+- [x] Gate check passes: App gate ≤ baseline
+
+**Tests**: none
+**Gate**: App
+
+**Commit**: `feat(mobile): lock address fields until CEP is filled`
+
+---
+
 ### Phase 3: Fechamento (tarefas)
 
 #### T8: Build gate e UAT manual
 
 **What**: Rodar o Build gate, executar o roteiro de UAT abaixo no web e no Android e marcar a traceability do spec. Se o usuário quiser, atualizar a issue #128 com o resumo da investigação, o que exige confirmação explícita por ser uma ação externa.
 **Where**: `.specs/features/cep-autocomplete/spec.md` (traceability)
-**Depends on**: T2, T7
+**Depends on**: T2, T9
 **Reuses**: roteiro abaixo
-**Requirement**: CEP-12, CEP-13, CEP-14, CEP-15, CEP-16, CEP-17, CEP-18, CEP-19, CEP-20, CEP-21
+**Requirement**: CEP-12, CEP-13, CEP-14, CEP-15, CEP-16, CEP-17, CEP-18, CEP-19, CEP-20, CEP-21, CEP-22
 
 **Tools**:
 
@@ -329,8 +356,8 @@ Se precisar de estilo para a mensagem, acrescentar `cepHint` em `styles/register
 **Done when**:
 
 - [ ] Build gate passa: Full e App ≤ baseline
-- [ ] Os 11 passos do roteiro (1–9, 4b e 4c) passam no web e no Android
-- [ ] Traceability de CEP-01 a CEP-21 atualizada em `spec.md`
+- [ ] Os 12 passos do roteiro (1–9, 1b, 4b e 4c) passam no web e no Android
+- [ ] Traceability de CEP-01 a CEP-22 atualizada em `spec.md`
 
 **Tests**: none
 **Gate**: build
@@ -346,6 +373,7 @@ Pré-requisitos: backend com acesso à internet e app apontando para ele (`EXPO_
 | # | Passo | Resultado esperado | Req |
 | - | ----- | ------------------ | --- |
 | 1 | Cadastro → etapa de endereço | O CEP é o primeiro campo | CEP-20 |
+| 1b | Abrir a etapa, digitar 7 dígitos, completar o 8º; repetir com `00000-000`, com o backend parado, e apagando um dígito depois de liberar | Os 6 outros campos ficam cinza e desabilitados até o 8º dígito, liberam em todos os casos (200, 404, falha) e não bloqueiam de novo ao apagar um dígito. Voltar da tela seguinte já os mostra liberados. | CEP-22 |
 | 2 | Digitar `69057-000` | O spinner aparece; depois rua "Avenida Mário Ypiranga", bairro "Adrianópolis", cidade "Manaus" e UF "AM" são preenchidos. Número e Complemento ficam vazios, e o foco vai para Número. | CEP-12, 13, 14, 15, 21 |
 | 3 | Editar a rua preenchida e tocar em Próximo com número preenchido | O campo aceita a edição e o fluxo avança | CEP-19 |
 | 4 | Voltar, digitar a rua "Rua Teste" e depois o CEP `78175-000` | Cidade "Poconé" e UF "MT" são preenchidas, e a rua continua "Rua Teste" | CEP-13 |
@@ -367,7 +395,7 @@ Phases run in sequence, and tasks within a phase run in order. The dependency ar
 Phase 1 → Phase 2 → Phase 3
 
 Phase 1:  T1 ------→ T2
-Phase 2:  T3, T4 --→ T5 ------→ T6 ------→ T7
+Phase 2:  T3, T4 --→ T5 ------→ T6 ------→ T7 ------→ T9
 Phase 3:  T8
 ```
 
@@ -386,6 +414,7 @@ Phase 3:  T8
 | T5: `useCepLookup` | 1 hook | ✅ Granular |
 | T6: `useAddress` | 1 hook (2 funções coesas) | ✅ Granular |
 | T7: `address.tsx` | 1 tela (mais 1 estilo, opcional) | ✅ Granular |
+| T9: travar campos | 1 flag + 1 tela + 1 estilo | ⚠️ OK (3 arquivos de 1 mudança coesa) |
 | T8: gate + UAT | 1 arquivo de spec | ✅ Granular |
 
 ---
@@ -403,7 +432,8 @@ A paridade vale dentro de cada fase. Dependências entre fases apontam sempre pa
 | T5 | T3, T4 | T3 → T5, T4 → T5 | ✅ Match |
 | T6 | T5 | T5 → T6 | ✅ Match |
 | T7 | T6 | T6 → T7 | ✅ Match |
-| T8 | T2, T7 (fases 1 e 2) | nenhuma seta intra-fase | ✅ Match |
+| T9 | T7 | T7 → T9 | ✅ Match |
+| T8 | T2, T9 (fases 1 e 2) | nenhuma seta intra-fase | ✅ Match |
 
 ---
 
@@ -413,7 +443,7 @@ A paridade vale dentro de cada fase. Dependências entre fases apontam sempre pa
 | ---- | --------------------------- | --------------- | --------- | ------ |
 | T1: `cep_lookup` | serviço de domínio | unit | unit | ✅ OK |
 | T2: `CepLookupView` | view/rota | integration | integration | ✅ OK |
-| T3–T7 | frontend | none (decisão do usuário) | none | ✅ OK |
+| T3–T7, T9 | frontend | none (decisão do usuário) | none | ✅ OK |
 | T8: UAT + traceability | documentação | none | none | ✅ OK |
 
 ---
@@ -440,8 +470,9 @@ A paridade vale dentro de cada fase. Dependências entre fases apontam sempre pa
 | CEP-16 | T5, T8 |
 | CEP-17 | T4, T5, T8 |
 | CEP-18 | T4, T5, T8 |
-| CEP-19 | T6, T7, T8 |
+| CEP-19 | T6, T7, T8, T9 |
 | CEP-20 | T7, T8 |
 | CEP-21 | T6, T7, T8 |
+| CEP-22 | T9, T8 |
 
-**Coverage:** 21 requisitos, 21 mapeados, 0 sem tarefa.
+**Coverage:** 22 requisitos, 22 mapeados, 0 sem tarefa.

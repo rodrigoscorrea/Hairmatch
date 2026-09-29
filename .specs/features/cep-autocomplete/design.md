@@ -164,7 +164,7 @@ graph TD
   - Abaixo dela vem um `<Text>` com `cepMessage` quando não vazio (CEP-17, 18).
   - A linha "Bairro + CEP" vira só "Bairro".
   - O campo Número recebe `ref={numberInputRef}`.
-  - Nenhum campo recebe `editable={false}` (CEP-19).
+  - Os campos, exceto o CEP, recebem `editable={addressUnlocked}` (CEP-22). `addressUnlocked` nasce `true` só se o CEP já tem 8 dígitos, vira `true` no 8º dígito e nunca volta a `false`. Depois de liberados, ficam editáveis (CEP-19).
 - **Reuses**: os estilos de `styles/register/styles/AdressStyle.ts`. Pode ganhar um estilo `cepHint`, que fica no mesmo arquivo de estilo e na mesma tarefa.
 
 ---

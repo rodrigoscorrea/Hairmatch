@@ -56,6 +56,10 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     marginHorizontal: 5,
   },
+  inputDisabled: {
+    backgroundColor: '#E5E5E5',
+    color: '#999',
+  },
   inputError: {
     borderWidth: 1.5,
     borderColor: 'purple',
