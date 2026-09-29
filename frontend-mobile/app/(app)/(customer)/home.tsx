@@ -13,7 +13,6 @@ import { Image } from 'expo-image';
 import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle';
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome';
 import { formatText } from '@/utils/text-formater'; 
-import { API_BACKEND_URL } from '@/app/_layout';
 
 type SectionKey = 'for_you' | 'cachos' | 'coloracao' | 'barbearia' | 'trancas';
 
@@ -65,7 +64,7 @@ const CustomerHomeScreen = () => {
   };
 
   const renderForYouItem = useCallback(({ item }: any) => {
-    const user_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
+    const user_picture = item.user.profile_picture;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.card}>
@@ -91,7 +90,7 @@ const CustomerHomeScreen = () => {
   }, []);
 
   const renderHairdresserItem = useCallback(({ item }: any) => {
-    const hairdresser_picture = `${API_BACKEND_URL}${item.user.profile_picture}`;
+    const hairdresser_picture = item.user.profile_picture;
     return (
       <TouchableOpacity onPress={() => handleClickHairdresser(item)}>
         <View style={styles.circleItem}>

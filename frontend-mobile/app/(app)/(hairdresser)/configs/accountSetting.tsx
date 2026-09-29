@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import Icon from 'react-native-vector-icons/FontAwesome'; // or another icon library
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
-import { API_BACKEND_URL } from '@/app/_layout';
 
 export default function AccountDetailsScreen() {
   const {hairdresser, handleGoBack} = useHairdresserProfile();
-  const hairdresser_image = `${API_BACKEND_URL}${hairdresser.user.profile_picture}`;
+  const hairdresser_image = hairdresser.user.profile_picture;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}

@@ -7,7 +7,6 @@ import ConfirmationModal from "@/components/modals/confirmationModal/Confirmatio
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
 import { usePathname } from 'expo-router'; // Adjust path if needed
-import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function ProfileScreen(){
     const pathname = usePathname();
@@ -24,7 +23,7 @@ export default function ProfileScreen(){
     const handleMenuPress = (item: string) => {
     };
 
-    const customer_image = `${API_BACKEND_URL}${customer.user.profile_picture}`;
+    const customer_image = customer.user.profile_picture;
     
     return (
     <SafeAreaView style={styles.safeArea}>        

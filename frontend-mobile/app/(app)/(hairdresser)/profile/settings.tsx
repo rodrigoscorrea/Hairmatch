@@ -7,11 +7,10 @@ import ConfirmationModal from "@/components/modals/confirmationModal/Confirmatio
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
-import { API_BACKEND_URL } from "@/app/_layout";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
-    const hairdresser_image = `${API_BACKEND_URL}${hairdresser.user.profile_picture}`;
+    const hairdresser_image = hairdresser.user.profile_picture;
     return (
     <SafeAreaView style={styles.safeArea}>        
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
