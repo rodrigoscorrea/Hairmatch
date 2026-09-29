@@ -46,6 +46,20 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     marginVertical: 5,
   },
+  cepSpinner: {
+    position: 'absolute',
+    right: 15,
+    alignSelf: 'center',
+  },
+  cepHint: {
+    color: '#555',
+    fontSize: 13,
+    marginHorizontal: 5,
+  },
+  inputDisabled: {
+    backgroundColor: '#E5E5E5',
+    color: '#999',
+  },
   inputError: {
     borderWidth: 1.5,
     borderColor: 'purple',

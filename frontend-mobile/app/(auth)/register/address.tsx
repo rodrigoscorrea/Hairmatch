@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, KeyboardAvoidingView, Image, ScrollView } from 'react-native';
+import { View, Text, Alert, ActivityIndicator, TextInput, TouchableOpacity, KeyboardAvoidingView, Image, ScrollView } from 'react-native';
 import { styles } from '../../../styles/register/styles/AdressStyle'
 import { ErrorModal } from '@/app/../components/modals/ErrorModal/ErrorModal';
 import { useAddress } from '@/hooks/authHooks/useAddress';
-import { formatCEP } from '@/app/../utils/forms';
 import { useRegistration } from '@/contexts/RegistrationContext';
 
 export default function Address() {
   const { registrationData, setRegistrationData } = useRegistration();
   const {
     handleInputChange,
+    handlePostalCodeChange,
+    cepLoading,
+    cepMessage,
+    numberInputRef,
+    addressUnlocked,
     errors,
     errorModal,
     closeErrorModal,
@@ -28,51 +32,62 @@ export default function Address() {
         <View style={styles.form}>
           <View style={styles.row}>
             <TextInput
+              placeholder="CEP"
+              style={[styles.input, { flex: 1 }, errors.postal_code && styles.inputError]}
+              value={registrationData.postal_code}
+              onChangeText={handlePostalCodeChange}
+              keyboardType="numeric"
+              maxLength={9}
+            />
+            {cepLoading && <ActivityIndicator style={styles.cepSpinner} />}
+          </View>
+          {!!cepMessage && <Text style={styles.cepHint}>{cepMessage}</Text>}
+          <View style={styles.row}>
+            <TextInput
+              editable={addressUnlocked}
               placeholder="Endereço"
-              style={[styles.input, { flex: 2, marginRight: 5 }, errors.address && styles.inputError]}
+              style={[styles.input, { flex: 2, marginRight: 5 }, errors.address && styles.inputError, !addressUnlocked && styles.inputDisabled]}
               value={registrationData.address}
               onChangeText={text => handleInputChange('address', text)}
             />
             <TextInput
+              ref={numberInputRef}
+              editable={addressUnlocked}
               placeholder="Número"
-              style={[styles.input, { flex: 1 }, errors.number && styles.inputError]}
+              style={[styles.input, { flex: 1 }, errors.number && styles.inputError, !addressUnlocked && styles.inputDisabled]}
               value={registrationData.number}
               onChangeText={text => handleInputChange('number', text)}
               keyboardType="numeric"
             />
           </View>
           <TextInput
+            editable={addressUnlocked}
             placeholder="Complemento"
-            style={styles.input}
+            style={[styles.input, !addressUnlocked && styles.inputDisabled]}
             value={registrationData.complement}
             onChangeText={text => handleInputChange('complement', text)}
           />
           <View style={styles.row}>
             <TextInput
+              editable={addressUnlocked}
               placeholder="Bairro"
-              style={[styles.input, { flex: 1, marginRight: 5 }, errors.neighborhood && styles.inputError]}
+              style={[styles.input, errors.neighborhood && styles.inputError, !addressUnlocked && styles.inputDisabled]}
               value={registrationData.neighborhood}
               onChangeText={text => handleInputChange('neighborhood', text)}
-            />
-            <TextInput
-              placeholder="CEP"
-              style={[styles.input, { flex: 1 }, errors.postal_code && styles.inputError]}
-              value={registrationData.postal_code}
-              onChangeText={(text) => handleInputChange('postal_code', formatCEP(text))}
-              keyboardType="numeric"
-              maxLength={9}
             />
           </View>
           <View style={styles.row}>
             <TextInput
+              editable={addressUnlocked}
               placeholder="Cidade"
-              style={[styles.input, { flex: 2, marginRight: 5 }, errors.city && styles.inputError]}
+              style={[styles.input, { flex: 2, marginRight: 5 }, errors.city && styles.inputError, !addressUnlocked && styles.inputDisabled]}
               value={registrationData.city}
               onChangeText={text => handleInputChange('city', text)}
             />
             <TextInput
+              editable={addressUnlocked}
               placeholder="UF"
-              style={[styles.input, { flex: 1 }, errors.state && styles.inputError]}
+              style={[styles.input, { flex: 1 }, errors.state && styles.inputError, !addressUnlocked && styles.inputDisabled]}
               value={registrationData.state}
               onChangeText={text => handleInputChange('state', text)}
               maxLength={2}

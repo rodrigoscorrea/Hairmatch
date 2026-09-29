@@ -21,6 +21,8 @@ from preferences.models import Preferences
 from django.db import transaction
 from .auth_tokens import set_session_cookie, create_signup_token, decode_signup_token, InvalidSignupToken
 from .google_auth import verify_google_id_token, GoogleTokenError
+from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
+from rest_framework.throttling import AnonRateThrottle
 
 GOOGLE_SIGNUP_REQUIRED_FIELDS = [
     'first_name', 'last_name', 'phone', 'address',
@@ -254,6 +256,23 @@ class GoogleAuthView(APIView):
                 'last_name': identity['family_name'],
             },
         }, status=200)
+
+class CepLookupThrottle(AnonRateThrottle):
+    scope = 'cep_lookup'
+    rate = '30/min'
+
+class CepLookupView(APIView):
+    throttle_classes = [CepLookupThrottle]
+
+    def get(self, request, cep):
+        try:
+            return JsonResponse(lookup_cep(cep), status=200)
+        except InvalidCep:
+            return JsonResponse({'error': 'CEP inválido. Informe 8 dígitos.'}, status=400)
+        except CepNotFound:
+            return JsonResponse({'error': 'CEP não encontrado.'}, status=404)
+        except CepServiceUnavailable:
+            return JsonResponse({'error': 'Serviço de CEP indisponível. Preencha o endereço manualmente.'}, status=503)
 
 class LogoutView(APIView):
     def post(self, request):
