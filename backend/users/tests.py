@@ -35,6 +35,9 @@ from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 from .management.commands import populate_hairdressers
+from . import cognito_fake
+from botocore.exceptions import ClientError, EndpointConnectionError
+from jwt.algorithms import RSAAlgorithm
 
 def stored_image(name):
     """Opens what was actually written to the media storage under `name`."""
@@ -2760,3 +2763,105 @@ class UserProfilePicturePathTest(SimpleTestCase):
             user_profile_picture_path(User(pk=42), 'screen.png'),
             'profile_pics/42/screen.png',
         )
+
+
+class FakeCognitoIdpTest(SimpleTestCase):
+    def setUp(self):
+        self.cognito = cognito_fake.FakeCognitoIdp()
+
+    def _sign_up_confirmed(self, email='a@x.com', password='Senha123'):
+        sub = self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, Password=password
+        )['UserSub']
+        self.cognito.admin_confirm_sign_up(
+            UserPoolId=cognito_fake.POOL_ID, Username=email
+        )
+        return sub
+
+    def _login(self, email='a@x.com', password='Senha123'):
+        return self.cognito.initiate_auth(
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters={'USERNAME': email, 'PASSWORD': password},
+            ClientId=cognito_fake.CLIENT_ID,
+        )['AuthenticationResult']
+
+    def test_sign_up_with_compliant_password_returns_user_sub(self):
+        response = self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+        )
+        self.assertEqual(response['UserSub'], self.cognito.users['a@x.com']['sub'])
+        self.assertFalse(response['UserConfirmed'])
+
+    def test_sign_up_rejects_passwords_outside_the_policy(self):
+        for password in ('senha123', 'SENHA123', 'Senhaabc', 'Se1'):
+            with self.subTest(password=password):
+                with self.assertRaises(ClientError) as ctx:
+                    self.cognito.sign_up(
+                        ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password=password
+                    )
+                self.assertEqual(
+                    ctx.exception.response['Error']['Code'], 'InvalidPasswordException'
+                )
+        self.assertEqual(self.cognito.users, {})
+
+    def test_sign_up_treats_emails_that_differ_in_case_as_the_same_user(self):
+        self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='A@x.com', Password='Senha123'
+        )
+        with self.assertRaises(ClientError) as ctx:
+            self.cognito.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+            )
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'UsernameExistsException')
+
+    def test_login_is_case_insensitive_on_the_email(self):
+        self._sign_up_confirmed(email='A@x.com')
+        self.assertIn('AccessToken', self._login(email='a@X.com'))
+
+    def test_login_returns_tokens_verifiable_with_the_published_jwks(self):
+        sub = self._sign_up_confirmed()
+        tokens = self._login()
+
+        jwk = self.cognito.jwks()['keys'][0]
+        key = RSAAlgorithm.from_jwk(json.dumps(jwk))
+        claims = jwt.decode(
+            tokens['AccessToken'],
+            key,
+            algorithms=['RS256'],
+            issuer=cognito_fake.issuer(),
+        )
+        self.assertEqual(jwt.get_unverified_header(tokens['AccessToken'])['kid'], jwk['kid'])
+        self.assertEqual(claims['sub'], sub)
+        self.assertEqual(claims['token_use'], 'access')
+        self.assertEqual(claims['client_id'], cognito_fake.CLIENT_ID)
+        self.assertEqual(claims['exp'] - claims['iat'], 3600)
+        self.assertIn('RefreshToken', tokens)
+
+    def test_login_with_wrong_password_is_not_authorized(self):
+        self._sign_up_confirmed()
+        with self.assertRaises(ClientError) as ctx:
+            self._login(password='Errada123')
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'NotAuthorizedException')
+
+    def test_refresh_after_revoke_is_not_authorized(self):
+        self._sign_up_confirmed()
+        refresh_token = self._login()['RefreshToken']
+        refresh = lambda: self.cognito.initiate_auth(
+            AuthFlow='REFRESH_TOKEN_AUTH',
+            AuthParameters={'REFRESH_TOKEN': refresh_token},
+            ClientId=cognito_fake.CLIENT_ID,
+        )
+
+        self.assertIn('AccessToken', refresh()['AuthenticationResult'])
+        self.cognito.revoke_token(Token=refresh_token, ClientId=cognito_fake.CLIENT_ID)
+        with self.assertRaises(ClientError) as ctx:
+            refresh()
+        self.assertEqual(ctx.exception.response['Error']['Code'], 'NotAuthorizedException')
+
+    def test_fail_next_raises_exactly_once(self):
+        self._sign_up_confirmed()
+        self.cognito.fail_next('initiate_auth', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertRaises(EndpointConnectionError):
+            self._login()
+        self.assertIn('AccessToken', self._login())

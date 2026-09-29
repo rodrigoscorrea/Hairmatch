@@ -141,17 +141,17 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] Baseline confirmado: `python manage.py test` passa com 330 testes antes da mudança
-- [ ] `FakeCognitoIdpTest` cobre:
-  - [ ] `sign_up` com `Senha123` → `UserSub`
-  - [ ] `sign_up` com `senha123`, `SENHA123`, `Senhaabc` e `Se1` → `ClientError` `InvalidPasswordException`
-  - [ ] `sign_up` repetido com `A@x.com` e `a@x.com` → `UsernameExistsException`
-  - [ ] `initiate_auth` `USER_PASSWORD_AUTH` com senha certa → tokens. O access token decodifica com a chave do `jwks()`, com `token_use="access"`, `client_id` e `iss` corretos.
-  - [ ] Senha errada → `NotAuthorizedException`
-  - [ ] `REFRESH_TOKEN_AUTH` depois de `revoke_token` → `NotAuthorizedException`
-  - [ ] `fail_next('initiate_auth', EndpointConnectionError(...))` levanta exatamente uma vez
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: ≥ 150 + novos em `users`, sem remoções
+- [x] Baseline confirmado: `python manage.py test` passa com 330 testes antes da mudança
+- [x] `FakeCognitoIdpTest` cobre:
+  - [x] `sign_up` com `Senha123` → `UserSub`
+  - [x] `sign_up` com `senha123`, `SENHA123`, `Senhaabc` e `Se1` → `ClientError` `InvalidPasswordException`
+  - [x] `sign_up` repetido com `A@x.com` e `a@x.com` → `UsernameExistsException`
+  - [x] `initiate_auth` `USER_PASSWORD_AUTH` com senha certa → tokens. O access token decodifica com a chave do `jwks()`, com `token_use="access"`, `client_id` e `iss` corretos.
+  - [x] Senha errada → `NotAuthorizedException`
+  - [x] `REFRESH_TOKEN_AUTH` depois de `revoke_token` → `NotAuthorizedException`
+  - [x] `fail_next('initiate_auth', EndpointConnectionError(...))` levanta exatamente uma vez
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: ≥ 150 + novos em `users`, sem remoções
 
 **Tests**: unit
 **Gate**: quick
