@@ -2421,6 +2421,9 @@ class CepLookupServiceTest(TestCase):
     def test_viacep_status_500_falls_back_to_brasilapi(self):
         self._assert_falls_back_to_brasilapi(self._response(500, None))
 
+    def test_viacep_status_500_with_address_body_falls_back_to_brasilapi(self):
+        self._assert_falls_back_to_brasilapi(self._response(500, self.VIACEP_OK))
+
     def test_viacep_invalid_json_falls_back_to_brasilapi(self):
         self._assert_falls_back_to_brasilapi(self._response(200, json_error=True))
 
@@ -2491,8 +2494,8 @@ class CepLookupServiceTest(TestCase):
         with self.assertLogs('users.cep_lookup', 'WARNING') as logs:
             with self.assertRaises(CepServiceUnavailable):
                 lookup_cep('69057000')
-        self.assertTrue(any('viacep' in line for line in logs.output))
-        self.assertTrue(any('brasilapi' in line for line in logs.output))
+        self.assertTrue(any('viacep' in line and 'timeout' in line for line in logs.output))
+        self.assertTrue(any('brasilapi' in line and 'status 500' in line for line in logs.output))
 
 
 class CepLookupViewTest(TestCase):
