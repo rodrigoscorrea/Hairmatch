@@ -6,7 +6,7 @@ import json
 import jwt
 import datetime
 import bcrypt
-from .models import User, Customer, Hairdresser
+from .models import User, Customer, Hairdresser, user_profile_picture_path
 from preferences.models import Preferences
 from service.models import Service
 import base64
@@ -27,6 +27,12 @@ from google.auth.exceptions import GoogleAuthError
 import requests as http_requests
 from django.core.cache import cache
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
+import os
+import tempfile
+from io import StringIO
+from django.core.files.storage import default_storage
+from django.core.management import call_command
+from .management.commands import populate_hairdressers
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -216,7 +222,7 @@ class RegisterViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.get(email='john@example.com')
-        self.assertTrue(user.profile_picture)
+        self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/profile.jpg')
 
 
 class LoginViewTest(TestCase):
@@ -2550,3 +2556,65 @@ class CepLookupViewTest(TestCase):
         for _ in range(30):
             self.assertEqual(self._get().status_code, 200)
         self.assertEqual(self._get().status_code, 429)
+
+
+class PopulateHairdressersCommandTest(TestCase):
+    PLACEHOLDERS = ['1_hairdresser_placeholder_male.jpg', '1_hairdresser_placeholder_female.jpg']
+
+    def setUp(self):
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        for file_name in self.PLACEHOLDERS:
+            with open(os.path.join(tmp_dir.name, file_name), 'wb') as f:
+                f.write(b'fake image')
+
+        patcher = patch.object(populate_hairdressers, 'PLACEHOLDERS_DIR', tmp_dir.name)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        # The command assigns preference ids 1-17
+        Preferences.objects.bulk_create([Preferences(id=i, name=f'pref{i}') for i in range(1, 18)])
+
+    def _run(self):
+        call_command('populate_hairdressers', stdout=StringIO())
+
+    def test_uploads_each_hairdresser_picture_to_its_own_directory(self):
+        self._run()
+
+        hairdressers = User.objects.filter(role='hairdresser')
+        self.assertEqual(hairdressers.count(), 40)
+        for user in hairdressers:
+            directory, file_name = user.profile_picture.name.rsplit('/', 1)
+            self.assertEqual(directory, f'profile_pics/{user.id}')
+            self.assertIn(file_name, self.PLACEHOLDERS)
+            self.assertTrue(default_storage.exists(user.profile_picture.name))
+
+    def test_running_twice_does_not_duplicate_uploads_or_hairdressers(self):
+        self._run()
+        user = User.objects.filter(role='hairdresser').first()
+
+        self._run()
+
+        _, files = default_storage.listdir(f'profile_pics/{user.id}')
+        self.assertEqual(files, [os.path.basename(user.profile_picture.name)])
+        self.assertEqual(User.objects.filter(role='hairdresser').count(), 40)
+
+    def test_restores_missing_seeded_pictures_on_the_same_key(self):
+        self._run()
+        user = User.objects.filter(role='hairdresser').first()
+        key = user.profile_picture.name
+        default_storage.delete(key)
+
+        self._run()
+
+        self.assertTrue(default_storage.exists(key))
+        user.refresh_from_db()
+        self.assertEqual(user.profile_picture.name, key)
+
+
+class UserProfilePicturePathTest(SimpleTestCase):
+    def test_path_is_scoped_by_user_id(self):
+        self.assertEqual(
+            user_profile_picture_path(User(pk=42), 'screen.png'),
+            'profile_pics/42/screen.png',
+        )

@@ -2,9 +2,8 @@ import os
 import random
 from datetime import time
 
-from django.conf import settings
-from django.core.exceptions import SuspiciousFileOperation
 from django.core.files import File
+from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from faker import Faker
 
@@ -12,16 +11,44 @@ from availability.models import Availability
 from service.models import Service
 from users.models import Hairdresser, User
 
+PLACEHOLDERS_DIR = os.path.join(os.path.dirname(__file__), "seed_assets", "profile_pics")
+
 
 class Command(BaseCommand):
     """
-    Populates the database with 20 fake hairdressers if none exist,
+    Populates the database with 40 fake hairdressers if none exist,
     along with their availabilities and services.
     """
 
     help = "Populates the database with fake hairdressers"
 
+    def restore_missing_pictures(self):
+        """
+        Re-uploads seeded hairdresser pictures missing from the media bucket,
+        keeping their keys. Runs on every boot because the dev bucket
+        (LocalStack) is ephemeral while the database is not.
+        """
+        seed_files = set(os.listdir(PLACEHOLDERS_DIR))
+        restored = 0
+        hairdressers = User.objects.filter(role="hairdresser").exclude(profile_picture="")
+        for user in hairdressers.exclude(profile_picture__isnull=True):
+            key = user.profile_picture.name
+            file_name = os.path.basename(key)
+            if file_name not in seed_files or default_storage.exists(key):
+                continue
+            with open(os.path.join(PLACEHOLDERS_DIR, file_name), "rb") as f:
+                default_storage.save(key, File(f))
+            restored += 1
+        if restored:
+            self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded pictures to the media bucket."))
+
     def handle(self, *args, **kwargs):
+        if not os.path.isdir(PLACEHOLDERS_DIR):
+            self.stdout.write(self.style.ERROR(f"Placeholder picture directory not found at: {PLACEHOLDERS_DIR}"))
+            return
+
+        self.restore_missing_pictures()
+
         if User.objects.filter(role="hairdresser").exists():
             self.stdout.write(
                 self.style.SUCCESS(
@@ -146,19 +173,11 @@ class Command(BaseCommand):
 
         weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-        # Define the base path for profile pictures
-        profile_pics_dir = os.path.join(settings.BASE_DIR, 'media', 'profile_pics')
-        
-        # Check if the directory exists to prevent errors
-        if not os.path.isdir(profile_pics_dir):
-            self.stdout.write(self.style.ERROR(f"Profile picture directory not found at: {profile_pics_dir}"))
-            return
-
-        male_pics = [f for f in os.listdir(profile_pics_dir) if "male" in f]
-        female_pics = [f for f in os.listdir(profile_pics_dir) if "female" in f]
+        male_pics = [f for f in os.listdir(PLACEHOLDERS_DIR) if "_male" in f]
+        female_pics = [f for f in os.listdir(PLACEHOLDERS_DIR) if "_female" in f]
 
         if not male_pics or not female_pics:
-            self.stdout.write(self.style.ERROR("Could not find male or female placeholder images in media/profile_pics/"))
+            self.stdout.write(self.style.ERROR(f"Could not find male or female placeholder images in {PLACEHOLDERS_DIR}"))
             return
 
         for i in range(40):
@@ -174,9 +193,6 @@ class Command(BaseCommand):
                 else:
                     first_name = fake.first_name_female()
                     profile_pic_name = random.choice(female_pics)
-                
-                # This is the full path to the source image file
-                profile_pic_path = os.path.join(profile_pics_dir, profile_pic_name)
 
                 # Create user data dictionary
                 user_data = {
@@ -200,10 +216,9 @@ class Command(BaseCommand):
                 user = User.objects.create(**user_data)
                 user.set_password('senha123') # Use set_password to hash it
 
-                # Now, attach the profile picture
-                with open(profile_pic_path, "rb") as f:
-                    # The key change is here: provide the filename separately.
-                    user.profile_picture.save(profile_pic_name, File(f), save=True)
+                # Upload the picture like a regular signup: profile_pics/<user_id>/<file>
+                with open(os.path.join(PLACEHOLDERS_DIR, profile_pic_name), "rb") as f:
+                    user.profile_picture.save(profile_pic_name, File(f), save=False)
 
                 preferences_ids = random.sample(list(range(1, 18)), random.randint(2, 6))
                 user.preferences.set(preferences_ids)
