@@ -158,22 +158,22 @@ Os preços são de referência (S3 Standard e Lambda em us-east) e devem ser con
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | WEBP-01 | P1: Fotos viram WebP, AC1 | Tasks | Pending |
-| WEBP-02 | P1: Fotos viram WebP, AC2 | Tasks | Pending |
+| WEBP-02 | P1: Fotos viram WebP, AC2 | Tasks | Done |
 | WEBP-03 | P1: Fotos viram WebP, AC3 | Tasks | Pending |
 | WEBP-04 | P1: Fotos viram WebP, AC4 | Tasks | Done |
 | WEBP-05 | P1: Fotos viram WebP, AC5 | Tasks | Done |
 | WEBP-06 | P1: Fotos viram WebP, AC6 | Tasks | Done |
 | WEBP-07 | P1: Fotos viram WebP, AC7 | Tasks | Done |
 | WEBP-08 | P1: Fotos viram WebP, AC8 | Tasks | Done |
-| WEBP-09 | P1: Fotos viram WebP, AC9 | Tasks | Pending |
+| WEBP-09 | P1: Fotos viram WebP, AC9 | Tasks | Done |
 | WEBP-10 | P1: Upload inválido, AC1 | Tasks | Pending |
 | WEBP-11 | P1: Upload inválido, AC2 | Tasks | Pending |
 | WEBP-12 | P1: Upload inválido, AC3 | Tasks | Pending |
 | WEBP-13 | P1: Upload inválido, AC4 | Tasks | Pending |
-| WEBP-14 | P2: Seed em WebP, AC1 | Tasks | Pending |
+| WEBP-14 | P2: Seed em WebP, AC1 | Tasks | Done |
 | WEBP-15 | P2: Seed em WebP, AC2 | Tasks | Done |
 | WEBP-16 | P2: Seed em WebP, AC3 | Tasks | Done |
-| WEBP-17 | P2: Seed em WebP, AC4 | Tasks | Pending |
+| WEBP-17 | P2: Seed em WebP, AC4 | Tasks | Done |
 
 **Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.
 

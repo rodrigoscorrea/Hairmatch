@@ -242,20 +242,21 @@ T9
 
 **Done when**:
 
-- [ ] Migration `backend/users/migrations/0007_*.py` gerada com `makemigrations users`, contendo só a AlterField de `profile_picture`
-- [ ] `test_register_with_profile_picture` usa um JPEG real e verifica `profile_pics/{user.id}/profile.webp` e `format == 'WEBP'` (WEBP-02)
-- [ ] Novo teste: cadastro Google com `profile_picture` válida → `profile_pics/{user.id}/<stem>.webp` (WEBP-02)
-- [ ] Novo teste: cadastro com `FOTO.JPG` 3000×2000 → nome `.../FOTO.webp` e dimensões 1080×720 (WEBP-02, WEBP-09 de ponta a ponta)
-- [ ] `test_uploads_each_hairdresser_picture_to_its_own_directory` verifica diretório `profile_pics/{user.id}`, stem entre os placeholders, extensão `.webp` e conteúdo WebP (WEBP-14)
-- [ ] `test_running_twice_does_not_duplicate_uploads_or_hairdressers` continua verificando um único arquivo por diretório (WEBP-17)
-- [ ] `test_restores_missing_seeded_pictures_on_the_same_key` recria a chave `.webp` com conteúdo WebP (WEBP-15)
-- [ ] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ contagem de T4 + novos testes em `users`, sem remoções
+- [x] Migration `backend/users/migrations/0007_*.py` gerada com `makemigrations users`, contendo só a AlterField de `profile_picture`
+- [x] `test_register_with_profile_picture` usa um JPEG real e verifica `profile_pics/{user.id}/profile.webp` e `format == 'WEBP'` (WEBP-02)
+- [x] Novo teste: cadastro Google com `profile_picture` válida → `profile_pics/{user.id}/<stem>.webp` (WEBP-02)
+- [x] Novo teste: cadastro com `FOTO.JPG` 3000×2000 → nome `.../FOTO.webp` e dimensões 1080×720 (WEBP-02, WEBP-09 de ponta a ponta)
+- [x] `test_uploads_each_hairdresser_picture_to_its_own_directory` verifica diretório `profile_pics/{user.id}`, stem entre os placeholders, extensão `.webp` e conteúdo WebP (WEBP-14)
+- [x] `test_running_twice_does_not_duplicate_uploads_or_hairdressers` continua verificando um único arquivo por diretório (WEBP-17)
+- [x] `test_restores_missing_seeded_pictures_on_the_same_key` recria a chave `.webp` com conteúdo WebP (WEBP-15)
+- [x] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ contagem de T4 + novos testes em `users`, sem remoções
 
 **Tests**: integration
 **Gate**: full
 
 **Commit**: `feat(users): store profile pictures as WebP`
+**Status**: ✅ Complete
 
 ---
 

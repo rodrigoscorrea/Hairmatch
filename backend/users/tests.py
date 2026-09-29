@@ -7,7 +7,7 @@ import jwt
 import datetime
 import bcrypt
 from .models import User, Customer, Hairdresser, user_profile_picture_path
-from hairmatch.image_fixtures import make_image_bytes
+from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
 import base64
@@ -35,6 +35,12 @@ from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
 from .management.commands import populate_hairdressers
+
+def stored_image(name):
+    """Opens what was actually written to the media storage under `name`."""
+    with default_storage.open(name) as stored:
+        return Image.open(BytesIO(stored.read()))
+
 
 class RegisterViewTest(TestCase):
     def setUp(self):
@@ -215,16 +221,26 @@ class RegisterViewTest(TestCase):
 
     def test_register_with_profile_picture(self):
         """Test user registration with a profile picture."""
-        # Create a dummy image file
-        image = SimpleUploadedFile("profile.jpg", b"file_content", content_type="image/jpeg")
         payload = self.valid_customer_payload.copy()
-        payload['profile_picture'] = image
+        payload['profile_picture'] = make_upload('profile.jpg')
 
         response = self.client.post(self.register_url, data=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.get(email='john@example.com')
-        self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/profile.jpg')
+        self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/profile.webp')
+        self.assertEqual(stored_image(user.profile_picture.name).format, 'WEBP')
+
+    def test_register_with_large_uppercase_picture_is_stored_as_resized_webp(self):
+        payload = self.valid_customer_payload.copy()
+        payload['profile_picture'] = make_upload('FOTO.JPG', size=(3000, 2000))
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email='john@example.com')
+        self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/FOTO.webp')
+        self.assertEqual(stored_image(user.profile_picture.name).size, (1080, 720))
 
 
 class LoginViewTest(TestCase):
@@ -2184,6 +2200,16 @@ class GoogleRegisterTest(TestCase):
         self.assertCountEqual(user.preferences.values_list('id', flat=True), [pref1.id, pref2.id])
         self._assert_session_cookie_for(response, user)
 
+    def test_google_signup_with_profile_picture_stores_a_webp(self):
+        payload = {**self.customer_payload, 'profile_picture': make_upload('ana_google.png', fmt='PNG')}
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/ana_google.webp')
+        self.assertEqual(stored_image(user.profile_picture.name).format, 'WEBP')
+
     def test_google_hairdresser_signup_creates_user_hairdresser_and_session(self):
         response = self.client.post(self.register_url, data=self.hairdresser_payload)
 
@@ -2562,6 +2588,7 @@ class CepLookupViewTest(TestCase):
 
 class PopulateHairdressersCommandTest(TestCase):
     PLACEHOLDERS = ['1_hairdresser_placeholder_male.jpg', '1_hairdresser_placeholder_female.jpg']
+    PLACEHOLDER_WEBPS = [os.path.splitext(name)[0] + '.webp' for name in PLACEHOLDERS]
 
     def setUp(self):
         tmp_dir = tempfile.TemporaryDirectory()
@@ -2589,8 +2616,8 @@ class PopulateHairdressersCommandTest(TestCase):
         for user in hairdressers:
             directory, file_name = user.profile_picture.name.rsplit('/', 1)
             self.assertEqual(directory, f'profile_pics/{user.id}')
-            self.assertIn(file_name, self.PLACEHOLDERS)
-            self.assertTrue(default_storage.exists(user.profile_picture.name))
+            self.assertIn(file_name, self.PLACEHOLDER_WEBPS)
+            self.assertEqual(stored_image(user.profile_picture.name).format, 'WEBP')
 
     def test_running_twice_does_not_duplicate_uploads_or_hairdressers(self):
         self._run()
@@ -2610,7 +2637,7 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self._run()
 
-        self.assertTrue(default_storage.exists(key))
+        self.assertEqual(stored_image(key).format, 'WEBP')
         user.refresh_from_db()
         self.assertEqual(user.profile_picture.name, key)
 
@@ -2629,8 +2656,7 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self._run()
 
-        with default_storage.open(key) as stored:
-            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+        self.assertEqual(stored_image(key).format, 'WEBP')
 
     def test_restores_a_missing_legacy_jpg_key_with_the_original_bytes(self):
         key = self._seeded_hairdresser('1_hairdresser_placeholder_male.jpg')
