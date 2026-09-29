@@ -163,7 +163,7 @@ T21 → T23 → T24
 #### T2: Criar o `CognitoService` (wrapper boto3)
 
 **What**: Criar `get_cognito()`, `reset_cognito()`, `CognitoService` e as exceções de domínio conforme o `design.md`: mapeamento de erros, log WARNING sem segredo, IDs por env ou por busca de nome, `issuer`, `fetch_jwks()` e compensação quando o `AdminConfirmSignUp` falha. Os testes unitários vão na mesma tarefa.
-**Where**: `backend/users/cognito.py` (novo)
+**Where**: `backend/users/cognito.py` (novo). Também `backend/hairmatch/test_runner.py` (novo) e `TEST_RUNNER` em `settings.py`: o runner chama `reset_cognito()` a cada teste, porque o banco faz rollback entre testes e o fake em memória não faria. Sem isso, os testes de register do T10 receberiam 409 pelos e-mails repetidos.
 **Depends on**: T1
 **Reuses**: padrão lazy de `backend/hairmatch/storage.py:26-32`; `requests` (`backend/requirements.txt`)
 **Requirement**: COG-03, COG-04, COG-47, COG-48, COG-49
@@ -175,19 +175,19 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] `CognitoServiceTest` cobre:
-  - [ ] Cada código de `ClientError` (`InvalidPasswordException`, `UsernameExistsException`, `NotAuthorizedException`, `UserNotFoundException`, `TooManyRequestsException`, `LimitExceededException`, `InternalErrorException`, código desconhecido) e `EndpointConnectionError` → a exceção de domínio da tabela do design
-  - [ ] `assertLogs('users.cognito', 'WARNING')` registra operação + código, e a senha usada não aparece em nenhuma linha (COG-49)
-  - [ ] Com `COGNITO_USER_POOL_ID`/`COGNITO_APP_CLIENT_ID` definidos (`override_settings`), nenhuma chamada `list_user_pools` em `fake.calls` (COG-03)
-  - [ ] Vazios → resolve `hairmatch-dev`/`hairmatch-backend` pela busca
-  - [ ] Pool inexistente → `CognitoUnavailable`
-  - [ ] `issuer == "https://cognito-idp.us-east-2.amazonaws.com/<pool>"`
-  - [ ] Com `AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER` e `AWS_ENDPOINT_URL` diferentes no env (`patch.dict(os.environ)`), um `boto3.client('cognito-idp')` real (sem rede) tem `meta.endpoint_url` igual ao primeiro, e `boto3.client('s3')` igual ao segundo (COG-04)
-  - [ ] `sign_up_confirmed` com `fail_next('admin_confirm_sign_up', ...)` → `admin_delete_user` chamado e exceção propagada
-  - [ ] `admin_delete_user` com usuário inexistente → sem exceção
-  - [ ] `fetch_jwks` com `requests.get` patchado para `ConnectionError` e para status 500 → `CognitoUnavailable`
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T1 + novos, sem remoções
+- [x] `CognitoServiceTest` cobre:
+  - [x] Cada código de `ClientError` (`InvalidPasswordException`, `UsernameExistsException`, `NotAuthorizedException`, `UserNotFoundException`, `TooManyRequestsException`, `LimitExceededException`, `InternalErrorException`, código desconhecido) e `EndpointConnectionError` → a exceção de domínio da tabela do design
+  - [x] `assertLogs('users.cognito', 'WARNING')` registra operação + código, e a senha usada não aparece em nenhuma linha (COG-49)
+  - [x] Com `COGNITO_USER_POOL_ID`/`COGNITO_APP_CLIENT_ID` definidos (`override_settings`), nenhuma chamada `list_user_pools` em `fake.calls` (COG-03)
+  - [x] Vazios → resolve `hairmatch-dev`/`hairmatch-backend` pela busca
+  - [x] Pool inexistente → `CognitoUnavailable`
+  - [x] `issuer == "https://cognito-idp.us-east-2.amazonaws.com/<pool>"`
+  - [x] Com `AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER` e `AWS_ENDPOINT_URL` diferentes no env (`patch.dict(os.environ)`), um `boto3.client('cognito-idp')` real (sem rede) tem `meta.endpoint_url` igual ao primeiro, e `boto3.client('s3')` igual ao segundo (COG-04)
+  - [x] `sign_up_confirmed` com `fail_next('admin_confirm_sign_up', ...)` → `admin_delete_user` chamado e exceção propagada
+  - [x] `admin_delete_user` com usuário inexistente → sem exceção
+  - [x] `fetch_jwks` com `requests.get` patchado para `ConnectionError` e para status 500 → `CognitoUnavailable`
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T1 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: quick

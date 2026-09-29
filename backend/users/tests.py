@@ -36,7 +36,26 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from .management.commands import populate_hairdressers
 from . import cognito_fake
-from botocore.exceptions import ClientError, EndpointConnectionError
+from .cognito import (
+    CognitoService,
+    CognitoUnavailable,
+    InvalidCredentials,
+    InvalidPassword,
+    TooManyRequests,
+    UserAlreadyExists,
+    get_cognito,
+    reset_cognito,
+)
+from botocore.exceptions import (
+    ClientError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
+from types import SimpleNamespace
+import unittest
+import boto3
+from hairmatch.test_runner import HairmatchTestRunner
 from jwt.algorithms import RSAAlgorithm
 
 def stored_image(name):
@@ -2865,3 +2884,146 @@ class FakeCognitoIdpTest(SimpleTestCase):
         with self.assertRaises(EndpointConnectionError):
             self._login()
         self.assertIn('AccessToken', self._login())
+
+
+class CognitoServiceTest(SimpleTestCase):
+    def setUp(self):
+        self.fake = cognito_fake.FakeCognitoIdp()
+        self.service = CognitoService(self.fake)
+
+    def _sign_up(self, password='Senha123'):
+        return self.service.sign_up_confirmed('a@x.com', password)
+
+    def test_boto_errors_become_domain_errors(self):
+        cases = [
+            ('InvalidPasswordException', InvalidPassword),
+            ('UsernameExistsException', UserAlreadyExists),
+            ('NotAuthorizedException', InvalidCredentials),
+            ('UserNotFoundException', InvalidCredentials),
+            ('TooManyRequestsException', TooManyRequests),
+            ('LimitExceededException', TooManyRequests),
+            ('InternalErrorException', CognitoUnavailable),
+            ('SomethingCognitoAddedLater', CognitoUnavailable),
+            (EndpointConnectionError(endpoint_url='http://x'), CognitoUnavailable),
+            (ConnectTimeoutError(endpoint_url='http://x'), CognitoUnavailable),
+            (ReadTimeoutError(endpoint_url='http://x'), CognitoUnavailable),
+        ]
+        for error, expected in cases:
+            with self.subTest(error=error):
+                self.fake.fail_next('sign_up', error)
+                with self.assertRaises(expected) as ctx:
+                    self._sign_up()
+                self.assertIs(type(ctx.exception), expected)
+
+    def test_failures_are_logged_with_operation_and_code_but_never_the_password(self):
+        with self.assertLogs('users.cognito', 'WARNING') as logs:
+            with self.assertRaises(InvalidPassword):
+                self._sign_up(password='senha123')
+            self.fake.fail_next('initiate_auth', EndpointConnectionError(endpoint_url='http://x'))
+            with self.assertRaises(CognitoUnavailable):
+                self.service.authenticate('a@x.com', 'Senha123')
+
+        self.assertEqual(logs.records[0].levelname, 'WARNING')
+        self.assertIn('sign_up', logs.output[0])
+        self.assertIn('InvalidPasswordException', logs.output[0])
+        self.assertIn('initiate_auth', logs.output[1])
+        self.assertIn('EndpointConnectionError', logs.output[1])
+        for line in logs.output:
+            self.assertNotIn('senha123', line.lower())
+            self.assertNotIn('a@x.com', line)
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-from-env', COGNITO_APP_CLIENT_ID='client-from-env')
+    def test_ids_from_settings_are_used_without_any_listing_call(self):
+        self.assertEqual(self.service.pool_id, 'pool-from-env')
+        self.assertEqual(self.service.client_id, 'client-from-env')
+        self.assertEqual(self.service.issuer, 'https://cognito-idp.us-east-2.amazonaws.com/pool-from-env')
+        self.assertEqual(self.fake.calls, [])
+
+    @override_settings(COGNITO_USER_POOL_ID='', COGNITO_APP_CLIENT_ID='')
+    def test_empty_ids_are_resolved_by_name(self):
+        self.assertEqual(self.service.pool_id, cognito_fake.POOL_ID)
+        self.assertEqual(self.service.client_id, cognito_fake.CLIENT_ID)
+        self.assertEqual(
+            [name for name, _ in self.fake.calls], ['list_user_pools', 'list_user_pool_clients']
+        )
+        self.assertEqual(
+            self.service.issuer,
+            f'https://cognito-idp.us-east-2.amazonaws.com/{cognito_fake.POOL_ID}',
+        )
+
+    @override_settings(COGNITO_USER_POOL_ID='', COGNITO_APP_CLIENT_ID='')
+    def test_missing_pool_is_reported_as_unavailable(self):
+        self.fake.list_user_pools = lambda **kwargs: {'UserPools': [{'Id': 'x', 'Name': 'other'}]}
+        with self.assertRaises(CognitoUnavailable):
+            self.service.pool_id
+
+    def test_cognito_calls_use_the_cognito_endpoint_while_s3_keeps_its_own(self):
+        env = {
+            'AWS_DEFAULT_REGION': 'us-east-2',
+            'AWS_ACCESS_KEY_ID': 'test',
+            'AWS_SECRET_ACCESS_KEY': 'test',
+            'AWS_ENDPOINT_URL': 'http://localstack:4566',
+            'AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER': 'http://ministack:4566',
+        }
+        with patch.dict(os.environ, env):
+            cognito_endpoint = CognitoService().client.meta.endpoint_url
+            s3_endpoint = boto3.client('s3').meta.endpoint_url
+        self.assertEqual(cognito_endpoint, 'http://ministack:4566')
+        self.assertEqual(s3_endpoint, 'http://localstack:4566')
+
+    def test_failed_confirmation_deletes_the_user_and_propagates(self):
+        self.fake.fail_next('admin_confirm_sign_up', 'InternalErrorException')
+
+        with self.assertRaises(CognitoUnavailable):
+            self._sign_up()
+
+        self.assertIn('admin_delete_user', [name for name, _ in self.fake.calls])
+        self.assertEqual(self.fake.users, {})
+
+    def test_deleting_a_user_that_does_not_exist_is_not_an_error(self):
+        self.service.admin_delete_user('nobody@x.com')
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-1')
+    def test_fetch_jwks_reports_network_errors_and_bad_status_as_unavailable(self):
+        service = CognitoService(SimpleNamespace(meta=self.fake.meta))
+        bad_status = MagicMock(status_code=500)
+        for outcome in (
+            {'side_effect': http_requests.ConnectionError('down')},
+            {'return_value': bad_status},
+        ):
+            with self.subTest(outcome=outcome):
+                with patch('users.cognito.requests.get', **outcome):
+                    with self.assertRaises(CognitoUnavailable):
+                        service.fetch_jwks()
+
+    @override_settings(COGNITO_USER_POOL_ID='pool-1')
+    def test_fetch_jwks_reads_the_pool_jwks_endpoint(self):
+        service = CognitoService(SimpleNamespace(meta=self.fake.meta))
+        response = MagicMock(status_code=200)
+        response.json.return_value = {'keys': []}
+        with patch('users.cognito.requests.get', return_value=response) as get:
+            self.assertEqual(service.fetch_jwks(), {'keys': []})
+        get.assert_called_once_with(
+            'https://cognito-idp.us-east-2.amazonaws.com/pool-1/.well-known/jwks.json',
+            timeout=5,
+        )
+
+    def test_test_runner_gives_every_test_a_clean_cognito(self):
+        class Registers(unittest.TestCase):
+            def test_a(self):
+                get_cognito().client.sign_up(
+                    ClientId=cognito_fake.CLIENT_ID, Username='a@x.com', Password='Senha123'
+                )
+
+        class SeesNothing(unittest.TestCase):
+            def test_b(self):
+                self.assertEqual(get_cognito().client.users, {})
+
+        runner = HairmatchTestRunner()
+        suite = unittest.TestSuite(
+            [Registers('test_a'), SeesNothing('test_b')]
+        )
+        result = unittest.TextTestRunner(
+            stream=StringIO(), resultclass=runner.get_resultclass()
+        ).run(suite)
+        self.assertTrue(result.wasSuccessful(), result.failures)
