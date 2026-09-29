@@ -53,6 +53,11 @@ _ERRORS_BY_CODE = {
 }
 
 
+def _username(email):
+    # The pool ignores case (CaseSensitive=false), but the MiniStack emulator matches usernames exactly.
+    return email.lower()
+
+
 class CognitoService:
     """
     Every call to Cognito goes through here. boto3 errors become domain errors
@@ -102,6 +107,7 @@ class CognitoService:
         return f'https://cognito-idp.{self.client.meta.region_name}.amazonaws.com/{self.pool_id}'
 
     def sign_up_confirmed(self, email, password):
+        email = _username(email)
         sub = self._call(
             'sign_up',
             ClientId=self.client_id,
@@ -123,7 +129,7 @@ class CognitoService:
         result = self._call(
             'initiate_auth',
             AuthFlow='USER_PASSWORD_AUTH',
-            AuthParameters={'USERNAME': email, 'PASSWORD': password},
+            AuthParameters={'USERNAME': _username(email), 'PASSWORD': password},
             ClientId=self.client_id,
         )['AuthenticationResult']
         return Tokens(result['AccessToken'], result['RefreshToken'])
@@ -150,14 +156,14 @@ class CognitoService:
 
     def admin_delete_user(self, email):
         try:
-            self._call('admin_delete_user', UserPoolId=self.pool_id, Username=email)
+            self._call('admin_delete_user', UserPoolId=self.pool_id, Username=_username(email))
         except InvalidCredentials as exc:
             if exc.code != 'UserNotFoundException':
                 raise CognitoUnavailable(exc.code) from exc
 
     def admin_get_sub(self, email):
         try:
-            response = self._call('admin_get_user', UserPoolId=self.pool_id, Username=email)
+            response = self._call('admin_get_user', UserPoolId=self.pool_id, Username=_username(email))
         except InvalidCredentials as exc:
             if exc.code != 'UserNotFoundException':
                 raise CognitoUnavailable(exc.code) from exc

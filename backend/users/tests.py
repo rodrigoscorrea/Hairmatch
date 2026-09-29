@@ -3127,6 +3127,30 @@ class CognitoServiceTest(SimpleTestCase):
             timeout=5,
         )
 
+    @override_settings(COGNITO_USER_POOL_ID='pool-1', COGNITO_APP_CLIENT_ID='client-1')
+    def test_usernames_reach_cognito_in_lower_case(self):
+        client = MagicMock()
+        client.sign_up.return_value = {'UserSub': 'sub-1'}
+        client.initiate_auth.return_value = {
+            'AuthenticationResult': {'AccessToken': 'a', 'RefreshToken': 'r'}
+        }
+        client.admin_get_user.return_value = {'UserAttributes': [{'Name': 'sub', 'Value': 'sub-1'}]}
+        service = CognitoService(client)
+
+        service.sign_up_confirmed('Ana@Example.com', 'Senha123')
+        service.authenticate('ANA@example.com', 'Senha123')
+        service.admin_get_sub('Ana@example.COM')
+        service.admin_delete_user('ANA@EXAMPLE.COM')
+
+        self.assertEqual(client.sign_up.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(
+            client.sign_up.call_args.kwargs['UserAttributes'], [{'Name': 'email', 'Value': 'ana@example.com'}]
+        )
+        self.assertEqual(client.admin_confirm_sign_up.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(client.initiate_auth.call_args.kwargs['AuthParameters']['USERNAME'], 'ana@example.com')
+        self.assertEqual(client.admin_get_user.call_args.kwargs['Username'], 'ana@example.com')
+        self.assertEqual(client.admin_delete_user.call_args.kwargs['Username'], 'ana@example.com')
+
     def test_test_runner_gives_every_test_a_clean_cognito(self):
         class Registers(unittest.TestCase):
             def test_a(self):
