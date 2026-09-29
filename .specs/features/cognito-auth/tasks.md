@@ -426,23 +426,23 @@ As duas views mudam juntas porque todos os testes do projeto se autenticam por r
 
 **Done when**:
 
-- [ ] Cadastro:
-  - [ ] Cliente e cabeleireiro → 201, `User.cognito_sub == UserSub`, `password is None`, usuário presente no fake (COG-05, COG-06)
-  - [ ] E-mail/telefone duplicado no Postgres, campo faltando e telefone curto → status e mensagem de hoje, com `fake.calls` sem `sign_up` (COG-07)
-  - [ ] Senha `senha123` → 400 com a mensagem de COG-08 e zero linhas
-  - [ ] `UsernameExistsException` (e-mail só no fake) → 409 e zero linhas (COG-09)
-  - [ ] Foto inválida, preferências inválidas e falha no insert (patch em `_create_role_profile`) depois do sign-up → `admin_delete_user` em `fake.calls`, zero `User`/`Customer`/`Hairdresser`, e status 400/400/500 (COG-10)
-  - [ ] Caminho Google: todos os testes `GoogleRegisterTest` passam sem nenhuma chamada no fake (COG-11)
-- [ ] Login:
-  - [ ] 200 com os dois cookies e os atributos do spec, e o `jwt` aceito por `GET /api/auth/user` (COG-12)
-  - [ ] Senha errada e e-mail inexistente → 401 "E-mail ou senha inválidos." sem cookie (COG-13)
-  - [ ] Conta Google → 403, sem chamada no fake (COG-14)
-  - [ ] Usuário no fake sem `User` correspondente → 401 (COG-15)
-  - [ ] Corpo sem `email`, sem `password` ou vazio → 400 "Informe e-mail e senha." (COG-16)
-- [ ] Com `fail_next(..., EndpointConnectionError)`: cadastro e login → 503, zero linhas novas. `TooManyRequestsException` → 429. (COG-47, COG-48)
-- [ ] `grep -n bcrypt backend/users/views.py` só encontra o uso restante em `ChangePasswordView` (sai no T13)
-- [ ] Gate check passes (Full): `makemigrations --check` + suíte inteira. Os helpers register → login de todos os apps passam com o fake.
-- [ ] Test count: ≥ 330 + novos, sem remoções
+- [x] Cadastro:
+  - [x] Cliente e cabeleireiro → 201, `User.cognito_sub == UserSub`, `password is None`, usuário presente no fake (COG-05, COG-06)
+  - [x] E-mail/telefone duplicado no Postgres, campo faltando e telefone curto → status e mensagem de hoje, com `fake.calls` sem `sign_up` (COG-07)
+  - [x] Senha `senha123` → 400 com a mensagem de COG-08 e zero linhas
+  - [x] `UsernameExistsException` (e-mail só no fake) → 409 e zero linhas (COG-09)
+  - [x] Foto inválida, preferências inválidas e falha no insert (patch em `_create_role_profile`) depois do sign-up → `admin_delete_user` em `fake.calls`, zero `User`/`Customer`/`Hairdresser`, e status 400/400/500 (COG-10)
+  - [x] Caminho Google: todos os testes `GoogleRegisterTest` passam sem nenhuma chamada no fake (COG-11)
+- [x] Login:
+  - [x] 200 com os dois cookies e os atributos do spec, e o `jwt` aceito por `GET /api/auth/user` (COG-12)
+  - [x] Senha errada e e-mail inexistente → 401 "E-mail ou senha inválidos." sem cookie (COG-13)
+  - [x] Conta Google → 403, sem chamada no fake (COG-14)
+  - [x] Usuário no fake sem `User` correspondente → 401 (COG-15)
+  - [x] Corpo sem `email`, sem `password` ou vazio → 400 "Informe e-mail e senha." (COG-16)
+- [x] Com `fail_next(..., EndpointConnectionError)`: cadastro e login → 503, zero linhas novas. `TooManyRequestsException` → 429. (COG-47, COG-48)
+- [x] `grep -n bcrypt backend/users/views.py` não encontra nada (o `ChangePasswordView` interino já usa o Cognito, ver T13)
+- [x] Gate check passes (Full): `makemigrations --check` + suíte inteira. Os helpers register → login de todos os apps passam com o fake.
+- [x] Test count: ≥ 330 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: full
@@ -522,6 +522,9 @@ As duas views mudam juntas porque todos os testes do projeto se autenticam por r
 - `InvalidPassword` → 400 com a mensagem da política.
 
 O último uso de `bcrypt` em `views.py` sai.
+
+> **Ordem (desvio do plano):** o T10 já ligou `ChangePasswordView.put` ao `change_password` do Cognito, sem validação de corpo nem mapeamento de erros (marcado `TEMPORARY`), porque o login do T10 já não enxerga uma senha trocada por bcrypt e `test_change_password_valid` quebraria a suíte. O T10 também removeu o `import bcrypt`. O T13 conclui a view e acrescenta os testes.
+
 **Where**: `backend/users/views.py` (modificar)
 **Depends on**: T10
 **Reuses**: `authenticated_user` (T5); `get_cognito().change_password` (T2)

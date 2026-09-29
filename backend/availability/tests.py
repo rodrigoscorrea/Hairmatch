@@ -21,7 +21,7 @@ class CreateAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -52,7 +52,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         response = self.client.post(
@@ -89,7 +89,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         response = self.client.post(
@@ -124,7 +124,7 @@ class CreateAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
 
         self.client.post(
@@ -226,7 +226,7 @@ class CreateMultipleAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -256,7 +256,7 @@ class CreateMultipleAvailabilityTest(TestCase):
         # Login
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
         self.client.post(
             self.login_url,
@@ -422,7 +422,7 @@ class ListAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -509,7 +509,7 @@ class RemoveAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -576,7 +576,7 @@ class UpdateAvailabilityTest(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Hair",
             "last_name": "Dresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -747,7 +747,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             "email": "rodrigosc615@gmail.com",
             "first_name": "Rodrigo Santos",
             "last_name": "o 12",
-            "password": "senha123",
+            "password": "Senha123",
             "phone": "+5592984502890",
             "complement": "casa",
             "neighborhood": "centro",
@@ -776,7 +776,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
-            'password': 'senha123'
+            'password': 'Senha123'
         }
         self.client.post(
             self.login_url,

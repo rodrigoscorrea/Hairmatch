@@ -62,6 +62,7 @@ class FakeCognitoIdp:
         )
         self.users = {}
         self.refresh_tokens = {}
+        self.access_tokens = {}
         self.calls = []
         self._failures = defaultdict(deque)
 
@@ -101,6 +102,11 @@ class FakeCognitoIdp:
             sub, token_use='refresh', exp=now + REFRESH_TOKEN_TTL, scope=None
         )
         self.refresh_tokens[token] = sub
+        return token
+
+    def _issue_access_token(self, sub):
+        token = self.make_access_token(sub)
+        self.access_tokens[token] = sub
         return token
 
     def fail_next(self, operation, error):
@@ -190,9 +196,10 @@ class FakeCognitoIdp:
                 raise _client_error('NotAuthorizedException', 'InitiateAuth')
             if not user['confirmed']:
                 raise _client_error('UserNotConfirmedException', 'InitiateAuth')
+            access_token = self._issue_access_token(user['sub'])
             return {
                 'AuthenticationResult': {
-                    'AccessToken': self.make_access_token(user['sub']),
+                    'AccessToken': access_token,
                     'RefreshToken': self.make_refresh_token(user['sub']),
                     'ExpiresIn': ACCESS_TOKEN_TTL,
                     'TokenType': 'Bearer',
@@ -204,7 +211,7 @@ class FakeCognitoIdp:
                 raise _client_error('NotAuthorizedException', 'InitiateAuth')
             return {
                 'AuthenticationResult': {
-                    'AccessToken': self.make_access_token(sub),
+                    'AccessToken': self._issue_access_token(sub),
                     'ExpiresIn': ACCESS_TOKEN_TTL,
                     'TokenType': 'Bearer',
                 }
@@ -213,16 +220,8 @@ class FakeCognitoIdp:
 
     def change_password(self, PreviousPassword, ProposedPassword, AccessToken, **kwargs):
         self._begin('change_password')
-        try:
-            claims = jwt.decode(
-                AccessToken,
-                _SIGNING_KEY.public_key(),
-                algorithms=['RS256'],
-                issuer=issuer(),
-            )
-        except jwt.InvalidTokenError:
-            raise _client_error('NotAuthorizedException', 'ChangePassword')
-        user = next((u for u in self.users.values() if u['sub'] == claims['sub']), None)
+        sub = self.access_tokens.get(AccessToken)
+        user = next((u for u in self.users.values() if u['sub'] == sub), None)
         if user is None or user['password'] != PreviousPassword:
             raise _client_error('NotAuthorizedException', 'ChangePassword')
         if not _meets_password_policy(ProposedPassword):

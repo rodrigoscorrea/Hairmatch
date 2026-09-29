@@ -28,7 +28,11 @@ def authenticate_request(request):
     Returns the SessionUser for the `jwt` cookie, or None when it is missing or invalid.
     Raises CognitoUnavailable only when the Cognito signing keys cannot be fetched.
     """
-    token = request.COOKIES.get('jwt')
+    return authenticate_token(request.COOKIES.get('jwt'))
+
+
+def authenticate_token(token):
+    """Same as authenticate_request, for a token that did not come from the cookie."""
     if not token:
         return None
     try:

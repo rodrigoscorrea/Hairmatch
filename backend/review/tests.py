@@ -30,7 +30,7 @@ class ReviewsTestCase(TestCase):
             "email": "customer@example.com",
             "first_name": "Test",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984501111",
             "complement": "Apt 101",
             "neighborhood": "Downtown",
@@ -49,7 +49,7 @@ class ReviewsTestCase(TestCase):
             "email": "customer2@example.com",
             "first_name": "Test2",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984501181",
             "complement": "Apt 101",
             "neighborhood": "Downtown",
@@ -69,7 +69,7 @@ class ReviewsTestCase(TestCase):
             "email": "hairdresser@example.com",
             "first_name": "Test",
             "last_name": "Hairdresser",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984502222",
             "complement": "Apt 202",
             "neighborhood": "Uptown",
@@ -439,7 +439,7 @@ class UpdateReviewTest(ReviewsTestCase):
             "email": "customer2@example.com",
             "first_name": "Second",
             "last_name": "Customer",
-            "password": "password123",
+            "password": "Password123",
             "phone": "+5592984503333",
             "complement": "Apt 303",
             "neighborhood": "Midtown",
@@ -545,8 +545,6 @@ class RemoveReview(ReviewsTestCase):
 
     def test_delete_non_existent_review(self):
         """Test that trying to delete a review that doesn't exist returns 404."""
-        self.client.login(email=self.customer_user.email, password="senha123")
-        
         # Use an ID that does not exist
         invalid_delete_url = reverse('remove_review', args=[9999])
         response = self.client.delete(invalid_delete_url)
