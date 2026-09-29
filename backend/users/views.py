@@ -357,10 +357,28 @@ class ChangePasswordView(APIView):
         if error:
             return error
 
-        # TEMPORARY: the body validation and the error mapping arrive in T13. Passwords now live in
-        # Cognito, so the change has to go there for the login that follows T10 to see it.
-        data = json.loads(request.body)
-        get_cognito().change_password(session.access_token, data['old_password'], data['password'])
+        if session.provider != 'cognito':
+            return JsonResponse({'error': 'Esta conta usa login com Google e não tem senha.'}, status=403)
+
+        try:
+            data = json.loads(request.body)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            data = {}
+        old_password = data.get('old_password')
+        new_password = data.get('password')
+        if not isinstance(old_password, str) or not isinstance(new_password, str) or not old_password or not new_password:
+            return JsonResponse({'error': 'Informe a senha atual e a nova senha.'}, status=400)
+
+        try:
+            get_cognito().change_password(session.access_token, old_password, new_password)
+        except InvalidCredentials:
+            return JsonResponse({'error': 'Senha atual incorreta.'}, status=400)
+        except InvalidPassword:
+            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+        except CognitoError as err:
+            return _cognito_error_response(err)
         return JsonResponse({'message': 'Password updated successfully'}, status=200)
         
 # 2 - The following views are related to the User Info

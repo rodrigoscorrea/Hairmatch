@@ -537,14 +537,14 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] Troca válida → 200, login com a senha nova → 200, login com a antiga → 401, `User.password` continua `None` (COG-30)
-- [ ] Senha atual errada → 400 "Senha atual incorreta." (COG-31)
-- [ ] Senha nova `abc` → 400 com a mensagem de COG-08 (COG-32)
-- [ ] Sem `old_password` ou sem `password` → 400, sem chamada no fake (COG-33)
-- [ ] Sessão Google → 403 com a mensagem do spec (COG-34)
-- [ ] `grep -n bcrypt backend/users/views.py` não encontra nada
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T12 + novos, sem remoções
+- [x] Troca válida → 200, login com a senha nova → 200, login com a antiga → 401, `User.password` continua `None` (COG-30)
+- [x] Senha atual errada → 400 "Senha atual incorreta." (COG-31)
+- [x] Senha nova `abc` → 400 com a mensagem de COG-08 (COG-32)
+- [x] Sem `old_password` ou sem `password` → 400, sem chamada no fake (COG-33)
+- [x] Sessão Google → 403 com a mensagem do spec (COG-34)
+- [x] `grep -n bcrypt backend/users/views.py` não encontra nada
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T12 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

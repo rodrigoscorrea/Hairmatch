@@ -3733,3 +3733,81 @@ class CognitoLogoutTest(TestCase):
         self.assertEqual(response.json(), self.LOGGED_OUT)
         self._assert_both_cookies_expired(response)
         self.assertEqual(self.fake.calls, [])
+
+
+class CognitoChangePasswordTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.change_url = reverse('password_change')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload())
+        self._login('Senha123')  # leaves the session cookies on the client
+        self.fake.calls.clear()
+
+    def _login(self, password):
+        return self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': password}),
+            content_type='application/json',
+        )
+
+    def _change(self, body):
+        return self.client.put(self.change_url, data=json.dumps(body), content_type='application/json')
+
+    def _fresh_login_status(self, password):
+        return APIClient().post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': password}),
+            content_type='application/json',
+        ).status_code
+
+    def test_valid_change_moves_the_password_in_cognito_and_never_stores_it_locally(self):
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Password updated successfully'})
+        self.assertEqual(self._fresh_login_status('NovaSenha456'), 200)
+        self.assertEqual(self._fresh_login_status('Senha123'), 401)
+        self.assertIsNone(User.objects.get(email='nova@example.com').password)
+
+    def test_wrong_current_password_answers_400_and_keeps_the_password(self):
+        response = self._change({'old_password': 'Errada123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Senha atual incorreta.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+    def test_new_password_outside_the_policy_answers_400(self):
+        response = self._change({'old_password': 'Senha123', 'password': 'abc'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
+
+    def test_missing_old_or_new_password_answers_400_without_calling_cognito(self):
+        for body in ({'password': 'NovaSenha456'}, {'old_password': 'Senha123'}, {}, {'old_password': '', 'password': 'NovaSenha456'}):
+            with self.subTest(body=body):
+                response = self._change(body)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(response.json(), {'error': 'Informe a senha atual e a nova senha.'})
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
+
+    def test_google_session_answers_403_without_calling_cognito(self):
+        google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        self.client.cookies.clear()
+        self.client.cookies['jwt'] = issue_session_token(google_user)
+
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json(), {'error': 'Esta conta usa login com Google e não tem senha.'})
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
+
+    def test_connection_error_answers_503_and_keeps_the_password(self):
+        self.fake.fail_next('change_password', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'})
+        self.assertEqual(self._fresh_login_status('Senha123'), 200)
