@@ -262,16 +262,16 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] `AuthenticationTest` cobre:
-  - [ ] Access token do fake → `SessionUser(provider="cognito")` do `User` com aquele `cognito_sub` (COG-17)
-  - [ ] Sessão Google no formato novo → `provider="google"` (COG-18)
-  - [ ] Cada caso de COG-19 → `None`, com um teste por caso: sem cookie, assinatura de outra chave RSA, expirado, `iss` de outro pool, `client_id` errado, `token_use="id"`, refresh token do fake, HS256 com `iss` do Cognito, RS256 com `iss="hairmatch"`, `alg=none`, `sub` sem `User`
-  - [ ] `authenticated_user` devolve 401 com `{"error": "Sessão inválida ou expirada."}` para os casos acima
-  - [ ] `kid` desconhecido → uma nova busca do JWKS. Continua desconhecido → 401, e `fetch_jwks` é chamado no máximo 2 vezes na requisição (COG-23)
-  - [ ] `fetch_jwks` levanta `CognitoUnavailable` → `authenticated_user` devolve 503 com a mensagem do spec (COG-24)
-  - [ ] Caminho legado aceita `jwt.encode({'id', 'exp', 'iat'}, 'secret')`. Esse teste é marcado para inversão no T16.
-- [ ] Gate check passes: `cd backend && python manage.py test users`
-- [ ] Test count: T4 + novos, sem remoções
+- [x] `AuthenticationTest` cobre:
+  - [x] Access token do fake → `SessionUser(provider="cognito")` do `User` com aquele `cognito_sub` (COG-17)
+  - [x] Sessão Google no formato novo → `provider="google"` (COG-18)
+  - [x] Cada caso de COG-19 → `None`, com um teste por caso: sem cookie, assinatura de outra chave RSA, expirado, `iss` de outro pool, `client_id` errado, `token_use="id"`, refresh token do fake, HS256 com `iss` do Cognito, RS256 com `iss="hairmatch"`, `alg=none`, `sub` sem `User`
+  - [x] `authenticated_user` devolve 401 com `{"error": "Sessão inválida ou expirada."}` para os casos acima
+  - [x] `kid` desconhecido → uma nova busca do JWKS. Continua desconhecido → 401, e `fetch_jwks` é chamado no máximo 2 vezes na requisição (COG-23)
+  - [x] `fetch_jwks` levanta `CognitoUnavailable` → `authenticated_user` devolve 503 com a mensagem do spec (COG-24)
+  - [x] Caminho legado aceita `jwt.encode({'id', 'exp', 'iat'}, 'secret')`. Esse teste é marcado para inversão no T16.
+- [x] Gate check passes: `cd backend && python manage.py test users`
+- [x] Test count: T4 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: quick

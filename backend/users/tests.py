@@ -57,6 +57,9 @@ from botocore.exceptions import (
     ReadTimeoutError,
 )
 from types import SimpleNamespace
+from django.test import RequestFactory
+from . import authentication
+from .authentication import authenticate_request, authenticated_user
 import unittest
 import boto3
 from hairmatch.test_runner import HairmatchTestRunner
@@ -3073,3 +3076,169 @@ class CognitoServiceTest(SimpleTestCase):
             stream=StringIO(), resultclass=runner.get_resultclass()
         ).run(suite)
         self.assertTrue(result.wasSuccessful(), result.failures)
+
+
+class AuthenticationTest(TestCase):
+    def setUp(self):
+        self.fake = get_cognito().client
+        self.user = _create_plain_user(email='cog@example.com', cognito_sub='sub-cognito-1')
+        self.google_user = _create_plain_user(email='goo@example.com', google_id='google-1')
+
+    def _request(self, token=None):
+        request = RequestFactory().get('/')
+        if token is not None:
+            request.COOKIES['jwt'] = token
+        return request
+
+    def _access_token(self, **kwargs):
+        return self.fake.make_access_token(self.user.cognito_sub, **kwargs)
+
+    def _google_session(self, user=None, key=None, **claims):
+        now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        payload = {
+            'id': (user or self.google_user).id,
+            'iss': 'hairmatch',
+            'token_use': 'session',
+            'iat': now,
+            'exp': now + 3600,
+        }
+        payload.update(claims)
+        return jwt.encode(payload, key or settings.SECRET_KEY, algorithm='HS256')
+
+    def _pool_issuer(self):
+        return cognito_fake.issuer()
+
+    def test_cognito_access_token_authenticates_the_user_with_that_sub(self):
+        token = self._access_token()
+
+        session = authenticate_request(self._request(token))
+
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(session.provider, 'cognito')
+        self.assertEqual(session.access_token, token)
+
+    def test_google_session_authenticates_the_user_with_that_id(self):
+        session = authenticate_request(self._request(self._google_session()))
+
+        self.assertEqual(session.user, self.google_user)
+        self.assertEqual(session.provider, 'google')
+
+    def test_invalid_sessions_are_rejected(self):
+        now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        other_rsa_key = cognito_fake.new_rsa_key()
+        cases = {
+            'no cookie': None,
+            'not a jwt': 'not-a-jwt',
+            'signed by another RSA key': self._access_token(signing_key=other_rsa_key),
+            'expired access token': self._access_token(iat=now - 7200, exp=now - 60),
+            'issuer of another pool': self._access_token(
+                iss='https://cognito-idp.us-east-2.amazonaws.com/us-east-2_OtherPool'
+            ),
+            'client_id of another app': self._access_token(client_id='another-client'),
+            'id token': self._access_token(token_use='id'),
+            'refresh token': self.fake.make_refresh_token(self.user.cognito_sub),
+            'HS256 with the Cognito issuer': jwt.encode(
+                {'sub': self.user.cognito_sub, 'iss': self._pool_issuer(), 'token_use': 'access',
+                 'client_id': cognito_fake.CLIENT_ID, 'exp': now + 3600},
+                settings.SECRET_KEY, algorithm='HS256',
+            ),
+            'RS256 with the hairmatch issuer': jwt.encode(
+                {'id': self.google_user.id, 'iss': 'hairmatch', 'token_use': 'session', 'exp': now + 3600},
+                other_rsa_key, algorithm='RS256',
+            ),
+            'alg none with the Cognito issuer': jwt.encode(
+                {'sub': self.user.cognito_sub, 'iss': self._pool_issuer(), 'token_use': 'access',
+                 'client_id': cognito_fake.CLIENT_ID, 'exp': now + 3600},
+                None, algorithm='none',
+            ),
+            'alg none with the hairmatch issuer': jwt.encode(
+                {'id': self.google_user.id, 'iss': 'hairmatch', 'token_use': 'session', 'exp': now + 3600},
+                None, algorithm='none',
+            ),
+            'sub without a user': self.fake.make_access_token('sub-nobody'),
+            'google session signed with another key': self._google_session(key='another-key-0123456789abcdef0123'),
+            'expired google session': self._google_session(iat=now - 7200, exp=now - 60),
+            'google session of a missing user': self._google_session(id=999999),
+            'google session with token_use signup': self._google_session(token_use='google_signup'),
+            'signup token': create_signup_token('goo@example.com', 'google-1'),
+        }
+        for name, token in cases.items():
+            with self.subTest(case=name):
+                self.assertIsNone(authenticate_request(self._request(token)))
+
+    def test_authenticated_user_answers_401_with_the_spec_message_for_invalid_sessions(self):
+        for token in (None, 'not-a-jwt', self._access_token(token_use='id')):
+            with self.subTest(token=token):
+                session, error = authenticated_user(self._request(token))
+                self.assertIsNone(session)
+                self.assertEqual(error.status_code, 401)
+                self.assertEqual(json.loads(error.content), {'error': 'Sessão inválida ou expirada.'})
+
+    def test_authenticated_user_returns_the_session_without_an_error(self):
+        session, error = authenticated_user(self._request(self._access_token()))
+
+        self.assertIsNone(error)
+        self.assertEqual(session.user, self.user)
+
+    def test_unknown_kid_refetches_the_jwks_once_and_answers_401(self):
+        authenticate_request(self._request(self._access_token()))  # primes the key cache
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks', wraps=service.fetch_jwks) as fetch:
+            session, error = authenticated_user(
+                self._request(self._access_token(headers={'kid': 'unknown-kid'}))
+            )
+
+        self.assertIsNone(session)
+        self.assertEqual(error.status_code, 401)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_kid_missing_from_a_stale_cache_is_found_after_refetching(self):
+        authentication._jwks_keys.update({'rotated-out': object()})
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks', wraps=service.fetch_jwks) as fetch:
+            session = authenticate_request(self._request(self._access_token()))
+
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_cached_keys_are_reused_without_fetching_again(self):
+        authenticate_request(self._request(self._access_token()))
+        service = get_cognito()
+
+        with patch.object(service, 'fetch_jwks') as fetch:
+            session = authenticate_request(self._request(self._access_token()))
+
+        self.assertEqual(session.user, self.user)
+        fetch.assert_not_called()
+
+    def test_unreachable_jwks_answers_503(self):
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            session, error = authenticated_user(self._request(self._access_token()))
+
+        self.assertIsNone(session)
+        self.assertEqual(error.status_code, 503)
+        self.assertEqual(
+            json.loads(error.content),
+            {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'},
+        )
+
+    def test_google_session_does_not_need_the_jwks(self):
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            session, error = authenticated_user(self._request(self._google_session()))
+
+        self.assertIsNone(error)
+        self.assertEqual(session.user, self.google_user)
+
+    # TEMPORARY: inverted in T16, when the legacy 'secret' format is dropped
+    def test_legacy_secret_token_is_still_accepted(self):
+        now = datetime.datetime.now()
+        token = jwt.encode(
+            {'id': self.user.id, 'exp': now + datetime.timedelta(minutes=60), 'iat': now},
+            'secret', algorithm='HS256',
+        )
+
+        session = authenticate_request(self._request(token))
+
+        self.assertEqual(session.user, self.user)
