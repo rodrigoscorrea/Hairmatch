@@ -9,7 +9,7 @@ export type RootStackParamList = {
   Register: undefined;
   HairdresserProfileReservation: {
     hairdresser : Hairdresser
-    avatar: any //remover depois
+    avatar: any //TODO: remove later
   } 
   Address: {
     personalData: {

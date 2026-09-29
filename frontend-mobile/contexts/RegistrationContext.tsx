@@ -30,7 +30,7 @@ interface IRegistrationData {
   products?: string;
   resume?: string;
 
-  // Cadastro via Google: token de cadastro pendente devolvido por /api/auth/google
+  // Google sign-up: pending signup token returned by /api/auth/google
   google_signup_token?: string;
 }
 

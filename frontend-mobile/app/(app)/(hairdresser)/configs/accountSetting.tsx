@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'r
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
-import Icon from 'react-native-vector-icons/FontAwesome'; // ou outra biblioteca de ícones
+import Icon from 'react-native-vector-icons/FontAwesome'; // or another icon library
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
 import { API_BACKEND_URL } from '@/app/_layout';
 
@@ -21,7 +21,7 @@ export default function AccountDetailsScreen() {
       </View>
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        {/* Adicione o ícone de voltar se estiver usando react-navigation */}
+        {/* Add the back icon if using react-navigation */}
         <Text style={styles.headerTitle}>Dados da Conta</Text>
       </View>
 
@@ -54,7 +54,7 @@ export default function AccountDetailsScreen() {
           value={hairdresser?.cnpj}
           //onChangeText={setCpf}
           placeholder="CNPJ"
-          keyboardType="numeric" // Facilita a digitação de números
+          keyboardType="numeric" // Makes it easier to type numbers
           containerStyle={styles.inputContainer}
         />
         <FormInput
@@ -76,7 +76,7 @@ export default function AccountDetailsScreen() {
           value={hairdresser?.user?.password}
           //onChangeText={setPassword}
           placeholder="Senha"
-          secureTextEntry // Oculta o texto da senha
+          secureTextEntry // Hides the password text
           containerStyle={styles.inputContainer}
         />
         <FormInput

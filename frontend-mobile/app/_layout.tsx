@@ -9,8 +9,8 @@ import { UserInfo, UserRole } from '../models/User.types';
 import { Preference } from '../models/Preferences.types';
 import * as WebBrowser from 'expo-web-browser';
 
-// Fecha o popup do login com Google no web. Precisa rodar na inicialização: no build de produção, o
-// expo-router só avalia a tela de login depois do redirect, tarde demais para capturar o retorno do popup.
+// Closes the Google login popup on web. Must run at startup: in the production build, the
+// expo-router only evaluates the login screen after the redirect, too late to capture the popup's return.
 WebBrowser.maybeCompleteAuthSession();
 
 export const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
@@ -53,7 +53,7 @@ export default function RootLayout() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   const authContext = React.useMemo(() => {
-  // Carrega a sessão a partir do cookie `jwt` já definido pelo backend.
+  // Loads the session from the `jwt` cookie already set by the backend.
   const loadSession = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
@@ -90,7 +90,7 @@ export default function RootLayout() {
   signUp: async (formData: FormData) => {
     if(Platform.OS === 'web') {
       try {
-        // withCredentials: o navegador guarda o cookie de sessão do 201 (cadastro Google).
+        // withCredentials: the browser stores the session cookie from the 201 (Google signup).
         return await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData, { withCredentials: true });
       } catch (error: any) {
         console.error('Registration error:', error.response?.data);
@@ -107,7 +107,7 @@ export default function RootLayout() {
     });
 
     if (!response.ok) {
-      // O fetch não lança em 4xx/5xx: repassa o JSON de erro ({ error }) para o wizard.
+      // fetch doesn't throw on 4xx/5xx: pass the error JSON ({ error }) through to the wizard.
       const errorData = await response.json().catch(() => null);
       console.error('Registration error:', errorData);
       throw errorData || new Error("An unknown error occurred during registration.");

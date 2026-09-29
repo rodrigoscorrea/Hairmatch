@@ -52,7 +52,7 @@ export const useDescriptionForm = () => {
     if (allData.cpf) allData.cpf = stripNonDigits(allData.cpf);
     if (allData.cnpj) allData.cnpj = stripNonDigits(allData.cnpj);
 
-    // Modo Google: sem senha e sem e-mail (o backend usa o e-mail do token), mas com o token de cadastro.
+    // Google mode: no password and no email (the backend uses the token's email), but with the signup token.
     if (isGoogleMode) {
         delete allData.password;
         delete allData.confirmPassword;
@@ -93,7 +93,7 @@ export const useDescriptionForm = () => {
         await signUp(formData);
 
         if (isGoogleMode) {
-          // O 201 já trouxe o cookie de sessão: o RootLayoutNav leva à agenda (GAUTH-26).
+          // The 201 already brought the session cookie: RootLayoutNav leads to the agenda (GAUTH-26).
           const session = await loadSession();
           if (!session.success) {
             setErrorModal({ visible: true, message: session.error || 'Erro desconhecido' });
@@ -108,7 +108,7 @@ export const useDescriptionForm = () => {
         router.replace('/(auth)/login');
 
     } catch (error: any) {
-        console.error("Erro completo no cadastro:", error); 
+        console.error("Full sign-up error:", error);
         
         const errorMessage = error.error || error.message || "Erro desconhecido";
         setErrorModal({ visible: true, message: errorMessage }); 
@@ -121,17 +121,17 @@ export const useDescriptionForm = () => {
     router.back();
   };
 
-  // --- INÍCIO DA CORREÇÃO ---
-  // Função dedicada para fechar o modal e redirecionar.
-  // Garante que o usuário veja o erro antes de ser navegado.
+  // --- FIX START ---
+  // Dedicated function to close the modal and redirect.
+  // Ensures the user sees the error before being navigated away.
   const handleCloseErrorModal = () => {
-    setErrorModal({ visible: false, message: '' }); // Primeiro, esconde o modal
-    // Em modo Google, o erro do envio final mantém o usuário no wizard (GAUTH-27).
+    setErrorModal({ visible: false, message: '' }); // First, hide the modal
+    // In Google mode, the final submission error keeps the user on the wizard (GAUTH-27).
     if (!isGoogleMode) {
-      router.replace('/(auth)/login'); // Segundo, redireciona o usuário
+      router.replace('/(auth)/login'); // Second, redirect the user
     }
   };
-  // --- FIM DA CORREÇÃO ---
+  // --- FIX END ---
 
   return {
     isLoading,
@@ -143,7 +143,7 @@ export const useDescriptionForm = () => {
     handleFinish,
     handleBack,
     errorModal,
-    // Garante que a prop `closeErrorModal` use a nova função corrigida
+    // Ensures the `closeErrorModal` prop uses the new fixed function
     closeErrorModal: handleCloseErrorModal,
   };
 };

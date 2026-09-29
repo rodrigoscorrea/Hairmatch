@@ -41,16 +41,16 @@ export const useAddress = () =>{
     }
     return true;
   }
-  // Função para o botão "Próximo"
+  // Function for the "Next" button
   const handleNext = () => {
     if (!validateFields()) return;
-    
-    // Navega para a próxima tela com todos os dados acumulados
+
+    // Navigates to the next screen with all the accumulated data
     router.push('/(auth)/register/preferences');
   };
 
 
-  // Função para o botão "Voltar"
+  // Function for the "Back" button
   const handleGoBack = () => {
     router.back();
   };

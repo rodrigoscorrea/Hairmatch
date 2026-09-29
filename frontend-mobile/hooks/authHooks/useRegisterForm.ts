@@ -17,7 +17,7 @@ export const useRegisterForm = () => {
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  // Modo Google: o e-mail vem do Google e a conta não tem senha (GAUTH-25).
+  // Google mode: the email comes from Google and the account has no password (GAUTH-25).
   const isGoogleMode = !!registrationData.google_signup_token;
 
   const handlePickImage = async () => {

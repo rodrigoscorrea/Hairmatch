@@ -116,9 +116,9 @@ scrollView: {
   width: '100%',
 },
 scrollViewContent: {
-  flexGrow: 1, // MUITO IMPORTANTE: Permite que o conteúdo cresça para preencher a tela
+  flexGrow: 1, // VERY IMPORTANT: Allows the content to grow to fill the screen
   paddingHorizontal: 20,
-  paddingBottom: 20, // Espaço no final
-  justifyContent: 'space-between', // Empurra o botão 'Salvar' para baixo se o conteúdo for pequeno
+  paddingBottom: 20, // Space at the end
+  justifyContent: 'space-between', // Pushes the 'Save' button down if the content is small
 },
 });

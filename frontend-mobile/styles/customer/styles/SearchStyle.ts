@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   backButton: {
-    marginRight: 12, // Espaço entre o botão e a barra de busca
+    marginRight: 12, // Space between the button and the search bar
   },
   searchWrapper: {
     flex: 1,

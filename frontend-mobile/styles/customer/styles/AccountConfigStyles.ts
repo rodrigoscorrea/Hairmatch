@@ -38,7 +38,7 @@ export const styles = StyleSheet.create({
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: '#FFE4C4', // Cor de fundo do círculo
+      backgroundColor: '#FFE4C4', // Circle background color
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,

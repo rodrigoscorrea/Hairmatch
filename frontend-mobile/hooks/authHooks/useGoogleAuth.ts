@@ -8,9 +8,9 @@ import { useGoogleIdToken } from './useGoogleIdToken';
 
 const GOOGLE_DEFAULT_ERROR = 'Não foi possível entrar com o Google. Tente novamente.';
 
-// SPEC_DEVIATION: o design só prevê `error.response.data.error` ou o texto padrão.
-// Reason: erros que não vêm do axios (ex.: "Login com Google indisponível no Expo Go...", exigido em T14)
-// precisam mostrar a própria mensagem. Erros do axios sem `error` (ex.: backend fora do ar) usam o texto padrão (GAUTH-09).
+// SPEC_DEVIATION: the design only accounts for `error.response.data.error` or the default text.
+// Reason: errors that don't come from axios (e.g. "Google login unavailable on Expo Go...", required by T14)
+// need to show their own message. Axios errors without `error` (e.g. backend unreachable) use the default text (GAUTH-09).
 const getGoogleErrorMessage = (error: any): string => {
   if (axios.isAxiosError(error)) {
     return (error.response?.data as any)?.error || GOOGLE_DEFAULT_ERROR;
@@ -27,7 +27,7 @@ export const useGoogleAuth = () => {
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState({ visible: false, message: '' });
-  // Evita dois fluxos com toques no mesmo frame, antes de o botão re-renderizar desabilitado (GAUTH-10).
+  // Avoids two flows from taps in the same frame, before the button re-renders disabled (GAUTH-10).
   const inFlight = useRef(false);
 
   const handleGoogle = async () => {
@@ -36,14 +36,14 @@ export const useGoogleAuth = () => {
     setIsGoogleLoading(true);
 
     try {
-      // Primeiro await do fluxo: no web, o popup precisa abrir no mesmo tick do toque, senão o navegador o bloqueia.
+      // First await of the flow: on web, the popup must open in the same tick as the tap, or the browser blocks it.
       const idToken = await getIdToken();
-      if (!idToken) return; // Cancelamento: fica na tela, sem modal (GAUTH-08).
+      if (!idToken) return; // Cancellation: stays on the screen, no modal (GAUTH-08).
 
       const response = await loginWithGoogle(idToken);
 
       if (response.status === 'authenticated') {
-        // O RootLayoutNav leva à home do papel depois que a sessão carrega (GAUTH-07, 29).
+        // RootLayoutNav leads to the role's home after the session loads (GAUTH-07, 29).
         const session = await loadSession();
         if (!session.success) {
           setGoogleError({ visible: true, message: GOOGLE_DEFAULT_ERROR });
@@ -51,7 +51,7 @@ export const useGoogleAuth = () => {
         return;
       }
 
-      // signup_required: abre o wizard em modo Google (GAUTH-24, 28).
+      // signup_required: opens the wizard in Google mode (GAUTH-24, 28).
       setRegistrationData({
         ...INITIAL_REGISTRATION_DATA,
         email: response.prefill.email,
