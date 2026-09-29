@@ -1,7 +1,11 @@
+from io import BytesIO
+from django.core.files.storage import default_storage
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
+from PIL import Image
+from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
 from .models import Review
 from reserve.models import Reserve
@@ -179,6 +183,24 @@ class CreateReviewTest(ReviewsTestCase):
         # Verify the reservation is updated
         self.reserve.refresh_from_db()
         self.assertEqual(self.reserve.review, created_review)
+
+    def test_create_review_with_picture_stores_a_webp(self):
+        """WEBP-03: the picture is saved as reviews/images/<stem>.webp with WebP content."""
+        self.login_as_customer()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 5,
+            'comment': 'With photo',
+            'hairdresser': self.hairdresser.id,
+            'reserve': self.reserve.id,
+            'picture': make_upload('review_photo.png', fmt='PNG'),
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        review = Review.objects.get()
+        self.assertEqual(review.picture.name, 'reviews/images/review_photo.webp')
+        with default_storage.open(review.picture.name) as stored:
+            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
 
     def test_create_review_missing_reserve_id(self):
         """Test that providing no reserve ID results in a 400 Bad Request."""

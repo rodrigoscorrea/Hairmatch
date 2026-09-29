@@ -157,9 +157,9 @@ Os preços são de referência (S3 Standard e Lambda em us-east) e devem ser con
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| WEBP-01 | P1: Fotos viram WebP, AC1 | Tasks | Pending |
+| WEBP-01 | P1: Fotos viram WebP, AC1 | Tasks | Done |
 | WEBP-02 | P1: Fotos viram WebP, AC2 | Tasks | Done |
-| WEBP-03 | P1: Fotos viram WebP, AC3 | Tasks | Pending |
+| WEBP-03 | P1: Fotos viram WebP, AC3 | Tasks | Done |
 | WEBP-04 | P1: Fotos viram WebP, AC4 | Tasks | Done |
 | WEBP-05 | P1: Fotos viram WebP, AC5 | Tasks | Done |
 | WEBP-06 | P1: Fotos viram WebP, AC6 | Tasks | Done |

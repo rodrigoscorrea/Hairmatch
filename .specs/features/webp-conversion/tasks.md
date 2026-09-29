@@ -310,16 +310,17 @@ T9
 
 **Done when**:
 
-- [ ] Migration `backend/review/migrations/0003_*.py` gerada, contendo só a AlterField de `picture`
-- [ ] Novo teste: `POST` de review em multipart com `picture` PNG válido → 201, `picture.name` igual a `reviews/images/<stem>.webp` e conteúdo WebP (WEBP-03)
-- [ ] Os testes existentes de `review` continuam passando
-- [ ] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ 14 + novos testes em `review`, sem remoções
+- [x] Migration `backend/review/migrations/0003_*.py` gerada, contendo só a AlterField de `picture`
+- [x] Novo teste: `POST` de review em multipart com `picture` PNG válido → 201, `picture.name` igual a `reviews/images/<stem>.webp` e conteúdo WebP (WEBP-03)
+- [x] Os testes existentes de `review` continuam passando
+- [x] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ 14 + novos testes em `review`, sem remoções
 
 **Tests**: integration
 **Gate**: full
 
 **Commit**: `feat(review): store review pictures as WebP`
+**Status**: ✅ Complete
 
 ---
 
