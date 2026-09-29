@@ -8,7 +8,8 @@ from .serializers import ReviewSerializer
 import json
 from django.http import JsonResponse
 from rest_framework.parsers import MultiPartParser, FormParser
-import jwt, datetime
+import datetime
+from users.authentication import authenticated_user
 from django.db import transaction
 from hairmatch.images import InvalidImage
 
@@ -18,18 +19,13 @@ class CreateReview(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
-        # 1. Authenticate the user via JWT cookie
-        token = request.COOKIES.get('jwt')
-        if not token:
-            return JsonResponse({'error': 'Unauthenticated'}, status=403)
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-            user = User.objects.filter(id=payload['id']).first()
-            customer = Customer.objects.filter(user=user).first()
-            if not customer:
-                return JsonResponse({'error': 'User is not a valid customer'}, status=403)
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            return JsonResponse({'error': 'Invalid token'}, status=403)
+        # 1. Authenticate the user via the session cookie
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        customer = Customer.objects.filter(user=session.user).first()
+        if not customer:
+            return JsonResponse({'error': 'User is not a valid customer'}, status=403)
 
         # 2. Extract data from the FormData
         reserve_id=request.data.get('reserve')
@@ -98,21 +94,13 @@ class ListReview(APIView):
 
 class UpdateReview(APIView):
     def put(self, request, id):
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
         try:
             data = json.loads(request.body)
-            user = User.objects.filter(id=payload['id']).first()
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = session.user
             customer = Customer.objects.filter(user=user).first()
             if user.role != 'customer':
                 return JsonResponse({'error': 'User is not a customer'}, status=403)
@@ -133,20 +121,12 @@ class UpdateReview(APIView):
     
 class RemoveReview(APIView):
     def delete(self, request, id): # Id da review
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
         try:
-            user = User.objects.filter(id=payload['id']).first()
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = session.user
             customer = Customer.objects.filter(user=user).first()
             if user.role != 'customer':
                 return JsonResponse({'error': 'User is not a customer'}, status=403)

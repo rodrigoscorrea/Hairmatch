@@ -357,10 +357,10 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] Sem `jwt.decode` em `backend/review/views.py`
-- [ ] As três rotas aceitam access token do fake e recusam com 401 um cookie ausente e um refresh token
-- [ ] Gate check passes: `cd backend && python manage.py test review`
-- [ ] Test count: ≥ 17 em `review`, sem remoções
+- [x] Sem `jwt.decode` em `backend/review/views.py`
+- [x] As três rotas aceitam access token do fake e recusam com 401 um cookie ausente e um refresh token
+- [x] Gate check passes: `cd backend && python manage.py test review`
+- [x] Test count: ≥ 17 em `review`, sem remoções
 
 **Tests**: integration
 **Gate**: quick
