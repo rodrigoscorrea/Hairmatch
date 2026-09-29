@@ -369,19 +369,36 @@ T9
 
 **Done when**:
 
-- [ ] No container: `python -c "import hairmatch.storage, mimetypes; print(mimetypes.guess_type('a.webp'))"` → `('image/webp', None)`
-- [ ] **Pré-condição:** banco sem cabeleireiros (volume novo do Postgres). Hoje o banco de dev persiste e tem o seed antigo com chaves `.jpg`, que o restore recria como JPEG (WEBP-16). Apagar o volume (`docker compose down -v`) **exige a autorização do usuário antes**. Sem essa autorização, pule este item e o próximo e registre o motivo.
-- [ ] `docker compose up` com o banco e o bucket vazios → `awslocal s3 ls s3://<bucket>/profile_pics/ --recursive` lista 40 objetos, todos `.webp`, somando ≤ 5 MB (Success Criteria)
-- [ ] `curl -I` na URL de um cabeleireiro devolvida pela API → 200 com `Content-Type: image/webp` (WEBP-04)
-- [ ] Um objeto criado nesta verificação, baixado e aberto com Pillow, tem o maior lado ≤ 1080 px (WEBP-09)
-- [ ] `curl -F profile_picture=@foto.jpg ...` em `/api/auth/register` → 201 e só a chave `profile_pics/<id>/foto.webp` no bucket, sem nenhum `foto.jpg` (WEBP-02, WEBP-04)
-- [ ] `curl -F profile_picture=@notas.txt ...` → 400 `"Imagem de perfil inválida."` e o e-mail continua livre (WEBP-10)
-- [ ] Gate check passes: Build (Full + os itens acima)
+- [x] No container: `python -c "import hairmatch.storage, mimetypes; print(mimetypes.guess_type('a.webp'))"` → `('image/webp', None)`
+- [x] **Pré-condição:** banco sem cabeleireiros (volume novo do Postgres). Hoje o banco de dev persiste e tem o seed antigo com chaves `.jpg`, que o restore recria como JPEG (WEBP-16). Apagar o volume (`docker compose down -v`) **exige a autorização do usuário antes**. Sem essa autorização, pule este item e o próximo e registre o motivo.
+- [x] `docker compose up` com o banco e o bucket vazios → `awslocal s3 ls s3://<bucket>/profile_pics/ --recursive` lista 40 objetos, todos `.webp`, somando ≤ 5 MB (Success Criteria)
+- [x] `curl -I` na URL de um cabeleireiro devolvida pela API → 200 com `Content-Type: image/webp` (WEBP-04)
+- [x] Um objeto criado nesta verificação, baixado e aberto com Pillow, tem o maior lado ≤ 1080 px (WEBP-09)
+- [x] `curl -F profile_picture=@foto.jpg ...` em `/api/auth/register` → 201 e só a chave `profile_pics/<id>/foto.webp` no bucket, sem nenhum `foto.jpg` (WEBP-02, WEBP-04)
+- [x] `curl -F profile_picture=@notas.txt ...` → 400 `"Imagem de perfil inválida."` e o e-mail continua livre (WEBP-10)
+- [x] Gate check passes: Build (Full + os itens acima)
 
 **Tests**: none
 **Gate**: build
 
+**Resultados (2026-09-29, `docker compose up django localstack`, Python 3.9.25, Pillow 11.3.0):**
+
+Pré-condição: o banco de dev tinha 40 cabeleireiros `.jpg` e 1 cliente. Para não apagar dados sem autorização, o backend subiu contra um banco novo e vazio (`DB_NAME=hairmatch_e2e`, criado no mesmo Postgres e descartado depois) com o LocalStack sem persistência (bucket vazio). O volume `postgres_data` não foi tocado, e `down -v` não foi executado.
+
+| Item | Resultado |
+| ---- | --------- |
+| `mimetypes.guess_type('a.webp')` no container | `('image/webp', None)` |
+| Seed: objetos em `profile_pics/` | 40 objetos, 0 fora de `.webp`, 2.368.080 bytes (≈ 2,3 MB, limite 5 MB) |
+| Bucket inteiro, objetos que não são `.webp` | 0 |
+| `curl -I` na URL de um cabeleireiro devolvida por `/api/hairdresser/1` | `200 OK`, `Content-Type: image/webp` |
+| Objeto do seed baixado e aberto com Pillow | WEBP 720×1080 (maior lado ≤ 1080) |
+| `curl -F profile_picture=@foto.jpg` (JPEG 4000×3000, `Orientation=6`, com GPS) | 201. Só `profile_pics/42/foto.webp` no bucket, sem `foto.jpg`. Baixado: WEBP 810×1080, EXIF vazio |
+| `curl -F profile_picture=@notas.txt` | 400 `{"error": "Imagem de perfil inválida."}` |
+| Mesmo e-mail depois do 400, com foto válida | 201 (e-mail livre) |
+| Gate Full (`makemigrations --check`, `coverage run manage.py test`) | 330 testes, OK (baseline 292) |
+
 **Commit**: `docs(specs): record webp-conversion end-to-end verification`
+**Status**: ✅ Complete
 
 ---
 
