@@ -5,27 +5,22 @@ from .models import Availability
 from users.models import Hairdresser
 from .serializers import AvailabilitySerializer
 from django.http import JsonResponse
-import jwt, json, datetime
+import json, datetime
+from users.authentication import authenticated_user
 # Create your views here.
 
 class CreateAvailability(APIView):
     def post(self, request):
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
+        session, error = authenticated_user(request)
+        if error:
+            return error
 
         try:
             data = json.loads(request.body)
 
             weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
             
-            hairdresser = Hairdresser.objects.filter(user_id=payload['id']).first()
+            hairdresser = Hairdresser.objects.filter(user_id=session.user.id).first()
             if not hairdresser:
                 return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 

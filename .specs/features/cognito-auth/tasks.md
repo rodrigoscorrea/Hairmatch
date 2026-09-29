@@ -330,10 +330,10 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] Sem `jwt.decode` em `backend/availability/views.py`
-- [ ] Access token do fake de um cabeleireiro → 201. Sem cookie → 401. Token assinado com outra chave → 401.
-- [ ] Gate check passes: `cd backend && python manage.py test availability`
-- [ ] Test count: ≥ 32 em `availability`, sem remoções
+- [x] Sem `jwt.decode` em `backend/availability/views.py`
+- [x] Access token do fake de um cabeleireiro → 201. Sem cookie → 401. Token assinado com outra chave → 401.
+- [x] Gate check passes: `cd backend && python manage.py test availability`
+- [x] Test count: ≥ 32 em `availability`, sem remoções
 
 **Tests**: integration
 **Gate**: quick
