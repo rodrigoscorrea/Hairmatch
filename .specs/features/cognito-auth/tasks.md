@@ -770,8 +770,8 @@ O último uso de `bcrypt` em `views.py` sai.
 
 **Done when**:
 
-- [ ] Seguindo só o README em um clone limpo, o dev sobe o ambiente e loga com um usuário do seed (verificado no T24)
-- [ ] Gate: revisão manual (camada infra = none)
+- [x] Seguindo só o README em um clone limpo, o dev sobe o ambiente e loga com um usuário do seed (verificado no T24)
+- [x] Gate: revisão manual (camada infra = none)
 
 **Tests**: none
 **Gate**: build
