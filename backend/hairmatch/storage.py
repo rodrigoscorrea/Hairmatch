@@ -8,6 +8,9 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
+# Python 3.9 (the container) has no .webp entry, and the upload would go out as octet-stream.
+mimetypes.add_type('image/webp', '.webp')
+
 
 @deconstructible
 class S3MediaStorage(Storage):

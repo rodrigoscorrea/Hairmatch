@@ -150,15 +150,16 @@ T9
 
 **Done when**:
 
-- [ ] `S3MediaStorage.save('profile_pics/1/a.webp', ...)` → `upload_fileobj` chamado uma vez com `ExtraArgs={'ContentType': 'image/webp'}` (WEBP-04)
-- [ ] O teste passa mesmo com `mimetypes.types_map` sem `.webp` (simular com `patch.dict(mimetypes.types_map)` removendo a chave e recarregando o registro, ou verificando que `add_type` roda no import)
-- [ ] Gate check passes: `cd backend && python manage.py test hairmatch`
-- [ ] Test count: ≥ contagem de T1 + 1 em `hairmatch`, sem remoções
+- [x] `S3MediaStorage.save('profile_pics/1/a.webp', ...)` → `upload_fileobj` chamado uma vez com `ExtraArgs={'ContentType': 'image/webp'}` (WEBP-04)
+- [x] O teste passa mesmo com `mimetypes.types_map` sem `.webp` (simular com `patch.dict(mimetypes.types_map)` removendo a chave e recarregando o registro, ou verificando que `add_type` roda no import)
+- [x] Gate check passes: `cd backend && python manage.py test hairmatch`
+- [x] Test count: ≥ contagem de T1 + 1 em `hairmatch`, sem remoções
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `fix(backend): serve .webp media with image/webp content type`
+**Status**: ✅ Complete
 
 ---
 

@@ -1,7 +1,9 @@
 # Create your tests here.
 # hairmatch/ai_clients/tests/test_gemini_client.py
 import io
+import mimetypes
 import os
+import runpy
 from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
 from django.core.files.base import ContentFile
@@ -207,6 +209,28 @@ class S3MediaStorageTest(SimpleTestCase):
         args, kwargs = self.mock_client.upload_fileobj.call_args
         self.assertEqual(args[1:], ('test-bucket', 'profile_pics/a.png'))
         self.assertEqual(kwargs['ExtraArgs'], {'ContentType': 'image/png'})
+
+    def test_save_uploads_webp_with_content_type(self):
+        self.mock_client.head_object.side_effect = ClientError(
+            {'Error': {'Code': '404'}}, 'HeadObject'
+        )
+        name = self.storage.save('profile_pics/1/a.webp', ContentFile(b'data'))
+
+        self.assertEqual(name, 'profile_pics/1/a.webp')
+        self.mock_client.upload_fileobj.assert_called_once()
+        args, kwargs = self.mock_client.upload_fileobj.call_args
+        self.assertEqual(args[1:], ('test-bucket', 'profile_pics/1/a.webp'))
+        self.assertEqual(kwargs['ExtraArgs'], {'ContentType': 'image/webp'})
+
+    def test_import_registers_webp_mime_type(self):
+        # Older Pythons (the container runs 3.9) do not know .webp, so simulate that.
+        with patch.dict(mimetypes.types_map):
+            mimetypes.types_map.pop('.webp', None)
+            self.assertIsNone(mimetypes.guess_type('a.webp')[0])
+
+            runpy.run_module('hairmatch.storage')
+
+            self.assertEqual(mimetypes.guess_type('a.webp'), ('image/webp', None))
 
     def test_delete_removes_object(self):
         self.storage.delete('profile_pics/a.jpg')
