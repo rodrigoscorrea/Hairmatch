@@ -243,6 +243,73 @@ class RegisterViewTest(TestCase):
         self.assertEqual(stored_image(user.profile_picture.name).size, (1080, 720))
 
 
+    INVALID_PICTURE_ERROR = {'error': 'Imagem de perfil inválida.'}
+
+    def _register_with_picture(self, payload, picture):
+        return self.client.post(self.register_url, data={**payload, 'profile_picture': picture})
+
+    def _assert_no_rows_created(self):
+        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(Customer.objects.count(), 0)
+        self.assertEqual(Hairdresser.objects.count(), 0)
+
+    def test_register_with_a_file_that_is_not_an_image_returns_400_and_creates_nothing(self):
+        picture = SimpleUploadedFile('p.jpg', b'not an image', content_type='image/jpeg')
+
+        response = self._register_with_picture(self.valid_customer_payload, picture)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        self._assert_no_rows_created()
+
+    def test_register_hairdresser_with_invalid_picture_creates_no_hairdresser(self):
+        picture = SimpleUploadedFile('p.jpg', b'not an image', content_type='image/jpeg')
+
+        response = self._register_with_picture(self.valid_hairdresser_payload, picture)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        self._assert_no_rows_created()
+
+    def test_register_can_be_retried_with_the_same_email_after_an_invalid_picture(self):
+        bad = SimpleUploadedFile('p.jpg', b'not an image', content_type='image/jpeg')
+        self.assertEqual(
+            self._register_with_picture(self.valid_customer_payload, bad).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        response = self._register_with_picture(self.valid_customer_payload, make_upload('retry.jpg'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.get().email, 'john@example.com')
+
+    def test_register_with_a_truncated_jpeg_returns_400(self):
+        noise = Image.frombytes('RGB', (300, 300), os.urandom(300 * 300 * 3))
+        jpeg = BytesIO()
+        noise.save(jpeg, 'JPEG')
+        picture = SimpleUploadedFile('cut.jpg', jpeg.getvalue()[: len(jpeg.getvalue()) // 2])
+
+        response = self._register_with_picture(self.valid_customer_payload, picture)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        self._assert_no_rows_created()
+
+    def test_register_with_an_image_over_the_pixel_limit_returns_400(self):
+        with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
+            response = self._register_with_picture(self.valid_customer_payload, make_upload('big.jpg'))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        self._assert_no_rows_created()
+
+    def test_register_without_a_picture_leaves_the_profile_picture_empty(self):
+        response = self.client.post(self.register_url, data=self.valid_customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(User.objects.get().profile_picture)
+
+
 class LoginViewTest(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -2209,6 +2276,18 @@ class GoogleRegisterTest(TestCase):
         user = User.objects.get()
         self.assertEqual(user.profile_picture.name, f'profile_pics/{user.id}/ana_google.webp')
         self.assertEqual(stored_image(user.profile_picture.name).format, 'WEBP')
+
+    def test_google_signup_with_a_file_that_is_not_an_image_returns_400_without_session(self):
+        picture = SimpleUploadedFile('p.jpg', b'not an image', content_type='image/jpeg')
+
+        response = self.client.post(
+            self.register_url, data={**self.customer_payload, 'profile_picture': picture}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'error': 'Imagem de perfil inválida.'})
+        self.assertNotIn('jwt', response.cookies)
+        self._assert_no_new_rows()
 
     def test_google_hairdresser_signup_creates_user_hairdresser_and_session(self):
         response = self.client.post(self.register_url, data=self.hairdresser_payload)

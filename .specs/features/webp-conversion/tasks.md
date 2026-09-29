@@ -275,20 +275,21 @@ T9
 
 **Done when**:
 
-- [ ] Cadastro por senha com `profile_picture` = `SimpleUploadedFile('p.jpg', b'not an image')` → 400 `{"error": "Imagem de perfil inválida."}`, `User.objects.count() == 0`, `Customer.objects.count() == 0` (WEBP-10)
-- [ ] Mesmo teste com `role='hairdresser'` → `Hairdresser.objects.count() == 0` (WEBP-10)
-- [ ] Depois do 400, o mesmo payload com uma foto válida → 201 (o e-mail não ficou preso) (WEBP-10)
-- [ ] Cadastro Google com foto inválida → 400 com a mensagem exata (não a de preferências), `User.objects.count() == 0` e sem cookie `jwt` na resposta (WEBP-11)
-- [ ] Cadastro por senha com JPEG truncado → 400 com a mensagem exata (edge case)
-- [ ] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)` → 400 com a mesma mensagem (WEBP-13)
-- [ ] Cadastro sem `profile_picture` continua devolvendo 201 com `profile_picture` vazio (edge case)
-- [ ] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ contagem de T5 + novos testes em `users`, sem remoções
+- [x] Cadastro por senha com `profile_picture` = `SimpleUploadedFile('p.jpg', b'not an image')` → 400 `{"error": "Imagem de perfil inválida."}`, `User.objects.count() == 0`, `Customer.objects.count() == 0` (WEBP-10)
+- [x] Mesmo teste com `role='hairdresser'` → `Hairdresser.objects.count() == 0` (WEBP-10)
+- [x] Depois do 400, o mesmo payload com uma foto válida → 201 (o e-mail não ficou preso) (WEBP-10)
+- [x] Cadastro Google com foto inválida → 400 com a mensagem exata (não a de preferências), `User.objects.count() == 0` e sem cookie `jwt` na resposta (WEBP-11)
+- [x] Cadastro por senha com JPEG truncado → 400 com a mensagem exata (edge case)
+- [x] Com `patch.object(Image, 'MAX_IMAGE_PIXELS', 10)` → 400 com a mesma mensagem (WEBP-13)
+- [x] Cadastro sem `profile_picture` continua devolvendo 201 com `profile_picture` vazio (edge case)
+- [x] Gate check passes: `cd backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ contagem de T5 + novos testes em `users`, sem remoções
 
 **Tests**: integration
 **Gate**: full
 
 **Commit**: `fix(users): reject invalid profile pictures without creating the user`
+**Status**: ✅ Complete
 
 ---
 
