@@ -6,7 +6,8 @@ from users.models import User
 from users.serializers import UserNameSerializer
 from .serializers import PreferencesSerializer
 from django.http import JsonResponse
-import jwt, json
+import json
+from users.authentication import authenticated_user
 
 # Create your views here.
 class CreatePreferences(APIView):
@@ -24,20 +25,11 @@ class CreatePreferences(APIView):
         
 class AssignPreferenceToUser(APIView):
     def post(self, request, preference_id):
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
-
+        session, error = authenticated_user(request)
+        if error:
+            return error
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        try:
-            user = User.objects.filter(id=payload['id']).first()
-
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = session.user
 
             preference = Preferences.objects.filter(id=preference_id).first()
             if not preference:
@@ -74,19 +66,11 @@ class AssignPreferenceToUserNoCookie(APIView):
         
 class UnnassignPreferenceFromUser(APIView):
     def post(self, request, preference_id):
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            return JsonResponse({'error': 'Invalid token'}, status=403)
+        session, error = authenticated_user(request)
+        if error:
+            return error
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token expired'}, status=403)
-        try:
-            user = User.objects.filter(id=payload['id']).first()
-
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = session.user
 
             preference = Preferences.objects.filter(id=preference_id).first()
             if not preference:

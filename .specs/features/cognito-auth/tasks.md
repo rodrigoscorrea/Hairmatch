@@ -384,10 +384,10 @@ T21 → T23 → T24
 
 **Done when**:
 
-- [ ] Sem `jwt.decode` em `backend/preferences/views.py`
-- [ ] As duas rotas aceitam access token do fake e recusam com 401 um cookie ausente e um token assinado com outra chave
-- [ ] Gate check passes: `cd backend && python manage.py test preferences`
-- [ ] Test count: ≥ 25 em `preferences`, sem remoções
+- [x] Sem `jwt.decode` em `backend/preferences/views.py`
+- [x] As duas rotas aceitam access token do fake e recusam com 401 um cookie ausente e um token assinado com outra chave
+- [x] Gate check passes: `cd backend && python manage.py test preferences`
+- [x] Test count: ≥ 25 em `preferences`, sem remoções
 
 **Tests**: integration
 **Gate**: quick

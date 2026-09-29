@@ -7,6 +7,10 @@ from preferences.models import Preferences
 import jwt
 import json
 import os
+import datetime
+from django.conf import settings
+from users.cognito import get_cognito
+from users.cognito_fake import new_rsa_key
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 class PreferencesTestCase(TestCase):
@@ -359,7 +363,8 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         
         response = self.client.post(assign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         self.assertFalse(self.user in self.preference.users.all())
     
     def test_assign_preference_not_found(self):
@@ -478,7 +483,8 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         
         response = self.client.post(unassign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         # The user should still be assigned to the preference
         self.assertTrue(self.user in self.preference.users.all())
     
@@ -513,3 +519,50 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         # Should still return 200 even though nothing changed (idempotent operation)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(self.user in self.preference.users.all())
+
+class PreferenceSessionTest(PreferencesTestCase):
+    """The cookie-based assign/unassign routes authenticate through the central authenticator."""
+
+    def setUp(self):
+        super().setUp()
+        self.user.cognito_sub = 'sub-user'
+        self.user.save()
+        self.fake = get_cognito().client
+        self.assign_url = reverse('assign_preferences_to_user', args=[self.preference.id])
+        self.unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+
+    def _google_token(self):
+        now = int(datetime.datetime.now().timestamp())
+        return jwt.encode(
+            {'id': self.user.id, 'iss': 'hairmatch', 'token_use': 'session',
+             'iat': now, 'exp': now + 3600},
+            settings.SECRET_KEY, algorithm='HS256',
+        )
+
+    def test_routes_accept_a_cognito_access_token_and_a_google_session(self):
+        tokens = {
+            'cognito': self.fake.make_access_token('sub-user'),
+            'google': self._google_token(),
+        }
+        for kind, token in tokens.items():
+            with self.subTest(token=kind):
+                self.client.cookies['jwt'] = token
+
+                self.assertEqual(self.client.post(self.assign_url).status_code, 200)
+                self.assertTrue(self.preference.users.filter(id=self.user.id).exists())
+                self.assertEqual(self.client.post(self.unassign_url).status_code, 200)
+                self.assertFalse(self.preference.users.filter(id=self.user.id).exists())
+
+    def test_routes_refuse_a_missing_cookie_and_a_token_signed_with_another_key_with_401(self):
+        forged = self.fake.make_access_token('sub-user', signing_key=new_rsa_key())
+        self.preference.users.add(self.user)
+        for token in (None, forged):
+            for url in (self.assign_url, self.unassign_url):
+                with self.subTest(url=url, forged=token is not None):
+                    self.client.cookies.clear()
+                    if token:
+                        self.client.cookies['jwt'] = token
+                    response = self.client.post(url)
+                    self.assertEqual(response.status_code, 401)
+                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        self.assertTrue(self.preference.users.filter(id=self.user.id).exists())
