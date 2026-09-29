@@ -70,18 +70,43 @@ services:
       - db
     restart: always
 
-  evolution-api:
-    container_name: evolution_api
-    image: atendai/evolution-api:v2.1.1
-    restart: always
+  #evolution-api:
+  #  container_name: evolution_api
+  #  image: atendai/evolution-api:v2.1.1
+  #  restart: always
+  #  ports:
+  #    - "8080:8080"
+  #  networks:
+  #    - app_network
+  #  env_file:
+  #    - ./.env
+  #  volumes:
+  #    - evolution_instances:/evolution/instances
+
+  localstack:
+    image: localstack/localstack-pro:${LOCALSTACK_IMAGE_TAG:-latest}
+    container_name: hairmatch_localstack
     ports:
-      - "8080:8080"
+      - "4566:4566"
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:?Set LOCALSTACK_AUTH_TOKEN in .env (get it at app.localstack.cloud)}
+      SERVICES: s3,ses
+      PERSISTENCE: 0
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-2}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-dev-hairmatch-media}
+      SES_SENDER_EMAIL: ${SES_SENDER_EMAIL:-no-reply@hairmatch.local}
+    volumes:
+      # Init scripts only (code, not state). No data volume: the free plan does not allow persistence.
+      - ./localstack/init:/etc/localstack/init/ready.d:ro
     networks:
       - app_network
-    env_file:
-      - ../.env
-    volumes:
-      - evolution_instances:/evolution/instances
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
   #angular:
   #  build: ./frontend/
   #  container_name: angular_frontend
