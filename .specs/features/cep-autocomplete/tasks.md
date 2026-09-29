@@ -141,15 +141,15 @@ T8
 
 **Done when**:
 
-- [ ] `CepLookupViewTest` (com `cache.clear()` no `setUp`) cobre:
-  - [ ] `GET /api/address/cep/69057-000`, sem cookie, com o serviço devolvendo o dict → 200 com o JSON exato (CEP-01, CEP-09)
-  - [ ] `InvalidCep` → 400 `{"error": "CEP inválido. Informe 8 dígitos."}` (CEP-02)
-  - [ ] `CepNotFound` → 404 `{"error": "CEP não encontrado."}` (CEP-04)
-  - [ ] `CepServiceUnavailable` → 503 `{"error": "Serviço de CEP indisponível. Preencha o endereço manualmente."}` (CEP-05)
-  - [ ] 30 requisições seguidas → 200; a 31ª → 429 (CEP-10)
-- [ ] `reverse('cep_lookup', args=['69057000'])` resolve para `/api/address/cep/69057000`
-- [ ] Gate check passes: `cd backend && coverage run manage.py test && coverage report -m`
-- [ ] Test count: ≥ 256 + novos testes no projeto, sem remoções
+- [x] `CepLookupViewTest` (com `cache.clear()` no `setUp`) cobre:
+  - [x] `GET /api/address/cep/69057-000`, sem cookie, com o serviço devolvendo o dict → 200 com o JSON exato (CEP-01, CEP-09)
+  - [x] `InvalidCep` → 400 `{"error": "CEP inválido. Informe 8 dígitos."}` (CEP-02)
+  - [x] `CepNotFound` → 404 `{"error": "CEP não encontrado."}` (CEP-04)
+  - [x] `CepServiceUnavailable` → 503 `{"error": "Serviço de CEP indisponível. Preencha o endereço manualmente."}` (CEP-05)
+  - [x] 30 requisições seguidas → 200; a 31ª → 429 (CEP-10)
+- [x] `reverse('cep_lookup', args=['69057000'])` resolve para `/api/address/cep/69057000`
+- [x] Gate check passes: `cd backend && coverage run manage.py test && coverage report -m`
+- [x] Test count: ≥ 256 + novos testes no projeto, sem remoções
 
 **Tests**: integration
 **Gate**: full

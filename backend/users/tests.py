@@ -2493,3 +2493,57 @@ class CepLookupServiceTest(TestCase):
                 lookup_cep('69057000')
         self.assertTrue(any('viacep' in line for line in logs.output))
         self.assertTrue(any('brasilapi' in line for line in logs.output))
+
+
+class CepLookupViewTest(TestCase):
+    ADDRESS = {
+        'postal_code': '69057000', 'address': 'Avenida Mário Ypiranga',
+        'neighborhood': 'Adrianópolis', 'city': 'Manaus', 'state': 'AM',
+    }
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        patcher = patch('users.views.lookup_cep')
+        self.mock_lookup = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _get(self, cep='69057-000'):
+        return self.client.get(reverse('cep_lookup', args=[cep]))
+
+    def test_route_resolves(self):
+        self.assertEqual(reverse('cep_lookup', args=['69057000']), '/api/address/cep/69057000')
+
+    def test_found_cep_returns_200_without_cookie(self):
+        self.mock_lookup.return_value = self.ADDRESS
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), self.ADDRESS)
+        self.mock_lookup.assert_called_once_with('69057-000')
+
+    def test_invalid_cep_returns_400(self):
+        self.mock_lookup.side_effect = InvalidCep('123')
+        response = self._get('123')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'error': 'CEP inválido. Informe 8 dígitos.'})
+
+    def test_not_found_returns_404(self):
+        self.mock_lookup.side_effect = CepNotFound('00000000')
+        response = self._get('00000000')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'error': 'CEP não encontrado.'})
+
+    def test_service_unavailable_returns_503(self):
+        self.mock_lookup.side_effect = CepServiceUnavailable('69057000')
+        response = self._get()
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json(),
+            {'error': 'Serviço de CEP indisponível. Preencha o endereço manualmente.'},
+        )
+
+    def test_thirty_first_request_in_a_minute_returns_429(self):
+        self.mock_lookup.return_value = self.ADDRESS
+        for _ in range(30):
+            self.assertEqual(self._get().status_code, 200)
+        self.assertEqual(self._get().status_code, 429)
