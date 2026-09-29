@@ -175,9 +175,9 @@ T8
 
 **Done when**:
 
-- [ ] Baseline do App gate medido e registrado neste arquivo antes da mudança
-- [ ] `CepAddress` tem exatamente `postal_code`, `address`, `neighborhood`, `city` e `state` (todos `string`)
-- [ ] Gate check passes: App gate ≤ baseline
+- [x] Baseline do App gate medido e registrado neste arquivo antes da mudança
+- [x] `CepAddress` tem exatamente `postal_code`, `address`, `neighborhood`, `city` e `state` (todos `string`)
+- [x] Gate check passes: App gate ≤ baseline
 
 **Tests**: none
 **Gate**: App
