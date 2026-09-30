@@ -63,7 +63,7 @@ export const useReserveDetails = () => {
   };
 
   const handleReviewScreen = (reserveId: number) => {
-    router.push(`/review/${reserveId}`);
+    router.push(`/customer/review/${reserveId}`);
   }
 
   const handleDeleteReview = async () => {
