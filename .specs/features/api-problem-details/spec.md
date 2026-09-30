@@ -371,17 +371,17 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-21 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-22 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-23 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-24 | P1: Cadastro e conta | - | Pending |
-| PD-25 | P1: Cadastro e conta | - | Pending |
-| PD-26 | P1: Cadastro e conta | - | Pending |
-| PD-27 | P1: Cadastro e conta | - | Pending |
-| PD-28 | P1: Cadastro e conta | T4 | Implemented |
-| PD-29 | P1: Cadastro e conta | - | Pending |
-| PD-30 | P1: Cadastro e conta | T4 | Implemented |
-| PD-31 | P1: Cadastro e conta | - | Pending |
-| PD-32 | P1: Cadastro e conta | - | Pending |
-| PD-33 | P1: Cadastro e conta | - | Pending |
-| PD-34 | P1: Cadastro e conta | - | Pending |
+| PD-24 | P1: Cadastro e conta | T5 | Implemented |
+| PD-25 | P1: Cadastro e conta | T5 | Implemented |
+| PD-26 | P1: Cadastro e conta | T5 | Implemented |
+| PD-27 | P1: Cadastro e conta | T5 | Implemented |
+| PD-28 | P1: Cadastro e conta | T4, T5 | Implemented |
+| PD-29 | P1: Cadastro e conta | T5 | Implemented |
+| PD-30 | P1: Cadastro e conta | T4, T5 | Implemented |
+| PD-31 | P1: Cadastro e conta | T5 | Implemented |
+| PD-32 | P1: Cadastro e conta | T5 | Implemented |
+| PD-33 | P1: Cadastro e conta | T5 | Implemented |
+| PD-34 | P1: Cadastro e conta | T5 | Implemented |
 | PD-35 | P1: Cadastro e conta | T4 | Implemented |
 | PD-36 | P1: Cadastro e conta | T4 | Implemented |
 | PD-37 | P1: Cadastro e conta | T4 | Implemented |

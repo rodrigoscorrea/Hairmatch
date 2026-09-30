@@ -127,7 +127,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             "address": "User2 Street",
             "number": "456",
             "postal_code": "69050760",
-            "role": "professional",
+            "role": "customer",
             "cpf": "98765432109",
             "rating": 4,
             "preferences": json.dumps([])

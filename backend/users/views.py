@@ -5,6 +5,7 @@ from .models import User, Customer, Hairdresser
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
+import logging
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
@@ -39,18 +40,28 @@ from .cognito import (
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
-from hairmatch.problems import Problem, body_error, json_object, problem_response, request_data, validation_problem
+from hairmatch.problems import (
+    Problem,
+    body_error,
+    json_object,
+    missing_field_errors,
+    problem_response,
+    request_data,
+    validation_problem,
+)
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_SIGNUP_REQUIRED_FIELDS = [
     'first_name', 'last_name', 'phone', 'address',
     'neighborhood', 'city', 'state', 'postal_code',
 ]
 ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
-PASSWORD_POLICY_MESSAGE = 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'
-EMAIL_TAKEN_MESSAGE = 'Usuário já está cadastrado na nossa base de dados'
-PHONE_TAKEN_MESSAGE = 'O número de telefone inserido já está cadastrado na nossa base de dados'
 PASSWORD_POLICY_DETAIL = 'The password must have at least 8 characters, with an uppercase letter, a lowercase letter and a number.'
 PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
+EMAIL_TAKEN_DETAIL = 'This email is already registered.'
+INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
+ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
 
 
 def normalize_phone(phone):
@@ -104,104 +115,98 @@ def _discard_cognito_user(email):
 class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request):    
-        if request.data.get('google_signup_token'):
-            return self._register_with_google(request)
+    def post(self, request):
+        data = request_data(request)
+        if data.get('google_signup_token'):
+            return self._register_with_google(request, data)
 
-        email = request.data.get('email')
-        password = request.data.get('password')
-        phone = request.data.get('phone')
-        role = request.data.get('role')
+        errors = missing_field_errors(data, ['role', 'email', 'password', 'phone'])
+        errors += _role_and_phone_errors(data)
+        if errors:
+            raise validation_problem(errors)
+
+        email = data['email']
+        role = data['role']
+        phone = data['phone']
         if User.objects.filter(email=email).exists():
-            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
-
-        if role is None or role is None or role == '':
-            return JsonResponse({'error': 'No role assigned to user'}, status=400)
-        if email is None or email is None or email == '':
-            return JsonResponse({'error': 'No email assigned to user'}, status=400)
-        if password is None or password is None or password == '':
-            return JsonResponse({'error': 'No password assigned to user'}, status=400)
-        if phone is None or phone is None or phone == '':
-            return JsonResponse({'error': 'No phone assigned to user'}, status=400)
-        if  len(phone) < 10:
-            return JsonResponse({'error': 'Phone number is too short'}, status=400)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(phone=normalize_phone(phone)).exists():
-            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            cognito_sub = get_cognito().sign_up_confirmed(email, password)
+            cognito_sub = get_cognito().sign_up_confirmed(email, data['password'])
         except InvalidPassword:
-            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+            return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except UserAlreadyExists:
-            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         except CognitoError as err:
             return _cognito_error_response(request, err)
 
         try:
             with transaction.atomic():
                 user = User.objects.create(
-                    first_name=request.data.get('first_name'),
-                    last_name=request.data.get('last_name'),
+                    first_name=data.get('first_name'),
+                    last_name=data.get('last_name'),
                     phone=normalize_phone(phone),
-                    complement=request.data.get('complement'),
-                    neighborhood=request.data.get('neighborhood'),
-                    city=request.data.get('city'),
-                    state=request.data.get('state'),
-                    address=request.data.get('address'),
-                    number=request.data.get('number'),
-                    postal_code=request.data.get('postal_code'),
-                    email=request.data.get('email'),
+                    complement=data.get('complement'),
+                    neighborhood=data.get('neighborhood'),
+                    city=data.get('city'),
+                    state=data.get('state'),
+                    address=data.get('address'),
+                    number=data.get('number'),
+                    postal_code=data.get('postal_code'),
+                    email=email,
                     password=None,
                     cognito_sub=cognito_sub,
-                    role=request.data.get('role'),
-                    rating=request.data.get('rating'),
+                    role=role,
+                    rating=data.get('rating'),
                 )
 
                 if 'profile_picture' in request.FILES:
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
 
-                _create_role_profile(user, request.data)
+                _create_role_profile(user, data)
         except InvalidImage:
-            failure = JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
-        except json.JSONDecodeError:
-            failure = JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+            failure = problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Problem as problem:
+            failure = problem_response(request, problem.slug, problem.detail, problem.errors)
         except Exception:
-            failure = JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+            logger.exception('E-mail sign-up failed')
+            failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
             return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
 
         _discard_cognito_user(email)
         return failure
 
-    def _register_with_google(self, request):
-        data = request.data
+    def _register_with_google(self, request, data):
         try:
             claims = decode_signup_token(data.get('google_signup_token'))
         except InvalidSignupToken:
-            return JsonResponse({'error': 'Sua sessão de cadastro com o Google expirou. Entre com o Google novamente.'}, status=401)
+            return problem_response(
+                request, 'signup-session-expired', 'Your Google sign-up session has expired. Sign in with Google again.'
+            )
 
         role = data.get('role')
-        if not role:
-            return JsonResponse({'error': 'Campo obrigatório ausente: role'}, status=400)
-        if role not in ROLE_DOCUMENT_FIELD:
-            return JsonResponse({'error': 'Papel de usuário inválido.'}, status=400)
-        for field in GOOGLE_SIGNUP_REQUIRED_FIELDS + [ROLE_DOCUMENT_FIELD[role]]:
-            if not data.get(field):
-                return JsonResponse({'error': f'Campo obrigatório ausente: {field}'}, status=400)
-        phone = data.get('phone')
-        if len(phone) < 10:
-            return JsonResponse({'error': 'O número de telefone informado é muito curto.'}, status=400)
+        required = list(GOOGLE_SIGNUP_REQUIRED_FIELDS)
+        if role in ROLE_DOCUMENT_FIELD:
+            required.append(ROLE_DOCUMENT_FIELD[role])
+        errors = missing_field_errors(data, ['role'] + required)
+        errors += _role_and_phone_errors(data)
+        if errors:
+            raise validation_problem(errors)
 
+        phone = data['phone']
         # The e-mail comes from the signup token; form email/password fields are ignored.
         email = claims['email']
         google_id = claims['sub']
         if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(google_id=google_id).exists():
-            return JsonResponse({'error': 'Esta conta Google já está cadastrada na nossa base de dados'}, status=409)
+            return problem_response(request, 'google-account-taken', 'This Google account is already registered.')
         if User.objects.filter(phone=normalize_phone(phone)).exists():
-            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
             with transaction.atomic():
@@ -226,20 +231,40 @@ class RegisterView(APIView):
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
                 _create_role_profile(user, data)
-        except InvalidImage:  # before ValueError, which it subclasses
-            return JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
-        except ValueError:
-            return JsonResponse({'error': 'As preferências enviadas são inválidas.'}, status=400)
+        except InvalidImage:
+            return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Problem as problem:
+            return problem_response(request, problem.slug, problem.detail, problem.errors)
         except Exception:
-            return JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+            logger.exception('Google sign-up failed')
+            return problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
 
         return set_session_cookie(JsonResponse({'message': f"{role} user registered successfully"}, status=201), user)
 
 
+def _role_and_phone_errors(data):
+    """`errors` items for a role outside the two accounts and a phone too short. A missing field is reported elsewhere."""
+    errors = []
+    role = data.get('role')
+    if role and role not in ROLE_DOCUMENT_FIELD:
+        errors.append(body_error('role', 'The role must be customer or hairdresser.'))
+    phone = data.get('phone')
+    if phone and len(phone) < 10:
+        errors.append(body_error('phone', 'The phone number is too short.'))
+    return errors
+
+
 def _create_role_profile(user, data):
-    # Raises json.JSONDecodeError (a ValueError) when preferences is not valid JSON.
-    preferences_ids = json.loads(data.get('preferences', '[]'))
-    if isinstance(preferences_ids, list) and len(preferences_ids) > 0:
+    # Raises Problem('validation-error') when preferences is not a JSON list of ids.
+    try:
+        preferences_ids = json.loads(data.get('preferences', '[]'))
+    except (TypeError, ValueError):
+        preferences_ids = None
+    if not isinstance(preferences_ids, list) or not all(
+        isinstance(pref_id, int) and not isinstance(pref_id, bool) for pref_id in preferences_ids
+    ):
+        raise validation_problem([body_error('preferences', 'The preferences must be a JSON list of ids.')])
+    if len(preferences_ids) > 0:
         user.preferences.clear()
         preferences_to_add = Preferences.objects.filter(id__in=preferences_ids)
         user.preferences.add(*preferences_to_add)

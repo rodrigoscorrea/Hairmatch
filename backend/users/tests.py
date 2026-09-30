@@ -187,8 +187,7 @@ class RegisterViewTest(TestCase):
 
         response = self.client.post(self.register_url, data=payload)
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.json()['error'], 'O número de telefone inserido já está cadastrado na nossa base de dados')
+        assert_phone_taken(response)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(User.objects.get().phone, '55123456789123')
         self.assertNotIn('other@example.com', get_cognito().client.users)  # refused before signing up in Cognito
@@ -304,7 +303,6 @@ class RegisterViewTest(TestCase):
         self.assertEqual(stored_image(user.profile_picture.name).size, (1080, 720))
 
 
-    INVALID_PICTURE_ERROR = {'error': 'Imagem de perfil inválida.'}
 
     def _register_with_picture(self, payload, picture):
         return self.client.post(self.register_url, data={**payload, 'profile_picture': picture})
@@ -319,8 +317,7 @@ class RegisterViewTest(TestCase):
 
         response = self._register_with_picture(self.valid_customer_payload, picture)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        assert_invalid_picture(response)
         self._assert_no_rows_created()
 
     def test_register_hairdresser_with_invalid_picture_creates_no_hairdresser(self):
@@ -328,8 +325,7 @@ class RegisterViewTest(TestCase):
 
         response = self._register_with_picture(self.valid_hairdresser_payload, picture)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        assert_invalid_picture(response)
         self._assert_no_rows_created()
 
     def test_register_can_be_retried_with_the_same_email_after_an_invalid_picture(self):
@@ -352,16 +348,14 @@ class RegisterViewTest(TestCase):
 
         response = self._register_with_picture(self.valid_customer_payload, picture)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        assert_invalid_picture(response)
         self._assert_no_rows_created()
 
     def test_register_with_an_image_over_the_pixel_limit_returns_400(self):
         with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
             response = self._register_with_picture(self.valid_customer_payload, make_upload('big.jpg'))
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), self.INVALID_PICTURE_ERROR)
+        assert_invalid_picture(response)
         self._assert_no_rows_created()
 
     def test_register_without_a_picture_leaves_the_profile_picture_empty(self):
@@ -1971,6 +1965,26 @@ def assert_invalid_credentials(response):
     return assert_problem(response, 'invalid-credentials', detail='Invalid email or password.')
 
 
+def assert_invalid_picture(response):
+    return assert_problem(response, 'invalid-image', detail='The profile picture is not a valid image.')
+
+
+def assert_email_taken(response):
+    return assert_problem(response, 'email-taken', detail='This email is already registered.')
+
+
+def assert_phone_taken(response):
+    return assert_problem(response, 'phone-taken', detail='This phone number is already registered.')
+
+
+def assert_missing(response, *fields):
+    """A 400 validation-error whose errors are exactly `fields`, each reported as required."""
+    return assert_problem(
+        response, 'validation-error',
+        errors=[{'pointer': f'#/{field}', 'detail': 'This field is required.'} for field in fields],
+    )
+
+
 def assert_session_expired(response):
     return assert_problem(response, 'session-expired', detail='Your session has expired. Sign in again.')
 
@@ -2516,8 +2530,7 @@ class GoogleRegisterTest(TestCase):
             self.register_url, data={**self.customer_payload, 'profile_picture': picture}
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'Imagem de perfil inválida.'})
+        assert_invalid_picture(response)
         self.assertNotIn('jwt', response.cookies)
         self._assert_no_new_rows()
 
@@ -2579,8 +2592,39 @@ class GoogleRegisterTest(TestCase):
 
                 response = self.client.post(self.register_url, data=payload)
 
-                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-                self.assertIn('error', response.json())
+                assert_problem(
+                    response, 'signup-session-expired',
+                    detail='Your Google sign-up session has expired. Sign in with Google again.',
+                )
+                self.assertNotIn('jwt', response.cookies)
+                self._assert_no_new_rows()
+
+    def test_a_body_with_only_the_token_reports_every_missing_field_at_once(self):
+        response = self.client.post(self.register_url, data={'google_signup_token': self.signup_token})
+
+        assert_missing(
+            response, 'role', 'first_name', 'last_name', 'phone', 'address', 'neighborhood', 'city', 'state', 'postal_code'
+        )
+        self._assert_no_new_rows()
+
+    def test_missing_document_of_the_role_is_reported_with_the_other_missing_fields(self):
+        payload = {k: v for k, v in self.customer_payload.items() if k not in ('cpf', 'city')}
+
+        response = self.client.post(self.register_url, data=payload)
+
+        assert_missing(response, 'city', 'cpf')
+
+    def test_preferences_that_are_not_a_list_of_ids_answer_400(self):
+        for preferences in ('{"a": 1}', '5', '["a"]'):
+            with self.subTest(preferences=preferences):
+                response = self.client.post(
+                    self.register_url, data={**self.customer_payload, 'preferences': preferences}
+                )
+
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': '#/preferences', 'detail': 'The preferences must be a JSON list of ids.'}],
+                )
                 self.assertNotIn('jwt', response.cookies)
                 self._assert_no_new_rows()
 
@@ -2589,8 +2633,7 @@ class GoogleRegisterTest(TestCase):
 
         response = self.client.post(self.register_url, data=self.customer_payload)
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn('error', response.json())
+        assert_phone_taken(response)
         self.assertNotIn('jwt', response.cookies)
         self._assert_no_new_rows(users=1)
 
@@ -2605,8 +2648,10 @@ class GoogleRegisterTest(TestCase):
 
                 response = self.client.post(self.register_url, data=self.customer_payload)
 
-                self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-                self.assertIn('error', response.json())
+                if label == 'email':
+                    assert_email_taken(response)
+                else:
+                    assert_problem(response, 'google-account-taken', detail='This Google account is already registered.')
                 self.assertNotIn('jwt', response.cookies)
                 self._assert_no_new_rows(users=1)
                 existing.delete()
@@ -2623,17 +2668,18 @@ class GoogleRegisterTest(TestCase):
 
                 response = self.client.post(self.register_url, data=payload)
 
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertIn('error', response.json())
+                assert_missing(response, missing_field)
                 self._assert_no_new_rows()
 
-        invalid_values = (('invalid role', {'role': 'admin'}), ('short phone', {'phone': '929912345'}))
-        for label, override in invalid_values:
+        invalid_values = (
+            ('invalid role', {'role': 'admin'}, {'pointer': '#/role', 'detail': 'The role must be customer or hairdresser.'}),
+            ('short phone', {'phone': '929912345'}, {'pointer': '#/phone', 'detail': 'The phone number is too short.'}),
+        )
+        for label, override, expected_error in invalid_values:
             with self.subTest(case=label):
                 response = self.client.post(self.register_url, data={**self.customer_payload, **override})
 
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertIn('error', response.json())
+                assert_problem(response, 'validation-error', errors=[expected_error])
                 self._assert_no_new_rows()
 
     def test_invalid_preferences_json_rolls_back_everything(self):
@@ -2643,8 +2689,10 @@ class GoogleRegisterTest(TestCase):
 
                 response = self.client.post(self.register_url, data=payload)
 
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertIn('error', response.json())
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': '#/preferences', 'detail': 'The preferences must be a JSON list of ids.'}],
+                )
                 self.assertNotIn('jwt', response.cookies)
                 self._assert_no_new_rows()
 
@@ -2655,8 +2703,7 @@ class GoogleRegisterTest(TestCase):
         with patch.object(Customer.objects, 'create', side_effect=RuntimeError('database failure')):
             response = self.client.post(self.register_url, data=payload)
 
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json(), {'error': 'Erro ao criar a conta.'})
+        assert_problem(response, 'internal-error', detail='The account could not be created.')
         self.assertNotIn('jwt', response.cookies)
         self._assert_no_new_rows()
 
@@ -3659,7 +3706,6 @@ def _hairdresser_payload(**overrides):
 class CognitoRegisterTest(TestCase):
     """Register by e-mail/password: Cognito holds the password, Postgres holds the profile."""
 
-    POLICY_ERROR = {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'}
 
     def setUp(self):
         self.client = APIClient()
@@ -3701,27 +3747,69 @@ class CognitoRegisterTest(TestCase):
             state='AM', address='E', postal_code='69000000', email='taken@example.com', role='customer',
         )
         cases = [
-            (_register_payload(email='taken@example.com'), 409, 'Usuário já está cadastrado na nossa base de dados'),
-            (_register_payload(phone='92991234567'), 409, 'O número de telefone inserido já está cadastrado na nossa base de dados'),
-            (_register_payload(role=''), 400, 'No role assigned to user'),
-            (_register_payload(email=''), 400, 'No email assigned to user'),
-            (_register_payload(password=''), 400, 'No password assigned to user'),
-            (_register_payload(phone=''), 400, 'No phone assigned to user'),
-            (_register_payload(phone='123456789'), 400, 'Phone number is too short'),
+            (_register_payload(email='taken@example.com'), assert_email_taken),
+            (_register_payload(phone='92991234567'), assert_phone_taken),
+            (_register_payload(role=''), lambda r: assert_missing(r, 'role')),
+            (_register_payload(email=''), lambda r: assert_missing(r, 'email')),
+            (_register_payload(password=''), lambda r: assert_missing(r, 'password')),
+            (_register_payload(phone=''), lambda r: assert_missing(r, 'phone')),
+            (_register_payload(phone='123456789'), lambda r: assert_problem(
+                r, 'validation-error',
+                errors=[{'pointer': '#/phone', 'detail': 'The phone number is too short.'}],
+            )),
         ]
-        for payload, expected_status, message in cases:
-            with self.subTest(message=message):
+        for index, (payload, assert_body) in enumerate(cases):
+            with self.subTest(case=index):
                 response = self.client.post(self.register_url, data=payload)
-                self.assertEqual(response.status_code, expected_status)
-                self.assertEqual(response.json(), {'error': message})
+                assert_body(response)
         self.assertEqual(self._called('sign_up'), [])
         self.assertEqual(User.objects.count(), 1)
+
+    def test_a_body_with_no_fields_reports_every_missing_field_at_once(self):
+        response = self.client.post(self.register_url, data={})
+
+        assert_missing(response, 'role', 'email', 'password', 'phone')
+        self.assertEqual(self._called('sign_up'), [])
+
+    def test_invalid_role_and_short_phone_are_reported_together(self):
+        response = self.client.post(self.register_url, data=_register_payload(role='admin', phone='123'))
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/role', 'detail': 'The role must be customer or hairdresser.'},
+            {'pointer': '#/phone', 'detail': 'The phone number is too short.'},
+        ])
+        self.assertEqual(self._called('sign_up'), [])
+
+    def test_preferences_that_are_not_a_list_of_ids_answer_400_and_delete_the_cognito_user(self):
+        for preferences in ('{"a": 1}', '5', '["a"]', '[true]'):
+            with self.subTest(preferences=preferences):
+                self.fake.calls.clear()
+
+                response = self.client.post(self.register_url, data=_register_payload(preferences=preferences))
+
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': '#/preferences', 'detail': 'The preferences must be a JSON list of ids.'}],
+                )
+                self._assert_cognito_user_was_deleted()
+
+    def test_unexpected_failure_after_sign_up_answers_500_and_deletes_the_cognito_user(self):
+        with patch.object(Customer.objects, 'create', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('users.views', level='ERROR'):
+                response = self.client.post(self.register_url, data=_register_payload())
+
+        body = assert_problem(response, 'internal-error', detail='The account could not be created.')
+        self.assertNotIn('database failure', json.dumps(body))
+        self._assert_no_rows()
+        self._assert_cognito_user_was_deleted()
 
     def test_password_outside_the_policy_answers_400_and_creates_nothing(self):
         response = self.client.post(self.register_url, data=_register_payload(password='senha123'))
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), self.POLICY_ERROR)
+        assert_problem(
+            response, 'password-policy',
+            detail='The password must have at least 8 characters, with an uppercase letter, a lowercase letter and a number.',
+        )
         self._assert_no_rows()
         self.assertEqual(self.fake.users, {})
 
@@ -3730,8 +3818,7 @@ class CognitoRegisterTest(TestCase):
 
         response = self.client.post(self.register_url, data=_register_payload())
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.json(), {'error': 'Usuário já está cadastrado na nossa base de dados'})
+        assert_email_taken(response)
         self._assert_no_rows()
 
     def _assert_cognito_user_was_deleted(self, email='nova@example.com'):
@@ -3744,15 +3831,16 @@ class CognitoRegisterTest(TestCase):
 
         response = self.client.post(self.register_url, data={**_register_payload(), 'profile_picture': picture})
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'Imagem de perfil inválida.'})
+        assert_invalid_picture(response)
         self._assert_cognito_user_was_deleted()
 
     def test_invalid_preferences_json_after_sign_up_deletes_the_cognito_user(self):
         response = self.client.post(self.register_url, data=_register_payload(preferences='not json'))
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'Invalid Preferences JSON'})
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/preferences', 'detail': 'The preferences must be a JSON list of ids.'}],
+        )
         self._assert_cognito_user_was_deleted()
 
     def test_insert_failure_after_sign_up_deletes_the_cognito_user_and_can_be_retried(self):

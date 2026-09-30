@@ -202,10 +202,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Um item de `errors` por campo ausente, `#/role`, `#/phone` e `#/preferences` apontados
-- [ ] 409 `email-taken`, `phone-taken`, `google-account-taken`
-- [ ] 400 `password-policy` e `invalid-image`, 401 `signup-session-expired`, 500 `internal-error` sem deixar usuário criado
-- [ ] Gate check passes: quick (`users`)
+- [x] Um item de `errors` por campo ausente, `#/role`, `#/phone` e `#/preferences` apontados
+- [x] 409 `email-taken`, `phone-taken`, `google-account-taken`
+- [x] 400 `password-policy` e `invalid-image`, 401 `signup-session-expired`, 500 `internal-error` sem deixar usuário criado
+- [x] Gate check passes: quick (`users`)
 
 **Tests**: integration
 **Gate**: quick
