@@ -127,8 +127,8 @@ class ListAvailability(APIView):
             return problem_response(request, 'not-found', 'Hairdresser not found.')
         result = get_hairdresser_availability(hairdresser_id)
         if 'error' in result:
-            # Only reached when reading the availabilities failed; the client gets no exception text.
-            logger.error('Listing the availabilities of hairdresser %s failed: %s', hairdresser_id, result['error'])
+            # Only reached when reading the availabilities failed; the helper logged why.
+            logger.error('Listing the availabilities of hairdresser %s failed', hairdresser_id)
             return problem_response(request, 'internal-error', 'The availabilities could not be listed.')
 
         serialized_data = result['availabilities']
@@ -257,5 +257,6 @@ def get_hairdresser_availability(hairdresser_id):
 
         serializer = AvailabilitySerializer(sorted_availabilities, many=True)
         return {'availabilities': serializer.data}
-    except Exception as e:
-        return {'error': str(e), 'status': 400}   
+    except Exception:
+        logger.exception('Reading the availabilities of hairdresser %s failed', hairdresser_id)
+        return {'error': 'The availabilities could not be read.', 'status': 500}   

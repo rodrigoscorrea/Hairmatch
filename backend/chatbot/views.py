@@ -1,6 +1,7 @@
 # chatbot/views.py
 import requests
 import json
+import logging
 import os
 import google.generativeai as genai
 from datetime import datetime
@@ -21,6 +22,9 @@ from availability.views import get_hairdresser_availability
 from .ai_utils import AiUtils
 from .response_messages import ResponseMessage
 from .templates import Templates
+from hairmatch.problems import Problem, json_object, problem_response
+
+logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY =  settings.GEMINI_API_KEY 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -38,7 +42,7 @@ chosen_date = {}
 class EvolutionApi(APIView):
     def post(self, request):
         try:
-            data = json.loads(request.body)
+            data = json_object(request)
             
             if (data.get('event') == 'messages.upsert' and not data.get('data', {}).get('key', {}).get('fromMe')):
                 message_data = data['data']
@@ -358,10 +362,10 @@ class EvolutionApi(APIView):
                         response_message = "Ocorreu um erro crítico ao confirmar seu agendamento. Tente novamente."
                         user_states[sender_number] = 'main_menu' 
                 AiUtils.send_whatsapp_message(sender_number,response_message)
-        except json.JSONDecodeError:
-            return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
-        except Exception as e:
-            print(f"Error processing webhook: {e}")
-            return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+        except Problem:
+            raise  # a body that is not a JSON object: the central handler answers 400 malformed-request
+        except Exception:
+            logger.exception('Error processing webhook')
+            return problem_response(request, 'internal-error', 'The webhook could not be processed.')
 
         return JsonResponse({"status": "ok"}, status=200)

@@ -1,7 +1,7 @@
 # chatbot/tests/test_ai_utils.py
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import patch, MagicMock, call
 from django.test import TestCase, override_settings
 
@@ -191,6 +191,9 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.conf import settings
 
+from hairmatch.local_time import make_local_aware
+from hairmatch.problem_testing import assert_problem
+from reserve.models import Reserve
 from users.models import User, Hairdresser, Customer
 from preferences.models import Preferences
 from service.models import Service
@@ -418,6 +421,44 @@ class ChatbotViewTest(TestCase):
         self.assertEqual(booked_start.utcoffset(), timedelta(hours=-4))
         self.assertEqual(booked_start.strftime('%H:%M'), '14:00')
         
+    @patch('chatbot.views.AiUtils.send_whatsapp_message')
+    def test_a_body_that_is_not_a_json_object_answers_400_malformed_request(self, mock_send_message):
+        for raw in ('{nope', '[1]', '"text"'):
+            with self.subTest(raw=raw):
+                response = self.client.post(self.evolution_api_url, data=raw, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
+        mock_send_message.assert_not_called()
+
+    @patch('chatbot.views.AiUtils.send_whatsapp_message', side_effect=RuntimeError('evolution is down'))
+    def test_an_internal_failure_answers_500_internal_error_without_the_exception_text(self, mock_send_message):
+        with self.assertLogs('chatbot.views', level='ERROR'):
+            response = self.client.post(
+                self.evolution_api_url, data=self._create_webhook_payload("Olá"), content_type='application/json'
+            )
+
+        body = assert_problem(response, 'internal-error', detail='The webhook could not be processed.')
+        self.assertNotIn('evolution is down', json.dumps(body))
+
+    @patch('chatbot.views.AiUtils.send_whatsapp_message')
+    def test_a_clashing_booking_is_refused_in_portuguese_on_whatsapp(self, mock_send_message):
+        """The chatbot keeps its own Portuguese text; only the REST API answers in English."""
+        start = make_local_aware(datetime(2030, 1, 7, 14, 0))
+        Reserve.objects.create(customer=self.customer, service=self.service2, start_time=start)
+        user_states[self.sender_number] = 'confirm_booking'
+        chosen_hairdresser[self.sender_number] = self.hairdresser1.id
+        chosen_service[self.sender_number] = self.service2.id
+        chosen_date[self.sender_number] = '2030-01-07'
+
+        response = self.client.post(
+            self.evolution_api_url, data=self._create_webhook_payload("14:00"), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sent_message = mock_send_message.call_args[0][1]
+        self.assertIn('Você já tem outra reserva agendada para o mesmo horário', sent_message)
+        self.assertNotIn('You already have', sent_message)
+
     @patch('chatbot.views.AiUtils.send_whatsapp_message')
     def test_stop_command(self, mock_send_message):
         """Test that the 'Parar' command stops the chat and clears the state."""

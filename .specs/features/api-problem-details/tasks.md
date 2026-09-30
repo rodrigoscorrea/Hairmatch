@@ -420,9 +420,9 @@ T17 → T18
 
 **Done when**:
 
-- [ ] JSON inválido: 400 `malformed-request`. Falha interna: 500 `internal-error`
-- [ ] As mensagens em português enviadas ao WhatsApp não mudam
-- [ ] Gate check passes: full (fecha o backend)
+- [x] JSON inválido: 400 `malformed-request`. Falha interna: 500 `internal-error`
+- [x] As mensagens em português enviadas ao WhatsApp não mudam
+- [x] Gate check passes: full (fecha o backend)
 
 **Tests**: integration
 **Gate**: full
