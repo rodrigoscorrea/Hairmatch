@@ -284,10 +284,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Formato inválido de `start_time` ou `end_time` aponta o campo em `errors`
-- [ ] Serviço inexistente responde 404 (era 500), sobreposição responde 409 `agenda-overlap` (era 400)
-- [ ] DELETE responde 204
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test agenda --noinput'`
+- [x] Formato inválido de `start_time` ou `end_time` aponta o campo em `errors`
+- [x] Serviço inexistente responde 404 (era 500), sobreposição responde 409 `agenda-overlap` (era 400)
+- [x] DELETE responde 204
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test agenda --noinput'`
 
 **Tests**: integration
 **Gate**: quick

@@ -10,6 +10,7 @@ from users.models import User, Hairdresser
 from service.models import Service
 from agenda.models import Agenda
 from users.cognito import get_cognito
+from hairmatch.problem_testing import assert_problem
 
 
 class AgendaTestCase(TestCase):
@@ -155,7 +156,7 @@ class CreateAgendaTest(AgendaTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.assertFalse(Agenda.objects.filter(service=other_service).exists())
 
     def test_create_agenda_without_session_is_refused_with_401(self):
@@ -168,7 +169,7 @@ class CreateAgendaTest(AgendaTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Agenda.objects.count(), 1)
         
     def test_create_agenda_invalid_service(self):
@@ -189,9 +190,89 @@ class CreateAgendaTest(AgendaTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        assert_problem(response, 'not-found', detail='Service not found.')
+        self.assertEqual(Agenda.objects.count(), 1)
         
+    def _post(self, body):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return self.client.post(self.create_url, data=body, content_type='application/json')
+
+    def test_create_agenda_that_overlaps_an_existing_block_answers_409(self):
+        overlapping = self.agenda_start_time + timedelta(minutes=30)
+
+        response = self._post({'start_time': overlapping.isoformat(), 'service': self.service.id})
+
+        assert_problem(
+            response, 'agenda-overlap', detail='This time slot overlaps with an existing appointment.'
+        )
+        self.assertEqual(Agenda.objects.count(), 1)
+
+    def test_create_agenda_with_an_end_time_that_overlaps_answers_409(self):
+        start = self.agenda_start_time - timedelta(hours=1)
+
+        response = self._post({
+            'start_time': start.isoformat(),
+            'end_time': (self.agenda_start_time + timedelta(minutes=10)).isoformat(),
+            'service': self.service.id,
+        })
+
+        assert_problem(response, 'agenda-overlap')
+
+    def test_create_agenda_with_a_body_that_is_not_json_answers_400(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                assert_problem(self._post(raw), 'malformed-request')
+
+    def test_create_agenda_reports_every_missing_field(self):
+        response = self._post({})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/start_time', 'detail': 'This field is required.'},
+            {'pointer': '#/service', 'detail': 'This field is required.'},
+        ])
+
+    def test_create_agenda_with_invalid_start_and_end_times_points_at_each_field(self):
+        for bad in ('tomorrow', '2025-13-45T10:00:00', 12345):
+            with self.subTest(bad=bad):
+                response = self._post({'start_time': bad, 'end_time': bad, 'service': self.service.id})
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/start_time', 'detail': 'The value must be an ISO 8601 datetime.'},
+                    {'pointer': '#/end_time', 'detail': 'The value must be an ISO 8601 datetime.'},
+                ])
+
+    def test_create_agenda_with_only_a_bad_end_time_points_at_that_field(self):
+        response = self._post({
+            'start_time': (self.agenda_start_time + timedelta(hours=3)).isoformat(),
+            'end_time': 'later',
+            'service': self.service.id,
+        })
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/end_time', 'detail': 'The value must be an ISO 8601 datetime.'},
+        ])
+        self.assertEqual(Agenda.objects.count(), 1)
+
+    def test_create_agenda_with_a_service_id_that_is_not_a_number_answers_404(self):
+        response = self._post({
+            'start_time': (self.agenda_start_time + timedelta(hours=3)).isoformat(), 'service': 'abc',
+        })
+
+        assert_problem(response, 'not-found', detail='Service not found.')
+
+    def test_create_agenda_as_a_customer_answers_403_hairdresser_required(self):
+        customer = User.objects.create(
+            email='customer@example.com', first_name='C', last_name='U', phone='+5592984509999',
+            neighborhood='X', city='Manaus', state='AM', address='Street', postal_code='69050750',
+            role='customer', cognito_sub='sub-customer-1',
+        )
+        self.login(customer)
+
+        response = self._post({'start_time': self.agenda_start_time.isoformat(), 'service': self.service.id})
+
+        assert_problem(response, 'hairdresser-required', detail='Only hairdressers can perform this action.')
+
     def test_create_agenda_field_name_mismatch(self):
         """Test the field name bug in CreateAgenda view (Hairdresser vs hairdresser)"""
         
@@ -265,14 +346,14 @@ class ListAgendaTest(AgendaTestCase):
         for hairdresser_id in (self.hairdresser.id, 9999):
             with self.subTest(hairdresser_id=hairdresser_id):
                 response = self.client.get(reverse('list_agenda', args=[hairdresser_id]))
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                assert_problem(response, 'forbidden')
                 self.assertNotIn('data', response.json())
 
     def test_list_agenda_without_session_is_refused_with_401(self):
         for url in (self.list_url, reverse('list_agenda', args=[self.hairdresser.id])):
             with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                assert_problem(response, 'invalid-session')
 
 class RemoveAgendaTest(AgendaTestCase):
     def test_remove_agenda_success(self):
@@ -280,26 +361,26 @@ class RemoveAgendaTest(AgendaTestCase):
         self.login(self.hairdresser_user)
         response = self.client.delete(self.remove_url(self.agenda.id))
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()['data'], 'Agenda register deleted successfully')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertEqual(Agenda.objects.count(), 0)
         
     def test_remove_nonexistent_agenda(self):
         """Test removing a non-existent agenda"""
         self.login(self.hairdresser_user)
         response = self.client.delete(self.remove_url(9999))  # Non-existent ID
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Agenda slot not found.')
 
     def test_remove_agenda_of_another_hairdresser_is_refused_with_403(self):
         self.login(self.hairdresser_user2)
 
         response = self.client.delete(self.remove_url(self.agenda.id))
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
 
     def test_remove_agenda_without_session_is_refused_with_401(self):
         response = self.client.delete(self.remove_url(self.agenda.id))
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
