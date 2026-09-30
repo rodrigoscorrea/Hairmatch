@@ -23,11 +23,11 @@ class ServiceTestCase(TestCase):
         self.client = APIClient()
         
         # URLs
-        self.create_url = reverse('create_service')
-        self.list_url = reverse('list_service')
-        self.list_service_url = lambda service_id: reverse('list_service', args=[service_id])
-        self.update_url = lambda service_id: reverse('update_service', args=[service_id])
-        self.remove_url = lambda service_id: reverse('remove_service', args=[service_id])
+        self.create_url = reverse('service_collection')
+        self.list_url = reverse('service_collection')
+        self.list_service_url = lambda service_id: reverse('service_detail', args=[service_id])
+        self.update_url = lambda service_id: reverse('service_detail', args=[service_id])
+        self.remove_url = lambda service_id: reverse('service_detail', args=[service_id])
         
         # Create test user (hairdresser)
         self.hairdresser_user = User.objects.create(
@@ -585,7 +585,7 @@ class RemoveServiceViewTest(TestCase):
         # Verify service exists before deletion
         self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
         
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
         self.assertEqual(response.status_code, 204)
@@ -595,7 +595,7 @@ class RemoveServiceViewTest(TestCase):
     def test_delete_service_not_found(self):
         """Test deletion with non-existent service ID."""
         non_existent_id = 99999
-        url = reverse('remove_service', kwargs={'service_id': non_existent_id})
+        url = reverse('service_detail', kwargs={'service_id': non_existent_id})
         response = self.client.delete(url)
         
         assert_problem(response, 'not-found', detail='Service not found.')
@@ -616,7 +616,7 @@ class RemoveServiceViewTest(TestCase):
         # Verify appointment exists
         self.assertTrue(Agenda.objects.filter(service=self.service_1).exists())
         
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
         assert_problem(
@@ -645,7 +645,7 @@ class RemoveServiceViewTest(TestCase):
         # Verify multiple appointments exist
         self.assertEqual(Agenda.objects.filter(service=self.service_2).count(), 3)
         
-        url = reverse('remove_service', kwargs={'service_id': self.service_2.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_2.id})
         response = self.client.delete(url)
         
         assert_problem(
@@ -657,42 +657,44 @@ class RemoveServiceViewTest(TestCase):
 
     def test_delete_service_zero_id(self):
         """Test deletion with ID 0."""
-        url = reverse('remove_service', kwargs={'service_id': 0})
+        url = reverse('service_detail', kwargs={'service_id': 0})
         response = self.client.delete(url)
         
         assert_problem(response, 'not-found', detail='Service not found.')
 
-    def test_get_method_not_allowed(self):
-        """Test that GET method is not allowed."""
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+    def test_get_method_reads_the_service(self):
+        """RT-39: the path shared with the removal also serves the public read."""
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['id'], self.service_1.id)
 
     def test_post_method_not_allowed(self):
         """Test that POST method is not allowed."""
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
-    def test_put_method_not_allowed(self):
-        """Test that PUT method is not allowed."""
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
-        response = self.client.put(url)
-        
-        self.assertEqual(response.status_code, 405)  # Method Not Allowed
+    def test_put_method_reaches_the_update_view(self):
+        """RT-41: the path shared with the removal also takes the PUT, and its body is validated."""
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
+        response = self.client.put(url, data='{}', content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['type'], 'https://hairmatch.app/problems/validation-error')
 
     def test_patch_method_not_allowed(self):
         """Test that PATCH method is not allowed."""
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.patch(url)
         
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
     def test_response_content_type(self):
         """Test that response content type is JSON for error responses."""
-        url = reverse('remove_service', kwargs={'service_id': 99999})
+        url = reverse('service_detail', kwargs={'service_id': 99999})
         response = self.client.delete(url)
         
         assert_problem(response, 'not-found')
@@ -704,7 +706,7 @@ class RemoveServiceViewTest(TestCase):
         # Mock an unexpected exception
         mock_get.side_effect = Exception("Unexpected database error")
         
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         with self.assertLogs('hairmatch.problems', level='ERROR'):
             response = self.client.delete(url)
 
@@ -713,7 +715,7 @@ class RemoveServiceViewTest(TestCase):
 
     def test_delete_service_different_hairdresser(self):
         """A hairdresser cannot delete a service of another hairdresser."""
-        url = reverse('remove_service', kwargs={'service_id': self.service_3.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_3.id})
         response = self.client.delete(url)
 
         assert_problem(response, 'forbidden')
@@ -721,7 +723,7 @@ class RemoveServiceViewTest(TestCase):
 
     def test_delete_service_without_session_is_refused_with_401(self):
         self.client.cookies.pop('jwt')
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
 
         response = self.client.delete(url)
 
@@ -744,7 +746,7 @@ class RemoveServiceViewTest(TestCase):
         )
         
         # Try to delete service (should fail due to business logic)
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
         assert_problem(response, 'service-has-reservations')
@@ -758,7 +760,7 @@ class RemoveServiceViewTest(TestCase):
         test_ids = [1, 123, 999999]
         
         for test_id in test_ids:
-            url = reverse('remove_service', kwargs={'service_id': test_id})
+            url = reverse('service_detail', kwargs={'service_id': test_id})
             self.assertIn(str(test_id), url)
 
     def test_concurrent_deletion_safety(self):
@@ -777,7 +779,7 @@ class RemoveServiceViewTest(TestCase):
         )
         
         # The view should still handle this correctly
-        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
         assert_problem(response, 'service-has-reservations')
@@ -831,7 +833,7 @@ class RemoveServiceViewIntegrationTest(TestCase):
         self.assertTrue(Service.objects.filter(id=self.service.id).exists())
         
         # Delete the service
-        url = reverse('remove_service', kwargs={'service_id': self.service.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service.id})
         response = self.client.delete(url)
         
         # Verify successful deletion
@@ -853,7 +855,7 @@ class RemoveServiceViewIntegrationTest(TestCase):
         )
         
         # Attempt deletion
-        url = reverse('remove_service', kwargs={'service_id': self.service.id})
+        url = reverse('service_detail', kwargs={'service_id': self.service.id})
         response = self.client.delete(url)
         
         # Verify business rule enforcement

@@ -120,3 +120,11 @@ class RemoveService(APIView):
 
         service_to_delete.delete()
         return HttpResponse(status=204)
+
+
+class ServiceCollection(ListService, CreateService):
+    """`/api/services`: GET lists every service and POST creates one for the logged hairdresser."""
+
+
+class ServiceDetail(ListService, UpdateService, RemoveService):
+    """`/api/services/{id}`: GET reads, PUT replaces and DELETE removes one service."""
