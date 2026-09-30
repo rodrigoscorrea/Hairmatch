@@ -1,19 +1,71 @@
 # Relatório de dependências e vulnerabilidades — Hairmatch
 
+## Status (PR da issue #168)
+
+Depois do merge do #167 sobravam **41 alertas abertos** no Dependabot: 35 npm, todos transitivos da cadeia Expo SDK 52 ou do `query-string`, e 6 do Django 4.2. Esta branch migra as duas stacks.
+
+| Pacote | Alertas | Origem no SDK 52 | Como fechou |
+|---|---|---|---|
+| `tar` 6.2.1 | 12 | `@expo/cli@0.22` → `cacache` | O `@expo/cli@57` não usa mais `tar`/`cacache` |
+| `@xmldom/xmldom` 0.7.13 | 15 | `@expo/plist@0.2` | `@expo/plist@0.8` → xmldom 0.8.15 |
+| `postcss` 8.4.49 | 4 | `@expo/metro-config@0.19` | 8.5.28 |
+| `image-size` 1.2.1 | 2 | `metro@0.81` | O `metro@0.84` não depende mais dele |
+| `uuid` 7.0.3 / 8.3.2 | 1 | `xcode`, `@expo/rudder-sdk-node` | O 8.x sai com o CLI novo. O 7.x (via `xcode@3.0.1`, a última versão) vai para 11.1.1 por `overrides`; o 11.x ainda tem build CJS, que o `require('uuid').v4()` do `xcode` precisa |
+| `Django` 4.2.30 | 6 | direto | `5.2.17` (LTS) |
+| `decode-uri-component` 0.2.2 | 1 | `query-string@7.1.3` | **Não corrigível — dispensar** (ver abaixo) |
+
+- **Frontend — Expo SDK 52 → 57:**
+  - React 18.3 → 19.2, RN 0.76 → 0.86, expo-router 4 → 57.
+  - `npm audit` medido: **35 → 1** (só o `decode-uri-component`, que aparece em 3 entradas da mesma cadeia).
+  - O lockfile foi regenerado. O antigo prendia `expo-router@4` e React 18 e o npm não resolvia o upgrade em cima dele.
+  - `reanimated`/`worklets`/`gesture-handler` continuam declarados nas versões do SDK. O `expo-router` os puxa como peers, e sem pin o npm escolhia majors incompatíveis com o código nativo do Expo Go; o `expo-doctor` não pega isso, porque só olha dependências diretas.
+  - Foram removidas as dependências que nada importava: `@react-navigation/*`, `react-native-vector-icons`, `swiper`, `webview`, `datetimepicker`, `async-storage`, `uuid`, `react-native-dotenv` e `react-test-renderer`.
+  - **Ajustes de código:**
+    - `useAddress` usava `useRoute` do `@react-navigation`, que o expo-router 57 não traz mais.
+    - Os ícones `react-native-vector-icons/*` foram para `@expo/vector-icons/*`, porque o preset do SDK 57 tirou o alias.
+    - O `SafeAreaView` passou a vir de `react-native-safe-area-context`.
+    - O `expo-image-picker` usa `mediaTypes: ['images']`.
+    - Os tipos de ref e `JSX` foram adaptados à React 19.
+- **Backend — Django 4.2.30 → 5.2.17:**
+  - `django-cors-headers` 3.14 → 4.9.
+  - PostgreSQL 13 → 17 no compose e no CI, porque o Django 5.2 exige 14 ou mais. Não há prod ativo.
+  - O código não usava nada removido nos releases 5.0, 5.1 e 5.2. O único ajuste foi um teste que passava `reserve=` para `Review.objects.create`: o 4.2 ignorava esse kwarg, o 5.2 recusa.
+- **`decode-uri-component` (alerta #162) — corrige a análise do #166:** o `expo-router@57` ainda depende de `query-string ^7.1.3`, que usa `decode-uri-component@^0.2`. A 0.5.0 corrigida é ESM-only, e um `override` quebraria o `require` no runtime (o mesmo problema da `query-string` 9). **E o alerta agora é alcançável:** o `expo-router@57` passou a chamar `queryString.parse()` ao ler a URL, não só `stringify`. Mesmo assim, o impacto é um DoS **do próprio cliente**, que precisa abrir um link com percent-encoding malformado; não há dado exposto nem efeito no servidor. Decisão: dispensar como *tolerable risk* e rever quando o expo-router trocar de `query-string`.
+- **Validado:**
+  - **Backend:** imagem reconstruída (Py 3.12.14, Django 5.2.17, Postgres 17.11). `check` e `makemigrations --check` passam limpos. A suíte completa dá **598 testes OK**. As seeds rodam pelo fluxo real, com upload de fotos. O `runserver` responde problem+json, e o S3 do LocalStack grava, lê e apaga.
+  - **Frontend:** `tsc --noEmit` limpo e `expo-doctor` 21/21. Os 40 módulos nativos do lockfile batem com o `bundledNativeModules` do SDK 57. `expo export` web + android OK.
+  - **Smoke no navegador (web),** com o backend local:
+    - cadastro de cliente → endereço (autocomplete de CEP) → preferências;
+    - login;
+    - home (carrossel com setas);
+    - busca;
+    - profissional (params de rota);
+    - agendamento com `react-native-calendars` (locale PT, dias desabilitados, horários);
+    - criação de reserva, lista e detalhe;
+    - perfil (ícones Feather) e logout;
+    - login de profissional: agenda (`react-native-big-calendar`, visões lista e mês), serviços e configurações;
+    - tela de avaliação: o picker gera `accept="image/*"`;
+    - cadastro de profissional: endereço → preferências → história profissional → descrição, com os campos salvos;
+    - Google no web: a URL de autorização sai com `redirect_uri=http://localhost:8081` (sem barra final, como no design do google-auth), `response_type=id_token`, `nonce` e `state`.
+  - **Não verificado:**
+    - Android no Expo Go 57;
+    - o login Google completo, com uma conta real, no web;
+    - Google Sign-In nativo, que só funciona no APK EAS `preview`.
+
 ## Status (PR da issue #166)
 
 Aplicado nesta branch, com testes:
 
 - **Frontend:** `npm audit fix` (sem `--force`) + `brace-expansion` atualizado + `query-string@7.1.3` **fixado** como dependência explícita. Resultado medido: **53 → 24** alertas (21 da cadeia Expo SDK 52, `image-size` do Metro, e `query-string` + `decode-uri-component`).
   - **Por que `query-string` é explícito:** o novo `@react-navigation/core` deixou de depender dele, mas o `expo-router@4.0.20` o importa sem declarar (dependia do hoist). Sem a dependência, `expo export` falhava com *Unable to resolve "query-string"*.
-  - **Por que exatamente a 7.1.3 (e não a 9.x, sem alerta):** a 9.x é ESM-only (`export default`) e o `expo-router` faz `require("query-string").stringify`; no navegador isso quebra com `queryString.stringify is not a function` (o `expo export` **não** pega — só o runtime). A 7.1.3 é a mesma versão que já rodava antes. O alerta dela (`decode-uri-component`, DoS no `parse`) não é alcançável: o `expo-router` só chama `stringify`.
+  - **Por que exatamente a 7.1.3 (e não a 9.x, sem alerta):** a 9.x é ESM-only (`export default`) e o `expo-router` faz `require("query-string").stringify`; no navegador isso quebra com `queryString.stringify is not a function` (o `expo export` **não** pega — só o runtime). A 7.1.3 é a mesma versão que já rodava antes. O alerta dela (`decode-uri-component`, DoS no `parse`) não é alcançável: o `expo-router` só chama `stringify`. *(Vale para o expo-router 4. O 57 também chama `parse`; ver o status do #168.)*
   - Validado: `npx tsc --noEmit` limpo; `expo export` android e web OK; o bundle web carregado num navegador renderiza `/login` e navega para `/register` sem erros de runtime. O app não tem testes automatizados (`jest` sem testes).
 - **Backend:** `Django 4.2.20 → 4.2.30` e Python **3.9 → 3.12** (`docker/backend/Dockerfile`, workflow), o que destrava `Pillow 11.3 → 12.3` (36 CVEs), `urllib3 1.26 → 2.8`, `sqlparse 0.5.5 → 0.6.0`, `requests 2.32 → 2.34`, `djangorestframework 3.15.0 → 3.17.2` e `boto3/botocore`. `requirements.txt` ganhou pisos (`Pillow>=12.3.0,<13`, `requests>=2.33,<3`, `sqlparse>=0.6.0`) para essas correções não regredirem. Nova varredura OSV das versões instaladas na imagem 3.12: **só restam os 7 alertas do Django 4.2** (LTS sem suporte; sem exposição neste app).
   - Validado na imagem 3.12: `manage.py check`, `makemigrations --check` (sem mudanças), suíte completa **598 testes OK** (igual ao baseline em 3.9), conversão WebP de JPEG/JPEG-CMYK/PNG-alpha/PNG-cinza/WebP/GIF/BMP idêntica à do 3.9 (lixo e arquivo truncado seguem dando `InvalidImage`), `runserver` sobe respondendo problem+json, e `default_storage` grava/lê/apaga no S3 do LocalStack com boto3 1.43 + urllib3 2.8.
   - **Ao atualizar o ambiente local:** rebuild da imagem (`docker compose build backend`); o container antigo ainda é Python 3.9.
 - **CI:** `actions/checkout@v3 → v4`, `actions/setup-python@v4 → v5` (só o próprio CI valida).
 
-**Não feito (fora de escopo):** fixar todo o `requirements.txt` com lockfile, `dependabot.yml`, Expo SDK 57, Django 5.2 LTS, migração do `google-generativeai` (agora emite aviso de fim de suporte; ver §2.3). As seções abaixo são a análise original, feita antes do bump de Python.
+**Não feito (fora de escopo):** fixar todo o `requirements.txt` com lockfile, `dependabot.yml`, migração do `google-generativeai` (Expo SDK 57 e Django 5.2 LTS entraram no #168) (agora emite aviso de fim de suporte; ver §2.3). As seções abaixo são a análise original, feita antes do bump de Python.
 
 ---
 
