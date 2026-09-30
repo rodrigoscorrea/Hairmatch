@@ -1,7 +1,7 @@
 from io import BytesIO
 from django.core.files.storage import default_storage
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -551,30 +551,20 @@ class RemoveReview(ReviewsTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-class RemoveAdminDeleteReview(ReviewsTestCase):
-    def setUp(self):
-        super().setUp()
-        self.review = Review.objects.create(
-            rating=1,
-            comment="A review to be deleted",
-            customer=self.customer,
-            hairdresser=self.hairdresser
+class RemovedAdminDeleteRouteTest(ReviewsTestCase):
+    """removeAdm had no auth nor role check and was removed (#151)."""
+
+    def test_remove_admin_route_no_longer_exists(self):
+        review = Review.objects.create(
+            rating=1, comment="A review", customer=self.customer, hairdresser=self.hairdresser
         )
-        self.admin_delete_url = reverse('remove_review_admin', args=[self.review.id])
 
-    def test_admin_can_delete_review(self):
-        """Test that the admin endpoint successfully deletes a review."""
-        response = self.client.delete(self.admin_delete_url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Review.objects.count(), 0)
-
-    def test_admin_delete_non_existent_review(self):
-        """Test that the admin endpoint returns 404 for a review that doesn't exist."""
-        invalid_url = reverse('remove_review_admin', args=[9999])
-        response = self.client.delete(invalid_url)
+        with self.assertRaises(NoReverseMatch):
+            reverse('remove_review_admin', args=[review.id])
+        response = self.client.delete(f'/api/review/removeAdm/{review.id}')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Review.objects.filter(id=review.id).exists())
 
 class ReviewSessionTest(ReviewsTestCase):
     """The three cookie-based review routes authenticate through the central authenticator."""
@@ -635,3 +625,46 @@ class ReviewSessionTest(ReviewsTestCase):
                     self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
                     # _call itself adds one review for update/delete, and the route must not change it
                     self.assertEqual(Review.objects.count(), before + (0 if route == 'create' else 1))
+
+
+class ReviewOwnershipTest(ReviewsTestCase):
+    """Review writes stay limited to the customer of the reservation."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_hairdresser_payload = dict(
+            self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999',
+        )
+        self.client.post(self.register_url, data=self.other_hairdresser_payload)
+        self.other_hairdresser = Hairdresser.objects.get(user__email='other.hairdresser@example.com')
+        self.review = Review.objects.create(
+            rating=4, comment='Good', customer=self.customer, hairdresser=self.hairdresser
+        )
+        self.reserve2.review = self.review
+        self.reserve2.save()
+
+    def test_create_review_for_a_hairdresser_other_than_the_reserved_one_is_refused(self):
+        self.login_as_customer()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 1, 'comment': 'fake', 'hairdresser': self.other_hairdresser.id, 'reserve': self.reserve.id,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Review.objects.filter(hairdresser=self.other_hairdresser).exists())
+        self.reserve.refresh_from_db()
+        self.assertIsNone(self.reserve.review)
+
+    def test_hairdresser_cannot_update_or_remove_a_review_with_403(self):
+        self.login_as_hairdresser()
+
+        update = self.client.put(
+            reverse('update_review', args=[self.review.id]),
+            data=json.dumps({'rating': 1}), content_type='application/json',
+        )
+        remove = self.client.delete(reverse('remove_review', args=[self.review.id]))
+
+        self.assertEqual(update.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(remove.status_code, status.HTTP_403_FORBIDDEN)
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.rating, 4)

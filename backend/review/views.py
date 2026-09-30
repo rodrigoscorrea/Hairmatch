@@ -60,6 +60,9 @@ class CreateReview(APIView):
         
         if not Hairdresser.objects.filter(id=hairdresser_id).exists():
             return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+        # A review can only be about the hairdresser who did the reserved service
+        if str(reserve.service.hairdresser_id) != str(hairdresser_id):
+            return JsonResponse({'error': 'The hairdresser does not match the reservation'}, status=400)
 
         # 4. Create the Review object in the database
         try:
@@ -100,9 +103,8 @@ class UpdateReview(APIView):
 
         try:
             data = json.loads(request.body)
-            user = session.user
-            customer = Customer.objects.filter(user=user).first()
-            if user.role != 'customer':
+            customer = Customer.objects.filter(user=session.user).first()
+            if not customer:
                 return JsonResponse({'error': 'User is not a customer'}, status=403)
 
             review = Review.objects.filter(id=id, customer_id=customer.id).first()
@@ -126,9 +128,8 @@ class RemoveReview(APIView):
             return error
 
         try:
-            user = session.user
-            customer = Customer.objects.filter(user=user).first()
-            if user.role != 'customer':
+            customer = Customer.objects.filter(user=session.user).first()
+            if not customer:
                 return JsonResponse({'error': 'User is not a customer'}, status=403)
 
             review = Review.objects.filter(id=id, customer_id=customer.id).first()
@@ -145,17 +146,6 @@ class RemoveReview(APIView):
                     review.delete()
             except Reserve.DoesNotExist:
                 return JsonResponse({'error': 'Related reserve not found'}, status=404)
-            return JsonResponse({'message': "Review deleted successfully"}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-
-class RemoveReviewAdmin(APIView):
-    def delete(self, request, id): # Id da review
-        try:
-            review = Review.objects.filter(id=id).first()
-            if not review:
-                return JsonResponse({'error': 'Review not found'}, status=404)
-            review.delete()
             return JsonResponse({'message': "Review deleted successfully"}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
