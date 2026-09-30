@@ -2,7 +2,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-import { formatDateTimeForAgenda } from '@/utils/time-formater';
 import { useAuth } from '@/app/_layout';
 import { listAgendaByHairdresser } from '@/services/agenda.service';
 import type { AgendaEvent, CalendarMode } from '@/models/Agenda.types';
@@ -32,8 +31,8 @@ export const useAgenda = () => {
           return {
             id: ev.id,
             title: `${ev.service.name}`,
-            start: new Date(formatDateTimeForAgenda(ev.start_time)),
-            end: new Date(formatDateTimeForAgenda(ev.end_time)),
+            start: new Date(ev.start_time),
+            end: new Date(ev.end_time),
           }
         });
         setEvents(convertedEvents);

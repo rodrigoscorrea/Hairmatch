@@ -1,24 +1,11 @@
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-import utc from 'dayjs/plugin/utc';
 
-dayjs.extend(utc);
+// The API sends UTC instants ("...Z"); show them in the device's local time.
 export const formatTime = (dateString: string) : string => {
   try {
-    return dayjs.utc(dateString).format("HH:mm[h]");;
-    //return format(date, "HH:mm'h'", { locale: ptBR });
+    return dayjs(dateString).format("HH:mm[h]");
   } catch (e) {
     return 'Invalid hour';
   }
 };
-
-export const formatDateTimeForAgenda = (date: string) : string => {
-  try {
-    const formatedDate =  date.replace(/Z$/, '');
-    return formatedDate;
-  } catch (error) {
-    return '';
-  }
-}
