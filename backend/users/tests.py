@@ -884,7 +884,15 @@ class UserInfoViewTest(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn('error', response.json())
 
+    def _login(self, email, password):
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': email, 'password': password}),
+            content_type='application/json',
+        )
+
     def test_delete_user_by_email(self):
+        self._login('customer@example.com', 'Customer_password1')
         url = reverse('user_info', kwargs={'email': 'customer@example.com'})
         response = self.client.delete(url)
         
@@ -892,12 +900,31 @@ class UserInfoViewTest(TestCase):
         self.assertEqual(User.objects.filter(email='customer@example.com').count(), 0)
         self.assertEqual(Customer.objects.count(), 0)
 
-    def test_delete_nonexistent_user_by_email(self):
-        url = reverse('user_info', kwargs={'email': 'nonexistent@example.com'})
+    def test_delete_user_by_email_is_case_insensitive(self):
+        self._login('customer@example.com', 'Customer_password1')
+
+        response = self.client.delete(reverse('user_info', kwargs={'email': 'Customer@Example.com'}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(email='customer@example.com').exists())
+
+    def test_delete_user_by_email_without_session_is_refused_with_401(self):
+        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
         response = self.client.delete(url)
-        
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response.json())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(User.objects.filter(email='customer@example.com').exists())
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_delete_another_user_by_email_is_refused_with_403(self):
+        self._login('hairdresser@example.com', 'Hairdresser_password1')
+
+        for email in ('customer@example.com', 'nonexistent@example.com'):
+            with self.subTest(email=email):
+                response = self.client.delete(reverse('user_info', kwargs={'email': email}))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(User.objects.filter(email='customer@example.com').exists())
+        self.assertTrue(User.objects.filter(email='hairdresser@example.com').exists())
         
 class CustomerHomeViewTest(TestCase):
     def setUp(self):
@@ -3966,8 +3993,9 @@ class CognitoDeleteAccountTest(TestCase):
                 self.assertIn('nova@example.com', self.fake.users)
 
     def test_google_accounts_are_deleted_without_calling_cognito(self):
-        _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
         self.fake.calls.clear()
+        self.client.cookies['jwt'] = issue_session_token(google_user)
 
         response = self.client.delete(reverse('user_info', args=['goo@example.com']))
         self.assertEqual(response.status_code, status.HTTP_200_OK)

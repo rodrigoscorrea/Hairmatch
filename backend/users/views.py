@@ -24,6 +24,8 @@ from .authentication import (
     authenticate_request,
     authenticate_token,
     authenticated_user,
+    forbidden,
+    is_own_email,
 )
 from .cognito import (
     CognitoError,
@@ -51,6 +53,17 @@ def _cognito_error_response(error):
     if isinstance(error, TooManyRequests):
         return JsonResponse({'error': 'Muitas tentativas. Aguarde e tente novamente.'}, status=429)
     return JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+
+
+def _delete_account(user):
+    """Deletes the Cognito user (e-mail accounts) and the row, and clears the session cookies."""
+    if user.cognito_sub:
+        try:
+            get_cognito().admin_delete_user(user.email)
+        except CognitoError as err:
+            return _cognito_error_response(err)
+    user.delete()
+    return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
 
 
 def _discard_cognito_user(email):
@@ -408,14 +421,7 @@ class UserInfoCookieView(APIView):
         if error:
             return error
 
-        user = session.user
-        if user.cognito_sub:
-            try:
-                get_cognito().admin_delete_user(user.email)
-            except CognitoError as err:
-                return _cognito_error_response(err)
-        user.delete()
-        return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
+        return _delete_account(session.user)
 
     #This function does not handle password update procedure
     def put(self, request):
@@ -504,23 +510,14 @@ class UserInfoView(APIView):
 
     
     def delete(self, request, email=None):
-        token = request.COOKIES.get('jwt')
-            
-        user = User.objects.filter(email=email).filter(is_active=True).first()  
-        if user:
-            if user.cognito_sub:
-                try:
-                    get_cognito().admin_delete_user(user.email)
-                except CognitoError as err:
-                    return _cognito_error_response(err)
-            user.delete()
-            response = JsonResponse({'message': 'user deleted'}, status=200)
+        # Only the account owner can delete it; the e-mail in the URL must be the session's.
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        if not is_own_email(session, email):
+            return forbidden()
+        return _delete_account(session.user)
 
-            if token:
-                response.delete_cookie('jwt')
-            return response
-        else:
-            return JsonResponse({'error': 'User not found'}, status=400)
 class CustomerHomeView(APIView):
     """
     API view for customer home page that returns:
