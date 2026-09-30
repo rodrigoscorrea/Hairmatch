@@ -320,11 +320,11 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-47 | Route Table: reservas | Execute | Done |
 | RT-48 | Route Table: reservas | Execute | Done |
 | RT-49 | Route Table: chatbot | Execute | Done |
-| RT-50 | P1: Rotas no padrão da tabela | - | Pending |
-| RT-51 | P1: Rotas no padrão da tabela | - | Pending |
-| RT-52 | P1: Rotas no padrão da tabela | - | Pending |
-| RT-53 | P1: Rotas no padrão da tabela | - | Pending |
-| RT-54 | P1: Rotas no padrão da tabela | - | Pending |
+| RT-50 | P1: Rotas no padrão da tabela | Execute | Done |
+| RT-51 | P1: Rotas no padrão da tabela | Execute | Done |
+| RT-52 | P1: Rotas no padrão da tabela | Execute | Done |
+| RT-53 | P1: Rotas no padrão da tabela | Execute | Done |
+| RT-54 | P1: Rotas no padrão da tabela | Execute | Done |
 | RT-55 | P1: Consultas por query string | Execute | Done |
 | RT-56 | P1: Conta e sessão | Execute | Done |
 | RT-57 | P1: Conta e sessão | Execute | Done |
@@ -344,8 +344,8 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-75 | P1: App usa as rotas novas | - | Pending |
 | RT-76 | P2: Webhook do chatbot | Execute | Done |
 | RT-77 | P2: Webhook do chatbot | - | Pending |
-| RT-80 | Edge Cases | - | Pending |
-| RT-81 | Edge Cases | - | Pending |
+| RT-80 | Edge Cases | Execute | Done |
+| RT-81 | Edge Cases | Execute | Done |
 | RT-82 | Edge Cases | Execute | Done |
 | RT-83 | Edge Cases | Execute | Done |
 
