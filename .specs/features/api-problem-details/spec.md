@@ -419,10 +419,10 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-81 | P1: App mostra erros em pt-BR | T14, T16 | Implemented |
 | PD-82 | P1: App mostra erros em pt-BR | T14, T15, T16 | Implemented |
 | PD-83 | P1: App mostra erros em pt-BR | T16 | Implemented |
-| PD-84 | P1: App mostra erros em pt-BR | - | Pending |
-| PD-85 | P1: App mostra erros em pt-BR | - | Pending |
+| PD-84 | P1: App mostra erros em pt-BR | T17 | Implemented |
+| PD-85 | P1: App mostra erros em pt-BR | T17 | Implemented |
 | PD-86 | P1: App mostra erros em pt-BR | T15 | Implemented |
-| PD-87 | P1: App mostra erros em pt-BR | T14 | Implemented |
+| PD-87 | P1: App mostra erros em pt-BR | T14, T17 | Implemented |
 | PD-90 | P2: Endpoints auxiliares | T6 | Implemented |
 | PD-91 | P2: Endpoints auxiliares | T6 | Implemented |
 | PD-92 | P2: Endpoints auxiliares | T6 | Implemented |

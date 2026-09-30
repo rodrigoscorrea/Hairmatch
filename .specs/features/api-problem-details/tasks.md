@@ -528,9 +528,9 @@ T17 → T18
 
 **Done when**:
 
-- [ ] `service-has-reservations` mostra `Não é possível excluir esse serviço pois há um agendamento atrelado a ele`
-- [ ] `postal-code-not-found` mostra `ERROR_MESSAGES.cep_not_found`, o resto `cep_lookup_failed`
-- [ ] Gate check passes: build
+- [x] `service-has-reservations` mostra `Não é possível excluir esse serviço pois há um agendamento atrelado a ele`
+- [x] `postal-code-not-found` mostra `ERROR_MESSAGES.cep_not_found`, o resto `cep_lookup_failed`
+- [x] Gate check passes: build
 
 **Tests**: none
 **Gate**: build
