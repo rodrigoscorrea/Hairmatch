@@ -473,11 +473,11 @@ T17 → T18
 
 **Done when**:
 
-- [ ] `signIn` e `loadSession` mostram o texto do catálogo
-- [ ] `signUp` levanta o problem normalizado nas duas plataformas
-- [ ] Fallbacks `Authentication failed...` e `An unknown error occurred...` em português
-- [ ] O refresh continua disparando só por 401 fora de `AUTH_EXCLUDED`
-- [ ] Gate check passes: build
+- [x] `signIn` e `loadSession` mostram o texto do catálogo
+- [x] `signUp` levanta o problem normalizado nas duas plataformas
+- [x] Fallbacks `Authentication failed...` e `An unknown error occurred...` em português
+- [x] O refresh continua disparando só por 401 fora de `AUTH_EXCLUDED`
+- [x] Gate check passes: build
 
 **Tests**: none
 **Gate**: build
