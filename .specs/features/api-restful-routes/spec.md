@@ -319,7 +319,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-46 | Route Table: reservas | Execute | Done |
 | RT-47 | Route Table: reservas | Execute | Done |
 | RT-48 | Route Table: reservas | Execute | Done |
-| RT-49 | Route Table: chatbot | - | Pending |
+| RT-49 | Route Table: chatbot | Execute | Done |
 | RT-50 | P1: Rotas no padrão da tabela | - | Pending |
 | RT-51 | P1: Rotas no padrão da tabela | - | Pending |
 | RT-52 | P1: Rotas no padrão da tabela | - | Pending |
@@ -342,7 +342,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-73 | P1: App usa as rotas novas | - | Pending |
 | RT-74 | P1: App usa as rotas novas | - | Pending |
 | RT-75 | P1: App usa as rotas novas | - | Pending |
-| RT-76 | P2: Webhook do chatbot | - | Pending |
+| RT-76 | P2: Webhook do chatbot | Execute | Done |
 | RT-77 | P2: Webhook do chatbot | - | Pending |
 | RT-80 | Edge Cases | - | Pending |
 | RT-81 | Edge Cases | - | Pending |
