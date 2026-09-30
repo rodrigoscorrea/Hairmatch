@@ -16,7 +16,7 @@ export const useSearch = () => {
   const [serviceResults, setServiceResults] = useState<ServiceResponseWithHairdresser[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
