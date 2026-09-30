@@ -311,12 +311,12 @@ T17 → T18
 
 **Done when**:
 
-- [ ] `POST /api/availability/create` por não profissional responde 403 `hairdresser-required` (era 404)
-- [ ] Campos ausentes e `weekday` inválido apontados em `errors`, na criação unitária e em lote
-- [ ] Duplicidade responde 409 `availability-exists` (era 400)
-- [ ] `PUT update/multiple/<id>` responde 200 (era 201)
-- [ ] DELETE responde 204, `<Resource> not found.` no 404
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test availability --noinput'`
+- [x] `POST /api/availability/create` por não profissional responde 403 `hairdresser-required` (era 404)
+- [x] Campos ausentes e `weekday` inválido apontados em `errors`, na criação unitária e em lote
+- [x] Duplicidade responde 409 `availability-exists` (era 400)
+- [x] `PUT update/multiple/<id>` responde 200 (era 201)
+- [x] DELETE responde 204, `<Resource> not found.` no 404
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test availability --noinput'`
 
 **Tests**: integration
 **Gate**: quick

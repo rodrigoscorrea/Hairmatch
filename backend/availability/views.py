@@ -1,57 +1,109 @@
-from django.shortcuts import render
+import logging
+
+from django.http import HttpResponse, JsonResponse
+from django.utils.dateparse import parse_time
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Availability
+
+from hairmatch.problems import Problem, body_error, json_object, problem_response, validation_problem
+from users.authentication import authenticated_hairdresser, forbidden
 from users.models import Hairdresser
+
+from .models import Availability
 from .serializers import AvailabilitySerializer
-from django.http import JsonResponse
-import json, datetime
-from users.authentication import authenticated_user, authenticated_hairdresser, forbidden
-# Create your views here.
+
+logger = logging.getLogger(__name__)
+
+WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+REQUIRED_FIELDS = ['weekday', 'start_time', 'end_time']
+TIME_FIELDS = ['start_time', 'end_time', 'break_start', 'break_end']
+AVAILABILITY_EXISTS_DETAIL = 'An availability already exists for this weekday.'
+
+
+def _is_time(value):
+    """Whether `value` is a time of day in HH:MM or HH:MM:SS."""
+    try:
+        return isinstance(value, str) and parse_time(value) is not None
+    except ValueError:
+        return False
+
+
+def _availability_errors(item, prefix='', partial=False):
+    """
+    `errors` items for one availability dict: a required field that is missing, a weekday
+    outside the week and a time that is not HH:MM. With `partial`, only the fields present are checked.
+    `prefix` is the JSON Pointer of the item inside a bulk body (`availabilities/0/`).
+    """
+    errors = []
+    for field in REQUIRED_FIELDS:
+        if not partial and not item.get(field):
+            errors.append(body_error(f'{prefix}{field}', 'This field is required.'))
+    if item.get('weekday') and item['weekday'] not in WEEKDAYS:
+        errors.append(body_error(f'{prefix}weekday', 'The weekday must be one of monday to sunday.'))
+    for field in TIME_FIELDS:
+        value = item.get(field)
+        if value and not _is_time(value):
+            errors.append(body_error(f'{prefix}{field}', 'The time must be in HH:MM format.'))
+    return errors
+
+
+def _bulk_items(data):
+    """
+    The `availabilities` list of a bulk body. Raises a validation Problem, before anything is written,
+    when it is missing, is not a list of objects or has an invalid item.
+    """
+    items = data.get('availabilities')
+    if items is None:
+        raise validation_problem([body_error('availabilities', 'This field is required.')])
+    if not isinstance(items, list):
+        raise validation_problem([body_error('availabilities', 'This field must be a list.')])
+    errors = []
+    for index, item in enumerate(items):
+        if isinstance(item, dict):
+            errors += _availability_errors(item, prefix=f'availabilities/{index}/')
+        else:
+            errors.append(body_error(f'availabilities/{index}', 'Each item must be an object.'))
+    if errors:
+        raise validation_problem(errors)
+    return items
+
+
+def _create_availability(hairdresser, item):
+    fields = {
+        'weekday': item['weekday'],
+        'start_time': item['start_time'],
+        'end_time': item['end_time'],
+        'hairdresser': hairdresser,
+    }
+    if item.get('break_start') and item.get('break_end'):
+        fields['break_start'] = item['break_start']
+        fields['break_end'] = item['break_end']
+    return Availability.objects.create(**fields)
+
+
+def _create_from_bulk(request, hairdresser, items):
+    """Creates the items one by one, as before: it stops at the first weekday that already exists."""
+    for item in items:
+        if Availability.objects.filter(weekday=item['weekday'], hairdresser=hairdresser).exists():
+            return problem_response(request, 'availability-exists', AVAILABILITY_EXISTS_DETAIL)
+        _create_availability(hairdresser, item)
+    return None
+
 
 class CreateAvailability(APIView):
     def post(self, request):
-        session, error = authenticated_user(request)
+        session, hairdresser, error = authenticated_hairdresser(request)
         if error:
             return error
 
-        try:
-            data = json.loads(request.body)
+        data = json_object(request)
+        errors = _availability_errors(data)
+        if errors:
+            raise validation_problem(errors)
+        if Availability.objects.filter(weekday=data['weekday'], hairdresser=hairdresser).exists():
+            return problem_response(request, 'availability-exists', AVAILABILITY_EXISTS_DETAIL)
 
-            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-            
-            hairdresser = Hairdresser.objects.filter(user_id=session.user.id).first()
-            if not hairdresser:
-                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
-
-            if not data.get('weekday') or not data.get('start_time') or not data.get('end_time'):
-                return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
-            if data['weekday'] not in weekdays:
-                return JsonResponse({'error': 'Invalid weekday'}, status=400)
-            if Availability.objects.filter(weekday=data['weekday'], hairdresser=hairdresser).exists():
-                return JsonResponse({'error': 'Availability already exists'}, status=400)
-
-            if data.get('break_start') and data.get('break_end'):
-                availability = Availability.objects.create(
-                    weekday=data['weekday'],
-                    start_time=data['start_time'],
-                    end_time=data['end_time'],
-                    break_start=data['break_start'],
-                    break_end=data['break_end'],
-                    hairdresser=hairdresser
-                )
-                return JsonResponse({'message': "Availability registered successfully"}, status=201)
-
-            availability = Availability.objects.create(
-                    weekday=data['weekday'],
-                    start_time=data['start_time'],
-                    end_time=data['end_time'],
-                    hairdresser=hairdresser
-                )
-
-            return JsonResponse({'message': "Availability registered successfully"}, status=201)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        _create_availability(hairdresser, data)
+        return JsonResponse({'message': "Availability registered successfully"}, status=201)
 
 class CreateMultipleAvailability(APIView):
     def post(self, request, hairdresser_id):
@@ -62,46 +114,23 @@ class CreateMultipleAvailability(APIView):
         if hairdresser_id != hairdresser.id:
             return forbidden(request)
 
-        try:
-            data = json.loads(request.body)
-            availabilities = data['availabilities']
-            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        items = _bulk_items(json_object(request))
+        failure = _create_from_bulk(request, hairdresser, items)
+        if failure:
+            return failure
 
-            for availability in availabilities:
-                if not availability.get('weekday') or not availability.get('start_time') or not availability.get('end_time'):
-                    return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
-                if availability['weekday'] not in weekdays:
-                    return JsonResponse({'error': 'Invalid weekday'}, status=400)
-                if Availability.objects.filter(weekday=availability['weekday'], hairdresser=hairdresser).exists():
-                    return JsonResponse({'error': 'Availability already exists'}, status=400)
-
-                if availability.get('break_start') and availability.get('break_end'):
-                    Availability.objects.create(
-                        weekday=availability['weekday'],
-                        start_time=availability['start_time'],
-                        end_time=availability['end_time'],
-                        break_start=availability['break_start'],
-                        break_end=availability['break_end'],
-                        hairdresser=hairdresser
-                    )
-                else:
-                    Availability.objects.create(
-                        weekday=availability['weekday'],
-                        start_time=availability['start_time'],
-                        end_time=availability['end_time'],
-                        hairdresser=hairdresser
-                    )
-
-            return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=201)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=201)
 
 class ListAvailability(APIView):
     def get(self, request, hairdresser_id):
+        if not Hairdresser.objects.filter(id=hairdresser_id).exists():
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
         result = get_hairdresser_availability(hairdresser_id)
         if 'error' in result:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
-        
+            # Only reached when reading the availabilities failed; the client gets no exception text.
+            logger.error('Listing the availabilities of hairdresser %s failed: %s', hairdresser_id, result['error'])
+            return problem_response(request, 'internal-error', 'The availabilities could not be listed.')
+
         serialized_data = result['availabilities']
         working_days = [avail['weekday'].lower() for avail in serialized_data]
             
@@ -154,14 +183,12 @@ class RemoveAvailability(APIView):
 
         try:
             availability = Availability.objects.get(id=id)
-            if availability.hairdresser_id != hairdresser.id:
-                return forbidden(request)
-            availability.delete()
-            return JsonResponse({'message': 'Availability removed successfully'}, status=200)
         except Availability.DoesNotExist:
-            return JsonResponse({'error': 'Availability not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return problem_response(request, 'not-found', 'Availability not found.')
+        if availability.hairdresser_id != hairdresser.id:
+            return forbidden(request)
+        availability.delete()
+        return HttpResponse(status=204)
 
 class UpdateMultipleAvailability(APIView):
     def put(self, request, hairdresser_id):
@@ -172,43 +199,17 @@ class UpdateMultipleAvailability(APIView):
         if hairdresser_id != hairdresser.id:
             return forbidden(request)
 
-        try:
-            data = json.loads(request.body)
-            availabilities = data['availabilities']
-            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        items = _bulk_items(json_object(request))
 
-            are_availabilities_deleted = delete_all_availabilities_by_hairdresser_safe(hairdresser.id)
-            if not are_availabilities_deleted:
-                return JsonResponse({'error': 'Unable to delete hairdresser availabilities'}, status=500)
-            
-            for availability in availabilities:
-                if not availability.get('weekday') or not availability.get('start_time') or not availability.get('end_time'):
-                    return JsonResponse({'error': 'One of the following required fields is missing: weekday, start_time, end_time'}, status=400)
-                if availability['weekday'] not in weekdays:
-                    return JsonResponse({'error': 'Invalid weekday'}, status=400)
-                if Availability.objects.filter(weekday=availability['weekday'], hairdresser=hairdresser).exists():
-                    return JsonResponse({'error': 'Availability already exists'}, status=400)
+        are_availabilities_deleted = delete_all_availabilities_by_hairdresser_safe(hairdresser.id)
+        if not are_availabilities_deleted:
+            raise Problem('internal-error', 'The current availabilities could not be replaced.')
 
-                if availability.get('break_start') and availability.get('break_end'):
-                    Availability.objects.create(
-                        weekday=availability['weekday'],
-                        start_time=availability['start_time'],
-                        end_time=availability['end_time'],
-                        break_start=availability['break_start'],
-                        break_end=availability['break_end'],
-                        hairdresser=hairdresser
-                    )
-                else:
-                    Availability.objects.create(
-                        weekday=availability['weekday'],
-                        start_time=availability['start_time'],
-                        end_time=availability['end_time'],
-                        hairdresser=hairdresser
-                    )
+        failure = _create_from_bulk(request, hairdresser, items)
+        if failure:
+            return failure
 
-            return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=201)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=200)
 
 class UpdateAvailability(APIView):
     def put(self, request, id):
@@ -218,23 +219,25 @@ class UpdateAvailability(APIView):
 
         try:
             availability = Availability.objects.get(id=id)
-            if availability.hairdresser_id != hairdresser.id:
-                return forbidden(request)
-            data = json.loads(request.body)
-
-            if 'weekday' in data:
-                availability.weekday = data['weekday']
-            if 'start_time' in data:
-                availability.start_time = data['start_time']
-            if 'end_time' in data:
-                availability.end_time = data['end_time']
-
-            availability.save()
-            return JsonResponse({'message': 'Availability updated successfully'}, status=200)
         except Availability.DoesNotExist:
-            return JsonResponse({'error': 'Availability not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return problem_response(request, 'not-found', 'Availability not found.')
+        if availability.hairdresser_id != hairdresser.id:
+            return forbidden(request)
+
+        data = json_object(request)
+        errors = _availability_errors(data, partial=True)
+        if errors:
+            raise validation_problem(errors)
+
+        if 'weekday' in data:
+            availability.weekday = data['weekday']
+        if 'start_time' in data:
+            availability.start_time = data['start_time']
+        if 'end_time' in data:
+            availability.end_time = data['end_time']
+
+        availability.save()
+        return JsonResponse({'message': 'Availability updated successfully'}, status=200)
 
 
 def delete_all_availabilities_by_hairdresser_safe(hairdresser_id: int) -> bool:
