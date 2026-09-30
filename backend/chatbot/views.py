@@ -16,6 +16,7 @@ from users.serializers import UserFullInfoSerializer
 from service.models import Service
 from reserve.models import Reserve
 from reserve.views import get_available_slots, create_new_reserve
+from hairmatch.local_time import make_local_aware
 from availability.views import get_hairdresser_availability
 from .ai_utils import AiUtils
 from .response_messages import ResponseMessage
@@ -315,7 +316,7 @@ class EvolutionApi(APIView):
                             f"{selected_date_str} {selected_time_str}",
                             '%Y-%m-%d %H:%M' 
                         )
-                        booking_datetime_aware = timezone.make_aware(booking_datetime_naive)
+                        booking_datetime_aware = make_local_aware(booking_datetime_naive)
                         result = create_new_reserve(
                             customer_id=customer.id,
                             service_id=service_id,

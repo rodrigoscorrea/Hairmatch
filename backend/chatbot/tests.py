@@ -411,7 +411,12 @@ class ChatbotViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("✅ *Agendamento Confirmado!* ✅", mock_send_message.call_args[0][1])
+        self.assertIn("Horário: *14:00*", mock_send_message.call_args[0][1])
         self.assertNotIn(self.sender_number, user_states) # State should be cleared
+        # The typed time is the salon's clock (Manaus, UTC-4), the same one the slots were listed in
+        booked_start = mock_create_reserve.call_args.kwargs['start_time_dt']
+        self.assertEqual(booked_start.utcoffset(), timedelta(hours=-4))
+        self.assertEqual(booked_start.strftime('%H:%M'), '14:00')
         
     @patch('chatbot.views.AiUtils.send_whatsapp_message')
     def test_stop_command(self, mock_send_message):

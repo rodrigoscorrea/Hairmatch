@@ -10,6 +10,7 @@ from datetime import timedelta, datetime
 from reserve.models import Reserve
 from django.db.models import Q
 from users.authentication import authenticated_hairdresser, forbidden
+from hairmatch.local_time import make_local_aware
 # Create your views here.
 
 class CreateAgenda(APIView):
@@ -22,7 +23,7 @@ class CreateAgenda(APIView):
         try:
             data = json.loads(request.body)
             # Convert the schedule times to datetime objects for proper handling
-            start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
+            start_time = make_local_aware(datetime.fromisoformat(data['start_time'].replace('Z', '+00:00')))
         except (ValueError, KeyError, TypeError, AttributeError):
             return JsonResponse({'error': 'Invalid start_time format'}, status=400)
 
@@ -35,11 +36,11 @@ class CreateAgenda(APIView):
         
         # Calculate end_time if not provided
         if 'end_time' not in data or not data['end_time']:
-            end_time = calculate_end_time(data['start_time'], service_instance.duration)
+            end_time = start_time + timedelta(minutes=service_instance.duration)
         else:
             try:
-                end_time = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
-            except ValueError:
+                end_time = make_local_aware(datetime.fromisoformat(data['end_time'].replace('Z', '+00:00')))
+            except (ValueError, TypeError, AttributeError):
                 return JsonResponse({'error': 'Invalid end_time format'}, status=400)
         
         # Full overlap check:
@@ -115,29 +116,3 @@ class RemoveAgenda(APIView):
 
         agenda.delete()
         return JsonResponse({"data": "Agenda register deleted successfully"}, status=200)
-        
-
-def calculate_end_time(start_time, duration_minutes):
-    if not isinstance(start_time, str):
-        raise TypeError("start_time must be a string")
-    
-    try:
-        # Parse the datetime string - assuming ISO format from JSON
-        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-    except ValueError:
-        # If the string doesn't match ISO format, try a more flexible approach
-        try:
-            start_time = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            raise ValueError("Invalid datetime format. Expected ISO format like '2025-04-26T14:30:00Z'")
-    
-    if not isinstance(duration_minutes, int):
-        try:
-            duration_minutes = int(duration_minutes)
-        except (ValueError, TypeError):
-            raise TypeError("duration_minutes must be an integer")
-    
-    # Calculate end time by adding the duration in minutes
-    end_time = start_time + timedelta(minutes=duration_minutes)
-    
-    return end_time
