@@ -1,6 +1,7 @@
 // app/(app)/customer/reserves.tsx
 
-import { ActivityIndicator, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native'
+import { ActivityIndicator, Text, View, TouchableOpacity, ScrollView, Image } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { styles } from '@/styles/customer/styles/ReserveStyle'; // Adjust path
 import React from 'react'
 import BottomTabBar from '@/components/BottomBar'; // Adjust path

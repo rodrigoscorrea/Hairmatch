@@ -4,7 +4,7 @@ name: hairmatch
 
 services:
   db:
-    image: postgres:13
+    image: postgres:17
     container_name: hairmatch_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

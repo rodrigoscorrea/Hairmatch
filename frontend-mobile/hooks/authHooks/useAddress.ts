@@ -1,8 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { TextInput } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '@/app/../models/RootStackParams.types';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { ERROR_MESSAGES } from '@/app/../constants/errorMessages';
 import { useRouter } from 'expo-router';
 import { useRegistration } from '@/contexts/RegistrationContext';
@@ -10,14 +7,9 @@ import { formatCEP, stripNonDigits } from '@/app/../utils/forms';
 import { CepAddress } from '@/services/cep.service';
 import { useCepLookup } from './useCepLookup';
 
-type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Address'>;
-type AddressScreenNavigationProp = StackNavigationProp<RootStackParamList>;
-
 export const useAddress = () =>{
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
-  const route = useRoute<AddressScreenRouteProp>();
-  const personalData = route.params?.personalData;
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const { loading: cepLoading, message: cepMessage, lookup, cancel } = useCepLookup();
@@ -107,9 +99,6 @@ export const useAddress = () =>{
     router.back();
   };
 
-  useEffect(() => {
-    }, [personalData]);
-  
   return {
     handleInputChange,
     handlePostalCodeChange,

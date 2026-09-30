@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  SafeAreaView,
   Alert,
   Platform,
 } from 'react-native';
@@ -62,7 +61,7 @@ export const useReviewForm = () => {
 
     // Launch the image library
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,

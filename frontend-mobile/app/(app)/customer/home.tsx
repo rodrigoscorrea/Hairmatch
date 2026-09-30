@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle';
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome';
@@ -25,7 +25,7 @@ const CustomerHomeScreen = () => {
   } = useCustomerHome();
 
   // Refs for each FlatList
-  const flatListRefs: { [key in SectionKey]: React.RefObject<FlatList<any>> } = {
+  const flatListRefs: { [key in SectionKey]: React.RefObject<FlatList<any> | null> } = {
     for_you: useRef<FlatList<any>>(null),
     cachos: useRef<FlatList<any>>(null),
     coloracao: useRef<FlatList<any>>(null),
@@ -122,7 +122,7 @@ const CustomerHomeScreen = () => {
   }
 
   // Helper to render a section
-  const renderSection = (title: string, data: any[], renderItem: ({ item }: any) => JSX.Element, sectionKey: SectionKey) => (
+  const renderSection = (title: string, data: any[], renderItem: ({ item }: any) => React.JSX.Element, sectionKey: SectionKey) => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{title}</Text>

@@ -1,6 +1,7 @@
 // app/(app)/hairdresser/agenda.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, FlatList, Modal, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Modal, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-big-calendar';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';

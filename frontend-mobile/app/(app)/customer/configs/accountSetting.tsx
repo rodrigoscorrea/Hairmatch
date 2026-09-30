@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile";
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from '@expo/vector-icons/FontAwesome';
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
 
 export default function AccountDetailsScreen() {

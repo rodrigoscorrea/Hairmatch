@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, TouchableOpacity} from "react-native";
 import {styles} from '../../../styles/customer/styles/ProfileStyle';
-import Icon from 'react-native-vector-icons/Feather';
+import Icon from '@expo/vector-icons/Feather';
 
 interface MenuItemProps {
-    iconName: string;
+    iconName: React.ComponentProps<typeof Icon>["name"];
     title: string;
     subtitle: string;
     onPress?: () => void;

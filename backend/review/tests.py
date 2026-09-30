@@ -606,12 +606,10 @@ class RemoveReview(ReviewsTestCase):
             customer=Customer.objects.get(id=self.customer.id),
             comment= 'An average service',
             hairdresser=Hairdresser.objects.get(id=self.hairdresser.id),
-            reserve=Reserve.objects.get(id=self.reserve.id),
         )
-        review_raw.save()
-    
-        # Get the created review and link it to the reserve to test unlinking
-        self.review = Review.objects.first()
+
+        # Link the review to the reserve (Reserve owns the relation) to test unlinking
+        self.review = review_raw
         self.reserve.review = self.review
         self.reserve.save()
         self.delete_url = reverse('review_detail', args=[self.review.id])

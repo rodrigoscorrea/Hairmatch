@@ -4,11 +4,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Image,
   StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from '../../styles/register/styles/LoginStyle';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorModal } from '../../components/modals/ErrorModal/ErrorModal';
