@@ -82,6 +82,12 @@ class ListPreferencesTest(PreferencesTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)  # 1 from setup + 2 new
     
+    def test_list_preferences_of_a_user_without_any_answers_404(self):
+        """The app depends on this 404 to tell "no preferences yet" from a failure"""
+        response = self.client.get(reverse('list_preferences', args=[999999]))
+
+        assert_problem(response, 'not-found', detail='Preferences not found.')
+
     def test_list_user_preferences(self):
         """Test listing preferences for a specific user"""
         # Login as user
@@ -176,11 +182,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
         """Test listing users for a preference that doesn't exist"""
         response = self.client.get(self.list_users_nonexistent_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        # Convert JsonResponse content to Python dict
-        response_content = json.loads(response.content.decode('utf-8'))
-        self.assertIn('error', response_content)
-        self.assertEqual(response_content['error'], 'Preference not found')
+        assert_problem(response, 'not-found', detail='Preference not found.')
     
     def test_list_users_for_preference_with_no_users(self):
         """Test listing users for a preference that has no users assigned"""
@@ -199,7 +201,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
 
         response = self.client.get(self.list_users_url1)
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.assertNotIn('data', response.json())
     
 
@@ -228,7 +230,6 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         
         response = self.client.post(assign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         assert_problem(response, 'invalid-session')
         self.assertFalse(self.user in self.preference.users.all())
     
@@ -245,7 +246,7 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         
         response = self.client.post(assign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Preference not found.')
 
 
 class UnassignPreferenceFromUserTest(PreferencesTestCase):
@@ -279,7 +280,6 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         
         response = self.client.post(unassign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         assert_problem(response, 'invalid-session')
         # The user should still be assigned to the preference
         self.assertTrue(self.user in self.preference.users.all())
@@ -297,7 +297,7 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         
         response = self.client.post(unassign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Preference not found.')
 
     def test_unassign_preference_user_not_assigned(self):
         """Test unassigning a preference that was not assigned to the user"""
@@ -383,7 +383,7 @@ class RemovedCatalogRoutesTest(PreferencesTestCase):
                     reverse(name, args=args)
                 kwargs = {'data': json.dumps(body), 'content_type': 'application/json'} if body else {}
                 response = getattr(self.client, method)(path, **kwargs)
-                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                assert_problem(response, 'not-found', detail='Resource not found.')
 
         self.assertEqual(list(Preferences.objects.values_list('name', flat=True)), ['Short Hair'])
         self.assertFalse(self.preference.users.filter(id=self.user.id).exists())

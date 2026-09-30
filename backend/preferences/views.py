@@ -7,6 +7,7 @@ from users.serializers import UserNameSerializer
 from .serializers import PreferencesSerializer
 from django.http import JsonResponse
 import json
+from hairmatch.problems import problem_response
 from users.authentication import authenticated_user
 
 # Create your views here.
@@ -16,57 +17,43 @@ class AssignPreferenceToUser(APIView):
         session, error = authenticated_user(request)
         if error:
             return error
-        try:
-            user = session.user
 
-            preference = Preferences.objects.filter(id=preference_id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
+        preference = Preferences.objects.filter(id=preference_id).first()
+        if not preference:
+            return problem_response(request, 'not-found', 'Preference not found.')
 
-            preference.users.add(user)
+        preference.users.add(session.user)
 
-            return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
         
 class UnnassignPreferenceFromUser(APIView):
     def post(self, request, preference_id):
         session, error = authenticated_user(request)
         if error:
             return error
-        try:
-            user = session.user
 
-            preference = Preferences.objects.filter(id=preference_id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
+        preference = Preferences.objects.filter(id=preference_id).first()
+        if not preference:
+            return problem_response(request, 'not-found', 'Preference not found.')
 
-            preference.users.remove(user)
+        preference.users.remove(session.user)
 
-            return JsonResponse({'message': 'Preference unassigned from user successfully'}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'message': 'Preference unassigned from user successfully'}, status=200)
             
 
 class ListPreferences(APIView):
     def get(self, request, users):
-        try:
-            preferences = Preferences.objects.filter(users=users)
-            if not preferences.exists():
-                return Response({'error': 'Preferences not found'}, status=404)
-            serializer = PreferencesSerializer(preferences, many=True)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({'error': str(e)}, status=400)
+        preferences = Preferences.objects.filter(users=users)
+        if not preferences.exists():
+            return problem_response(request, 'not-found', 'Preferences not found.')
+        serializer = PreferencesSerializer(preferences, many=True)
+        return Response(serializer.data)
         
 class ListAllPreferences(APIView):
     def get(self, request):
-        try:
-            preferences = Preferences.objects.all()
-            serializer = PreferencesSerializer(preferences, many=True)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({'error': str(e)}, status=400)
+        preferences = Preferences.objects.all()
+        serializer = PreferencesSerializer(preferences, many=True)
+        return Response(serializer.data)
 
 class ListUsersPerPreference(APIView):
     def get(self, request, preference_id):
@@ -74,12 +61,10 @@ class ListUsersPerPreference(APIView):
         session, error = authenticated_user(request)
         if error:
             return error
-        try:
-            preference = Preferences.objects.filter(id=preference_id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
-            users = preference.users.filter(role='hairdresser')
-            serializer = UserNameSerializer(users, many=True)
-            return Response({'data':serializer.data},  status=200)
-        except Exception as e:
-            return Response({'error': str(e)}, status=400)
+
+        preference = Preferences.objects.filter(id=preference_id).first()
+        if not preference:
+            return problem_response(request, 'not-found', 'Preference not found.')
+        users = preference.users.filter(role='hairdresser')
+        serializer = UserNameSerializer(users, many=True)
+        return Response({'data':serializer.data},  status=200)

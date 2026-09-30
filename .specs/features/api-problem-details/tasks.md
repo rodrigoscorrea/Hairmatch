@@ -394,9 +394,9 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Lista vazia e preferência inexistente respondem 404 `not-found` com `Preference not found.`
-- [ ] Nenhum `except Exception` devolve `str(e)`
-- [ ] Gate check passes: quick (`preferences`)
+- [x] Lista vazia e preferência inexistente respondem 404 `not-found` com `Preference not found.`
+- [x] Nenhum `except Exception` devolve `str(e)`
+- [x] Gate check passes: quick (`preferences`)
 
 **Tests**: integration
 **Gate**: quick
