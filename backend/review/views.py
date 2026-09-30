@@ -148,3 +148,7 @@ class RemoveReview(APIView):
 
             review.delete()
         return HttpResponse(status=204)
+
+
+class ReviewDetail(UpdateReview, RemoveReview):
+    """`/api/reviews/{id}`: PUT updates and DELETE removes the review of the logged customer."""

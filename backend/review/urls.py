@@ -1,9 +1,8 @@
 from django.urls import path
-from .views import CreateReview, ListReview, UpdateReview, RemoveReview
+from .views import CreateReview, ListReview, ReviewDetail
 
 urlpatterns = [
-    path('register', CreateReview.as_view(), name='create_review'),
-    path('list/<int:hairdresser_id>', ListReview.as_view(), name='list_review'),
-    path('update/<int:id>', UpdateReview.as_view(), name='update_review'),
-    path('remove/<int:id>', RemoveReview.as_view(), name='remove_review'),
-    ]
+    path('reviews', CreateReview.as_view(), name='create_review'),
+    path('hairdressers/<int:hairdresser_id>/reviews', ListReview.as_view(), name='list_review'),
+    path('reviews/<int:id>', ReviewDetail.as_view(), name='review_detail'),
+]

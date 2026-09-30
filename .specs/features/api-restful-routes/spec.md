@@ -293,10 +293,10 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-20 | Route Table: preferências | Execute | Done |
 | RT-21 | Route Table: preferências | Execute | Done |
 | RT-22 | Route Table: preferências | Execute | Done |
-| RT-23 | Route Table: avaliações | - | Pending |
-| RT-24 | Route Table: avaliações | - | Pending |
-| RT-25 | Route Table: avaliações | - | Pending |
-| RT-26 | Route Table: avaliações | - | Pending |
+| RT-23 | Route Table: avaliações | Execute | Done |
+| RT-24 | Route Table: avaliações | Execute | Done |
+| RT-25 | Route Table: avaliações | Execute | Done |
+| RT-26 | Route Table: avaliações | Execute | Done |
 | RT-27 | Route Table: disponibilidade | - | Pending |
 | RT-28 | Route Table: disponibilidade | - | Pending |
 | RT-29 | Route Table: disponibilidade | - | Pending |
