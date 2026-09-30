@@ -5,15 +5,17 @@ from .models import Preferences
 from users.models import User
 from users.serializers import UserNameSerializer
 from .serializers import PreferencesSerializer
-from django.http import JsonResponse
+from django.http import HttpResponse
 import json
 from hairmatch.problems import problem_response
 from users.authentication import authenticated_user
 
 # Create your views here.
 # The catalog comes from the populate_preferences seed; the API does not create, edit or remove it.
-class AssignPreferenceToUser(APIView):
-    def post(self, request, preference_id):
+class UserPreferenceView(APIView):
+    """PUT assigns and DELETE unassigns a preference of the logged user. Both are idempotent and answer 204."""
+
+    def put(self, request, preference_id):
         session, error = authenticated_user(request)
         if error:
             return error
@@ -24,10 +26,9 @@ class AssignPreferenceToUser(APIView):
 
         preference.users.add(session.user)
 
-        return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
-        
-class UnnassignPreferenceFromUser(APIView):
-    def post(self, request, preference_id):
+        return HttpResponse(status=204)
+
+    def delete(self, request, preference_id):
         session, error = authenticated_user(request)
         if error:
             return error
@@ -38,12 +39,12 @@ class UnnassignPreferenceFromUser(APIView):
 
         preference.users.remove(session.user)
 
-        return JsonResponse({'message': 'Preference unassigned from user successfully'}, status=200)
-            
+        return HttpResponse(status=204)
+
 
 class ListPreferences(APIView):
-    def get(self, request, users):
-        preferences = Preferences.objects.filter(users=users)
+    def get(self, request, user_id):
+        preferences = Preferences.objects.filter(users=user_id)
         if not preferences.exists():
             return problem_response(request, 'not-found', 'Preferences not found.')
         serializer = PreferencesSerializer(preferences, many=True)

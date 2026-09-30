@@ -288,11 +288,11 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-15 | Route Table: usuários | - | Pending |
 | RT-16 | Route Table: usuários | - | Pending |
 | RT-17 | Route Table: usuários | - | Pending |
-| RT-18 | Route Table: preferências | - | Pending |
-| RT-19 | Route Table: preferências | - | Pending |
-| RT-20 | Route Table: preferências | - | Pending |
-| RT-21 | Route Table: preferências | - | Pending |
-| RT-22 | Route Table: preferências | - | Pending |
+| RT-18 | Route Table: preferências | Execute | Done |
+| RT-19 | Route Table: preferências | Execute | Done |
+| RT-20 | Route Table: preferências | Execute | Done |
+| RT-21 | Route Table: preferências | Execute | Done |
+| RT-22 | Route Table: preferências | Execute | Done |
 | RT-23 | Route Table: avaliações | - | Pending |
 | RT-24 | Route Table: avaliações | - | Pending |
 | RT-25 | Route Table: avaliações | - | Pending |
@@ -330,9 +330,9 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-57 | P1: Conta e sessão | - | Pending |
 | RT-58 | P1: Conta e sessão | - | Pending |
 | RT-59 | P1: Conta e sessão | - | Pending |
-| RT-60 | P1: Conta e sessão | - | Pending |
-| RT-61 | P1: Conta e sessão | - | Pending |
-| RT-62 | P1: Conta e sessão | - | Pending |
+| RT-60 | P1: Conta e sessão | Execute | Done |
+| RT-61 | P1: Conta e sessão | Execute | Done |
+| RT-62 | P1: Conta e sessão | Execute | Done |
 | RT-63 | P1: Consultas por query string | - | Pending |
 | RT-64 | P1: Consultas por query string | - | Pending |
 | RT-65 | P1: Consultas por query string | - | Pending |

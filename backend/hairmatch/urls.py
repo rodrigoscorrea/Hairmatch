@@ -21,7 +21,7 @@ from hairmatch.problems import api_not_found
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
-    path('api/preferences/', include('preferences.urls')),
+    path('api/', include('preferences.urls')),
     path('api/review/', include('review.urls')),
     path('api/availability/', include('availability.urls')),
     path('api/reserve/', include('reserve.urls')),
