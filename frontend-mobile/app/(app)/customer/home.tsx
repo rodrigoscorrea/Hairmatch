@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { styles } from '@/styles/customer/home/styles/CustomerHomeStyle';
 import { useCustomerHome } from '@/hooks/customerHooks/useCustomerHome';

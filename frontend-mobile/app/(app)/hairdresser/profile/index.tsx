@@ -1,6 +1,7 @@
 // app/(app)/hairdresser/profile/index.tsx
 import React from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';

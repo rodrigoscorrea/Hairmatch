@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/customer/reservation/styles/ReservationDetailsStyles';
 import { useReserveDetails } from '@/hooks/customerHooks/useReserveDetails';
