@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 import axiosInstance, { setSessionExpiredHandler } from '../services/axios-instance';
+import { REFRESH_PATH } from '../services/auth-routes';
 import { UserInfo } from '../models/User.types';
 import { homeRouteFor } from '../utils/routes';
 import { Preference } from '../models/Preferences.types';
@@ -53,10 +54,10 @@ export default function RootLayout() {
   // Loads the session from the `jwt` cookie already set by the backend.
   const loadSession = React.useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/user`, { withCredentials: true });
+      const authResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/auth/session`, { withCredentials: true });
 
       if (authResponse.data.authenticated) {
-        const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/user/authenticated`, { withCredentials: true });
+        const userResponse = await axiosInstance.get(`${API_BACKEND_URL}/api/users/me`, { withCredentials: true });
         setUserInfo(userResponse.data);
         setUserToken('authenticated');
         return { success: true };
@@ -87,7 +88,7 @@ export default function RootLayout() {
     if(Platform.OS === 'web') {
       try {
         // withCredentials: the browser stores the session cookie from the 201 (Google signup).
-        return await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData, { withCredentials: true });
+        return await axios.post(`${API_BACKEND_URL}/api/users`, formData, { withCredentials: true });
       } catch (error: any) {
         console.error('Registration error:', error.response?.data);
         // The AxiosError goes through as is: the wizard reads it with problemMessage (toApiProblem understands it).
@@ -97,7 +98,7 @@ export default function RootLayout() {
 
     let response: Response;
     try {
-      response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
+      response = await fetch(`${API_BACKEND_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -153,7 +154,7 @@ export default function RootLayout() {
         let session = await loadSession();
         if (!session.success) {
           try {
-            await axiosInstance.post(`${API_BACKEND_URL}/api/auth/refresh`, {}, { withCredentials: true });
+            await axiosInstance.post(`${API_BACKEND_URL}${REFRESH_PATH}`, {}, { withCredentials: true });
             session = await loadSession();
           } catch (refreshError) {
             // No valid refresh token: stay on the login screen.
