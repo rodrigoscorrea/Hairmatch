@@ -25,8 +25,6 @@ from .authentication import (
     authenticate_request,
     authenticate_token,
     authenticated_user,
-    forbidden,
-    is_own_email,
 )
 from .cognito import (
     CognitoError,
@@ -319,6 +317,10 @@ class LoginView(APIView):
         }
         return response
 
+
+class SessionView(APIView):
+    """Whether the request carries a valid session. Never 401: the app asks it before it knows."""
+
     def get(self, request):
         try:
             session = authenticate_request(request)
@@ -439,7 +441,7 @@ class ChangePasswordView(APIView):
 # Those views only works if cookies are present in the request       
 # Therefore, they can be used only if the user is logged in and are user accessible
 
-class UserInfoCookieView(APIView):
+class CurrentUserView(APIView):
     def get(self, request):
         session, error = authenticated_user(request)
         if error:
@@ -465,7 +467,7 @@ class UserInfoCookieView(APIView):
         return _delete_account(request, session.user)
 
     #This function does not handle password update procedure
-    def put(self, request):
+    def patch(self, request):
         session, error = authenticated_user(request)
         if error:
             return error
@@ -519,10 +521,10 @@ class UserInfoCookieView(APIView):
 
 class GlobalSearchView(APIView):
     def get(self, request):
-        query = request.query_params.get('search', None)
+        query = request.query_params.get('q', None)
 
         if not query:
-            return Response([], status=200)
+            return JsonResponse({'data': []}, status=200)
 
         hairdresser_queryset = Hairdresser.objects.all()
         hairdresser_filter = HairdresserFilter({'search': query}, queryset=hairdresser_queryset)
@@ -536,94 +538,63 @@ class GlobalSearchView(APIView):
 
         return JsonResponse({'data':serializer.data}, status=200)
 
-class UserInfoView(APIView):
-    def get(self,request,email=None):
-        # Full personal data, so only for the account owner.
-        session, error = authenticated_user(request)
-        if error:
-            return error
-        if not is_own_email(session, email):
-            return forbidden(request)
+def _home_response(for_you_data):
+    """The home body: the 'for_you' list plus 10 hairdressers for each of the specified preference categories."""
+    specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
+    formated_preferences_name = ["coloracao", "cachos", "barbearia", "trancas"]
+    preference_hairdressers = {}
 
-        user = session.user
-        if (user.role == 'customer'):
-            customer = Customer.objects.get(user=user)
-            customer_serialized = CustomerSerializer(customer).data
-            return JsonResponse({'data': customer_serialized}, status=200)
-        else: 
-            hairdresser = Hairdresser.objects.get(user=user)
-            hairdresser_serialized = HairdresserSerializer(hairdresser).data
-            return JsonResponse({'data': hairdresser_serialized}, status=200)
-
-    
-    def delete(self, request, email=None):
-        # Only the account owner can delete it; the e-mail in the URL must be the session's.
-        session, error = authenticated_user(request)
-        if error:
-            return error
-        if not is_own_email(session, email):
-            return forbidden(request)
-        return _delete_account(request, session.user)
-
-class CustomerHomeView(APIView):
-    """
-    API view for customer home page that returns:
-    1. Hairdressers matching customer preferences in 'for_you' object
-    2. 10 hairdressers for each of the specified preference categories
-    """
-    
-    def get(self, request, email=None):
-        for_you_data = []
-        if email:
-            # The "for you" section reveals the customer's preferences, so it is only for that customer.
-            session, error = authenticated_user(request)
-            if error:
-                return error
-            if not is_own_email(session, email):
-                return forbidden(request)
-            customer_user = session.user
-            if customer_user.role != 'customer':
-                return problem_response(request, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
-            customer_preferences = customer_user.preferences.all()
-            
-            # Get hairdressers matching customer preferences
+    for i in range(len(specific_preferences)):
+        try:
+            preference = Preferences.objects.get(name=specific_preferences[i])
             hairdressers_users = User.objects.filter(
                 role='hairdresser',
-                preferences__in=customer_preferences
-            ).distinct()
+                preferences=preference
+            ).distinct()[:10]
 
-            hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
-            
-            # Prepare data for for_you response
-            for_you_data = PublicHairdresserSerializer(hairdressers_for_you, many=True).data
-        
-        # Get hairdressers for specific preferences
-        specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
-        formated_preferences_name=["coloracao", "cachos", "barbearia", "trancas"]
-        preference_hairdressers = {}
-        
-        for i in range(len(specific_preferences)):
-            try:
-                preference = Preferences.objects.get(name=specific_preferences[i])
-                hairdressers_users = User.objects.filter(
-                    role='hairdresser',
-                    preferences=preference
-                ).distinct()[:10]
-                
-                hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
-                hairdressers_data = PublicHairdresserSerializer(hairdressers_per_preference, many=True).data
-                
-                preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
-            except Preferences.DoesNotExist:
-                preference_hairdressers[formated_preferences_name[i]] = []
-        
-        # Prepare the final response
-        response_data = {
-            'for_you': for_you_data,
-            'hairdressers_by_preferences': preference_hairdressers
-        }     
-        return JsonResponse(response_data, status=200)
-    
+            hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
+            hairdressers_data = PublicHairdresserSerializer(hairdressers_per_preference, many=True).data
+
+            preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
+        except Preferences.DoesNotExist:
+            preference_hairdressers[formated_preferences_name[i]] = []
+
+    return JsonResponse({
+        'for_you': for_you_data,
+        'hairdressers_by_preferences': preference_hairdressers
+    }, status=200)
+
+
+class HomeView(APIView):
+    """The public home: the preference categories and no 'for_you' section."""
+
+    def get(self, request):
+        return _home_response([])
+
+
+class CustomerHomeView(APIView):
+    """The home of the logged customer: hairdressers matching their preferences in 'for_you', plus the categories."""
+
+    def get(self, request):
+        # The "for you" section reveals the customer's preferences, so it is only for that customer.
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        customer_user = session.user
+        if customer_user.role != 'customer':
+            return problem_response(request, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
+        customer_preferences = customer_user.preferences.all()
+
+        # Get hairdressers matching customer preferences
+        hairdressers_users = User.objects.filter(
+            role='hairdresser',
+            preferences__in=customer_preferences
+        ).distinct()
+
+        hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
+
+        return _home_response(PublicHairdresserSerializer(hairdressers_for_you, many=True).data)
+
 class GeminiCompletionThrottle(AnonRateThrottle):
     scope = 'gemini_completion'
     rate = '10/hour'

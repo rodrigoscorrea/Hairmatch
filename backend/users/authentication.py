@@ -79,11 +79,6 @@ def authenticated_customer(request):
     return _authenticated_profile(request, Customer, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
 
 
-def is_own_email(session, email):
-    """Whether the e-mail in the URL is the session user's. Case-insensitive, since Cognito lowercases usernames."""
-    return isinstance(email, str) and email.lower() == session.user.email.lower()
-
-
 def _authenticated_profile(request, model, slug, detail):
     session, error = authenticated_user(request)
     if error:

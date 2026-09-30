@@ -271,23 +271,23 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RT-01 | Route Table: conta e sessão | - | Pending |
-| RT-02 | Route Table: conta e sessão | - | Pending |
-| RT-03 | Route Table: conta e sessão | - | Pending |
-| RT-04 | Route Table: conta e sessão | - | Pending |
-| RT-05 | Route Table: conta e sessão | - | Pending |
-| RT-06 | Route Table: conta e sessão | - | Pending |
-| RT-07 | Route Table: conta e sessão | - | Pending |
-| RT-08 | Route Table: conta e sessão | - | Pending |
-| RT-09 | Route Table: conta e sessão | - | Pending |
-| RT-10 | Route Table: conta e sessão | - | Pending |
-| RT-11 | Route Table: conta e sessão | - | Pending |
-| RT-12 | Route Table: usuários | - | Pending |
-| RT-13 | Route Table: usuários | - | Pending |
-| RT-14 | Route Table: usuários | - | Pending |
-| RT-15 | Route Table: usuários | - | Pending |
-| RT-16 | Route Table: usuários | - | Pending |
-| RT-17 | Route Table: usuários | - | Pending |
+| RT-01 | Route Table: conta e sessão | Execute | Done |
+| RT-02 | Route Table: conta e sessão | Execute | Done |
+| RT-03 | Route Table: conta e sessão | Execute | Done |
+| RT-04 | Route Table: conta e sessão | Execute | Done |
+| RT-05 | Route Table: conta e sessão | Execute | Done |
+| RT-06 | Route Table: conta e sessão | Execute | Done |
+| RT-07 | Route Table: conta e sessão | Execute | Done |
+| RT-08 | Route Table: conta e sessão | Execute | Done |
+| RT-09 | Route Table: conta e sessão | Execute | Done |
+| RT-10 | Route Table: conta e sessão | Execute | Done |
+| RT-11 | Route Table: conta e sessão | Execute | Done |
+| RT-12 | Route Table: usuários | Execute | Done |
+| RT-13 | Route Table: usuários | Execute | Done |
+| RT-14 | Route Table: usuários | Execute | Done |
+| RT-15 | Route Table: usuários | Execute | Done |
+| RT-16 | Route Table: usuários | Execute | Done |
+| RT-17 | Route Table: usuários | Execute | Done |
 | RT-18 | Route Table: preferências | Execute | Done |
 | RT-19 | Route Table: preferências | Execute | Done |
 | RT-20 | Route Table: preferências | Execute | Done |
@@ -325,17 +325,17 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-52 | P1: Rotas no padrão da tabela | - | Pending |
 | RT-53 | P1: Rotas no padrão da tabela | - | Pending |
 | RT-54 | P1: Rotas no padrão da tabela | - | Pending |
-| RT-55 | P1: Consultas por query string | - | Pending |
-| RT-56 | P1: Conta e sessão | - | Pending |
-| RT-57 | P1: Conta e sessão | - | Pending |
-| RT-58 | P1: Conta e sessão | - | Pending |
-| RT-59 | P1: Conta e sessão | - | Pending |
+| RT-55 | P1: Consultas por query string | Execute | Done |
+| RT-56 | P1: Conta e sessão | Execute | Done |
+| RT-57 | P1: Conta e sessão | Execute | Done |
+| RT-58 | P1: Conta e sessão | Execute | Done |
+| RT-59 | P1: Conta e sessão | Execute | Done |
 | RT-60 | P1: Conta e sessão | Execute | Done |
 | RT-61 | P1: Conta e sessão | Execute | Done |
 | RT-62 | P1: Conta e sessão | Execute | Done |
 | RT-63 | P1: Consultas por query string | Execute | Done |
 | RT-64 | P1: Consultas por query string | Execute | Done |
-| RT-65 | P1: Consultas por query string | - | Pending |
+| RT-65 | P1: Consultas por query string | Execute | Done |
 | RT-70 | P1: App usa as rotas novas | - | Pending |
 | RT-71 | P1: App usa as rotas novas | - | Pending |
 | RT-72 | P1: App usa as rotas novas | - | Pending |
@@ -346,7 +346,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-77 | P2: Webhook do chatbot | - | Pending |
 | RT-80 | Edge Cases | - | Pending |
 | RT-81 | Edge Cases | - | Pending |
-| RT-82 | Edge Cases | - | Pending |
+| RT-82 | Edge Cases | Execute | Done |
 | RT-83 | Edge Cases | Execute | Done |
 
 **ID format:** `RT-NN`. As rotas são RT-01 a RT-49, e os comportamentos começam em RT-50. As lacunas (66-69, 78-79) separam as histórias e são intencionais.
