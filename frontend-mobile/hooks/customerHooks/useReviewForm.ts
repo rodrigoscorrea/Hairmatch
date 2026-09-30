@@ -128,7 +128,7 @@ export const useReviewForm = () => {
       router.push(`/(app)/customer/reserves/${id}`);
     } catch (error) {
       console.error('Error submitting review:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Erro', 'Algo deu errado. Tente novamente.');
     } finally {
       setIsLoading(false);
     }

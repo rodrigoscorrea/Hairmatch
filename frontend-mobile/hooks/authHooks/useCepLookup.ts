@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import axios from 'axios';
 import { ERROR_MESSAGES } from '@/app/../constants/errorMessages';
 import { CepAddress, lookupCep } from '@/services/cep.service';
+import { toApiProblem } from '@/utils/api-problem';
 
 export const useCepLookup = () => {
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export const useCepLookup = () => {
       onFound(address);
     } catch (error) {
       if (latestCepRef.current !== digits) return;
-      const notFound = axios.isAxiosError(error) && error.response?.status === 404;
+      const notFound = toApiProblem(error)?.slug === 'postal-code-not-found';
       setMessage(notFound ? ERROR_MESSAGES.cep_not_found : ERROR_MESSAGES.cep_lookup_failed);
     } finally {
       if (latestCepRef.current === digits) setLoading(false);

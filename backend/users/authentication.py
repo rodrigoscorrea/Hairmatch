@@ -3,16 +3,19 @@ from collections import namedtuple
 
 import jwt
 from django.conf import settings
-from django.http import JsonResponse
 from jwt.algorithms import RSAAlgorithm
+
+from hairmatch.problems import problem_response
 
 from .cognito import CognitoUnavailable, get_cognito
 from .models import Customer, Hairdresser, User
 
 SESSION_ISSUER = 'hairmatch'
-INVALID_SESSION_MESSAGE = 'Sessão inválida ou expirada.'
-AUTH_UNAVAILABLE_MESSAGE = 'Serviço de autenticação indisponível. Tente novamente em instantes.'
-FORBIDDEN_MESSAGE = 'Você não tem permissão para acessar este recurso.'
+INVALID_SESSION_DETAIL = 'Your session is missing, invalid or expired.'
+AUTH_UNAVAILABLE_DETAIL = 'The authentication service is unavailable. Try again shortly.'
+FORBIDDEN_DETAIL = 'You do not have permission to access this resource.'
+HAIRDRESSER_REQUIRED_DETAIL = 'Only hairdressers can perform this action.'
+CUSTOMER_REQUIRED_DETAIL = 'Only customers can perform this action.'
 
 SessionUser = namedtuple('SessionUser', ['user', 'provider', 'access_token'])
 
@@ -51,29 +54,29 @@ def authenticate_token(token):
 
 
 def authenticated_user(request):
-    """Returns (SessionUser, None) or (None, JsonResponse) with the 401/503 to send back."""
+    """Returns (SessionUser, None) or (None, problem response) with the 401/503 to send back."""
     try:
         session = authenticate_request(request)
     except CognitoUnavailable:
-        return None, JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+        return None, problem_response(request, 'auth-unavailable', AUTH_UNAVAILABLE_DETAIL)
     if session is None:
-        return None, JsonResponse({'error': INVALID_SESSION_MESSAGE}, status=401)
+        return None, problem_response(request, 'invalid-session', INVALID_SESSION_DETAIL)
     return session, None
 
 
-def forbidden():
+def forbidden(request):
     """403 for a valid session that does not own the resource."""
-    return JsonResponse({'error': FORBIDDEN_MESSAGE}, status=403)
+    return problem_response(request, 'forbidden', FORBIDDEN_DETAIL)
 
 
 def authenticated_hairdresser(request):
-    """Returns (SessionUser, Hairdresser, None) or (None, None, JsonResponse): 401/503 without a session, 403 for non-hairdressers."""
-    return _authenticated_profile(request, Hairdresser, 'Apenas profissionais podem realizar esta ação.')
+    """Returns (SessionUser, Hairdresser, None) or (None, None, problem response): 401/503 without a session, 403 for non-hairdressers."""
+    return _authenticated_profile(request, Hairdresser, 'hairdresser-required', HAIRDRESSER_REQUIRED_DETAIL)
 
 
 def authenticated_customer(request):
-    """Returns (SessionUser, Customer, None) or (None, None, JsonResponse): 401/503 without a session, 403 for non-customers."""
-    return _authenticated_profile(request, Customer, 'Apenas clientes podem realizar esta ação.')
+    """Returns (SessionUser, Customer, None) or (None, None, problem response): 401/503 without a session, 403 for non-customers."""
+    return _authenticated_profile(request, Customer, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
 
 
 def is_own_email(session, email):
@@ -81,13 +84,13 @@ def is_own_email(session, email):
     return isinstance(email, str) and email.lower() == session.user.email.lower()
 
 
-def _authenticated_profile(request, model, message):
+def _authenticated_profile(request, model, slug, detail):
     session, error = authenticated_user(request)
     if error:
         return None, None, error
     profile = model.objects.filter(user_id=session.user.id).first()
     if profile is None:
-        return None, None, JsonResponse({'error': message}, status=403)
+        return None, None, problem_response(request, slug, detail)
     return session, profile, None
 
 

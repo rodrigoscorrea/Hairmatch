@@ -59,7 +59,7 @@ export const useLogin = () => {
         const result = await signIn(formData.email, formData.password);
 
         if (!result.success) {
-            setErrorModal({ visible: true, message: result.error || 'An unknown error occurred.' });
+            setErrorModal({ visible: true, message: result.error || 'Ocorreu um erro desconhecido.' });
         }
     };
 

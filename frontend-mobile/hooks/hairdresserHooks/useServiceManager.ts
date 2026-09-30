@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/app/_layout';
 import { deleteService, listServicesByHairdresser } from '@/services/service.service';
 import { ServiceResponse } from '@/models/Service.types';
-import axios from 'axios';
+import { problemMessage } from '@/utils/api-problem';
 
 export const useServiceManager = () => {
   const router = useRouter();
@@ -54,15 +54,11 @@ export const useServiceManager = () => {
       await deleteService(selectedServiceId);
       setServices(currentServices => currentServices.filter(s => s.id !== selectedServiceId));
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        if (error.response.status === 400) {
-          setErrorModal({ visible: true, message: 'Não é possível excluir esse serviço pois há um agendamento atrelado a ele' });
-        } else {
-          setErrorModal({ visible: true, message: "Ocorreu um erro no servidor. Tente novamente mais tarde." });
-        }
-      } else {
-        setErrorModal({ visible: true, message: "Não foi possível conectar ao servidor." });
-      }
+      // The slug decides: `service-has-reservations` is the deletion refused because of a booking (it was a 400 before).
+      setErrorModal({
+        visible: true,
+        message: problemMessage(error, "Ocorreu um erro no servidor. Tente novamente mais tarde."),
+      });
     } finally {
       setModalVisible(false);
       setSelectedServiceId(null);

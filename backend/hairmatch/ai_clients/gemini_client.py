@@ -1,3 +1,5 @@
+import logging
+
 import google.generativeai as genai
 from users.serializers import HairdresserFullInfoSerializer
 from users.models import Hairdresser
@@ -5,6 +7,9 @@ from django.http import JsonResponse
 from django.conf import settings
 from preferences.models import Preferences
 from preferences.serializers import PreferencesNameSerializer
+from hairmatch.problems import Problem, body_error, is_id_list, validation_problem
+
+logger = logging.getLogger(__name__)
 
 def setup_environment():
     gemini_api_key = settings.GEMINI_API_KEY 
@@ -73,27 +78,25 @@ def process_hairdresser_profile(profile_data):
     return final_description
 
 def hairdresser_profile_ai_completion(data):
+    """
+    Generates the description for the profile in `data`. Raises Problem: 400 validation-error for
+    `preferences` that is not a list of ids, 503 ai-service-unavailable when Gemini is not configured or fails.
+    """
+    preferences_ids = data.get('preferences')
+    if not is_id_list(preferences_ids):
+        raise validation_problem([body_error('preferences', 'The preferences must be a list of ids.')])
+
     try:
         setup_environment()
-        hairdresser_data_raw = data
-         
-        if hairdresser_data_raw is None:
-            return JsonResponse({'error': "Hairdresser data not provided"}, status=404)
-        
-        hairdresser_raw_preferences = hairdresser_data_raw.get('preferences')
-        hairdresser_filtered_preferences = Preferences.objects.filter(id__in=hairdresser_raw_preferences)
-        serialized_hairdressed_preferences = PreferencesNameSerializer(
-                                                hairdresser_filtered_preferences,
-                                                many=True).data
-         
-        hairdresser_data = hairdresser_data_raw
-        hairdresser_data['preferences'] = serialized_hairdressed_preferences
+        serialized_preferences = PreferencesNameSerializer(
+            Preferences.objects.filter(id__in=preferences_ids),
+            many=True).data
 
-        
+        hairdresser_data = data
+        hairdresser_data['preferences'] = serialized_preferences
+
         generated_description = process_hairdresser_profile(hairdresser_data)
-        return JsonResponse({'result': generated_description}, status = 200)
-
-    except ValueError as ve:
-        return JsonResponse({'error': f"Config error: {ve}"}, status=500)
-    except Exception as e:
-        return JsonResponse({'error': f"Unexpected error occurred: {e}"}, status=500)
+    except Exception:
+        logger.exception('Gemini completion failed')
+        raise Problem('ai-service-unavailable', 'The description could not be generated right now. Try again.')
+    return JsonResponse({'result': generated_description}, status=200)

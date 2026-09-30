@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
-import { useRouter, useSegments } from 'expo-router'; // <-- Expo Router hooks
+import { Href, useRouter, useSegments } from 'expo-router'; // <-- Expo Router hooks
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles/BottomBarStyle';
@@ -24,7 +24,7 @@ const BottomTabBar: React.FC = () => {
 
   const handleTabPress = (path: string) => {
     // Use the router to navigate to the tab's path
-    router.push(path as `http${string}`);
+    router.push(path as Href);
   };
 
   const renderIcon = (iconName: string, isActive: boolean) => (

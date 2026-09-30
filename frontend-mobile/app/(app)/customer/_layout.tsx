@@ -16,7 +16,7 @@ export default function CustomerTabLayout() {
     // Use the `tabBar` prop to provide your custom component
     <Tabs 
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <BottomTabBar {...props} />}
+      tabBar={() => <BottomTabBar />}
     >
 
       {customerTabs.map((tab) => (

@@ -4,14 +4,26 @@ from agenda.serializers import AgendaSerializer
 from users.models import User, Hairdresser
 from service.models import Service
 from rest_framework.views import APIView
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 import json
 from datetime import timedelta, datetime
 from reserve.models import Reserve
 from django.db.models import Q
 from users.authentication import authenticated_hairdresser, forbidden
 from hairmatch.local_time import make_local_aware
+from hairmatch.problems import body_error, json_object, problem_response, validation_problem
 # Create your views here.
+
+DATETIME_FORMAT_DETAIL = 'The value must be an ISO 8601 datetime.'
+
+
+def _parse_local_datetime(value):
+    """An ISO 8601 string as an aware datetime (a naive one is Manaus time), or None when it is not one."""
+    try:
+        return make_local_aware(datetime.fromisoformat(value.replace('Z', '+00:00')))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
 
 class CreateAgenda(APIView):
     def post(self, request):
@@ -20,29 +32,35 @@ class CreateAgenda(APIView):
         if error:
             return error
 
-        try:
-            data = json.loads(request.body)
-            # Convert the schedule times to datetime objects for proper handling
-            start_time = make_local_aware(datetime.fromisoformat(data['start_time'].replace('Z', '+00:00')))
-        except (ValueError, KeyError, TypeError, AttributeError):
-            return JsonResponse({'error': 'Invalid start_time format'}, status=400)
+        data = json_object(request)
+        errors = []
+        start_time = end_time = None
+        if not data.get('start_time'):
+            errors.append(body_error('start_time', 'This field is required.'))
+        else:
+            start_time = _parse_local_datetime(data['start_time'])
+            if start_time is None:
+                errors.append(body_error('start_time', DATETIME_FORMAT_DETAIL))
+        if data.get('end_time'):
+            end_time = _parse_local_datetime(data['end_time'])
+            if end_time is None:
+                errors.append(body_error('end_time', DATETIME_FORMAT_DETAIL))
+        if not data.get('service'):
+            errors.append(body_error('service', 'This field is required.'))
+        if errors:
+            raise validation_problem(errors)
 
         try:
-            service_instance = Service.objects.get(id=data.get('service'))
+            service_instance = Service.objects.get(id=data['service'])
         except (Service.DoesNotExist, ValueError, TypeError):
-            return JsonResponse({'error': 'Service not found'}, status=500)
+            return problem_response(request, 'not-found', 'Service not found.')
         if service_instance.hairdresser_id != hairdresser_instance.id:
-            return forbidden()
-        
+            return forbidden(request)
+
         # Calculate end_time if not provided
-        if 'end_time' not in data or not data['end_time']:
+        if end_time is None:
             end_time = start_time + timedelta(minutes=service_instance.duration)
-        else:
-            try:
-                end_time = make_local_aware(datetime.fromisoformat(data['end_time'].replace('Z', '+00:00')))
-            except (ValueError, TypeError, AttributeError):
-                return JsonResponse({'error': 'Invalid end_time format'}, status=400)
-        
+
         # Full overlap check:
         # Checks whether there are appointments that overlap with the new appointment
         overlapping_agendas = Agenda.objects.filter(
@@ -54,9 +72,7 @@ class CreateAgenda(APIView):
         )
 
         if overlapping_agendas.exists():
-            return JsonResponse({
-                'error': 'This time slot overlaps with an existing appointment'
-            }, status=400)
+            return problem_response(request, 'agenda-overlap', 'This time slot overlaps with an existing appointment.')
 
         # It's now safe to create the appointment
         Agenda.objects.create(
@@ -75,7 +91,7 @@ class ListAgenda(APIView):
         if error:
             return error
         if hairdresser_id is not None and hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         agenda_items = Agenda.objects.filter(hairdresser=hairdresser).select_related('service')
         if not agenda_items.exists():
@@ -110,9 +126,9 @@ class RemoveAgenda(APIView):
         try:
             agenda = Agenda.objects.get(id=agenda_id)
         except Agenda.DoesNotExist:
-            return JsonResponse({"error": "Agenda not found"}, status=404)
+            return problem_response(request, 'not-found', 'Agenda slot not found.')
         if agenda.hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         agenda.delete()
-        return JsonResponse({"data": "Agenda register deleted successfully"}, status=200)
+        return HttpResponse(status=204)

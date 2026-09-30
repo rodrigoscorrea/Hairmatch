@@ -10,6 +10,7 @@ import { Preference } from '@/models/Preferences.types';
 import { UserRole } from '@/models/User.types';
 
 import { stripNonDigits } from '@/utils/forms';
+import { problemMessage } from '@/utils/api-problem';
 
 export const usePreferencesForm = () => {
   const router = useRouter();
@@ -130,8 +131,7 @@ export const usePreferencesForm = () => {
         router.replace('/(auth)/login'); 
 
     } catch (error: any) {
-      const errorMessage = error.error || error.message || "Erro desconhecido";
-      setErrorModal({ visible: true, message: errorMessage }); 
+      setErrorModal({ visible: true, message: problemMessage(error, "Erro desconhecido") });
     } finally {
         setIsLoading(false);
     }

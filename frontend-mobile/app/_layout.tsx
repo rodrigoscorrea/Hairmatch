@@ -7,6 +7,7 @@ import axiosInstance, { setSessionExpiredHandler } from '../services/axios-insta
 import { UserInfo } from '../models/User.types';
 import { homeRouteFor } from '../utils/routes';
 import { Preference } from '../models/Preferences.types';
+import { ApiConnectionError, problemMessage } from '../utils/api-problem';
 import * as WebBrowser from 'expo-web-browser';
 
 // Closes the Google login popup on web. Must run at startup: in the production build, the
@@ -60,11 +61,10 @@ export default function RootLayout() {
         setUserToken('authenticated');
         return { success: true };
       } else {
-        return { success: false, error: 'Authentication failed. Please check your credentials.' };
+        return { success: false, error: 'Falha na autenticação. Verifique suas credenciais.' };
       }
     } catch (error: any) {
-        const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
-      return { success: false, error: errorMessage };
+      return { success: false, error: problemMessage(error, 'Um erro aconteceu, tente novamente') };
     }
   }, []);
 
@@ -78,8 +78,7 @@ export default function RootLayout() {
         password
       }, { withCredentials: true });
     } catch (error: any) {
-        const errorMessage = error.response?.data?.error || 'Um erro aconteceu, tente novamente';
-      return { success: false, error: errorMessage };
+      return { success: false, error: problemMessage(error, 'Um erro aconteceu, tente novamente') };
     }
 
     return loadSession();
@@ -91,23 +90,30 @@ export default function RootLayout() {
         return await axios.post(`${API_BACKEND_URL}/api/auth/register`, formData, { withCredentials: true });
       } catch (error: any) {
         console.error('Registration error:', error.response?.data);
-        throw error.response?.data || new Error("An unknown error occurred during registration.");
+        // The AxiosError goes through as is: the wizard reads it with problemMessage (toApiProblem understands it).
+        throw error;
       }
     }
 
-    const response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+    } catch {
+      // fetch rejects when the request never got an answer.
+      throw new ApiConnectionError();
+    }
 
     if (!response.ok) {
-      // fetch doesn't throw on 4xx/5xx: pass the error JSON ({ error }) through to the wizard.
+      // fetch doesn't throw on 4xx/5xx: pass the problem body through to the wizard, which reads it with problemMessage.
       const errorData = await response.json().catch(() => null);
       console.error('Registration error:', errorData);
-      throw errorData || new Error("An unknown error occurred during registration.");
+      throw errorData || new Error('Ocorreu um erro desconhecido durante o cadastro.');
     }
 
     return response;

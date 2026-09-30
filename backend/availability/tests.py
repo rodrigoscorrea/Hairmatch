@@ -1,8 +1,10 @@
+from hairmatch.problem_testing import assert_problem
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
-from users.models import User, Hairdresser
+from unittest.mock import patch
+from users.models import User, Customer, Hairdresser
 from availability.models import Availability
 from datetime import time, datetime, timedelta
 import jwt
@@ -143,7 +145,10 @@ class CreateAvailabilityTest(TestCase):
             content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/start_time', 'detail': 'This field is required.'},
+            {'pointer': '#/end_time', 'detail': 'This field is required.'},
+        ])
         self.assertEqual(Availability.objects.count(), 0)
     
     def test_create_availability_no_auth(self):
@@ -158,8 +163,7 @@ class CreateAvailabilityTest(TestCase):
             content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Availability.objects.count(), 0)
 
 
@@ -211,7 +215,7 @@ class CreateAvailabilitySessionTest(TestCase):
         response = self._post()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Availability.objects.count(), 0)
 
 
@@ -337,9 +341,8 @@ class CreateMultipleAvailabilityTest(TestCase):
         )
         
         # Assertions
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'availability-exists', detail='An availability already exists for this weekday.')
         self.assertEqual(Availability.objects.count(), 1)
-        self.assertIn('Availability already exists', str(response.content))
     
     def test_create_multiple_availability_missing_fields(self):
         # Payload with missing required fields
@@ -359,9 +362,11 @@ class CreateMultipleAvailabilityTest(TestCase):
         )
         
         # Assertions
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/start_time', 'detail': 'This field is required.'},
+            {'pointer': '#/availabilities/0/end_time', 'detail': 'This field is required.'},
+        ])
         self.assertEqual(Availability.objects.count(), 0)
-        self.assertIn('required fields is missing', str(response.content))
     
     def test_create_multiple_availability_invalid_weekday(self):
         # Payload with invalid weekday
@@ -382,9 +387,10 @@ class CreateMultipleAvailabilityTest(TestCase):
         )
         
         # Assertions
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
+        ])
         self.assertEqual(Availability.objects.count(), 0)
-        self.assertIn('Invalid weekday', str(response.content))
     
     def test_create_multiple_availability_nonexistent_hairdresser(self):
         # Try to create availability for a non-existent hairdresser
@@ -407,7 +413,7 @@ class CreateMultipleAvailabilityTest(TestCase):
         )
         
         # An id that is not the session hairdresser's is refused
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.assertEqual(Availability.objects.count(), 0)
 
 class ListAvailabilityTest(TestCase):
@@ -492,9 +498,7 @@ class ListAvailabilityTest(TestCase):
         response = self.client.get(nonexistent_url)
         
         # The API should return an empty list rather than an error
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        data = json.loads(response.content)
-        self.assertEqual(data['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
 
 
 class RemoveAvailabilityTest(TestCase):
@@ -558,7 +562,8 @@ class RemoveAvailabilityTest(TestCase):
     def test_remove_availability_success(self):
         response = self.client.delete(self.remove_url)
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertEqual(Availability.objects.count(), 0)
         
     def test_remove_nonexistent_availability(self):
@@ -566,7 +571,7 @@ class RemoveAvailabilityTest(TestCase):
         nonexistent_url = reverse('remove_availability', args=[999])
         response = self.client.delete(nonexistent_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Availability not found.')
         self.assertEqual(Availability.objects.count(), 1)  # Original availability still exists
 
 
@@ -678,7 +683,7 @@ class UpdateAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Availability not found.')
         
         # Original availability should remain unchanged
         self.availability.refresh_from_db()
@@ -852,7 +857,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         )
         
         # Assertions
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = json.loads(response.content)
         self.assertEqual(data['message'], 'Multiple availabilities registered successfully')
         
@@ -900,7 +905,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 1)
         
         availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='saturday')
@@ -925,7 +930,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 1)
         
         availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='sunday')
@@ -949,9 +954,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('required fields is missing', data['error'])
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/weekday', 'detail': 'This field is required.'},
+        ])
     
     def test_update_multiple_availability_missing_start_time(self):
         """Test update with missing start_time field"""
@@ -970,9 +975,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('required fields is missing', data['error'])
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/start_time', 'detail': 'This field is required.'},
+        ])
     
     def test_update_multiple_availability_missing_end_time(self):
         """Test update with missing end_time field"""
@@ -991,9 +996,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('required fields is missing', data['error'])
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/end_time', 'detail': 'This field is required.'},
+        ])
     
     def test_update_multiple_availability_invalid_weekday(self):
         """Test update with invalid weekday"""
@@ -1013,9 +1018,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('Invalid weekday', data['error'])
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/0/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
+        ])
     
     def test_update_multiple_availability_nonexistent_hairdresser(self):
         """Test update for non-existent hairdresser"""
@@ -1038,7 +1043,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         )
         
         # An id that is not the session hairdresser's is refused, and nothing is deleted
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
     
     def test_update_multiple_availability_empty_list(self):
@@ -1053,7 +1058,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # All existing availabilities should be deleted
         self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 0)
@@ -1082,9 +1087,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         )
         
         # This should fail because of duplicate weekdays
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('Availability already exists', data['error'])
+        assert_problem(response, 'availability-exists', detail='An availability already exists for this weekday.')
     
     def test_update_multiple_availability_malformed_json(self):
         """Test update with malformed JSON"""
@@ -1094,9 +1097,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
+        assert_problem(response, 'malformed-request')
     
     def test_update_multiple_availability_missing_availabilities_key(self):
         """Test update with missing 'availabilities' key in payload"""
@@ -1110,9 +1111,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities', 'detail': 'This field is required.'},
+        ])
     
     def test_update_multiple_availability_partial_break_time(self):
         """Test update with only break_start or break_end (not both)"""
@@ -1134,7 +1135,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Should create availability without break times
         availability = Availability.objects.get(hairdresser=self.hairdresser, weekday='monday')
@@ -1169,7 +1170,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Should have exactly 2 availabilities (the new ones)
         self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
@@ -1228,7 +1229,7 @@ class AvailabilityOwnershipTest(TestCase):
         for name, send in self._requests().items():
             with self.subTest(endpoint=name):
                 response = send()
-                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                assert_problem(response, 'invalid-session')
                 self._assert_schedule_untouched()
 
     def test_another_hairdresser_is_refused_with_403(self):
@@ -1237,7 +1238,7 @@ class AvailabilityOwnershipTest(TestCase):
         for name, send in self._requests().items():
             with self.subTest(endpoint=name):
                 response = send()
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                assert_problem(response, 'forbidden')
                 self._assert_schedule_untouched()
 
     def test_owner_replaces_own_schedule(self):
@@ -1245,6 +1246,186 @@ class AvailabilityOwnershipTest(TestCase):
 
         response = self._requests()['update multiple']()
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         created = Availability.objects.get()
         self.assertEqual((created.hairdresser, created.weekday), (self.owner, 'sunday'))
+
+
+class AvailabilityProblemsTest(TestCase):
+    """Every error of the availability endpoints is a problem+json that points at what is wrong."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.fake = get_cognito().client
+        self.user = User.objects.create(
+            first_name='Ana', last_name='Silva', phone='5592999990000', neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', email='ana@example.com', role='hairdresser',
+            cognito_sub='sub-owner',
+        )
+        self.hairdresser = Hairdresser.objects.create(user=self.user, cnpj='12345678901212')
+        self.client.cookies['jwt'] = self.fake.make_access_token('sub-owner')
+        self.create_url = reverse('create_availability')
+        self.create_multiple_url = reverse('create_multiple_availability', args=[self.hairdresser.id])
+        self.update_multiple_url = reverse('update_multiple_availability', args=[self.hairdresser.id])
+        self.monday = {'weekday': 'monday', 'start_time': '09:00:00', 'end_time': '17:00:00'}
+
+    def _send(self, method, url, body):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return getattr(self.client, method)(url, data=body, content_type='application/json')
+
+    def test_a_customer_creating_an_availability_is_refused_with_403_hairdresser_required(self):
+        customer = User.objects.create(
+            first_name='Cli', last_name='Ente', phone='5592999990001', neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua B', postal_code='69000000', email='cli@example.com', role='customer',
+            cognito_sub='sub-customer',
+        )
+        Customer.objects.create(user=customer, cpf='12345678901')
+        self.client.cookies['jwt'] = self.fake.make_access_token('sub-customer')
+
+        response = self._send('post', self.create_url, self.monday)
+
+        assert_problem(response, 'hairdresser-required', detail='Only hairdressers can perform this action.')
+        self.assertEqual(Availability.objects.count(), 0)
+
+    def test_creating_with_no_fields_reports_the_three_required_ones(self):
+        response = self._send('post', self.create_url, {})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/weekday', 'detail': 'This field is required.'},
+            {'pointer': '#/start_time', 'detail': 'This field is required.'},
+            {'pointer': '#/end_time', 'detail': 'This field is required.'},
+        ])
+
+    def test_creating_with_an_invalid_weekday_points_at_it(self):
+        response = self._send('post', self.create_url, {**self.monday, 'weekday': 'funday'})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
+        ])
+
+    def test_creating_with_times_that_are_not_hh_mm_points_at_each_one(self):
+        for bad in ('nine', '25:99:00', 900):
+            with self.subTest(bad=bad):
+                response = self._send('post', self.create_url, {**self.monday, 'start_time': bad, 'break_end': bad})
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/start_time', 'detail': 'The time must be in HH:MM format.'},
+                    {'pointer': '#/break_end', 'detail': 'The time must be in HH:MM format.'},
+                ])
+        self.assertEqual(Availability.objects.count(), 0)
+
+    def test_creating_the_same_weekday_twice_answers_409(self):
+        self._send('post', self.create_url, self.monday)
+
+        response = self._send('post', self.create_url, {**self.monday, 'start_time': '10:00:00'})
+
+        assert_problem(response, 'availability-exists', detail='An availability already exists for this weekday.')
+        self.assertEqual(Availability.objects.count(), 1)
+
+    def test_creating_with_a_body_that_is_not_json_answers_400(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                assert_problem(self._send('post', self.create_url, raw), 'malformed-request')
+
+    def test_creating_with_hh_mm_times_and_a_break_works(self):
+        body = {**self.monday, 'start_time': '09:00', 'end_time': '17:30', 'break_start': '12:00', 'break_end': '13:00'}
+
+        response = self._send('post', self.create_url, body)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Availability.objects.get()
+        self.assertEqual((created.break_start, created.break_end), (time(12, 0), time(13, 0)))
+
+    def test_bulk_create_reports_the_errors_of_every_item_before_writing_any(self):
+        body = {'availabilities': [
+            self.monday,
+            {'weekday': 'tuesday'},
+            {**self.monday, 'weekday': 'someday'},
+        ]}
+
+        response = self._send('post', self.create_multiple_url, body)
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/availabilities/1/start_time', 'detail': 'This field is required.'},
+            {'pointer': '#/availabilities/1/end_time', 'detail': 'This field is required.'},
+            {'pointer': '#/availabilities/2/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
+        ])
+        self.assertEqual(Availability.objects.count(), 0)
+
+    def test_bulk_create_needs_a_list_of_objects(self):
+        cases = [
+            ({'availabilities': 'monday'}, [{'pointer': '#/availabilities', 'detail': 'This field must be a list.'}]),
+            ({'availabilities': [self.monday, 5]},
+             [{'pointer': '#/availabilities/1', 'detail': 'Each item must be an object.'}]),
+            ({}, [{'pointer': '#/availabilities', 'detail': 'This field is required.'}]),
+        ]
+        for body, errors in cases:
+            with self.subTest(body=body):
+                assert_problem(self._send('post', self.create_multiple_url, body), 'validation-error', errors=errors)
+        self.assertEqual(Availability.objects.count(), 0)
+
+    def test_bulk_create_with_a_body_that_is_not_json_answers_400(self):
+        assert_problem(self._send('post', self.create_multiple_url, '{nope'), 'malformed-request')
+
+    def test_bulk_create_of_an_existing_weekday_answers_409(self):
+        Availability.objects.create(hairdresser=self.hairdresser, weekday='monday',
+                                    start_time=time(8, 0), end_time=time(12, 0))
+
+        response = self._send('post', self.create_multiple_url, {'availabilities': [self.monday]})
+
+        assert_problem(response, 'availability-exists')
+
+    def test_bulk_update_with_an_invalid_item_keeps_the_current_schedule(self):
+        Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
+                                    start_time=time(8, 0), end_time=time(12, 0))
+
+        response = self._send('put', self.update_multiple_url, {'availabilities': [{'weekday': 'monday'}]})
+
+        assert_problem(response, 'validation-error')
+        self.assertEqual(list(Availability.objects.values_list('weekday', flat=True)), ['friday'])
+
+    def test_bulk_update_answers_200_and_replaces_the_schedule(self):
+        Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
+                                    start_time=time(8, 0), end_time=time(12, 0))
+
+        response = self._send('put', self.update_multiple_url, {'availabilities': [self.monday]})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list(Availability.objects.values_list('weekday', flat=True)), ['monday'])
+
+    def test_bulk_update_that_cannot_delete_the_schedule_answers_500(self):
+        with patch('availability.views.delete_all_availabilities_by_hairdresser_safe', return_value=False):
+            response = self._send('put', self.update_multiple_url, {'availabilities': [self.monday]})
+
+        assert_problem(response, 'internal-error', detail='The current availabilities could not be replaced.')
+
+    def test_updating_one_availability_validates_the_fields_it_receives(self):
+        availability = Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
+                                                   start_time=time(8, 0), end_time=time(12, 0))
+        url = reverse('update_availability', args=[availability.id])
+
+        response = self._send('put', url, {'weekday': 'someday', 'end_time': 'noon'})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
+            {'pointer': '#/end_time', 'detail': 'The time must be in HH:MM format.'},
+        ])
+        availability.refresh_from_db()
+        self.assertEqual((availability.weekday, availability.end_time), ('friday', time(12, 0)))
+
+    def test_updating_one_availability_with_a_body_that_is_not_json_answers_400(self):
+        availability = Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
+                                                   start_time=time(8, 0), end_time=time(12, 0))
+
+        response = self._send('put', reverse('update_availability', args=[availability.id]), '{nope')
+
+        assert_problem(response, 'malformed-request')
+
+    def test_listing_answers_500_without_the_exception_text_when_the_read_fails(self):
+        with patch('availability.views.get_hairdresser_availability', return_value={'error': 'db is down'}):
+            with self.assertLogs('availability.views', level='ERROR'):
+                response = self.client.get(reverse('list_availability', args=[self.hairdresser.id]))
+
+        body = assert_problem(response, 'internal-error', detail='The availabilities could not be listed.')
+        self.assertNotIn('db is down', json.dumps(body))

@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import json
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from users.models import User, Customer, Hairdresser
 from reserve.models import Reserve
 from reserve.serializers import ReserveSerializer, ReserveFullInfoSerializer
@@ -13,12 +13,14 @@ from agenda.models import Agenda
 from availability.models import Availability
 import calendar
 from django.db import transaction
-from rest_framework import status
 from django.utils.dateparse import parse_datetime
+from hairmatch.problems import body_error, json_object, missing_field_errors, problem_response, validation_problem
 from users.authentication import authenticated_user, authenticated_customer, forbidden
 from hairmatch.local_time import LOCAL_TIMEZONE, make_local_aware, local_day_bounds, local_today
 
 # Create your views here.
+# What the API answers, in English, and what the WhatsApp chatbot tells the customer, in Portuguese.
+CUSTOMER_CONFLICT_DETAIL = 'You already have another reservation at the same time.'
 CUSTOMER_CONFLICT_MESSAGE = 'Você já tem outra reserva agendada para o mesmo horário'
 
 def _is_reserve_party(user, reserve):
@@ -36,6 +38,16 @@ def customer_has_conflicting_reserve(customer, start_time, end_time):
     return False
 
 
+def _integer_field_errors(data, fields):
+    """One `errors` item per field of `fields` that is present but not an integer id."""
+    errors = []
+    for field in fields:
+        value = data.get(field)
+        if value and (isinstance(value, bool) or not str(value).lstrip('-').isdigit()):
+            errors.append(body_error(field, 'This field must be an integer.'))
+    return errors
+
+
 class ReserveById(APIView):
     def get(self, request, id=None):
         session, error = authenticated_user(request)
@@ -45,9 +57,9 @@ class ReserveById(APIView):
         try:
             reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=id)
         except Reserve.DoesNotExist:
-            return JsonResponse({'error': 'Reserve not found'}, status=404)
+            return problem_response(request, 'not-found', 'Reservation not found.')
         if not _is_reserve_party(session.user, reserve):
-            return forbidden()
+            return forbidden(request)
 
         result = ReserveFullInfoSerializer(reserve).data
         return JsonResponse({'data': result}, status=200) 
@@ -60,35 +72,32 @@ class CreateReserve(APIView):
         if error:
             return error
 
-        try:
-            data = json.loads(request.body)
-            hairdresser_id = data['hairdresser']
-            service_id = data['service']
-            start_time_str = data['start_time']
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            return JsonResponse({'error': f'Invalid request body: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+        data = json_object(request)
+        errors = missing_field_errors(data, ['hairdresser', 'service', 'start_time'])
+        errors += _integer_field_errors(data, ['hairdresser', 'service'])
+        if errors:
+            raise validation_problem(errors)
 
         try:
-            hairdresser_instance = Hairdresser.objects.get(id=hairdresser_id)
-            service_instance = Service.objects.get(id=service_id)
+            hairdresser_instance = Hairdresser.objects.get(id=data['hairdresser'])
+            service_instance = Service.objects.get(id=data['service'])
         except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
+            return problem_response(request, 'not-found', 'Service not found.')
         except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=status.HTTP_404_NOT_FOUND)
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
 
         if service_instance.hairdresser_id != hairdresser_instance.id:
-            return JsonResponse(
-                {'error': 'The service does not belong to this hairdresser.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise validation_problem([body_error('service', 'The service does not belong to this hairdresser.')])
 
-        start_time = parse_datetime(start_time_str)
+        try:
+            start_time = parse_datetime(data['start_time'])
+        except (ValueError, TypeError):
+            start_time = None
         if not start_time:
-            return JsonResponse(
-                {'error': "Invalid datetime format. Expected ISO format like '2025-04-26T14:30:00Z'"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+            raise validation_problem([
+                body_error('start_time', "The start time must be an ISO 8601 datetime like '2025-04-26T14:30:00Z'.")
+            ])
+
         # The app sends the slot as a naive Manaus time, the clock the slots are listed in.
         start_time = make_local_aware(start_time)
 
@@ -100,38 +109,29 @@ class CreateReserve(APIView):
         ).exists()
 
         if hairdresser_overlap:
-            return JsonResponse(
-                {'error': 'The hairdresser is not available during this time slot.'},
-                status=status.HTTP_409_CONFLICT
+            return problem_response(
+                request, 'slot-unavailable', 'The hairdresser is not available during this time slot.'
             )
 
         if customer_has_conflicting_reserve(customer_instance, start_time, end_time):
-            return JsonResponse(
-                {'error': CUSTOMER_CONFLICT_MESSAGE},
-                status=status.HTTP_409_CONFLICT
+            return problem_response(request, 'customer-schedule-conflict', CUSTOMER_CONFLICT_DETAIL)
+
+        # A failure here is unexpected: the transaction rolls back and the central handler answers 500.
+        with transaction.atomic():
+            Reserve.objects.create(
+                start_time=start_time,
+                customer=customer_instance,
+                service=service_instance,
             )
 
-        try:
-            with transaction.atomic():
-                Reserve.objects.create(
-                    start_time=start_time,
-                    customer=customer_instance,
-                    service=service_instance,
-                )
-                
-                Agenda.objects.create(
-                    start_time=start_time,
-                    end_time=end_time,
-                    hairdresser=hairdresser_instance,
-                    service=service_instance
-                )
-        except Exception as e:
-            return JsonResponse(
-                {'error': f'An error occurred while saving the reservation: {e}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            Agenda.objects.create(
+                start_time=start_time,
+                end_time=end_time,
+                hairdresser=hairdresser_instance,
+                service=service_instance
             )
-            
-        return JsonResponse({'message': 'Reserve created successfully'}, status=status.HTTP_201_CREATED)     
+
+        return JsonResponse({'message': 'Reserve created successfully'}, status=201)
 
 class ListReserve(APIView):
     def get(self, request, customer_id=None):
@@ -140,7 +140,7 @@ class ListReserve(APIView):
         if error:
             return error
         if customer_id is not None and customer_id != customer.id:
-            return forbidden()
+            return forbidden(request)
 
         reserves = Reserve.objects.filter(customer=customer).order_by('start_time')
         result = ReserveFullInfoSerializer(reserves, many=True).data
@@ -159,32 +159,34 @@ class RemoveReserve(APIView):
         try:
             reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=reserve_id)
         except Reserve.DoesNotExist:
-            return JsonResponse({"error": "Result not found"}, status=404)
+            return problem_response(request, 'not-found', 'Reservation not found.')
         if not _is_reserve_party(session.user, reserve):
-            return forbidden()
+            return forbidden(request)
 
         reserve.delete()
-        return JsonResponse({"data": "reserve deleted successfully"}, status=200)
+        return HttpResponse(status=204)
     
 class ReserveSlot(APIView):
     def post(self, request, hairdresser_id):
-        try:
-            data = json.loads(request.body)
-            service_id = data['service']
-            date_str = data['date']
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except (json.JSONDecodeError, KeyError):
-            return JsonResponse({'error': 'Invalid payload. "service" and "date" are required.'}, status=400)
-        except ValueError:
-            return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD.'}, status=400)
+        data = json_object(request)
+        errors = missing_field_errors(data, ['service', 'date'])
+        errors += _integer_field_errors(data, ['service'])
+        selected_date = None
+        if data.get('date'):
+            try:
+                selected_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                errors.append(body_error('date', 'The date must be in YYYY-MM-DD format.'))
+        if errors:
+            raise validation_problem(errors)
 
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
-            service = Service.objects.get(id=service_id)
+            service = Service.objects.get(id=data['service'])
         except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
         except Service.DoesNotExist:
-            return JsonResponse({'error': 'Service not found'}, status=404)
+            return problem_response(request, 'not-found', 'Service not found.')
 
         weekday_name = calendar.day_name[selected_date.weekday()]
         availability = Availability.objects.filter(
@@ -309,7 +311,7 @@ def get_available_slots(hairdresser_id, service_id, date_str):
     except Hairdresser.DoesNotExist:
         return {'error': 'Hairdresser not found', 'status': 404}
     except Service.DoesNotExist:
-        return {'error': 'Service not found', 'status': 500}
+        return {'error': 'Service not found', 'status': 404}
     except ValueError:
         return {'error': 'Invalid date format', 'status': 400}
 

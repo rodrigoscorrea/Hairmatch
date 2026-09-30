@@ -15,7 +15,7 @@ export default function HairdresserTabLayout() {
   return (
     <Tabs 
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <BottomTabBar {...props} />}
+      tabBar={() => <BottomTabBar />}
     >
       {/* Generate screens from our central config file */}
       {hairdresserTabs.map((tab) => (

@@ -5,7 +5,8 @@ from .models import User, Customer, Hairdresser
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
-from django.http import JsonResponse
+import logging
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
@@ -20,7 +21,7 @@ from preferences.models import Preferences
 from django.db import transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
-    AUTH_UNAVAILABLE_MESSAGE,
+    CUSTOMER_REQUIRED_DETAIL,
     authenticate_request,
     authenticate_token,
     authenticated_user,
@@ -39,15 +40,29 @@ from .cognito import (
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
+from hairmatch.problems import (
+    Problem,
+    body_error,
+    is_id_list,
+    json_object,
+    missing_field_errors,
+    problem_response,
+    request_data,
+    validation_problem,
+)
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_SIGNUP_REQUIRED_FIELDS = [
     'first_name', 'last_name', 'phone', 'address',
     'neighborhood', 'city', 'state', 'postal_code',
 ]
 ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
-PASSWORD_POLICY_MESSAGE = 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'
-EMAIL_TAKEN_MESSAGE = 'Usuário já está cadastrado na nossa base de dados'
-PHONE_TAKEN_MESSAGE = 'O número de telefone inserido já está cadastrado na nossa base de dados'
+PASSWORD_POLICY_DETAIL = 'The password must have at least 8 characters, with an uppercase letter, a lowercase letter and a number.'
+PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
+EMAIL_TAKEN_DETAIL = 'This email is already registered.'
+INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
+ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
 
 
 def normalize_phone(phone):
@@ -55,21 +70,33 @@ def normalize_phone(phone):
     return f"55{''.join(ch for ch in str(phone) if ch.isdigit())}"
 
 
-def _cognito_error_response(error):
+def _cognito_error_response(request, error):
     if isinstance(error, TooManyRequests):
-        return JsonResponse({'error': 'Muitas tentativas. Aguarde e tente novamente.'}, status=429)
-    return JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+        return problem_response(request, 'too-many-requests', 'Too many attempts. Wait and try again.')
+    return problem_response(request, 'auth-unavailable', 'The authentication service is unavailable. Try again shortly.')
 
 
-def _delete_account(user):
+def _string_field_errors(data, fields):
+    """One `errors` item per field of `fields` that is absent, empty or not a string."""
+    errors = []
+    for field in fields:
+        value = data.get(field)
+        if value is None or value == '':
+            errors.append(body_error(field, 'This field is required.'))
+        elif not isinstance(value, str):
+            errors.append(body_error(field, 'This field must be a string.'))
+    return errors
+
+
+def _delete_account(request, user):
     """Deletes the Cognito user (e-mail accounts) and the row, and clears the session cookies."""
     if user.cognito_sub:
         try:
             get_cognito().admin_delete_user(user.email)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
     user.delete()
-    return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
+    return clear_auth_cookies(HttpResponse(status=204))
 
 
 def _discard_cognito_user(email):
@@ -89,104 +116,98 @@ def _discard_cognito_user(email):
 class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request):    
-        if request.data.get('google_signup_token'):
-            return self._register_with_google(request)
+    def post(self, request):
+        data = request_data(request)
+        if data.get('google_signup_token'):
+            return self._register_with_google(request, data)
 
-        email = request.data.get('email')
-        password = request.data.get('password')
-        phone = request.data.get('phone')
-        role = request.data.get('role')
+        errors = missing_field_errors(data, ['role', 'email', 'password', 'phone'])
+        errors += _role_and_phone_errors(data)
+        if errors:
+            raise validation_problem(errors)
+
+        email = data['email']
+        role = data['role']
+        phone = data['phone']
         if User.objects.filter(email=email).exists():
-            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
-
-        if role is None or role is None or role == '':
-            return JsonResponse({'error': 'No role assigned to user'}, status=400)
-        if email is None or email is None or email == '':
-            return JsonResponse({'error': 'No email assigned to user'}, status=400)
-        if password is None or password is None or password == '':
-            return JsonResponse({'error': 'No password assigned to user'}, status=400)
-        if phone is None or phone is None or phone == '':
-            return JsonResponse({'error': 'No phone assigned to user'}, status=400)
-        if  len(phone) < 10:
-            return JsonResponse({'error': 'Phone number is too short'}, status=400)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(phone=normalize_phone(phone)).exists():
-            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            cognito_sub = get_cognito().sign_up_confirmed(email, password)
+            cognito_sub = get_cognito().sign_up_confirmed(email, data['password'])
         except InvalidPassword:
-            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+            return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except UserAlreadyExists:
-            return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
 
         try:
             with transaction.atomic():
                 user = User.objects.create(
-                    first_name=request.data.get('first_name'),
-                    last_name=request.data.get('last_name'),
+                    first_name=data.get('first_name'),
+                    last_name=data.get('last_name'),
                     phone=normalize_phone(phone),
-                    complement=request.data.get('complement'),
-                    neighborhood=request.data.get('neighborhood'),
-                    city=request.data.get('city'),
-                    state=request.data.get('state'),
-                    address=request.data.get('address'),
-                    number=request.data.get('number'),
-                    postal_code=request.data.get('postal_code'),
-                    email=request.data.get('email'),
+                    complement=data.get('complement'),
+                    neighborhood=data.get('neighborhood'),
+                    city=data.get('city'),
+                    state=data.get('state'),
+                    address=data.get('address'),
+                    number=data.get('number'),
+                    postal_code=data.get('postal_code'),
+                    email=email,
                     password=None,
                     cognito_sub=cognito_sub,
-                    role=request.data.get('role'),
-                    rating=request.data.get('rating'),
+                    role=role,
+                    rating=data.get('rating'),
                 )
 
                 if 'profile_picture' in request.FILES:
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
 
-                _create_role_profile(user, request.data)
+                _create_role_profile(user, data)
         except InvalidImage:
-            failure = JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
-        except json.JSONDecodeError:
-            failure = JsonResponse({'error': 'Invalid Preferences JSON'}, status=400)
+            failure = problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Problem as problem:
+            failure = problem_response(request, problem.slug, problem.detail, problem.errors)
         except Exception:
-            failure = JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+            logger.exception('E-mail sign-up failed')
+            failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
             return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
 
         _discard_cognito_user(email)
         return failure
 
-    def _register_with_google(self, request):
-        data = request.data
+    def _register_with_google(self, request, data):
         try:
             claims = decode_signup_token(data.get('google_signup_token'))
         except InvalidSignupToken:
-            return JsonResponse({'error': 'Sua sessão de cadastro com o Google expirou. Entre com o Google novamente.'}, status=401)
+            return problem_response(
+                request, 'signup-session-expired', 'Your Google sign-up session has expired. Sign in with Google again.'
+            )
 
         role = data.get('role')
-        if not role:
-            return JsonResponse({'error': 'Campo obrigatório ausente: role'}, status=400)
-        if role not in ROLE_DOCUMENT_FIELD:
-            return JsonResponse({'error': 'Papel de usuário inválido.'}, status=400)
-        for field in GOOGLE_SIGNUP_REQUIRED_FIELDS + [ROLE_DOCUMENT_FIELD[role]]:
-            if not data.get(field):
-                return JsonResponse({'error': f'Campo obrigatório ausente: {field}'}, status=400)
-        phone = data.get('phone')
-        if len(phone) < 10:
-            return JsonResponse({'error': 'O número de telefone informado é muito curto.'}, status=400)
+        required = list(GOOGLE_SIGNUP_REQUIRED_FIELDS)
+        if role in ROLE_DOCUMENT_FIELD:
+            required.append(ROLE_DOCUMENT_FIELD[role])
+        errors = missing_field_errors(data, ['role'] + required)
+        errors += _role_and_phone_errors(data)
+        if errors:
+            raise validation_problem(errors)
 
+        phone = data['phone']
         # The e-mail comes from the signup token; form email/password fields are ignored.
         email = claims['email']
         google_id = claims['sub']
         if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
+            return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(google_id=google_id).exists():
-            return JsonResponse({'error': 'Esta conta Google já está cadastrada na nossa base de dados'}, status=409)
+            return problem_response(request, 'google-account-taken', 'This Google account is already registered.')
         if User.objects.filter(phone=normalize_phone(phone)).exists():
-            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
             with transaction.atomic():
@@ -211,20 +232,38 @@ class RegisterView(APIView):
                     user.profile_picture = request.FILES['profile_picture']
                     user.save()
                 _create_role_profile(user, data)
-        except InvalidImage:  # before ValueError, which it subclasses
-            return JsonResponse({'error': 'Imagem de perfil inválida.'}, status=400)
-        except ValueError:
-            return JsonResponse({'error': 'As preferências enviadas são inválidas.'}, status=400)
+        except InvalidImage:
+            return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Problem as problem:
+            return problem_response(request, problem.slug, problem.detail, problem.errors)
         except Exception:
-            return JsonResponse({'error': 'Erro ao criar a conta.'}, status=500)
+            logger.exception('Google sign-up failed')
+            return problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
 
         return set_session_cookie(JsonResponse({'message': f"{role} user registered successfully"}, status=201), user)
 
 
+def _role_and_phone_errors(data):
+    """`errors` items for a role outside the two accounts and a phone too short. A missing field is reported elsewhere."""
+    errors = []
+    role = data.get('role')
+    if role and role not in ROLE_DOCUMENT_FIELD:
+        errors.append(body_error('role', 'The role must be customer or hairdresser.'))
+    phone = data.get('phone')
+    if phone and len(phone) < 10:
+        errors.append(body_error('phone', 'The phone number is too short.'))
+    return errors
+
+
 def _create_role_profile(user, data):
-    # Raises json.JSONDecodeError (a ValueError) when preferences is not valid JSON.
-    preferences_ids = json.loads(data.get('preferences', '[]'))
-    if isinstance(preferences_ids, list) and len(preferences_ids) > 0:
+    # Raises Problem('validation-error') when preferences is not a JSON list of ids.
+    try:
+        preferences_ids = json.loads(data.get('preferences', '[]'))
+    except (TypeError, ValueError):
+        preferences_ids = None
+    if not is_id_list(preferences_ids):
+        raise validation_problem([body_error('preferences', 'The preferences must be a JSON list of ids.')])
+    if len(preferences_ids) > 0:
         user.preferences.clear()
         preferences_to_add = Preferences.objects.filter(id__in=preferences_ids)
         user.preferences.add(*preferences_to_add)
@@ -249,30 +288,28 @@ def _create_role_profile(user, data):
 
 class LoginView(APIView):
     def post(self, request):
-        try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            data = {}
-        email = data.get('email')
-        password = data.get('password')
-        if not isinstance(email, str) or not isinstance(password, str) or not email or not password:
-            return JsonResponse({'error': 'Informe e-mail e senha.'}, status=400)
+        data = json_object(request)
+        errors = _string_field_errors(data, ['email', 'password'])
+        if errors:
+            raise validation_problem(errors)
+        email = data['email']
+        password = data['password']
 
         if User.objects.filter(
             email__iexact=email, cognito_sub__isnull=True
         ).exclude(google_id__isnull=True).exists():
-            return JsonResponse({'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'}, status=403)
+            return problem_response(
+                request, 'google-account-login', 'This account uses Google sign-in. Use the Sign in with Google button.'
+            )
 
-        invalid_credentials = JsonResponse({'error': 'E-mail ou senha inválidos.'}, status=401)
+        invalid_credentials = problem_response(request, 'invalid-credentials', 'Invalid email or password.')
         try:
             tokens = get_cognito().authenticate(email, password)
             session = authenticate_token(tokens.access_token)
         except InvalidCredentials:
             return invalid_credentials
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
         if session is None:
             return invalid_credentials
 
@@ -292,40 +329,40 @@ class LoginView(APIView):
 class RefreshView(APIView):
     def post(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
-        session_expired = {'error': 'Sessão expirada. Entre novamente.'}
+        session_expired = problem_response(request, 'session-expired', 'Your session has expired. Sign in again.')
         if not refresh_token:
-            return JsonResponse(session_expired, status=401)
+            return session_expired
 
         try:
             access_token = get_cognito().refresh(refresh_token)
         except InvalidCredentials:
-            return clear_auth_cookies(JsonResponse(session_expired, status=401))
+            return clear_auth_cookies(session_expired)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
 
         return set_access_cookie(JsonResponse({'message': 'Session refreshed'}, status=200), access_token)
 
 
 class GoogleAuthView(APIView):
     def post(self, request):
-        google_id_token = request.data.get('id_token')
+        google_id_token = request_data(request).get('id_token')
         if not google_id_token:
-            return JsonResponse({'error': 'Token do Google não informado.'}, status=400)
+            raise validation_problem([body_error('id_token', 'This field is required.')])
 
         try:
             identity = verify_google_id_token(google_id_token)
         except GoogleTokenError:
-            return JsonResponse({'error': 'Não foi possível validar sua conta Google. Tente novamente.'}, status=401)
+            return problem_response(request, 'invalid-google-token', 'The Google account could not be validated. Try again.')
 
         if not identity['email_verified']:
-            return JsonResponse({'error': 'Seu e-mail do Google não está verificado.'}, status=403)
+            return problem_response(request, 'google-email-unverified', 'Your Google email is not verified.')
 
         user = User.objects.filter(google_id=identity['sub']).first()
         if user is None:
             user = User.objects.filter(email__iexact=identity['email']).first()
             if user is not None:
                 if user.google_id:
-                    return JsonResponse({'error': 'Este e-mail já está vinculado a outra conta Google.'}, status=409)
+                    return problem_response(request, 'google-email-linked', 'This email is linked to another Google account.')
                 user.google_id = identity['sub']
                 user.save(update_fields=['google_id'])
 
@@ -353,11 +390,13 @@ class CepLookupView(APIView):
         try:
             return JsonResponse(lookup_cep(cep), status=200)
         except InvalidCep:
-            return JsonResponse({'error': 'CEP inválido. Informe 8 dígitos.'}, status=400)
+            return problem_response(request, 'invalid-postal-code', 'The postal code must have 8 digits.')
         except CepNotFound:
-            return JsonResponse({'error': 'CEP não encontrado.'}, status=404)
+            return problem_response(request, 'postal-code-not-found', 'No address was found for this postal code.')
         except CepServiceUnavailable:
-            return JsonResponse({'error': 'Serviço de CEP indisponível. Preencha o endereço manualmente.'}, status=503)
+            return problem_response(
+                request, 'postal-code-service-unavailable', 'The postal code providers are unavailable.'
+            )
 
 class LogoutView(APIView):
     def post(self, request):
@@ -377,27 +416,23 @@ class ChangePasswordView(APIView):
             return error
 
         if session.provider != 'cognito':
-            return JsonResponse({'error': 'Esta conta usa login com Google e não tem senha.'}, status=403)
+            return problem_response(
+                request, 'google-account-login', 'This account uses Google sign-in and has no password.'
+            )
+
+        data = json_object(request)
+        errors = _string_field_errors(data, ['old_password', 'password'])
+        if errors:
+            raise validation_problem(errors)
 
         try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            data = {}
-        old_password = data.get('old_password')
-        new_password = data.get('password')
-        if not isinstance(old_password, str) or not isinstance(new_password, str) or not old_password or not new_password:
-            return JsonResponse({'error': 'Informe a senha atual e a nova senha.'}, status=400)
-
-        try:
-            get_cognito().change_password(session.access_token, old_password, new_password)
+            get_cognito().change_password(session.access_token, data['old_password'], data['password'])
         except InvalidCredentials:
-            return JsonResponse({'error': 'Senha atual incorreta.'}, status=400)
+            return problem_response(request, 'incorrect-current-password', 'The current password is incorrect.')
         except InvalidPassword:
-            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+            return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
         return JsonResponse({'message': 'Password updated successfully'}, status=200)
         
 # 2 - The following views are related to the User Info
@@ -419,15 +454,15 @@ class UserInfoCookieView(APIView):
             hairdresser = Hairdresser.objects.filter(user=user).first()
             hairdresser_data = HairdresserSerializer(hairdresser).data
             return JsonResponse({'hairdresser': hairdresser_data}, status=200)    
-        else: 
-            return JsonResponse({'error': 'error retrieving user with role'}, status=500)
+        else:
+            return problem_response(request, 'internal-error', 'The account has an unsupported role.')
 
     def delete(self, request):
         session, error = authenticated_user(request)
         if error:
             return error
 
-        return _delete_account(session.user)
+        return _delete_account(request, session.user)
 
     #This function does not handle password update procedure
     def put(self, request):
@@ -436,17 +471,17 @@ class UserInfoCookieView(APIView):
             return error
 
         user = session.user
-        data = json.loads(request.body)
+        data = json_object(request)
 
         # The e-mail is the Cognito username, and changing it there needs a verification step.
         if 'email' in data and data['email'] != user.email:
-            return JsonResponse({'error': 'A troca de e-mail não é suportada.'}, status=400)
+            return problem_response(request, 'email-change-unsupported', 'Changing the email is not supported.')
 
         # Unlike sign-up, the phone here is the full stored number (55 included), as GET returns it.
         if 'phone' in data:
             data['phone'] = ''.join(ch for ch in str(data['phone']) if ch.isdigit())
             if User.objects.filter(phone=data['phone']).exclude(id=user.id).exists():
-                return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+                return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',
@@ -508,7 +543,7 @@ class UserInfoView(APIView):
         if error:
             return error
         if not is_own_email(session, email):
-            return forbidden()
+            return forbidden(request)
 
         user = session.user
         if (user.role == 'customer'):
@@ -527,8 +562,8 @@ class UserInfoView(APIView):
         if error:
             return error
         if not is_own_email(session, email):
-            return forbidden()
-        return _delete_account(session.user)
+            return forbidden(request)
+        return _delete_account(request, session.user)
 
 class CustomerHomeView(APIView):
     """
@@ -545,10 +580,10 @@ class CustomerHomeView(APIView):
             if error:
                 return error
             if not is_own_email(session, email):
-                return forbidden()
+                return forbidden(request)
             customer_user = session.user
             if customer_user.role != 'customer':
-                return JsonResponse({'error': 'User not found'}, status=404)
+                return problem_response(request, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
             customer_preferences = customer_user.preferences.all()
             
             # Get hairdressers matching customer preferences
@@ -599,21 +634,14 @@ class GeminiChatView(APIView):
     throttle_classes = [GeminiCompletionThrottle]
 
     def post(self, request):
-        try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            return JsonResponse({'error': 'Invalid request body'}, status=400)
-        result = hairdresser_profile_ai_completion(data)
-        return result
+        return hairdresser_profile_ai_completion(json_object(request))
     
 class HairdresserInfoView(APIView):
     def get(self,request,hairdresser_id=None): 
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
         except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
 
         hairdresser_serialized = PublicHairdresserSerializer(hairdresser).data
         return JsonResponse({'data': hairdresser_serialized}, status=200)

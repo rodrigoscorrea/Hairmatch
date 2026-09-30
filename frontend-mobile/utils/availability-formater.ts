@@ -24,8 +24,8 @@ export const formatAvailability = (availability: {
   weekday: string;
   start_time: string;
   end_time: string;
-  break_start: string | null;
-  break_end: string | null;
+  break_start?: string | null;
+  break_end?: string | null;
 }) => {
   const translatedWeekday = weekdayTranslations[availability.weekday as keyof typeof weekdayTranslations] || availability.weekday;
   const formattedStartTime = formatTime(availability.start_time);
