@@ -42,6 +42,8 @@ COGNITO_APP_CLIENT_ID = os.getenv('COGNITO_APP_CLIENT_ID', '')
 # Tests use an in-memory Cognito so they need no emulator.
 COGNITO_USE_FAKE = 'test' in sys.argv
 TEST_RUNNER = 'hairmatch.test_runner.HairmatchTestRunner'
+# Base of every problem `type` (RFC 9457). A fixed URI, not an env var; it need not resolve.
+PROBLEM_TYPE_BASE_URI = 'https://hairmatch.app/problems/'
 GOOGLE_OAUTH_CLIENT_IDS = [
     client_id.strip()
     for client_id in os.getenv('GOOGLE_OAUTH_CLIENT_IDS', '').split(',')
@@ -204,3 +206,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     "ngrok-skip-browser-warning"
 ]
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'hairmatch.problems.exception_handler',
+}

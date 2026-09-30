@@ -15,7 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, re_path, include
+from hairmatch.problems import api_not_found
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,5 +27,7 @@ urlpatterns = [
     path('api/reserve/', include('reserve.urls')),
     path('api/agenda/', include('agenda.urls')),
     path('api/service/', include('service.urls')),
-    path('api/chatbot/', include('chatbot.urls'))
+    path('api/chatbot/', include('chatbot.urls')),
+    # Must stay last: a URL under /api/ that no route matched.
+    re_path(r'^api(?:/|$)', api_not_found),
 ]
