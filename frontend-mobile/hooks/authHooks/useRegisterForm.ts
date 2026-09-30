@@ -5,7 +5,6 @@ import { useRegistration } from '@/contexts/RegistrationContext';
 import { UserRole } from '@/app/../models/User.types';
 import { ERROR_MESSAGES } from '@/app/../constants/errorMessages';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { stripNonDigits, isValidEmail, validatePassword } from '@/app/../utils/forms';
 
 export const useRegisterForm = () => {
@@ -30,7 +29,7 @@ export const useRegisterForm = () => {
 
     // 2. Launch the picker
     let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
