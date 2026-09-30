@@ -9,6 +9,7 @@ from django.utils import timezone
 from users.models import User, Hairdresser
 from service.models import Service
 from agenda.models import Agenda
+from users.cognito import get_cognito
 
 
 class AgendaTestCase(TestCase):
@@ -35,7 +36,8 @@ class AgendaTestCase(TestCase):
             number="456",
             postal_code="69050750",
             role="hairdresser",
-            rating=4.5
+            rating=4.5,
+            cognito_sub="sub-hairdresser-1",
         )
         
         self.hairdresser = Hairdresser.objects.create(
@@ -60,7 +62,8 @@ class AgendaTestCase(TestCase):
             number="789",
             postal_code="69050750",
             role="hairdresser",
-            rating=4.0
+            rating=4.0,
+            cognito_sub="sub-hairdresser-2",
         )
         
         self.hairdresser2 = Hairdresser.objects.create(
@@ -91,8 +94,15 @@ class AgendaTestCase(TestCase):
             service=self.service
         )
 
+    def login(self, user):
+        self.client.cookies['jwt'] = get_cognito().client.make_access_token(user.cognito_sub)
+
 
 class CreateAgendaTest(AgendaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.login(self.hairdresser_user)
+
     def test_create_agenda_success(self):
         """Test successful agenda creation"""
         # Create new start and end times
@@ -116,26 +126,50 @@ class CreateAgendaTest(AgendaTestCase):
         self.assertEqual(response.json()['message'], 'Agenda register created successfully')
         self.assertEqual(Agenda.objects.count(), 2)  # 1 from setup + 1 new
         
-    def test_create_agenda_invalid_hairdresser(self):
-        """Test agenda creation with non-existent hairdresser"""
+    def test_create_agenda_ignores_the_hairdresser_in_the_body(self):
+        """The slot is blocked in the session hairdresser's agenda, whatever `hairdresser` the body sends"""
         new_start_time = self.agenda_start_time + timedelta(hours=2)
-        new_end_time = new_start_time + timedelta(minutes=self.service.duration)
-        
+
         agenda_data = {
             'start_time': new_start_time.isoformat(),
-            'end_time': new_end_time.isoformat(),
-            'hairdresser': 9999,  # Non-existent ID
+            'hairdresser': self.hairdresser2.id,
             'service': self.service.id
         }
-        
-        response = self.client.post(
-            self.create_url,
-            data=json.dumps(agenda_data),
-            content_type='application/json'
+
+        response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Agenda.objects.exclude(id=self.agenda.id).get()
+        self.assertEqual(created.hairdresser, self.hairdresser)
+        self.assertFalse(Agenda.objects.filter(hairdresser=self.hairdresser2).exists())
+
+    def test_create_agenda_with_a_service_of_another_hairdresser_is_refused_with_403(self):
+        """Otherwise the other hairdresser could never delete that service"""
+        other_service = Service.objects.create(
+            name="Beard", description="", price=20.00, duration=30, hairdresser=self.hairdresser2
         )
-        
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json()['error'], 'Hairdresser not found')
+        agenda_data = {
+            'start_time': (self.agenda_start_time + timedelta(hours=2)).isoformat(),
+            'service': other_service.id
+        }
+
+        response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Agenda.objects.filter(service=other_service).exists())
+
+    def test_create_agenda_without_session_is_refused_with_401(self):
+        self.client.cookies.pop('jwt')
+        agenda_data = {
+            'start_time': (self.agenda_start_time + timedelta(hours=2)).isoformat(),
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id
+        }
+
+        response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Agenda.objects.count(), 1)
         
     def test_create_agenda_invalid_service(self):
         """Test agenda creation with non-existent service"""
@@ -217,6 +251,7 @@ class ListAgendaTest(AgendaTestCase):
 class RemoveAgendaTest(AgendaTestCase):
     def test_remove_agenda_success(self):
         """Test successful agenda removal"""
+        self.login(self.hairdresser_user)
         response = self.client.delete(self.remove_url(self.agenda.id))
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -224,6 +259,21 @@ class RemoveAgendaTest(AgendaTestCase):
         self.assertEqual(Agenda.objects.count(), 0)
         
     def test_remove_nonexistent_agenda(self):
-        """Test removing a non-existent agenda"""        
+        """Test removing a non-existent agenda"""
+        self.login(self.hairdresser_user)
         response = self.client.delete(self.remove_url(9999))  # Non-existent ID
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_remove_agenda_of_another_hairdresser_is_refused_with_403(self):
+        self.login(self.hairdresser_user2)
+
+        response = self.client.delete(self.remove_url(self.agenda.id))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
+
+    def test_remove_agenda_without_session_is_refused_with_401(self):
+        response = self.client.delete(self.remove_url(self.agenda.id))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
