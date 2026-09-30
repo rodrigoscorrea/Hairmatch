@@ -38,18 +38,20 @@ export const useHairdresserProfile = () => {
           hairdresserData,
           availabilitiesData,
           servicesData,
-          preferencesData,
         ] = await Promise.all([
           getHairdresser(id),
           listAvailabilitiesByHairdresser(Number(id)),
           listServicesByHairdresser(Number(id)),
-          getPreferencesByUser(userInfo.customer.user.id),
         ]);
 
         setHairdresser(hairdresserData.data);
         setAvailabilities(availabilitiesData.data);
         setServices(servicesData.data);
-        setPreferences(preferencesData)
+
+        // The visited hairdresser's techniques. The API answers 404 when there are none,
+        // which must not hide the rest of the profile.
+        const preferencesData = await getPreferencesByUser(hairdresserData.data.user.id).catch(() => []);
+        setPreferences(preferencesData ?? []);
 
       } catch (error) {
         console.error("Failed to fetch hairdresser profile data:", error);
