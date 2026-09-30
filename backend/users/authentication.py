@@ -16,8 +16,6 @@ AUTH_UNAVAILABLE_DETAIL = 'The authentication service is unavailable. Try again 
 FORBIDDEN_DETAIL = 'You do not have permission to access this resource.'
 HAIRDRESSER_REQUIRED_DETAIL = 'Only hairdressers can perform this action.'
 CUSTOMER_REQUIRED_DETAIL = 'Only customers can perform this action.'
-# Kept in Portuguese until users/views.py answers in problem+json (the next task); then it goes away.
-AUTH_UNAVAILABLE_MESSAGE = 'Serviço de autenticação indisponível. Tente novamente em instantes.'
 
 SessionUser = namedtuple('SessionUser', ['user', 'provider', 'access_token'])
 

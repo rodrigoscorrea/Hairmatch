@@ -428,7 +428,7 @@ class LoginViewTest(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'E-mail ou senha inválidos.'})
+        assert_invalid_credentials(response)
 
     def test_login_nonexistent_user(self):
         login_payload = {
@@ -442,7 +442,7 @@ class LoginViewTest(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'E-mail ou senha inválidos.'})
+        assert_invalid_credentials(response)
 
     def test_check_authentication_with_token(self):
         # First login to get token
@@ -1942,6 +1942,25 @@ class HairdresserInfoViewIntegrationTest(TestCase):
         self.assertEqual(hairdresser_data['id'], self.hairdresser.id)
 
 
+def assert_auth_unavailable(response):
+    return assert_problem(
+        response, 'auth-unavailable', detail='The authentication service is unavailable. Try again shortly.'
+    )
+
+
+def assert_throttled(response):
+    return assert_problem(response, 'too-many-requests', detail='Too many attempts. Wait and try again.')
+
+
+def assert_invalid_credentials(response):
+    return assert_problem(response, 'invalid-credentials', detail='Invalid email or password.')
+
+
+def assert_session_expired(response):
+    return assert_problem(response, 'session-expired', detail='Your session has expired. Sign in again.')
+
+
+
 def _create_plain_user(**overrides):
     fields = {
         'first_name': 'Plain',
@@ -2194,9 +2213,9 @@ class LoginViewGoogleAccountTest(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(
-            response.json()['error'],
-            'Esta conta usa login com Google. Use o botão Entrar com Google.'
+        assert_problem(
+            response, 'google-account-login',
+            detail='This account uses Google sign-in. Use the Sign in with Google button.',
         )
         self.assertNotIn('jwt', response.cookies)
 
@@ -2292,13 +2311,23 @@ class GoogleAuthViewTest(TestCase):
         self.assertEqual(User.objects.count(), 1)
         self._assert_session_cookie_for(response, user)
 
+    def test_body_that_is_not_a_json_object_returns_400_malformed_request(self):
+        for raw in ('[1]', '{nope'):
+            with self.subTest(raw=raw):
+                response = self.client.post(self.google_auth_url, data=raw, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
+        self.mock_verify.assert_not_called()
+
     def test_missing_or_empty_id_token_returns_400(self):
         for body in ({}, {'id_token': ''}):
             with self.subTest(body=body):
                 response = self._post(body)
 
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertIn('error', response.json())
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': '#/id_token', 'detail': 'This field is required.'}],
+                )
                 self.assertNotIn('jwt', response.cookies)
         self.mock_verify.assert_not_called()
 
@@ -2309,8 +2338,9 @@ class GoogleAuthViewTest(TestCase):
 
         response = self._post()
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn('error', response.json())
+        assert_problem(
+            response, 'invalid-google-token', detail='The Google account could not be validated. Try again.'
+        )
         self.assertNotIn('jwt', response.cookies)
         self.assertEqual(self._users_snapshot(), before)
 
@@ -2321,8 +2351,7 @@ class GoogleAuthViewTest(TestCase):
 
         response = self._post()
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('error', response.json())
+        assert_problem(response, 'google-email-unverified', detail='Your Google email is not verified.')
         self.assertNotIn('jwt', response.cookies)
         self.assertEqual(self._users_snapshot(), before)
 
@@ -2333,8 +2362,7 @@ class GoogleAuthViewTest(TestCase):
 
         response = self._post()
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn('error', response.json())
+        assert_problem(response, 'google-email-linked', detail='This email is linked to another Google account.')
         self.assertNotIn('jwt', response.cookies)
         self.assertEqual(self._users_snapshot(), before)
 
@@ -3617,7 +3645,6 @@ class CognitoRegisterTest(TestCase):
     """Register by e-mail/password: Cognito holds the password, Postgres holds the profile."""
 
     POLICY_ERROR = {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'}
-    UNAVAILABLE_ERROR = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
 
     def setUp(self):
         self.client = APIClient()
@@ -3728,7 +3755,7 @@ class CognitoRegisterTest(TestCase):
         response = self.client.post(self.register_url, data=_register_payload())
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        assert_auth_unavailable(response)
         self._assert_cognito_user_was_deleted()
 
     def test_google_signup_makes_no_cognito_call(self):
@@ -3747,7 +3774,7 @@ class CognitoRegisterTest(TestCase):
         response = self.client.post(self.register_url, data=_register_payload())
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        assert_auth_unavailable(response)
         self._assert_no_rows()
 
     def test_throttling_answers_429_and_creates_nothing(self):
@@ -3758,13 +3785,11 @@ class CognitoRegisterTest(TestCase):
                 response = self.client.post(self.register_url, data=_register_payload())
 
                 self.assertEqual(response.status_code, 429)
-                self.assertEqual(response.json(), {'error': 'Muitas tentativas. Aguarde e tente novamente.'})
+                assert_throttled(response)
                 self._assert_no_rows()
 
 
 class CognitoLoginTest(TestCase):
-    INVALID_CREDENTIALS = {'error': 'E-mail ou senha inválidos.'}
-    UNAVAILABLE_ERROR = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
 
     def setUp(self):
         self.client = APIClient()
@@ -3810,8 +3835,32 @@ class CognitoLoginTest(TestCase):
                 response = self._login(email, password)
 
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-                self.assertEqual(response.json(), self.INVALID_CREDENTIALS)
+                assert_invalid_credentials(response)
                 self._assert_no_cookies(response)
+
+    def test_body_that_is_not_json_answers_400_malformed_request(self):
+        for body in ('{nope', '[1, 2]', '"text"'):
+            with self.subTest(body=body):
+                response = self.client.post(self.login_url, data=body, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
+        self.assertEqual(self.fake.calls, [])
+
+    def test_email_and_password_that_are_not_strings_answer_400_validation_error(self):
+        response = self.client.post(
+            self.login_url, data=json.dumps({'email': 123, 'password': ['x']}), content_type='application/json'
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/email', 'detail': 'This field must be a string.'},
+            {'pointer': '#/password', 'detail': 'This field must be a string.'},
+        ])
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_problem_instance_is_the_login_path(self):
+        response = self._login('ninguem@example.com', 'Senha123')
+
+        self.assertEqual(json.loads(response.content)['instance'], '/api/auth/login')
 
     def test_google_account_answers_403_without_calling_cognito(self):
         _create_plain_user(email='google-only@example.com', google_id='google-sub-9')
@@ -3819,7 +3868,10 @@ class CognitoLoginTest(TestCase):
         response = self._login('google-only@example.com', 'Senha123')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.json(), {'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'})
+        assert_problem(
+            response, 'google-account-login',
+            detail='This account uses Google sign-in. Use the Sign in with Google button.',
+        )
         self.assertEqual(self.fake.calls, [])
 
     def test_cognito_user_without_a_postgres_user_answers_401_without_cookies(self):
@@ -3829,7 +3881,7 @@ class CognitoLoginTest(TestCase):
         response = self._login('orfao@example.com', 'Senha123')
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), self.INVALID_CREDENTIALS)
+        assert_invalid_credentials(response)
         self._assert_no_cookies(response)
 
     def test_missing_or_empty_email_and_password_answer_400_without_calling_cognito(self):
@@ -3840,8 +3892,11 @@ class CognitoLoginTest(TestCase):
                 response = self.client.post(
                     self.login_url, data=json.dumps(body), content_type='application/json'
                 )
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertEqual(response.json(), {'error': 'Informe e-mail e senha.'})
+                expected = [
+                    {'pointer': f'#/{field}', 'detail': 'This field is required.'}
+                    for field in ('email', 'password') if not body.get(field)
+                ]
+                assert_problem(response, 'validation-error', errors=expected)
         self.assertEqual(self.fake.calls, [])
 
     def test_connection_error_answers_503_logs_the_operation_and_sets_no_cookie(self):
@@ -3851,7 +3906,7 @@ class CognitoLoginTest(TestCase):
             response = self._login()
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.json(), self.UNAVAILABLE_ERROR)
+        assert_auth_unavailable(response)
         self._assert_no_cookies(response)
         self.assertIn('initiate_auth', logs.output[0])
         self.assertNotIn('Senha123', ''.join(logs.output))
@@ -3862,12 +3917,11 @@ class CognitoLoginTest(TestCase):
         response = self._login()
 
         self.assertEqual(response.status_code, 429)
-        self.assertEqual(response.json(), {'error': 'Muitas tentativas. Aguarde e tente novamente.'})
+        assert_throttled(response)
         self._assert_no_cookies(response)
 
 
 class CognitoRefreshTest(TestCase):
-    SESSION_EXPIRED = {'error': 'Sessão expirada. Entre novamente.'}
 
     def setUp(self):
         self.client = APIClient()
@@ -3900,7 +3954,7 @@ class CognitoRefreshTest(TestCase):
         response = self.client.post(self.refresh_url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        assert_session_expired(response)
         self.assertEqual(self.fake.calls, [])
 
     def test_revoked_refresh_token_answers_401_and_expires_both_cookies(self):
@@ -3909,25 +3963,24 @@ class CognitoRefreshTest(TestCase):
         response = self.client.post(self.refresh_url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), self.SESSION_EXPIRED)
+        assert_session_expired(response)
         for key in ('jwt', 'refresh_token'):
             self.assertEqual(response.cookies[key].value, '')
             self.assertEqual(response.cookies[key]['max-age'], 0)
 
     def test_cognito_failures_answer_503_and_429_without_touching_the_cookies(self):
         cases = [
-            (EndpointConnectionError(endpoint_url='http://x'), 503,
-             {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}),
-            ('TooManyRequestsException', 429, {'error': 'Muitas tentativas. Aguarde e tente novamente.'}),
+            (EndpointConnectionError(endpoint_url='http://x'), 503, assert_auth_unavailable),
+            ('TooManyRequestsException', 429, assert_throttled),
         ]
-        for failure, expected_status, body in cases:
+        for failure, expected_status, assert_body in cases:
             with self.subTest(status=expected_status):
                 self.fake.fail_next('initiate_auth', failure)
 
                 response = self.client.post(self.refresh_url)
 
                 self.assertEqual(response.status_code, expected_status)
-                self.assertEqual(response.json(), body)
+                assert_body(response)
                 self.assertEqual(len(response.cookies), 0)
 
 
@@ -4058,12 +4111,11 @@ class CognitoChangePasswordTest(TestCase):
         response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.json(), {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'})
+        assert_auth_unavailable(response)
         self.assertEqual(self._fresh_login_status('Senha123'), 200)
 
 
 class CognitoDeleteAccountTest(TestCase):
-    UNAVAILABLE = {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'}
 
     def setUp(self):
         self.client = APIClient()
@@ -4121,7 +4173,7 @@ class CognitoDeleteAccountTest(TestCase):
                 response = delete()
 
                 self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-                self.assertEqual(response.json(), self.UNAVAILABLE)
+                assert_auth_unavailable(response)
                 self.assertTrue(User.objects.filter(email='nova@example.com').exists())
                 self.assertIn('nova@example.com', self.fake.users)
 

@@ -20,7 +20,6 @@ from preferences.models import Preferences
 from django.db import transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
-    AUTH_UNAVAILABLE_MESSAGE,
     authenticate_request,
     authenticate_token,
     authenticated_user,
@@ -39,6 +38,7 @@ from .cognito import (
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
+from hairmatch.problems import Problem, body_error, json_object, problem_response, request_data, validation_problem
 
 GOOGLE_SIGNUP_REQUIRED_FIELDS = [
     'first_name', 'last_name', 'phone', 'address',
@@ -55,19 +55,31 @@ def normalize_phone(phone):
     return f"55{''.join(ch for ch in str(phone) if ch.isdigit())}"
 
 
-def _cognito_error_response(error):
+def _cognito_error_response(request, error):
     if isinstance(error, TooManyRequests):
-        return JsonResponse({'error': 'Muitas tentativas. Aguarde e tente novamente.'}, status=429)
-    return JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+        return problem_response(request, 'too-many-requests', 'Too many attempts. Wait and try again.')
+    return problem_response(request, 'auth-unavailable', 'The authentication service is unavailable. Try again shortly.')
 
 
-def _delete_account(user):
+def _string_field_errors(data, fields):
+    """One `errors` item per field of `fields` that is absent, empty or not a string."""
+    errors = []
+    for field in fields:
+        value = data.get(field)
+        if value is None or value == '':
+            errors.append(body_error(field, 'This field is required.'))
+        elif not isinstance(value, str):
+            errors.append(body_error(field, 'This field must be a string.'))
+    return errors
+
+
+def _delete_account(request, user):
     """Deletes the Cognito user (e-mail accounts) and the row, and clears the session cookies."""
     if user.cognito_sub:
         try:
             get_cognito().admin_delete_user(user.email)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
     user.delete()
     return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
 
@@ -120,7 +132,7 @@ class RegisterView(APIView):
         except UserAlreadyExists:
             return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
 
         try:
             with transaction.atomic():
@@ -249,30 +261,28 @@ def _create_role_profile(user, data):
 
 class LoginView(APIView):
     def post(self, request):
-        try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            data = {}
-        email = data.get('email')
-        password = data.get('password')
-        if not isinstance(email, str) or not isinstance(password, str) or not email or not password:
-            return JsonResponse({'error': 'Informe e-mail e senha.'}, status=400)
+        data = json_object(request)
+        errors = _string_field_errors(data, ['email', 'password'])
+        if errors:
+            raise validation_problem(errors)
+        email = data['email']
+        password = data['password']
 
         if User.objects.filter(
             email__iexact=email, cognito_sub__isnull=True
         ).exclude(google_id__isnull=True).exists():
-            return JsonResponse({'error': 'Esta conta usa login com Google. Use o botão Entrar com Google.'}, status=403)
+            return problem_response(
+                request, 'google-account-login', 'This account uses Google sign-in. Use the Sign in with Google button.'
+            )
 
-        invalid_credentials = JsonResponse({'error': 'E-mail ou senha inválidos.'}, status=401)
+        invalid_credentials = problem_response(request, 'invalid-credentials', 'Invalid email or password.')
         try:
             tokens = get_cognito().authenticate(email, password)
             session = authenticate_token(tokens.access_token)
         except InvalidCredentials:
             return invalid_credentials
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
         if session is None:
             return invalid_credentials
 
@@ -292,40 +302,40 @@ class LoginView(APIView):
 class RefreshView(APIView):
     def post(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
-        session_expired = {'error': 'Sessão expirada. Entre novamente.'}
+        session_expired = problem_response(request, 'session-expired', 'Your session has expired. Sign in again.')
         if not refresh_token:
-            return JsonResponse(session_expired, status=401)
+            return session_expired
 
         try:
             access_token = get_cognito().refresh(refresh_token)
         except InvalidCredentials:
-            return clear_auth_cookies(JsonResponse(session_expired, status=401))
+            return clear_auth_cookies(session_expired)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
 
         return set_access_cookie(JsonResponse({'message': 'Session refreshed'}, status=200), access_token)
 
 
 class GoogleAuthView(APIView):
     def post(self, request):
-        google_id_token = request.data.get('id_token')
+        google_id_token = request_data(request).get('id_token')
         if not google_id_token:
-            return JsonResponse({'error': 'Token do Google não informado.'}, status=400)
+            raise validation_problem([body_error('id_token', 'This field is required.')])
 
         try:
             identity = verify_google_id_token(google_id_token)
         except GoogleTokenError:
-            return JsonResponse({'error': 'Não foi possível validar sua conta Google. Tente novamente.'}, status=401)
+            return problem_response(request, 'invalid-google-token', 'The Google account could not be validated. Try again.')
 
         if not identity['email_verified']:
-            return JsonResponse({'error': 'Seu e-mail do Google não está verificado.'}, status=403)
+            return problem_response(request, 'google-email-unverified', 'Your Google email is not verified.')
 
         user = User.objects.filter(google_id=identity['sub']).first()
         if user is None:
             user = User.objects.filter(email__iexact=identity['email']).first()
             if user is not None:
                 if user.google_id:
-                    return JsonResponse({'error': 'Este e-mail já está vinculado a outra conta Google.'}, status=409)
+                    return problem_response(request, 'google-email-linked', 'This email is linked to another Google account.')
                 user.google_id = identity['sub']
                 user.save(update_fields=['google_id'])
 
@@ -397,7 +407,7 @@ class ChangePasswordView(APIView):
         except InvalidPassword:
             return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
         except CognitoError as err:
-            return _cognito_error_response(err)
+            return _cognito_error_response(request, err)
         return JsonResponse({'message': 'Password updated successfully'}, status=200)
         
 # 2 - The following views are related to the User Info
@@ -427,7 +437,7 @@ class UserInfoCookieView(APIView):
         if error:
             return error
 
-        return _delete_account(session.user)
+        return _delete_account(request, session.user)
 
     #This function does not handle password update procedure
     def put(self, request):
@@ -528,7 +538,7 @@ class UserInfoView(APIView):
             return error
         if not is_own_email(session, email):
             return forbidden(request)
-        return _delete_account(session.user)
+        return _delete_account(request, session.user)
 
 class CustomerHomeView(APIView):
     """

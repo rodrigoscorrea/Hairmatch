@@ -147,10 +147,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Cada critério com o slug do spec e `detail` em inglês
-- [ ] Login sem e-mail e sem senha devolve dois itens em `errors`
-- [ ] Refresh recusado continua apagando os cookies `jwt` e `refresh_token`
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test users --noinput'`
+- [x] Cada critério com o slug do spec e `detail` em inglês
+- [x] Login sem e-mail e sem senha devolve dois itens em `errors`
+- [x] Refresh recusado continua apagando os cookies `jwt` e `refresh_token`
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test users --noinput'`
 
 **Tests**: integration
 **Gate**: quick

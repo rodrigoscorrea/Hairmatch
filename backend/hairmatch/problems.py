@@ -123,6 +123,14 @@ def json_object(request):
     return data
 
 
+def request_data(request):
+    """`request.data` of a view that lets DRF parse the body, guaranteed to be a mapping."""
+    data = request.data
+    if not hasattr(data, 'get'):
+        raise Problem('malformed-request', 'The request body must be a JSON object.')
+    return data
+
+
 def _sentence(message):
     message = str(message).strip()
     return message if message.endswith(('.', '!', '?')) else f'{message}.'
