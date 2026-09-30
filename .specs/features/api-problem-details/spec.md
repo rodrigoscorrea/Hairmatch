@@ -361,7 +361,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-11 | P1: Autenticação e autorização | T2 | Implemented |
 | PD-12 | P1: Autenticação e autorização | T2 | Implemented |
 | PD-13 | P1: Autenticação e autorização | T2, T9 | Implemented |
-| PD-14 | P1: Autenticação e autorização | T2, T4 | Implemented |
+| PD-14 | P1: Autenticação e autorização | T2, T4, T11 | Implemented |
 | PD-15 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-16 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-17 | P1: Autenticação e autorização | T3, T4 | Implemented |
@@ -413,7 +413,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-67 | P1: Erros fora das views | T1 | Implemented |
 | PD-70 | P1: Mensagens em inglês | - | Pending |
 | PD-71 | P1: Mensagens em inglês | T7 | Implemented |
-| PD-72 | P1: Mensagens em inglês | T4, T7, T8, T9, T10 | Implemented |
+| PD-72 | P1: Mensagens em inglês | T4, T7, T8, T9, T10, T11 | Implemented |
 | PD-73 | P1: Mensagens em inglês | T4 | Implemented |
 | PD-80 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-81 | P1: App mostra erros em pt-BR | - | Pending |
@@ -428,10 +428,10 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-92 | P2: Endpoints auxiliares | T6 | Implemented |
 | PD-93 | P2: Endpoints auxiliares | T6 | Implemented |
 | PD-94 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-95 | P2: Endpoints auxiliares | - | Pending |
-| PD-96 | P2: Endpoints auxiliares | - | Pending |
-| PD-97 | P2: Endpoints auxiliares | - | Pending |
-| PD-98 | P2: Endpoints auxiliares | - | Pending |
+| PD-95 | P2: Endpoints auxiliares | T11 | Implemented |
+| PD-96 | P2: Endpoints auxiliares | T11 | Implemented |
+| PD-97 | P2: Endpoints auxiliares | T11 | Implemented |
+| PD-98 | P2: Endpoints auxiliares | T11 | Implemented |
 | PD-99 | P2: Endpoints auxiliares | - | Pending |
 | PD-100 | P2: Endpoints auxiliares | - | Pending |
 | PD-101 | P2: Fallbacks do app em português | - | Pending |

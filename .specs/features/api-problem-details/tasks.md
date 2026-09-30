@@ -367,10 +367,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Campos ausentes, `rating` inválido e profissional divergente apontados em `errors`
-- [ ] 409 `review-exists`, 403 `forbidden`, 400 `invalid-image`, 403 `customer-required`
-- [ ] DELETE responde 204
-- [ ] Gate check passes: quick (`review`)
+- [x] Campos ausentes, `rating` inválido e profissional divergente apontados em `errors`
+- [x] 409 `review-exists`, 403 `forbidden`, 400 `invalid-image`, 403 `customer-required`
+- [x] DELETE responde 204
+- [x] Gate check passes: quick (`review`)
 
 **Tests**: integration
 **Gate**: quick

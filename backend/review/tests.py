@@ -218,8 +218,7 @@ class CreateReviewTest(ReviewsTestCase):
         })
 
     def _assert_rejected_with_no_review(self, response):
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'Imagem inválida.'})
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
         self.assertEqual(Review.objects.count(), 0)
         self.reserve.refresh_from_db()
         self.assertIsNone(self.reserve.review)
@@ -254,8 +253,9 @@ class CreateReviewTest(ReviewsTestCase):
         }
         
         response = self.client.post(self.create_url, data=review_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('Missing field: reserve', str(response.content))
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/reserve', 'detail': 'This field is required.'},
+        ])
         
     def test_create_review_reserve_not_found(self):
         """Test that using a non-existent reserve ID results in a 404 Not Found."""
@@ -269,7 +269,7 @@ class CreateReviewTest(ReviewsTestCase):
         }
 
         response = self.client.post(self.create_url, data=review_data)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Reservation not found.')
 
     def test_create_review_not_authorized_for_reserve(self):
         """Test that a user cannot review a reservation that isn't theirs."""
@@ -296,7 +296,7 @@ class CreateReviewTest(ReviewsTestCase):
         }
         
         response = self.client.post(self.create_url, data=review_data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
 
     def test_create_review_no_token(self):
         """Test review creation fails when not authenticated (401 Unauthorized)."""
@@ -308,8 +308,107 @@ class CreateReviewTest(ReviewsTestCase):
             'reserve': self.reserve.id
         }
         response = self.client.post(self.create_url, data=review_data)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         assert_problem(response, 'invalid-session')
+class CreateReviewProblemsTest(ReviewsTestCase):
+    """Every way the create endpoint refuses a review answers with a problem that names the field."""
+
+    def _post(self, **overrides):
+        data = {'reserve': self.reserve.id, 'rating': 4, 'comment': 'ok', 'hairdresser': self.hairdresser.id}
+        data.update(overrides)
+        return self.client.post(self.create_url, data=data)
+
+    def setUp(self):
+        super().setUp()
+        self.login_as_customer()
+
+    def test_no_fields_reports_reserve_rating_and_hairdresser(self):
+        response = self.client.post(self.create_url, data={})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/reserve', 'detail': 'This field is required.'},
+            {'pointer': '#/rating', 'detail': 'This field is required.'},
+            {'pointer': '#/hairdresser', 'detail': 'This field is required.'},
+        ])
+
+    def test_a_rating_that_is_not_a_finite_number_is_refused(self):
+        for rating in ('great', 'nan', 'inf'):
+            with self.subTest(rating=rating):
+                assert_problem(self._post(rating=rating), 'validation-error', errors=[
+                    {'pointer': '#/rating', 'detail': 'This field must be a number.'},
+                ])
+        self.assertEqual(Review.objects.filter(comment='ok').count(), 0)
+
+    def test_ids_that_are_not_integers_are_refused(self):
+        assert_problem(self._post(reserve='abc', hairdresser='x'), 'validation-error', errors=[
+            {'pointer': '#/reserve', 'detail': 'This field must be an integer.'},
+            {'pointer': '#/hairdresser', 'detail': 'This field must be an integer.'},
+        ])
+
+    def test_a_reserve_that_was_already_reviewed_answers_409(self):
+        self.reserve.review = Review.objects.create(
+            rating=3, comment='first', customer=self.customer, hairdresser=self.hairdresser
+        )
+        self.reserve.save()
+
+        response = self._post()
+
+        assert_problem(response, 'review-exists', detail='This reservation has already been reviewed.')
+        self.assertEqual(Review.objects.filter(customer=self.customer).count(), 1)
+
+    def test_a_hairdresser_that_does_not_exist_answers_404(self):
+        assert_problem(self._post(hairdresser=999999), 'not-found', detail='Hairdresser not found.')
+        self.assertFalse(Review.objects.filter(comment='ok').exists())
+
+    def test_a_hairdresser_account_creating_a_review_answers_403_customer_required(self):
+        self.login_as_hairdresser()
+
+        response = self._post()
+
+        assert_problem(response, 'customer-required', detail='Only customers can perform this action.')
+
+    def test_an_unexpected_failure_is_a_500_without_the_exception_text(self):
+        with patch.object(Review.objects, 'create', side_effect=RuntimeError('disk full')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post()
+
+        body = assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertNotIn('disk full', json.dumps(body))
+        self.reserve.refresh_from_db()
+        self.assertIsNone(self.reserve.review)
+
+
+class UpdateReviewProblemsTest(ReviewsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.login_as_customer()
+        self.review = Review.objects.create(
+            rating=4, comment='Good service', customer=self.customer, hairdresser=self.hairdresser
+        )
+        self.url = reverse('update_review', args=[self.review.id])
+
+    def _put(self, body):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return self.client.put(self.url, data=body, content_type='application/json')
+
+    def test_a_body_that_is_not_json_answers_400(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                assert_problem(self._put(raw), 'malformed-request')
+
+    def test_a_missing_rating_answers_400(self):
+        assert_problem(self._put({'comment': 'only'}), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field is required.'},
+        ])
+
+    def test_a_rating_that_is_not_a_number_answers_400(self):
+        assert_problem(self._put({'rating': 'top'}), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field must be a number.'},
+        ])
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.rating, 4)
+
+
 class ListReviewTest(ReviewsTestCase):
     def setUp(self):
         super().setUp()
@@ -486,7 +585,7 @@ class UpdateReviewTest(ReviewsTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND) # Review not found for this user
+        assert_problem(response, 'not-found', detail='Review not found.')  # Review not found for this user
         
         # Verify data was not changed
         self.review.refresh_from_db()
@@ -524,8 +623,8 @@ class RemoveReview(ReviewsTestCase):
         self.login_as_customer()
         response = self.client.delete(self.delete_url)
         
-        # A successful deletion with no content should return 204 - but it will return 200 due to axios problems in the frontend
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertEqual(Review.objects.count(), 0)
         
         # Assert that the review was unlinked from the reserve
@@ -550,7 +649,7 @@ class RemoveReview(ReviewsTestCase):
         invalid_delete_url = reverse('remove_review', args=[9999])
         response = self.client.delete(invalid_delete_url)
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Review not found.')
 
 class RemovedAdminDeleteRouteTest(ReviewsTestCase):
     """removeAdm had no auth nor role check and was removed (#151)."""
@@ -608,7 +707,7 @@ class ReviewSessionTest(ReviewsTestCase):
         return self.client.delete(reverse('remove_review', args=[review.id]))
 
     def test_routes_accept_a_cognito_access_token_and_a_google_session(self):
-        expected = {'create': 201, 'update': 200, 'delete': 200}
+        expected = {'create': 201, 'update': 200, 'delete': 204}
         for token_kind in ('cognito', 'google'):
             for route, status_code in expected.items():
                 with self.subTest(token=token_kind, route=route):
@@ -651,7 +750,9 @@ class ReviewOwnershipTest(ReviewsTestCase):
             'rating': 1, 'comment': 'fake', 'hairdresser': self.other_hairdresser.id, 'reserve': self.reserve.id,
         })
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/hairdresser', 'detail': 'The hairdresser does not match the reservation.'},
+        ])
         self.assertFalse(Review.objects.filter(hairdresser=self.other_hairdresser).exists())
         self.reserve.refresh_from_db()
         self.assertIsNone(self.reserve.review)
@@ -665,7 +766,7 @@ class ReviewOwnershipTest(ReviewsTestCase):
         )
         remove = self.client.delete(reverse('remove_review', args=[self.review.id]))
 
-        self.assertEqual(update.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(remove.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(update, 'customer-required', detail='Only customers can perform this action.')
+        assert_problem(remove, 'customer-required', detail='Only customers can perform this action.')
         self.review.refresh_from_db()
         self.assertEqual(self.review.rating, 4)
