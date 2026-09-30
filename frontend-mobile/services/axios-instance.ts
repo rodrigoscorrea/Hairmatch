@@ -1,10 +1,8 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
+import { REFRESH_PATH, isRefreshExcluded } from './auth-routes';
 
 const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
-
-// A 401 from these routes is a real answer (wrong password, no session to refresh...), not an expired access token.
-const AUTH_EXCLUDED = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout', '/api/auth/google'];
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -30,7 +28,7 @@ export const setSessionExpiredHandler = (handler: () => void): void => {
 const refreshSession = (): Promise<void> => {
   if (!refreshPromise) {
     refreshPromise = axiosInstance
-      .post('/api/auth/refresh')
+      .post(REFRESH_PATH)
       .then(() => undefined)
       .finally(() => {
         refreshPromise = null;
@@ -60,7 +58,7 @@ axiosInstance.interceptors.response.use(
       error.response?.status === 401 &&
       config &&
       !config._retry &&
-      !AUTH_EXCLUDED.some((path) => config.url?.includes(path))
+      !isRefreshExcluded(config.method, config.url)
     ) {
       config._retry = true;
       try {

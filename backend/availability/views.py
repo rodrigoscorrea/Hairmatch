@@ -212,7 +212,7 @@ class UpdateMultipleAvailability(APIView):
         return JsonResponse({'message': "Multiple availabilities registered successfully"}, status=200)
 
 class UpdateAvailability(APIView):
-    def put(self, request, id):
+    def patch(self, request, id):
         session, hairdresser, error = authenticated_hairdresser(request)
         if error:
             return error
@@ -260,3 +260,10 @@ def get_hairdresser_availability(hairdresser_id):
     except Exception:
         logger.exception('Reading the availabilities of hairdresser %s failed', hairdresser_id)
         return {'error': 'The availabilities could not be read.', 'status': 500}   
+
+class HairdresserAvailabilities(ListAvailability, CreateMultipleAvailability, UpdateMultipleAvailability):
+    """`/api/hairdressers/{id}/availabilities`: GET reads, POST adds to and PUT replaces the work schedule."""
+
+
+class AvailabilityDetail(UpdateAvailability, RemoveAvailability):
+    """`/api/availabilities/{id}`: PATCH updates and DELETE removes one availability."""

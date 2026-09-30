@@ -21,12 +21,12 @@ from hairmatch.problems import api_not_found
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
-    path('api/preferences/', include('preferences.urls')),
-    path('api/review/', include('review.urls')),
-    path('api/availability/', include('availability.urls')),
-    path('api/reserve/', include('reserve.urls')),
-    path('api/agenda/', include('agenda.urls')),
-    path('api/service/', include('service.urls')),
+    path('api/', include('preferences.urls')),
+    path('api/', include('review.urls')),
+    path('api/', include('availability.urls')),
+    path('api/', include('reserve.urls')),
+    path('api/', include('agenda.urls')),
+    path('api/', include('service.urls')),
     path('api/chatbot/', include('chatbot.urls')),
     # Must stay last: a URL under /api/ that no route matched.
     re_path(r'^api(?:/|$)', api_not_found),

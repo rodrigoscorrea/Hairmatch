@@ -456,7 +456,7 @@ class LoginViewTest(TestCase):
         self.client.cookies['jwt'] = token
         
         # Then check authentication status
-        response = self.client.get(self.login_url)
+        response = self.client.get(reverse('session'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.json()['authenticated'])
 
@@ -464,7 +464,7 @@ class LoginViewTest(TestCase):
         # Clear cookies to ensure no token
         self.client.cookies.clear()
         
-        response = self.client.get(self.login_url)
+        response = self.client.get(reverse('session'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.json()['authenticated'])
 
@@ -617,7 +617,7 @@ class UserInfoCookieViewTest(TestCase):
         self.client = APIClient()
         self.register_url = reverse('register')
         self.login_url = reverse('login')
-        self.user_info_auth_url = reverse('user_info_auth')
+        self.user_info_auth_url = reverse('current_user')
         
         # Create customer user
         self.customer_data = {
@@ -754,7 +754,7 @@ class UserInfoCookieViewTest(TestCase):
             'cpf': '98765432100'
         }
         
-        response = self.client.put(
+        response = self.client.patch(
             self.user_info_auth_url,
             data=json.dumps(update_payload),
             content_type='application/json'
@@ -771,6 +771,36 @@ class UserInfoCookieViewTest(TestCase):
         updated_customer = Customer.objects.get(user=updated_user)
         self.assertEqual(updated_customer.cpf, '98765432100')
 
+    def test_patch_with_a_single_field_changes_only_that_field(self):
+        """RT-58: a subset of the fields updates just those."""
+        self.client.cookies['jwt'] = self.customer_token
+        before = User.objects.get(email='customer@example.com')
+
+        response = self.client.patch(
+            self.user_info_auth_url, data=json.dumps({'first_name': 'Ana'}), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        after = User.objects.get(email='customer@example.com')
+        self.assertEqual(after.first_name, 'Ana')
+        self.assertEqual(
+            (after.last_name, after.phone, after.address, after.city),
+            (before.last_name, before.phone, before.address, before.city),
+        )
+
+    def test_put_on_the_current_user_answers_405(self):
+        """RT-09: the partial update is a PATCH, so the old PUT is a method the path does not list."""
+        self.client.cookies['jwt'] = self.customer_token
+
+        response = self.client.put(
+            self.user_info_auth_url, data=json.dumps({'first_name': 'Ana'}), content_type='application/json'
+        )
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(
+            sorted(response['Allow'].split(', ')), ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH']
+        )
+
     def test_update_hairdresser_info(self):
         self.client.cookies['jwt'] = self.hairdresser_token
         
@@ -782,7 +812,7 @@ class UserInfoCookieViewTest(TestCase):
             'cnpj': '98765432000190'
         }
         
-        response = self.client.put(
+        response = self.client.patch(
             self.user_info_auth_url,
             data=json.dumps(update_payload),
             content_type='application/json'
@@ -806,7 +836,7 @@ class UserInfoCookieViewTest(TestCase):
 
         for raw in ('{nope', '[1]'):
             with self.subTest(raw=raw):
-                response = self.client.put(self.user_info_auth_url, data=raw, content_type='application/json')
+                response = self.client.patch(self.user_info_auth_url, data=raw, content_type='application/json')
 
                 assert_problem(response, 'malformed-request')
 
@@ -826,7 +856,7 @@ class UserInfoCookieViewTest(TestCase):
             'email': 'hairdresser@example.com'
         }
         
-        response = self.client.put(
+        response = self.client.patch(
             self.user_info_auth_url,
             data=json.dumps(update_payload),
             content_type='application/json'
@@ -896,45 +926,42 @@ class UserInfoViewTest(TestCase):
             data=self.hairdresser_data,
         )
 
-    def test_get_customer_info_by_email(self):
+    def test_get_customer_info_of_the_session(self):
         self._login('customer@example.com', 'Customer_password1')
-        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('data', response.json())
-        user_data = response.json()['data']
-        self.assertEqual(user_data['user']['email'], 'customer@example.com')
-        self.assertEqual(user_data['user']['role'], 'customer')
-        self.assertIn('cpf', user_data)
+        response = self.client.get(reverse('current_user'))
 
-    def test_get_hairdresser_info_by_email(self):
-        self._login('hairdresser@example.com', 'Hairdresser_password1')
-        url = reverse('user_info', kwargs={'email': 'hairdresser@example.com'})
-        response = self.client.get(url)
-        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('data', response.json())
-        user_data = response.json()['data']
-        self.assertEqual(user_data['user']['email'], 'hairdresser@example.com')
-        self.assertEqual(user_data['user']['role'], 'hairdresser')
-        self.assertIn('resume', user_data)
+        customer = response.json()['customer']
+        self.assertEqual(customer['user']['email'], 'customer@example.com')
+        self.assertEqual(customer['user']['role'], 'customer')
+        self.assertIn('cpf', customer)
+
+    def test_get_hairdresser_info_of_the_session(self):
+        self._login('hairdresser@example.com', 'Hairdresser_password1')
+        response = self.client.get(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        hairdresser = response.json()['hairdresser']
+        self.assertEqual(hairdresser['user']['email'], 'hairdresser@example.com')
+        self.assertEqual(hairdresser['user']['role'], 'hairdresser')
+        self.assertIn('resume', hairdresser)
 
     def test_get_user_info_without_session_is_refused_with_401(self):
-        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
-        response = self.client.get(url)
+        response = self.client.get(reverse('current_user'))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertNotIn('data', response.json())
+        self.assertNotIn('customer', response.json())
 
-    def test_get_another_user_info_is_refused_with_403(self):
-        self._login('hairdresser@example.com', 'Hairdresser_password1')
+    def test_the_routes_by_email_no_longer_exist(self):
+        """RT-11: `GET` and `DELETE /api/user/<email>` have no replacement other than /api/users/me."""
+        self._login('customer@example.com', 'Customer_password1')
 
-        for email in ('customer@example.com', 'nonexistent@example.com'):
-            with self.subTest(email=email):
-                response = self.client.get(reverse('user_info', kwargs={'email': email}))
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-                self.assertNotIn('data', response.json())
+        for method in ('get', 'delete'):
+            for email in ('customer@example.com', 'hairdresser@example.com', 'nonexistent@example.com'):
+                with self.subTest(method=method, email=email):
+                    assert_problem(getattr(self.client, method)(f'/api/user/{email}'), 'not-found')
+        self.assertTrue(User.objects.filter(email='customer@example.com').exists())
+        self.assertTrue(User.objects.filter(email='hairdresser@example.com').exists())
 
     def _login(self, email, password):
         self.client.post(
@@ -943,42 +970,22 @@ class UserInfoViewTest(TestCase):
             content_type='application/json',
         )
 
-    def test_delete_user_by_email(self):
+    def test_delete_own_user(self):
         self._login('customer@example.com', 'Customer_password1')
-        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
-        response = self.client.delete(url)
-        
+        response = self.client.delete(reverse('current_user'))
+
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.content, b'')
         self.assertEqual(User.objects.filter(email='customer@example.com').count(), 0)
         self.assertEqual(Customer.objects.count(), 0)
 
-    def test_delete_user_by_email_is_case_insensitive(self):
-        self._login('customer@example.com', 'Customer_password1')
-
-        response = self.client.delete(reverse('user_info', kwargs={'email': 'Customer@Example.com'}))
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(User.objects.filter(email='customer@example.com').exists())
-
-    def test_delete_user_by_email_without_session_is_refused_with_401(self):
-        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
-        response = self.client.delete(url)
+    def test_delete_own_user_without_session_is_refused_with_401(self):
+        response = self.client.delete(reverse('current_user'))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(User.objects.filter(email='customer@example.com').exists())
         self.assertEqual(Customer.objects.count(), 1)
 
-    def test_delete_another_user_by_email_is_refused_with_403(self):
-        self._login('hairdresser@example.com', 'Hairdresser_password1')
-
-        for email in ('customer@example.com', 'nonexistent@example.com'):
-            with self.subTest(email=email):
-                response = self.client.delete(reverse('user_info', kwargs={'email': email}))
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertTrue(User.objects.filter(email='customer@example.com').exists())
-        self.assertTrue(User.objects.filter(email='hairdresser@example.com').exists())
-        
 class CustomerHomeViewTest(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -1100,7 +1107,7 @@ class CustomerHomeViewTest(TestCase):
 
     def test_customer_home_with_matching_preferences(self):
         """Test customer home view returns hairdressers matching customer preferences"""
-        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1121,7 +1128,7 @@ class CustomerHomeViewTest(TestCase):
 
     def test_customer_home_with_specific_preference_categories(self):
         """Test that specific preference categories return correct hairdressers"""
-        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1154,41 +1161,35 @@ class CustomerHomeViewTest(TestCase):
         trancas_ids = [h['id'] for h in trancas_hairdressers]
         self.assertIn(self.hairdresser_user_2.hairdresser.id, trancas_ids)
 
-    def test_customer_home_of_another_email_is_refused_with_403(self):
-        """The "for you" section reveals the customer's preferences, so only that customer sees it"""
-        for email in ('nonexistent@example.com', 'hairdresser1@example.com'):
+    def test_customer_home_by_email_no_longer_exists(self):
+        """RT-13: the "for you" section reveals the customer's preferences, so it follows the session, not an e-mail"""
+        for email in ('customer@example.com', 'nonexistent@example.com', 'hairdresser1@example.com'):
             with self.subTest(email=email):
-                response = self.client.get(reverse('customer_home_info', kwargs={'email': email}))
-                self.assertEqual(response.status_code, 403)
+                response = self.client.get(f'/api/customer/home/{email}')
+                assert_problem(response, 'not-found')
                 self.assertNotIn('for_you', response.json())
 
     def test_customer_home_hairdresser_email(self):
-        """A hairdresser asking for their own customer home gets 403"""
+        """A hairdresser asking for the customer home gets 403"""
         self._login('hairdresser1@example.com', 'Hairdresser_password1')
-        url = reverse('customer_home_info', kwargs={'email': 'hairdresser1@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         assert_problem(response, 'customer-required', detail='Only customers can perform this action.')
 
-    def test_customer_home_by_email_without_session_is_refused_with_401(self):
+    def test_customer_home_without_session_is_refused_with_401(self):
         self.client.cookies.clear()
 
-        response = self.client.get(reverse('customer_home_info', kwargs={'email': 'customer@example.com'}))
+        response = self.client.get(reverse('customer_home'))
 
         self.assertEqual(response.status_code, 401)
         self.assertNotIn('for_you', response.json())
 
-    def test_customer_home_email_is_compared_case_insensitively(self):
-        response = self.client.get(reverse('customer_home_info', kwargs={'email': 'Customer@Example.COM'}))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['for_you']), 2)
-
     def test_public_customer_home_has_no_contact_data(self):
-        """Without an e-mail the home is public: categories only, and no PII of the hairdressers"""
+        """`/api/home` is public: categories only, and no PII of the hairdressers"""
         self.client.cookies.clear()
 
-        response = self.client.get(reverse('customer_home_info'))
+        response = self.client.get(reverse('home'))
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -1232,7 +1233,7 @@ class CustomerHomeViewTest(TestCase):
         customer_user_no_match.preferences.add(self.other_pref)
         self._login('nomatch@example.com')
         
-        url = reverse('customer_home_info', kwargs={'email': 'nomatch@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1272,7 +1273,7 @@ class CustomerHomeViewTest(TestCase):
         )
         
         self._login('empty@example.com')
-        url = reverse('customer_home_info', kwargs={'email': 'empty@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1289,7 +1290,7 @@ class CustomerHomeViewTest(TestCase):
         # Delete one of the preferences to test missing category handling
         self.trancas_pref.delete()
         
-        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1305,7 +1306,7 @@ class CustomerHomeViewTest(TestCase):
 
     def test_customer_home_response_structure(self):
         """Test the structure of the response data"""
-        url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
+        url = reverse('customer_home')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -1455,20 +1456,27 @@ class GlobalSearchViewTest(TestCase):
         )
 
     def test_search_without_query_parameter(self):
-        """Test search endpoint without query parameter returns empty list"""
+        """RT-65: no `q` answers the usual envelope with an empty list"""
         response = self.client.get(self.search_url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
-        self.assertEqual(response_data, [])
+        self.assertEqual(response_data, {'data': []})
 
     def test_search_with_empty_query_parameter(self):
         """Test search endpoint with empty query parameter returns empty list"""
-        response = self.client.get(self.search_url, {'search': ''})
+        response = self.client.get(self.search_url, {'q': ''})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
-        self.assertEqual(response_data, [])
+        self.assertEqual(response_data, {'data': []})
+
+    def test_the_old_search_parameter_is_no_longer_read(self):
+        """RT-12: `search` was renamed to `q` and there is no alias."""
+        response = self.client.get(self.search_url, {'search': 'Alice'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': []})
 
     def test_search_with_none_query_parameter(self):
         """Test search endpoint with None query parameter returns empty list"""
@@ -1476,11 +1484,11 @@ class GlobalSearchViewTest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
-        self.assertEqual(response_data, [])
+        self.assertEqual(response_data, {'data': []})
 
     def test_search_hairdressers_by_first_name(self):
         """Test search finds hairdressers by first name"""
-        response = self.client.get(self.search_url, {'search': 'Alice'})
+        response = self.client.get(self.search_url, {'q': 'Alice'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1495,7 +1503,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_hairdressers_by_last_name(self):
         """Test search finds hairdressers by last name"""
-        response = self.client.get(self.search_url, {'search': 'Smith'})
+        response = self.client.get(self.search_url, {'q': 'Smith'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1507,7 +1515,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_services_by_name(self):
         """Test search finds services by name"""
-        response = self.client.get(self.search_url, {'search': 'Hair Cut'})
+        response = self.client.get(self.search_url, {'q': 'Hair Cut'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1519,7 +1527,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_services_partial_name_match(self):
         """Test search finds services with partial name match"""
-        response = self.client.get(self.search_url, {'search': 'Hair'})
+        response = self.client.get(self.search_url, {'q': 'Hair'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1535,7 +1543,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_case_insensitive(self):
         """Test search is case insensitive"""
-        response = self.client.get(self.search_url, {'search': 'hair cut'})
+        response = self.client.get(self.search_url, {'q': 'hair cut'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1548,7 +1556,7 @@ class GlobalSearchViewTest(TestCase):
     def test_search_combined_results(self):
         """Test search returns both hairdressers and services when relevant"""
         # Search for "curl" which should match hairdresser Carol and Curly Hair Treatment service
-        response = self.client.get(self.search_url, {'search': 'curl'})
+        response = self.client.get(self.search_url, {'q': 'curl'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1571,7 +1579,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_no_results_found(self):
         """Test search with query that matches nothing"""
-        response = self.client.get(self.search_url, {'search': 'nonexistent'})
+        response = self.client.get(self.search_url, {'q': 'nonexistent'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1582,7 +1590,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_result_serializer_structure(self):
         """Test that search results have correct structure and required fields"""
-        response = self.client.get(self.search_url, {'search': 'Alice'})
+        response = self.client.get(self.search_url, {'q': 'Alice'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1605,7 +1613,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_service_result_structure(self):
         """Test that service search results have correct structure"""
-        response = self.client.get(self.search_url, {'search': 'Hair Cut'})
+        response = self.client.get(self.search_url, {'q': 'Hair Cut'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1624,7 +1632,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_response_format(self):
         """Test that response is in correct JSON format"""
-        response = self.client.get(self.search_url, {'search': 'Alice'})
+        response = self.client.get(self.search_url, {'q': 'Alice'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'application/json')
@@ -1637,7 +1645,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_with_special_characters(self):
         """Test search handles special characters gracefully"""
-        response = self.client.get(self.search_url, {'search': 'Alice@#$%'})
+        response = self.client.get(self.search_url, {'q': 'Alice@#$%'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1646,7 +1654,7 @@ class GlobalSearchViewTest(TestCase):
     def test_search_with_very_long_query(self):
         """Test search handles very long query strings"""
         long_query = 'a' * 1000
-        response = self.client.get(self.search_url, {'search': long_query})
+        response = self.client.get(self.search_url, {'q': long_query})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1654,7 +1662,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_with_unicode_characters(self):
         """Test search handles unicode characters"""
-        response = self.client.get(self.search_url, {'search': 'Alicê'})
+        response = self.client.get(self.search_url, {'q': 'Alicê'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1662,8 +1670,8 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_result_order_consistency(self):
         """Test that search results are returned in consistent order"""
-        response1 = self.client.get(self.search_url, {'search': 'Hair'})
-        response2 = self.client.get(self.search_url, {'search': 'Hair'})
+        response1 = self.client.get(self.search_url, {'q': 'Hair'})
+        response2 = self.client.get(self.search_url, {'q': 'Hair'})
         
         self.assertEqual(response1.status_code, status.HTTP_200_OK)
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
@@ -1673,7 +1681,7 @@ class GlobalSearchViewTest(TestCase):
 
     def test_search_handles_deleted_objects(self):
         """Test search gracefully handles if objects are deleted during processing"""
-        response = self.client.get(self.search_url, {'search': 'Alice'})
+        response = self.client.get(self.search_url, {'q': 'Alice'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
@@ -1684,7 +1692,7 @@ class GlobalSearchViewTest(TestCase):
         import time
         
         start_time = time.time()
-        response = self.client.get(self.search_url, {'search': 'Hair'})
+        response = self.client.get(self.search_url, {'q': 'Hair'})
         end_time = time.time()
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2220,7 +2228,7 @@ class LoginViewGoogleAccountTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.login_url = reverse('login')
-        self.user_auth_url = reverse('user_auth')
+        self.user_auth_url = reverse('session')
 
     def test_password_login_on_google_only_account_returns_403(self):
         _create_plain_user(email='google-only@example.com', password=None, google_id='google-sub-123')
@@ -2264,7 +2272,7 @@ class GoogleAuthViewTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.google_auth_url = reverse('google_auth')
-        self.user_auth_url = reverse('user_auth')
+        self.user_auth_url = reverse('session')
         patcher = patch('users.views.verify_google_id_token')
         self.mock_verify = patcher.start()
         self.addCleanup(patcher.stop)
@@ -2433,8 +2441,8 @@ class GoogleRegisterTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.register_url = reverse('register')
-        self.user_auth_url = reverse('user_auth')
-        self.user_info_auth_url = reverse('user_info_auth')
+        self.user_auth_url = reverse('session')
+        self.user_info_auth_url = reverse('current_user')
         self.signup_token = create_signup_token('ana@gmail.com', 'google-sub-123')
         self.customer_payload = {
             'google_signup_token': self.signup_token,
@@ -2897,7 +2905,7 @@ class CepLookupViewTest(TestCase):
         return self.client.get(reverse('cep_lookup', args=[cep]))
 
     def test_route_resolves(self):
-        self.assertEqual(reverse('cep_lookup', args=['69057000']), '/api/address/cep/69057000')
+        self.assertEqual(reverse('cep_lookup', args=['69057000']), '/api/postal-codes/69057000')
 
     def test_found_cep_returns_200_without_cookie(self):
         self.mock_lookup.return_value = self.ADDRESS
@@ -2922,6 +2930,17 @@ class CepLookupViewTest(TestCase):
         assert_problem(
             response, 'postal-code-service-unavailable', detail='The postal code providers are unavailable.'
         )
+
+    def test_a_cep_with_a_hyphen_reaches_the_lookup_like_one_without(self):
+        """RT-82: `69000-000` and `69000000` are both accepted by the route."""
+        self.mock_lookup.return_value = self.ADDRESS
+
+        hyphen = self.client.get('/api/postal-codes/69000-000')
+        plain = self.client.get('/api/postal-codes/69000000')
+
+        self.assertEqual(hyphen.status_code, 200)
+        self.assertEqual(hyphen.json(), plain.json())
+        self.assertEqual([call.args[0] for call in self.mock_lookup.call_args_list], ['69000-000', '69000000'])
 
     def test_thirty_first_request_in_a_minute_returns_429(self):
         self.mock_lookup.return_value = self.ADDRESS
@@ -3458,10 +3477,10 @@ class AuthenticationTest(TestCase):
                 assert_problem(error, 'invalid-session')
 
     def test_authenticated_user_error_carries_the_request_path_as_instance(self):
-        session, error = authenticated_user(RequestFactory().get('/api/user/authenticated?x=1'))
+        session, error = authenticated_user(RequestFactory().get('/api/users/me?x=1'))
 
         body = assert_problem(error, 'invalid-session', detail='Your session is missing, invalid or expired.')
-        self.assertEqual(body['instance'], '/api/user/authenticated')
+        self.assertEqual(body['instance'], '/api/users/me')
 
     def test_forbidden_answers_403_forbidden(self):
         assert_problem(
@@ -3595,7 +3614,7 @@ class SessionReadersTest(TestCase):
     def test_check_authentication_accepts_a_cognito_access_token(self):
         self.client.cookies['jwt'] = self.access_token
 
-        response = self.client.get(reverse('user_auth'))
+        response = self.client.get(reverse('session'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authenticated': True})
@@ -3603,7 +3622,7 @@ class SessionReadersTest(TestCase):
     def test_check_authentication_is_false_for_the_google_signup_token(self):
         self.client.cookies['jwt'] = create_signup_token('cog@example.com', 'google-sub-1')
 
-        response = self.client.get(reverse('user_auth'))
+        response = self.client.get(reverse('session'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authenticated': False})
@@ -3612,7 +3631,7 @@ class SessionReadersTest(TestCase):
         for token in ('not-a-jwt', self._forged_session()):
             with self.subTest(token=token):
                 self.client.cookies['jwt'] = token
-                response = self.client.get(reverse('user_auth'))
+                response = self.client.get(reverse('session'))
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), {'authenticated': False})
 
@@ -3620,7 +3639,7 @@ class SessionReadersTest(TestCase):
         self.client.cookies['jwt'] = self.access_token
 
         with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
-            response = self.client.get(reverse('user_auth'))
+            response = self.client.get(reverse('session'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authenticated': False})
@@ -3628,16 +3647,16 @@ class SessionReadersTest(TestCase):
     def test_user_info_accepts_a_cognito_access_token(self):
         self.client.cookies['jwt'] = self.access_token
 
-        response = self.client.get(reverse('user_info_auth'))
+        response = self.client.get(reverse('current_user'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['customer']['user']['email'], 'cog@example.com')
 
     def test_protected_routes_answer_401_without_a_cookie_or_with_a_forged_signature(self):
         routes = [
-            ('get', reverse('user_info_auth')),
-            ('put', reverse('user_info_auth')),
-            ('delete', reverse('user_info_auth')),
+            ('get', reverse('current_user')),
+            ('patch', reverse('current_user')),
+            ('delete', reverse('current_user')),
             ('put', reverse('password_change')),
         ]
         for token in (None, self._forged_session()):
@@ -3647,7 +3666,7 @@ class SessionReadersTest(TestCase):
                     if token:
                         self.client.cookies['jwt'] = token
                     extra = {}
-                    if method == 'put':
+                    if method in ('put', 'patch'):
                         extra = {
                             'data': json.dumps({'email': 'cog@example.com', 'password': 'x'}),
                             'content_type': 'application/json',
@@ -3915,7 +3934,7 @@ class CognitoLoginTest(TestCase):
             self.assertTrue(cookie['httponly'])
             self.assertEqual(cookie['samesite'], 'None')
             self.assertTrue(cookie['secure'])
-        self.assertEqual(self.client.get(reverse('user_auth')).json(), {'authenticated': True})
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': True})
 
     def test_login_is_case_insensitive_on_the_email(self):
         self.assertEqual(self._login(email='NOVA@example.com').status_code, status.HTTP_200_OK)
@@ -4037,7 +4056,7 @@ class CognitoRefreshTest(TestCase):
         self.assertEqual([k['AuthFlow'] for n, k in self.fake.calls if n == 'initiate_auth'], ['REFRESH_TOKEN_AUTH'])
         self.assertEqual(response.cookies['jwt']['max-age'], 3600)
         self.assertNotIn('refresh_token', response.cookies)
-        self.assertEqual(self.client.get(reverse('user_auth')).json(), {'authenticated': True})
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': True})
 
     def test_refresh_without_the_cookie_answers_401_without_calling_cognito(self):
         self.client.cookies.clear()
@@ -4223,7 +4242,7 @@ class CognitoDeleteAccountTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.own_url = reverse('user_info_auth')
+        self.own_url = reverse('current_user')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
         self.client.post(
@@ -4231,7 +4250,6 @@ class CognitoDeleteAccountTest(TestCase):
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
             content_type='application/json',
         )
-        self.by_email_url = reverse('user_info', args=['nova@example.com'])
 
     def test_deleting_the_own_account_removes_the_cognito_user_the_row_and_the_cookies(self):
         response = self.client.delete(self.own_url)
@@ -4252,27 +4270,9 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertEqual(response.content, b'')
         self.assertFalse(User.objects.filter(email='nova@example.com').exists())
 
-    def test_deleting_by_email_removes_the_cognito_user_and_the_row(self):
-        response = self.client.delete(self.by_email_url)
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(response.content, b'')
-        self.assertNotIn('nova@example.com', self.fake.users)
-        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
-
-    def test_deleting_by_email_of_a_user_missing_from_cognito_still_succeeds(self):
-        del self.fake.users['nova@example.com']
-
-        response = self.client.delete(self.by_email_url)
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(response.content, b'')
-        self.assertFalse(User.objects.filter(email='nova@example.com').exists())
-
     def test_cognito_outage_answers_503_and_keeps_both_the_row_and_the_cognito_user(self):
         for name, delete in (
             ('own account', lambda: self.client.delete(self.own_url)),
-            ('by email', lambda: self.client.delete(self.by_email_url)),
         ):
             with self.subTest(route=name):
                 self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
@@ -4289,7 +4289,7 @@ class CognitoDeleteAccountTest(TestCase):
         self.fake.calls.clear()
         self.client.cookies['jwt'] = issue_session_token(google_user)
 
-        response = self.client.delete(reverse('user_info', args=['goo@example.com']))
+        response = self.client.delete(self.own_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(email='goo@example.com').exists())
 
@@ -4302,11 +4302,11 @@ class CognitoDeleteAccountTest(TestCase):
 
 
 class UpdateProfileEmailTest(TestCase):
-    """PUT /api/user/authenticated does not change the e-mail (it is the Cognito username)."""
+    """PATCH /api/users/me does not change the e-mail (it is the Cognito username)."""
 
     def setUp(self):
         self.client = APIClient()
-        self.own_url = reverse('user_info_auth')
+        self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
         self.client.post(
             reverse('login'),
@@ -4315,7 +4315,7 @@ class UpdateProfileEmailTest(TestCase):
         )
 
     def _put(self, body):
-        return self.client.put(self.own_url, data=json.dumps(body), content_type='application/json')
+        return self.client.patch(self.own_url, data=json.dumps(body), content_type='application/json')
 
     def test_a_different_email_answers_400_and_changes_no_field(self):
         before = User.objects.values().get(email='nova@example.com')
@@ -4334,11 +4334,11 @@ class UpdateProfileEmailTest(TestCase):
 
 
 class UpdateProfilePhoneTest(TestCase):
-    """PUT /api/user/authenticated takes the full stored phone (55 included) and refuses one used by another user."""
+    """PATCH /api/users/me takes the full stored phone (55 included) and refuses one used by another user."""
 
     def setUp(self):
         self.client = APIClient()
-        self.own_url = reverse('user_info_auth')
+        self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
         self.client.post(
             reverse('login'),
@@ -4348,7 +4348,7 @@ class UpdateProfilePhoneTest(TestCase):
         _create_plain_user(email='other@example.com', phone='5592998887777')
 
     def _put(self, body):
-        return self.client.put(self.own_url, data=json.dumps(body), content_type='application/json')
+        return self.client.patch(self.own_url, data=json.dumps(body), content_type='application/json')
 
     def test_a_phone_of_another_user_answers_409_and_changes_nothing(self):
         response = self._put({'phone': '+55 (92) 99888-7777', 'first_name': 'Trocado'})
@@ -4386,8 +4386,8 @@ class SessionFormatTest(TestCase):
         )
         self.client.cookies['jwt'] = legacy
 
-        protected = self.client.get(reverse('user_info_auth'))
-        auth_check = self.client.get(reverse('user_auth'))
+        protected = self.client.get(reverse('current_user'))
+        auth_check = self.client.get(reverse('session'))
 
         self.assertEqual(protected.status_code, status.HTTP_401_UNAUTHORIZED)
         assert_problem(protected, 'invalid-session')
@@ -4396,7 +4396,7 @@ class SessionFormatTest(TestCase):
     def test_the_google_signup_token_answers_401_on_a_protected_route(self):
         self.client.cookies['jwt'] = create_signup_token('ana@gmail.com', 'google-sub-123')
 
-        response = self.client.get(reverse('user_info_auth'))
+        response = self.client.get(reverse('current_user'))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         assert_problem(response, 'invalid-session')
@@ -4413,11 +4413,11 @@ class SessionFormatTest(TestCase):
             )
         self.assertEqual(login.status_code, status.HTTP_200_OK)
 
-        own = self.client.get(reverse('user_info_auth'))
-        assign = self.client.post(reverse('assign_preferences_to_user', args=[preference.id]))
+        own = self.client.get(reverse('current_user'))
+        assign = self.client.put(reverse('user_preference', args=[preference.id]))
 
         self.assertEqual(own.status_code, status.HTTP_200_OK)
-        self.assertEqual(assign.status_code, status.HTTP_200_OK)
+        self.assertEqual(assign.status_code, status.HTTP_204_NO_CONTENT)
         self.assertTrue(preference.users.filter(id=self.user.id).exists())
 
 

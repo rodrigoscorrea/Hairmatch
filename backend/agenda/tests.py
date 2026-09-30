@@ -18,9 +18,9 @@ class AgendaTestCase(TestCase):
         self.client = APIClient()
         
         # URLs
-        self.create_url = reverse('create_agenda')
-        self.list_url = reverse('list_agenda')
-        self.remove_url = lambda agenda_id: reverse('remove_agenda', args=[agenda_id])
+        self.create_url = reverse('agenda_collection')
+        self.list_url = reverse('agenda_collection')
+        self.remove_url = lambda agenda_id: reverse('agenda_detail', args=[agenda_id])
         
         # Create test user (hairdresser)
         self.hairdresser_user = User.objects.create(
@@ -333,7 +333,7 @@ class ListAgendaTest(AgendaTestCase):
     def test_list_hairdresser_agendas(self):
         """Test listing agendas for a specific hairdresser"""
         self.login(self.hairdresser_user)
-        list_hairdresser_url = reverse('list_agenda', args=[self.hairdresser.id])
+        list_hairdresser_url = reverse('hairdresser_agenda', args=[self.hairdresser.id])
 
         response = self.client.get(list_hairdresser_url)
 
@@ -345,12 +345,12 @@ class ListAgendaTest(AgendaTestCase):
 
         for hairdresser_id in (self.hairdresser.id, 9999):
             with self.subTest(hairdresser_id=hairdresser_id):
-                response = self.client.get(reverse('list_agenda', args=[hairdresser_id]))
+                response = self.client.get(reverse('hairdresser_agenda', args=[hairdresser_id]))
                 assert_problem(response, 'forbidden')
                 self.assertNotIn('data', response.json())
 
     def test_list_agenda_without_session_is_refused_with_401(self):
-        for url in (self.list_url, reverse('list_agenda', args=[self.hairdresser.id])):
+        for url in (self.list_url, reverse('hairdresser_agenda', args=[self.hairdresser.id])):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 assert_problem(response, 'invalid-session')

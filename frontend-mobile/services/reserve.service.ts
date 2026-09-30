@@ -3,7 +3,7 @@ import axiosInstance from './axios-instance';
 
 export const getReserveById = async (id:string | number) => {
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/reserve/${id}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/reservations/${id}`);
         return response.data;
     } catch (error) {
         console.error("Error in getAvailableResearchSlots:", error);
@@ -13,7 +13,7 @@ export const getReserveById = async (id:string | number) => {
 
 export const getAvailableResearchSlots = async (hairdresser_id: string | number, serviceId: number | string | undefined, selectedDate: string) => {
     try {
-        const response = await axiosInstance.post(`${API_BACKEND_URL}/api/reserve/slots/${hairdresser_id}`, {service: serviceId, date: selectedDate});
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/hairdressers/${hairdresser_id}/available-slots`, {params: {service: serviceId, date: selectedDate}});
         return response.data;
     } catch (error) {
         console.error("Error in getAvailableResearchSlots:", error);
@@ -23,7 +23,7 @@ export const getAvailableResearchSlots = async (hairdresser_id: string | number,
 
 export const createReserve = async (reserveData: any) => {
     try {
-        await axiosInstance.post(`${API_BACKEND_URL}/api/reserve/create`, reserveData);
+        await axiosInstance.post(`${API_BACKEND_URL}/api/reservations`, reserveData);
         return
     } catch (error) {
         console.error("Error in createReserve:", error);
@@ -33,7 +33,7 @@ export const createReserve = async (reserveData: any) => {
 
 export const getCustomerReserves = async (customerId: string | number) => {
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/reserve/list/${customerId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/customers/${customerId}/reservations`);
         return response.data;
     } catch (error) {
         console.error("Error in get Reserve by customer:", error);

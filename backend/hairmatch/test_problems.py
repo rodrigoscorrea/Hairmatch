@@ -153,13 +153,13 @@ class ExceptionHandlerTest(TestCase):
             try:
                 raise RuntimeError('secret internals')
             except RuntimeError as exc:
-                response = handle(exc, '/api/reserve/create', 'POST')
+                response = handle(exc, '/api/reservations', 'POST')
         body = assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
         self.assertNotIn('secret', json.dumps(body))
         self.assertEqual(len(logs.records), 1)
         record = logs.records[0]
         self.assertEqual(record.levelname, 'ERROR')
-        self.assertIn('POST /api/reserve/create', record.getMessage())
+        self.assertIn('POST /api/reservations', record.getMessage())
         self.assertIsNotNone(record.exc_info)
         self.assertIn('secret internals', logs.output[0])  # the traceback is in the server log
 
@@ -189,7 +189,7 @@ class ApiRoutesTest(TestCase):
         self.check_unknown_route_is_a_problem()
 
     def test_unknown_route_with_a_route_prefix_and_a_deeper_path(self):
-        assert_problem(self.client.get('/api/service/does/not/exist'), 'not-found')
+        assert_problem(self.client.get('/api/services/does/not/exist'), 'not-found')
 
     def test_bare_api_path_is_not_found(self):
         assert_problem(self.client.get('/api'), 'not-found')
@@ -202,13 +202,13 @@ class ApiRoutesTest(TestCase):
 
     def test_unmatched_converter_is_not_found(self):
         """`<int:...>` does not match a word, so the URL falls through to the catch-all."""
-        assert_problem(self.client.get('/api/hairdresser/abc'), 'not-found')
+        assert_problem(self.client.get('/api/hairdressers/abc'), 'not-found')
 
     def test_method_not_allowed_keeps_the_allow_header(self):
         response = self.client.patch('/api/auth/login', data='{}', content_type='application/json')
         assert_problem(response, 'method-not-allowed')
         allowed = {method.strip() for method in response['Allow'].split(',')}
-        self.assertTrue({'GET', 'POST', 'OPTIONS'} <= allowed)
+        self.assertEqual(allowed, {'POST', 'OPTIONS'})
         self.assertNotIn('PATCH', allowed)
 
     def test_method_not_allowed_ignores_an_html_accept_header(self):
@@ -216,13 +216,13 @@ class ApiRoutesTest(TestCase):
         assert_problem(response, 'method-not-allowed')
 
     def test_unsupported_media_type(self):
-        response = self.client.post('/api/auth/register', data='{}', content_type='application/json')
+        response = self.client.post('/api/users', data='{}', content_type='application/json')
         assert_problem(response, 'unsupported-media-type')
 
     def test_throttle_answers_429_with_retry_after(self):
         with patch.object(CepLookupThrottle, 'rate', '1/min'):
-            first = self.client.get('/api/address/cep/123')
-            second = self.client.get('/api/address/cep/123')
+            first = self.client.get('/api/postal-codes/123')
+            second = self.client.get('/api/postal-codes/123')
         self.assertEqual(first.status_code, 400)
         assert_problem(second, 'too-many-requests')
         self.assertGreater(int(second['Retry-After']), 0)
@@ -230,10 +230,10 @@ class ApiRoutesTest(TestCase):
     def check_unhandled_exception_is_a_problem(self):
         with patch('users.views.lookup_cep', side_effect=RuntimeError('db password is hunter2')):
             with self.assertLogs('hairmatch.problems', level='ERROR') as logs:
-                response = self.client.get('/api/address/cep/69050750')
+                response = self.client.get('/api/postal-codes/69050750')
         body = assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
         self.assertNotIn('hunter2', json.dumps(body))
-        self.assertIn('GET /api/address/cep/69050750', logs.records[0].getMessage())
+        self.assertIn('GET /api/postal-codes/69050750', logs.records[0].getMessage())
         self.assertIn('hunter2', logs.output[0])
         self.assertIn('Traceback', logs.output[0])
 

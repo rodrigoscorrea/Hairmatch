@@ -334,6 +334,21 @@ class ChatbotViewTest(TestCase):
         self.assertIn(f"Olá {self.customer_user.first_name}", sent_message)
         self.assertEqual(user_states.get(self.sender_number), 'main_menu')
 
+    def test_the_webhook_url_is_api_chatbot_webhook(self):
+        """RT-49 and RT-76: the Evolution API posts to /api/chatbot/webhook, and the old /test is gone."""
+        self.assertEqual(self.evolution_api_url, '/api/chatbot/webhook')
+        with patch('chatbot.views.AiUtils.send_whatsapp_message') as mock_send_message:
+            response = self.client.post(
+                '/api/chatbot/webhook', data=self._create_webhook_payload("Olá"), content_type='application/json'
+            )
+            old = self.client.post(
+                '/api/chatbot/test', data=self._create_webhook_payload("Olá"), content_type='application/json'
+            )
+
+        self.assertEqual(response.status_code, 200)
+        mock_send_message.assert_called_once()
+        self.assertEqual(old.status_code, 404)
+
     @patch('chatbot.views.AiUtils.send_whatsapp_message')
     def test_start_state_new_user(self, mock_send_message):
         """Test the initial message from a new, unregistered user."""

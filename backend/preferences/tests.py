@@ -215,20 +215,20 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         token = login_response.data['jwt']
         self.client.cookies['jwt'] = token
         
-        assign_url = reverse('assign_preferences_to_user', args=[self.preference.id])
+        assign_url = reverse('user_preference', args=[self.preference.id])
         
-        response = self.client.post(assign_url)
+        response = self.client.put(assign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # Refresh the preference from the database to get updated users
         self.preference.refresh_from_db()
         self.assertTrue(self.user in self.preference.users.all())
     
     def test_assign_preference_no_auth(self):
         """Test assigning a preference with no authentication"""
-        assign_url = reverse('assign_preferences_to_user', args=[self.preference.id])
+        assign_url = reverse('user_preference', args=[self.preference.id])
         
-        response = self.client.post(assign_url)
+        response = self.client.put(assign_url)
         
         assert_problem(response, 'invalid-session')
         self.assertFalse(self.user in self.preference.users.all())
@@ -242,11 +242,24 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         token = login_response.data['jwt']
         self.client.cookies['jwt'] = token
         
-        assign_url = reverse('assign_preferences_to_user', args=[999])  # Non-existent ID
+        assign_url = reverse('user_preference', args=[999])  # Non-existent ID
         
-        response = self.client.post(assign_url)
+        response = self.client.put(assign_url)
         
         assert_problem(response, 'not-found', detail='Preference not found.')
+
+    def test_assign_preference_twice_leaves_it_assigned_once(self):
+        """RT-60: repeating the PUT keeps a single assignment and answers 204 both times."""
+        login_response = self.login_user()
+        self.client.cookies['jwt'] = login_response.data['jwt']
+        assign_url = reverse('user_preference', args=[self.preference.id])
+
+        first = self.client.put(assign_url)
+        second = self.client.put(assign_url)
+
+        self.assertEqual(first.status_code, 204)
+        self.assertEqual(second.status_code, 204)
+        self.assertEqual(self.preference.users.filter(id=self.user.id).count(), 1)
 
 
 class UnassignPreferenceFromUserTest(PreferencesTestCase):
@@ -262,11 +275,11 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         # First assign the preference to the user
         self.preference.users.add(self.user)
         
-        unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+        unassign_url = reverse('user_preference', args=[self.preference.id])
         
-        response = self.client.post(unassign_url)
+        response = self.client.delete(unassign_url)
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # Refresh the preference from the database to get updated users
         self.preference.refresh_from_db()
         self.assertFalse(self.user in self.preference.users.all())
@@ -276,9 +289,9 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         # First assign the preference to the user
         self.preference.users.add(self.user)
         
-        unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+        unassign_url = reverse('user_preference', args=[self.preference.id])
         
-        response = self.client.post(unassign_url)
+        response = self.client.delete(unassign_url)
         
         assert_problem(response, 'invalid-session')
         # The user should still be assigned to the preference
@@ -293,9 +306,9 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         token = login_response.data['jwt']
         self.client.cookies['jwt'] = token
         
-        unassign_url = reverse('unassign_preferences_from_user', args=[999])  # Non-existent ID
+        unassign_url = reverse('user_preference', args=[999])  # Non-existent ID
         
-        response = self.client.post(unassign_url)
+        response = self.client.delete(unassign_url)
         
         assert_problem(response, 'not-found', detail='Preference not found.')
 
@@ -308,12 +321,12 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         token = login_response.data['jwt']
         self.client.cookies['jwt'] = token
         
-        unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+        unassign_url = reverse('user_preference', args=[self.preference.id])
         
-        response = self.client.post(unassign_url)
+        response = self.client.delete(unassign_url)
         
-        # Should still return 200 even though nothing changed (idempotent operation)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should still return 204 even though nothing changed (idempotent operation)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(self.user in self.preference.users.all())
 
 class PreferenceSessionTest(PreferencesTestCase):
@@ -324,8 +337,7 @@ class PreferenceSessionTest(PreferencesTestCase):
         self.user.cognito_sub = 'sub-user'
         self.user.save()
         self.fake = get_cognito().client
-        self.assign_url = reverse('assign_preferences_to_user', args=[self.preference.id])
-        self.unassign_url = reverse('unassign_preferences_from_user', args=[self.preference.id])
+        self.preference_url = reverse('user_preference', args=[self.preference.id])
 
     def _google_token(self):
         now = int(datetime.datetime.now().timestamp())
@@ -344,21 +356,21 @@ class PreferenceSessionTest(PreferencesTestCase):
             with self.subTest(token=kind):
                 self.client.cookies['jwt'] = token
 
-                self.assertEqual(self.client.post(self.assign_url).status_code, 200)
+                self.assertEqual(self.client.put(self.preference_url).status_code, 204)
                 self.assertTrue(self.preference.users.filter(id=self.user.id).exists())
-                self.assertEqual(self.client.post(self.unassign_url).status_code, 200)
+                self.assertEqual(self.client.delete(self.preference_url).status_code, 204)
                 self.assertFalse(self.preference.users.filter(id=self.user.id).exists())
 
     def test_routes_refuse_a_missing_cookie_and_a_token_signed_with_another_key_with_401(self):
         forged = self.fake.make_access_token('sub-user', signing_key=new_rsa_key())
         self.preference.users.add(self.user)
         for token in (None, forged):
-            for url in (self.assign_url, self.unassign_url):
-                with self.subTest(url=url, forged=token is not None):
+            for method in ('put', 'delete'):
+                with self.subTest(method=method, forged=token is not None):
                     self.client.cookies.clear()
                     if token:
                         self.client.cookies['jwt'] = token
-                    response = self.client.post(url)
+                    response = getattr(self.client, method)(self.preference_url)
                     self.assertEqual(response.status_code, 401)
                     assert_problem(response, 'invalid-session')
         self.assertTrue(self.preference.users.filter(id=self.user.id).exists())

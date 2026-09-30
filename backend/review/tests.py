@@ -384,7 +384,7 @@ class UpdateReviewProblemsTest(ReviewsTestCase):
         self.review = Review.objects.create(
             rating=4, comment='Good service', customer=self.customer, hairdresser=self.hairdresser
         )
-        self.url = reverse('update_review', args=[self.review.id])
+        self.url = reverse('review_detail', args=[self.review.id])
 
     def _put(self, body):
         if not isinstance(body, str):
@@ -482,7 +482,7 @@ class UpdateReviewTest(ReviewsTestCase):
     
     def test_update_review_success(self):
         """Test successfully updating a review"""
-        update_url = reverse('update_review', args=[self.review.id])
+        update_url = reverse('review_detail', args=[self.review.id])
         
         # Login as customer who owns the review
         self.login_as_customer()
@@ -508,7 +508,7 @@ class UpdateReviewTest(ReviewsTestCase):
     
     def test_update_review_no_token(self):
         """Test updating review with no auth token"""
-        update_url = reverse('update_review', args=[self.review.id])
+        update_url = reverse('review_detail', args=[self.review.id])
         
         # Clear any cookies/tokens
         self.client.cookies.clear()
@@ -572,7 +572,7 @@ class UpdateReviewTest(ReviewsTestCase):
         )
         
         # Try to update the review
-        update_url = reverse('update_review', args=[self.review.id])
+        update_url = reverse('review_detail', args=[self.review.id])
         
         updated_data = {
             'rating': 5,
@@ -614,7 +614,7 @@ class RemoveReview(ReviewsTestCase):
         self.review = Review.objects.first()
         self.reserve.review = self.review
         self.reserve.save()
-        self.delete_url = reverse('remove_review', args=[self.review.id])
+        self.delete_url = reverse('review_detail', args=[self.review.id])
 
     def test_delete_review_success(self):
         """Test a customer can successfully delete their own review."""
@@ -646,7 +646,7 @@ class RemoveReview(ReviewsTestCase):
     def test_delete_non_existent_review(self):
         """Test that trying to delete a review that doesn't exist returns 404."""
         # Use an ID that does not exist
-        invalid_delete_url = reverse('remove_review', args=[9999])
+        invalid_delete_url = reverse('review_detail', args=[9999])
         response = self.client.delete(invalid_delete_url)
         
         assert_problem(response, 'not-found', detail='Review not found.')
@@ -701,10 +701,10 @@ class ReviewSessionTest(ReviewsTestCase):
         Reserve.objects.create(customer=self.customer, service=self.service, review=review)
         if route == 'update':
             return self.client.put(
-                reverse('update_review', args=[review.id]),
+                reverse('review_detail', args=[review.id]),
                 data=json.dumps({'rating': 5}), content_type='application/json',
             )
-        return self.client.delete(reverse('remove_review', args=[review.id]))
+        return self.client.delete(reverse('review_detail', args=[review.id]))
 
     def test_routes_accept_a_cognito_access_token_and_a_google_session(self):
         expected = {'create': 201, 'update': 200, 'delete': 204}
@@ -761,10 +761,10 @@ class ReviewOwnershipTest(ReviewsTestCase):
         self.login_as_hairdresser()
 
         update = self.client.put(
-            reverse('update_review', args=[self.review.id]),
+            reverse('review_detail', args=[self.review.id]),
             data=json.dumps({'rating': 1}), content_type='application/json',
         )
-        remove = self.client.delete(reverse('remove_review', args=[self.review.id]))
+        remove = self.client.delete(reverse('review_detail', args=[self.review.id]))
 
         assert_problem(update, 'customer-required', detail='Only customers can perform this action.')
         assert_problem(remove, 'customer-required', detail='Only customers can perform this action.')
