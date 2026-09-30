@@ -8,6 +8,7 @@ import { getServiceById } from '@/services/service.service'; // Assuming you hav
 import { getHairdresser } from '@/services/hairdresser.service';
 import { listAvailabilitiesByHairdresser } from '@/services/availability.service';
 import { getAvailableResearchSlots, createReserve } from '@/services/reserve.service';
+import { problemMessage } from '@/utils/api-problem';
 
 // Import Types and Helpers
 import { ServiceResponse } from '@/models/Service.types';
@@ -181,17 +182,10 @@ export const useServiceBooking = () => {
         router.replace('/(app)/customer/reserves');
     } catch (err: any) {
         setShowConfirmationModal(false);
-        if (err.response && err.response.data && err.response.data.error) {
-          setErrorInfo({
-              visible: true,
-              message: err.response.data.error,
-          });
-        } else {
-          setErrorInfo({
-              visible: true,
-              message: "Não foi possível confirmar sua reserva. Tente novamente mais tarde.",
-          });
-        }
+        setErrorInfo({
+            visible: true,
+            message: problemMessage(err, "Não foi possível confirmar sua reserva. Tente novamente mais tarde."),
+        });
     }
   };
 

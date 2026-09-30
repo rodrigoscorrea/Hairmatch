@@ -416,9 +416,9 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-72 | P1: Mensagens em inglês | T4, T7, T8, T9, T10, T11 | Implemented |
 | PD-73 | P1: Mensagens em inglês | T4 | Implemented |
 | PD-80 | P1: App mostra erros em pt-BR | T14, T15 | Implemented |
-| PD-81 | P1: App mostra erros em pt-BR | T14 | Implemented |
-| PD-82 | P1: App mostra erros em pt-BR | T14, T15 | Implemented |
-| PD-83 | P1: App mostra erros em pt-BR | - | Pending |
+| PD-81 | P1: App mostra erros em pt-BR | T14, T16 | Implemented |
+| PD-82 | P1: App mostra erros em pt-BR | T14, T15, T16 | Implemented |
+| PD-83 | P1: App mostra erros em pt-BR | T16 | Implemented |
 | PD-84 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-85 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-86 | P1: App mostra erros em pt-BR | T15 | Implemented |
@@ -434,7 +434,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-98 | P2: Endpoints auxiliares | T11 | Implemented |
 | PD-99 | P2: Endpoints auxiliares | T12 | Implemented |
 | PD-100 | P2: Endpoints auxiliares | T13 | Implemented |
-| PD-101 | P2: Fallbacks do app em português | T15 | Implemented |
+| PD-101 | P2: Fallbacks do app em português | T15, T16 | Implemented |
 | PD-110 | Edge Cases | T1 | Implemented |
 | PD-111 | Edge Cases | T1 | Implemented |
 | PD-112 | Edge Cases | T1 | Implemented |

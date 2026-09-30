@@ -5,6 +5,7 @@ import { useRegistration } from '@/contexts/RegistrationContext';
 import { useAuth } from '@/app/_layout';
 import { requestAiResume } from '@/services/auth-user.service';
 import { stripNonDigits } from '@/utils/forms';
+import { problemMessage } from '@/utils/api-problem';
 
 export const useDescriptionForm = () => {
   const router = useRouter();
@@ -35,7 +36,7 @@ export const useDescriptionForm = () => {
       setRegistrationData(prev => ({ ...prev, resume: responseData }));
     } catch (error) {
       console.error("AI Resume Error:", error);
-      Alert.alert("Erro", "Não foi possível gerar a descrição com IA.");
+      Alert.alert("Erro", problemMessage(error, "Não foi possível gerar a descrição com IA."));
     } finally {
       setIsLoading(false);
     }
@@ -110,8 +111,7 @@ export const useDescriptionForm = () => {
     } catch (error: any) {
         console.error("Full sign-up error:", error);
         
-        const errorMessage = error.error || error.message || "Erro desconhecido";
-        setErrorModal({ visible: true, message: errorMessage }); 
+        setErrorModal({ visible: true, message: problemMessage(error, "Erro desconhecido") });
     } finally {
         setIsLoading(false);
     }

@@ -5,15 +5,16 @@ import { useAuth } from '@/app/_layout';
 import { INITIAL_REGISTRATION_DATA, useRegistration } from '@/contexts/RegistrationContext';
 import { loginWithGoogle } from '@/services/google-auth.service';
 import { useGoogleIdToken } from './useGoogleIdToken';
+import { problemMessage } from '@/utils/api-problem';
 
 const GOOGLE_DEFAULT_ERROR = 'Não foi possível entrar com o Google. Tente novamente.';
 
-// SPEC_DEVIATION: the design only accounts for `error.response.data.error` or the default text.
-// Reason: errors that don't come from axios (e.g. "Google login unavailable on Expo Go...", required by T14)
-// need to show their own message. Axios errors without `error` (e.g. backend unreachable) use the default text (GAUTH-09).
+// Backend errors show the pt-BR text of the problem slug (no response: the connection message; unknown slug: the default text).
+// SPEC_DEVIATION: errors that don't come from axios (e.g. "Google login unavailable on Expo Go...", required by T14)
+// need to show their own message.
 const getGoogleErrorMessage = (error: any): string => {
   if (axios.isAxiosError(error)) {
-    return (error.response?.data as any)?.error || GOOGLE_DEFAULT_ERROR;
+    return problemMessage(error, GOOGLE_DEFAULT_ERROR);
   }
   return error?.message || GOOGLE_DEFAULT_ERROR;
 };

@@ -501,10 +501,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] As cinco telas (login, Google, cadastro descrição, cadastro preferências, confirmação de reserva) mostram o texto do catálogo
-- [ ] Nenhum `response.data.error` nem `error.error` sobra em `hooks/` e `app/`
-- [ ] Fallbacks em português (`useLogin`, `useReviewForm`)
-- [ ] Gate check passes: build
+- [x] As cinco telas (login, Google, cadastro descrição, cadastro preferências, confirmação de reserva) mostram o texto do catálogo
+- [x] Nenhum `response.data.error` nem `error.error` sobra em `hooks/` e `app/`
+- [x] Fallbacks em português (`useLogin`, `useReviewForm`)
+- [x] Gate check passes: build
 
 **Tests**: none
 **Gate**: build
