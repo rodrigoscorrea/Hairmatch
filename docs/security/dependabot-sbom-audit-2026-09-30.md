@@ -7,10 +7,12 @@ Aplicado nesta branch, com testes:
 - **Frontend:** `npm audit fix` (sem `--force`) + `brace-expansion` atualizado + `query-string@^9.5.1` como dependência **explícita**. Resultado medido: **53 → 22** alertas (restam os 21 da cadeia Expo SDK 52 e `image-size`, só build/Metro).
   - **Achado durante a validação:** o novo `@react-navigation/core` deixou de depender de `query-string`, mas o `expo-router@4.0.20` o importa sem declarar (dependia do hoist). Sem a dependência explícita, `expo export` falhava com *Unable to resolve "query-string"*. O `expo-router` só chama `stringify(..., {sort:false})`, que não passa pelo `decode-uri-component` vulnerável.
   - Validado: `npx tsc --noEmit` limpo; `npx expo export` para **android** e **web** OK. O app não tem testes automatizados de propósito (`jest` sem testes).
-- **Backend (Python 3.9):** `Django 4.2.20 → 4.2.30`, `djangorestframework 3.15.0 → 3.15.2`. Suíte completa: 598 testes OK antes e depois (rodada em container descartável com `pip install -r requirements.txt`).
+- **Backend:** `Django 4.2.20 → 4.2.30` e Python **3.9 → 3.12** (`docker/backend/Dockerfile`, workflow), o que destrava `Pillow 11.3 → 12.3` (36 CVEs), `urllib3 1.26 → 2.8`, `sqlparse 0.5.5 → 0.6.0`, `requests 2.32 → 2.34`, `djangorestframework 3.15.0 → 3.17.2` e `boto3/botocore`. `requirements.txt` ganhou pisos (`Pillow>=12.3.0,<13`, `requests>=2.33,<3`, `sqlparse>=0.6.0`) para essas correções não regredirem. Nova varredura OSV das versões instaladas na imagem 3.12: **só restam os 7 alertas do Django 4.2** (LTS sem suporte; sem exposição neste app).
+  - Validado na imagem 3.12: `manage.py check`, `makemigrations --check` (sem mudanças), suíte completa **598 testes OK** (igual ao baseline em 3.9), conversão WebP de JPEG/JPEG-CMYK/PNG-alpha/PNG-cinza/WebP/GIF/BMP idêntica à do 3.9 (lixo e arquivo truncado seguem dando `InvalidImage`), `runserver` sobe respondendo problem+json, e `default_storage` grava/lê/apaga no S3 do LocalStack com boto3 1.43 + urllib3 2.8.
+  - **Ao atualizar o ambiente local:** rebuild da imagem (`docker compose build backend`); o container antigo ainda é Python 3.9.
 - **CI:** `actions/checkout@v3 → v4`, `actions/setup-python@v4 → v5` (só o próprio CI valida).
 
-**Não feito (decisão pendente / fora de escopo):** bump para Python 3.12 (Pillow 12.3, sqlparse, requests, urllib3, DRF 3.17), fixar o resto do `requirements.txt`, `dependabot.yml`, Expo SDK 57, Django 5.2, migração do `google-generativeai`. Ver §2.2, §2.3, §3 e o plano abaixo.
+**Não feito (fora de escopo):** fixar todo o `requirements.txt` com lockfile, `dependabot.yml`, Expo SDK 57, Django 5.2 LTS, migração do `google-generativeai` (agora emite aviso de fim de suporte; ver §2.3). As seções abaixo são a análise original, feita antes do bump de Python.
 
 ---
 
