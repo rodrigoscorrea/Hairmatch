@@ -385,15 +385,15 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-35 | P1: Cadastro e conta | T4 | Implemented |
 | PD-36 | P1: Cadastro e conta | T4 | Implemented |
 | PD-37 | P1: Cadastro e conta | T4 | Implemented |
-| PD-40 | P1: Agendamento | - | Pending |
-| PD-41 | P1: Agendamento | - | Pending |
-| PD-42 | P1: Agendamento | - | Pending |
-| PD-43 | P1: Agendamento | - | Pending |
-| PD-44 | P1: Agendamento | - | Pending |
-| PD-45 | P1: Agendamento | - | Pending |
-| PD-46 | P1: Agendamento | - | Pending |
-| PD-47 | P1: Agendamento | - | Pending |
-| PD-48 | P1: Agendamento | - | Pending |
+| PD-40 | P1: Agendamento | T7 | Implemented |
+| PD-41 | P1: Agendamento | T7 | Implemented |
+| PD-42 | P1: Agendamento | T7 | Implemented |
+| PD-43 | P1: Agendamento | T7 | Implemented |
+| PD-44 | P1: Agendamento | T7 | Implemented |
+| PD-45 | P1: Agendamento | T7 | Implemented |
+| PD-46 | P1: Agendamento | T7 | Implemented |
+| PD-47 | P1: Agendamento | T7 | Implemented |
+| PD-48 | P1: Agendamento | T7 | Implemented |
 | PD-49 | P1: Agendamento | - | Pending |
 | PD-50 | P1: Agendamento | - | Pending |
 | PD-51 | P1: Agendamento | - | Pending |
@@ -412,8 +412,8 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-66 | P1: Erros fora das views | T1 | Implemented |
 | PD-67 | P1: Erros fora das views | T1 | Implemented |
 | PD-70 | P1: Mensagens em inglês | - | Pending |
-| PD-71 | P1: Mensagens em inglês | - | Pending |
-| PD-72 | P1: Mensagens em inglês | T4 | Implemented |
+| PD-71 | P1: Mensagens em inglês | T7 | Implemented |
+| PD-72 | P1: Mensagens em inglês | T4, T7 | Implemented |
 | PD-73 | P1: Mensagens em inglês | T4 | Implemented |
 | PD-80 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-81 | P1: App mostra erros em pt-BR | - | Pending |

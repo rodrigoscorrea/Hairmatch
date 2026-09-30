@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -13,6 +15,7 @@ from agenda.models import Agenda
 from availability.models import Availability
 from users.cognito import get_cognito
 from hairmatch.local_time import make_local_aware
+from hairmatch.problem_testing import assert_problem
 
 
 class ReserveTestCase(TestCase):
@@ -179,8 +182,9 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.json()['error'], 'The hairdresser is not available during this time slot.')
+        assert_problem(
+            response, 'slot-unavailable', detail='The hairdresser is not available during this time slot.'
+        )
         self.assertEqual(Reserve.objects.count(), 1)  # No new reserve created
         
     def test_create_reserve_ignores_the_customer_in_the_body(self):
@@ -206,6 +210,80 @@ class CreateReserveTest(ReserveTestCase):
         self.assertEqual(created.service, self.service)
         self.assertFalse(Reserve.objects.filter(customer=self.other_customer).exists())
 
+    def _post(self, body, **extra):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return self.client.post(self.create_url, data=body, content_type='application/json', **extra)
+
+    def _payload(self, **overrides):
+        payload = {
+            'start_time': (self.reserve_start_time + timedelta(hours=2)).isoformat(),
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_create_reserve_with_a_body_that_is_not_json_answers_400_without_the_exception_text(self):
+        for raw in ('{nope', '[1]', '"text"'):
+            with self.subTest(raw=raw):
+                response = self._post(raw)
+
+                body = assert_problem(response, 'malformed-request')
+                self.assertNotIn('Expecting', body['detail'])
+        self.assertEqual(Reserve.objects.count(), 1)
+
+    def test_create_reserve_reports_every_missing_field(self):
+        response = self._post({})
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/hairdresser', 'detail': 'This field is required.'},
+            {'pointer': '#/service', 'detail': 'This field is required.'},
+            {'pointer': '#/start_time', 'detail': 'This field is required.'},
+        ])
+
+    def test_create_reserve_with_ids_that_are_not_integers_answers_400(self):
+        response = self._post(self._payload(hairdresser='abc', service=[1]))
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/hairdresser', 'detail': 'This field must be an integer.'},
+            {'pointer': '#/service', 'detail': 'This field must be an integer.'},
+        ])
+
+    def test_create_reserve_with_a_start_time_that_is_not_iso_8601_answers_400(self):
+        for start_time in ('tomorrow at 3pm', '2025-13-45T10:00:00', 12345):
+            with self.subTest(start_time=start_time):
+                response = self._post(self._payload(start_time=start_time))
+
+                assert_problem(response, 'validation-error', errors=[{
+                    'pointer': '#/start_time',
+                    'detail': "The start time must be an ISO 8601 datetime like '2025-04-26T14:30:00Z'.",
+                }])
+        self.assertEqual(Reserve.objects.count(), 1)
+
+    def test_create_reserve_that_clashes_with_another_reserve_of_the_customer_answers_409(self):
+        payload = self._payload(
+            hairdresser=self.other_hairdresser.id, service=self.other_service.id,
+            start_time=(self.reserve_start_time + timedelta(minutes=30)).isoformat(),
+        )
+
+        response = self._post(payload)
+
+        assert_problem(
+            response, 'customer-schedule-conflict', detail='You already have another reservation at the same time.'
+        )
+        self.assertEqual(Reserve.objects.count(), 1)
+        self.assertFalse(Agenda.objects.filter(hairdresser=self.other_hairdresser).exists())
+
+    def test_create_reserve_that_fails_to_save_answers_500_and_rolls_back(self):
+        with patch.object(Agenda.objects, 'create', side_effect=RuntimeError('disk on fire')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post(self._payload())
+
+        body = assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertNotIn('disk on fire', json.dumps(body))
+        self.assertEqual(Reserve.objects.count(), 1)
+
     def test_create_reserve_without_session_is_refused_with_401(self):
         self.logout()
         reserve_data = {
@@ -217,7 +295,7 @@ class CreateReserveTest(ReserveTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Reserve.objects.count(), 1)
         self.assertEqual(Agenda.objects.count(), 1)
 
@@ -231,7 +309,7 @@ class CreateReserveTest(ReserveTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'customer-required', detail='Only customers can perform this action.')
         self.assertEqual(Reserve.objects.count(), 1)
 
     def test_create_reserve_with_a_service_of_another_hairdresser_is_refused(self):
@@ -244,7 +322,9 @@ class CreateReserveTest(ReserveTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/service', 'detail': 'The service does not belong to this hairdresser.'}
+        ])
         self.assertEqual(Reserve.objects.count(), 1)
         self.assertEqual(Agenda.objects.count(), 1)
         
@@ -265,9 +345,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
         
     def test_create_reserve_invalid_service(self):
         """Test reserve creation with a non-existent service"""
@@ -286,9 +364,7 @@ class CreateReserveTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        assert_problem(response, 'not-found', detail='Service not found.')
 
 
 class ListReserveTest(ReserveTestCase):
@@ -322,7 +398,7 @@ class ListReserveTest(ReserveTestCase):
 
         response = self.client.get(reverse('list_reserve', args=[self.customer.id]))
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.assertNotIn('data', response.json())
 
     def test_list_without_session_is_refused_with_401(self):
@@ -335,6 +411,13 @@ class ListReserveTest(ReserveTestCase):
 class ReserveByIdTest(ReserveTestCase):
     def url(self, reserve_id):
         return reverse('retrieve_reserve_by_id', args=[reserve_id])
+
+    def test_reading_a_reserve_that_does_not_exist_answers_404(self):
+        self.login(self.customer_user)
+
+        response = self.client.get(self.url(9999))
+
+        assert_problem(response, 'not-found', detail='Reservation not found.')
 
     def test_customer_reads_own_reserve(self):
         self.login(self.customer_user)
@@ -356,13 +439,13 @@ class ReserveByIdTest(ReserveTestCase):
             with self.subTest(user=user.email):
                 self.login(user)
                 response = self.client.get(self.url(self.reserve.id))
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                assert_problem(response, 'forbidden')
                 self.assertNotIn('data', response.json())
 
     def test_without_session_is_refused_with_401(self):
         response = self.client.get(self.url(self.reserve.id))
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
 
 
 class RemoveReserveTest(ReserveTestCase):
@@ -371,8 +454,8 @@ class RemoveReserveTest(ReserveTestCase):
         self.login(self.customer_user)
         response = self.client.delete(self.remove_url(self.reserve.id))
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()['data'], 'reserve deleted successfully')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertEqual(Reserve.objects.count(), 0)
         
     def test_hairdresser_of_the_service_removes_the_reserve(self):
@@ -380,21 +463,21 @@ class RemoveReserveTest(ReserveTestCase):
 
         response = self.client.delete(self.remove_url(self.reserve.id))
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Reserve.objects.exists())
 
     def test_remove_nonexistent_reserve(self):
         """Test removing a non-existent reserve"""
         self.login(self.customer_user)
         response = self.client.delete(self.remove_url(9999))  # Non-existent ID
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert_problem(response, 'not-found', detail='Reservation not found.')
 
     def test_remove_reserve_of_someone_else_is_refused_with_403(self):
         for user in (self.other_customer_user, self.other_hairdresser_user):
             with self.subTest(user=user.email):
                 self.login(user)
                 response = self.client.delete(self.remove_url(self.reserve.id))
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                assert_problem(response, 'forbidden')
                 self.assertTrue(Reserve.objects.filter(id=self.reserve.id).exists())
 
     def test_remove_without_session_is_refused_with_401(self):
@@ -430,6 +513,46 @@ class ReserveSlotTest(ReserveTestCase):
         # we expect approximately 14 half-hour slots
         # This might need adjustment based on exact business logic
         
+    def test_get_slots_without_service_and_date_reports_both(self):
+        response = self.client.post(
+            self.get_slots_url(self.hairdresser.id), data='{}', content_type='application/json'
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/service', 'detail': 'This field is required.'},
+            {'pointer': '#/date', 'detail': 'This field is required.'},
+        ])
+
+    def test_get_slots_with_a_missing_service_and_a_bad_date_reports_each_field(self):
+        response = self.client.post(
+            self.get_slots_url(self.hairdresser.id), data=json.dumps({'date': '26/04/2025'}),
+            content_type='application/json',
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/service', 'detail': 'This field is required.'},
+            {'pointer': '#/date', 'detail': 'The date must be in YYYY-MM-DD format.'},
+        ])
+
+    def test_get_slots_with_a_body_that_is_not_json_answers_400(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                response = self.client.post(
+                    self.get_slots_url(self.hairdresser.id), data=raw, content_type='application/json'
+                )
+
+                assert_problem(response, 'malformed-request')
+
+    def test_get_slots_with_a_service_that_is_not_an_integer_answers_400(self):
+        response = self.client.post(
+            self.get_slots_url(self.hairdresser.id), data=json.dumps({'date': '2025-04-28', 'service': 'abc'}),
+            content_type='application/json',
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/service', 'detail': 'This field must be an integer.'},
+        ])
+
     def test_get_slots_invalid_hairdresser(self):
         """Test getting slots for non-existent hairdresser"""
         today = timezone.now().date()
@@ -445,8 +568,7 @@ class ReserveSlotTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
         
     def test_get_slots_invalid_service(self):
         """Test getting slots with non-existent service"""
@@ -463,8 +585,7 @@ class ReserveSlotTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        assert_problem(response, 'not-found', detail='Service not found.')
         
     def test_get_slots_invalid_date_format(self):
         """Test getting slots with invalid date format"""
@@ -479,8 +600,9 @@ class ReserveSlotTest(ReserveTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()['error'], 'Invalid date format. Please use YYYY-MM-DD.')
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/date', 'detail': 'The date must be in YYYY-MM-DD format.'}
+        ])
         
     def test_get_slots_no_availability(self):
         """Test getting slots when hairdresser has no availability for that day"""

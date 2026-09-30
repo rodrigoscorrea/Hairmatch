@@ -257,10 +257,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Cada critério com o slug do spec, sem `f'...{e}'` em corpo de resposta
-- [ ] `DELETE reserve/remove/<id>` responde 204, e reserva ausente `Reservation not found.`
-- [ ] `get_available_slots` responde 404 para serviço ausente (era 500 no dict interno), e a mensagem em português do WhatsApp não muda
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test reserve chatbot --noinput'`
+- [x] Cada critério com o slug do spec, sem `f'...{e}'` em corpo de resposta
+- [x] `DELETE reserve/remove/<id>` responde 204, e reserva ausente `Reservation not found.`
+- [x] `get_available_slots` responde 404 para serviço ausente (era 500 no dict interno), e a mensagem em português do WhatsApp não muda
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test reserve chatbot --noinput'`
 
 **Tests**: integration
 **Gate**: quick
