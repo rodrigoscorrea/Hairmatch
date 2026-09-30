@@ -229,11 +229,11 @@ T17 → T18
 
 **Done when**:
 
-- [ ] 400 `invalid-postal-code`, 404 `postal-code-not-found`, 503 `postal-code-service-unavailable`
-- [ ] Gemini sem configuração ou com falha: 503 `ai-service-unavailable`, sem `Config error` nem texto da exceção
-- [ ] Throttle do CEP e do Gemini: 429 com `Retry-After`
-- [ ] Testes de `hairmatch/tests.py` reescritos para `Problem`
-- [ ] Gate check passes: full
+- [x] 400 `invalid-postal-code`, 404 `postal-code-not-found`, 503 `postal-code-service-unavailable`
+- [x] Gemini sem configuração ou com falha: 503 `ai-service-unavailable`, sem `Config error` nem texto da exceção
+- [x] Throttle do CEP e do Gemini: 429 com `Retry-After`
+- [x] Testes de `hairmatch/tests.py` reescritos para `Problem`
+- [x] Gate check passes: full
 
 **Tests**: integration
 **Gate**: full

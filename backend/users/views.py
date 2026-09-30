@@ -43,6 +43,7 @@ from rest_framework.throttling import AnonRateThrottle
 from hairmatch.problems import (
     Problem,
     body_error,
+    is_id_list,
     json_object,
     missing_field_errors,
     problem_response,
@@ -260,9 +261,7 @@ def _create_role_profile(user, data):
         preferences_ids = json.loads(data.get('preferences', '[]'))
     except (TypeError, ValueError):
         preferences_ids = None
-    if not isinstance(preferences_ids, list) or not all(
-        isinstance(pref_id, int) and not isinstance(pref_id, bool) for pref_id in preferences_ids
-    ):
+    if not is_id_list(preferences_ids):
         raise validation_problem([body_error('preferences', 'The preferences must be a JSON list of ids.')])
     if len(preferences_ids) > 0:
         user.preferences.clear()
@@ -391,11 +390,13 @@ class CepLookupView(APIView):
         try:
             return JsonResponse(lookup_cep(cep), status=200)
         except InvalidCep:
-            return JsonResponse({'error': 'CEP inválido. Informe 8 dígitos.'}, status=400)
+            return problem_response(request, 'invalid-postal-code', 'The postal code must have 8 digits.')
         except CepNotFound:
-            return JsonResponse({'error': 'CEP não encontrado.'}, status=404)
+            return problem_response(request, 'postal-code-not-found', 'No address was found for this postal code.')
         except CepServiceUnavailable:
-            return JsonResponse({'error': 'Serviço de CEP indisponível. Preencha o endereço manualmente.'}, status=503)
+            return problem_response(
+                request, 'postal-code-service-unavailable', 'The postal code providers are unavailable.'
+            )
 
 class LogoutView(APIView):
     def post(self, request):
@@ -633,21 +634,14 @@ class GeminiChatView(APIView):
     throttle_classes = [GeminiCompletionThrottle]
 
     def post(self, request):
-        try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            return JsonResponse({'error': 'Invalid request body'}, status=400)
-        result = hairdresser_profile_ai_completion(data)
-        return result
+        return hairdresser_profile_ai_completion(json_object(request))
     
 class HairdresserInfoView(APIView):
     def get(self,request,hairdresser_id=None): 
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
         except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=404)
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
 
         hairdresser_serialized = PublicHairdresserSerializer(hairdresser).data
         return JsonResponse({'data': hairdresser_serialized}, status=200)

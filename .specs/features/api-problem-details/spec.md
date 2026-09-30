@@ -402,11 +402,11 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-54 | P1: Agendamento | - | Pending |
 | PD-55 | P1: Agendamento | - | Pending |
 | PD-56 | P1: Agendamento | - | Pending |
-| PD-57 | P1: Agendamento | - | Pending |
+| PD-57 | P1: Agendamento | T6 | Implemented |
 | PD-60 | P1: Erros fora das views | T1 | Implemented |
 | PD-61 | P1: Erros fora das views | T1 | Implemented |
 | PD-62 | P1: Erros fora das views | T1, T4 | Implemented |
-| PD-63 | P1: Erros fora das views | T1 | Implemented |
+| PD-63 | P1: Erros fora das views | T1, T6 | Implemented |
 | PD-64 | P1: Erros fora das views | T1 | Implemented |
 | PD-65 | P1: Erros fora das views | T1 | Implemented |
 | PD-66 | P1: Erros fora das views | T1 | Implemented |
@@ -423,11 +423,11 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-85 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-86 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-87 | P1: App mostra erros em pt-BR | - | Pending |
-| PD-90 | P2: Endpoints auxiliares | - | Pending |
-| PD-91 | P2: Endpoints auxiliares | - | Pending |
-| PD-92 | P2: Endpoints auxiliares | - | Pending |
-| PD-93 | P2: Endpoints auxiliares | - | Pending |
-| PD-94 | P2: Endpoints auxiliares | - | Pending |
+| PD-90 | P2: Endpoints auxiliares | T6 | Implemented |
+| PD-91 | P2: Endpoints auxiliares | T6 | Implemented |
+| PD-92 | P2: Endpoints auxiliares | T6 | Implemented |
+| PD-93 | P2: Endpoints auxiliares | T6 | Implemented |
+| PD-94 | P2: Endpoints auxiliares | T6 | Implemented |
 | PD-95 | P2: Endpoints auxiliares | - | Pending |
 | PD-96 | P2: Endpoints auxiliares | - | Pending |
 | PD-97 | P2: Endpoints auxiliares | - | Pending |

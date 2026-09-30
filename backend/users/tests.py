@@ -1,4 +1,5 @@
 from hairmatch.problem_testing import assert_problem
+from hairmatch.problems import Problem
 from django.test import TestCase, Client, SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -1778,25 +1779,14 @@ class HairdresserInfoViewTest(TestCase):
         url = reverse('hairdresser_info', kwargs={'hairdresser_id': non_existent_id})
         response = self.client.get(url)
         
-        self.assertEqual(response.status_code, 404)
-        
-        # Parse JSON response
-        response_data = json.loads(response.content)
-        
-        # Check error message
-        self.assertIn('error', response_data)
-        self.assertEqual(response_data['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
 
     def test_get_hairdresser_info_zero_id(self):
         """Test retrieval with ID 0."""
         url = reverse('hairdresser_info', kwargs={'hairdresser_id': 0})
         response = self.client.get(url)
         
-        self.assertEqual(response.status_code, 404)
-        
-        response_data = json.loads(response.content)
-        self.assertIn('error', response_data)
-        self.assertEqual(response_data['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
 
     def test_get_different_hairdresser_info(self):
         """Test retrieval of different hairdresser information."""
@@ -2919,29 +2909,27 @@ class CepLookupViewTest(TestCase):
     def test_invalid_cep_returns_400(self):
         self.mock_lookup.side_effect = InvalidCep('123')
         response = self._get('123')
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {'error': 'CEP inválido. Informe 8 dígitos.'})
+        assert_problem(response, 'invalid-postal-code', detail='The postal code must have 8 digits.')
 
     def test_not_found_returns_404(self):
         self.mock_lookup.side_effect = CepNotFound('00000000')
         response = self._get('00000000')
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json(), {'error': 'CEP não encontrado.'})
+        assert_problem(response, 'postal-code-not-found', detail='No address was found for this postal code.')
 
     def test_service_unavailable_returns_503(self):
         self.mock_lookup.side_effect = CepServiceUnavailable('69057000')
         response = self._get()
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(
-            response.json(),
-            {'error': 'Serviço de CEP indisponível. Preencha o endereço manualmente.'},
+        assert_problem(
+            response, 'postal-code-service-unavailable', detail='The postal code providers are unavailable.'
         )
 
     def test_thirty_first_request_in_a_minute_returns_429(self):
         self.mock_lookup.return_value = self.ADDRESS
         for _ in range(30):
             self.assertEqual(self._get().status_code, 200)
-        self.assertEqual(self._get().status_code, 429)
+        throttled = self._get()
+        assert_problem(throttled, 'too-many-requests')
+        self.assertGreater(int(throttled['Retry-After']), 0)
 
 
 class PopulateHairdressersCommandTest(TestCase):
@@ -4459,8 +4447,45 @@ class GeminiChatViewTest(TestCase):
         for body in ('[]', 'not json', '"text"'):
             with self.subTest(body=body):
                 response = self._post(body)
-                self.assertEqual(response.status_code, 400)
+                assert_problem(response, 'malformed-request')
         completion.assert_not_called()
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_unavailable_gemini_answers_503_from_the_client_problem(self, completion):
+        completion.side_effect = Problem('ai-service-unavailable', 'The description could not be generated right now. Try again.')
+
+        response = self._post()
+
+        assert_problem(
+            response, 'ai-service-unavailable',
+            detail='The description could not be generated right now. Try again.',
+        )
+
+    @override_settings(GEMINI_API_KEY=None)
+    def test_gemini_without_an_api_key_answers_503_without_the_exception_text(self):
+        with self.assertLogs('hairmatch.ai_clients.gemini_client', level='ERROR'):
+            response = self._post()
+
+        body = assert_problem(response, 'ai-service-unavailable')
+        self.assertNotIn('GEMINI_API_KEY', json.dumps(body))
+        self.assertNotIn('Config error', json.dumps(body))
+
+    def test_preferences_that_are_not_a_list_of_ids_answer_400_validation_error(self):
+        for preferences in (None, 'abc', [1, 'x'], {'a': 1}):
+            with self.subTest(preferences=preferences):
+                response = self._post(json.dumps({'first_name': 'Ana', 'preferences': preferences}))
+
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': '#/preferences', 'detail': 'The preferences must be a list of ids.'}],
+                )
+
+    def test_the_gemini_view_is_a_problem_for_an_html_accept_header_too(self):
+        response = self.client.post(
+            self.url, data='{nope', content_type='application/json', HTTP_ACCEPT='text/html'
+        )
+
+        assert_problem(response, 'malformed-request')
 
     @patch('users.views.hairdresser_profile_ai_completion')
     def test_the_eleventh_request_in_an_hour_is_throttled_with_429(self, completion):

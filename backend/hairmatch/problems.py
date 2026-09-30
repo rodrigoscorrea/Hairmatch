@@ -123,6 +123,11 @@ def json_object(request):
     return data
 
 
+def is_id_list(value):
+    """Whether `value` is a list of integer ids (a bool is not an id)."""
+    return isinstance(value, list) and all(isinstance(item, int) and not isinstance(item, bool) for item in value)
+
+
 def request_data(request):
     """`request.data` of a view that lets DRF parse the body, guaranteed to be a mapping."""
     data = request.data

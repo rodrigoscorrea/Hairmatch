@@ -15,6 +15,7 @@ from django.http import JsonResponse
 from PIL import Image, ImageCms
 
 from hairmatch.image_fixtures import make_image_bytes
+from hairmatch.problems import Problem
 from hairmatch.images import InvalidImage, WebPImageField, to_webp, webp_name
 from hairmatch.storage import S3MediaStorage
 
@@ -150,15 +151,37 @@ class GeminiClientTest(TestCase):
     @patch('hairmatch.ai_clients.gemini_client.setup_environment', side_effect=ValueError("Test error"))
     def test_hairdresser_profile_ai_completion_config_error(self, mock_setup):
         """Test completion function when setup_environment fails."""
-        response = hairdresser_profile_ai_completion({})
-        self.assertEqual(response.status_code, 500)
+        with self.assertLogs('hairmatch.ai_clients.gemini_client', level='ERROR'):
+            with self.assertRaises(Problem) as ctx:
+                hairdresser_profile_ai_completion({'preferences': []})
+
+        self.assertEqual(ctx.exception.slug, 'ai-service-unavailable')
+        self.assertNotIn('Test error', ctx.exception.detail)
+        self.assertNotIn('Config error', ctx.exception.detail)
 
     @patch('hairmatch.ai_clients.gemini_client.setup_environment')
     @patch('hairmatch.ai_clients.gemini_client.process_hairdresser_profile', side_effect=Exception("Unexpected"))
     def test_hairdresser_profile_ai_completion_unexpected_error(self, mock_process, mock_setup):
         """Test completion function with a generic unexpected error."""
-        response = hairdresser_profile_ai_completion({'preferences': []})
-        self.assertEqual(response.status_code, 500)
+        with self.assertLogs('hairmatch.ai_clients.gemini_client', level='ERROR'):
+            with self.assertRaises(Problem) as ctx:
+                hairdresser_profile_ai_completion({'preferences': []})
+
+        self.assertEqual(ctx.exception.slug, 'ai-service-unavailable')
+        self.assertEqual(ctx.exception.detail, 'The description could not be generated right now. Try again.')
+        self.assertNotIn('Unexpected', ctx.exception.detail)
+
+    def test_hairdresser_profile_ai_completion_rejects_preferences_that_are_not_a_list_of_ids(self):
+        for data in ({}, {'preferences': None}, {'preferences': 'abc'}, {'preferences': [1, 'x']}):
+            with self.subTest(data=data):
+                with self.assertRaises(Problem) as ctx:
+                    hairdresser_profile_ai_completion(data)
+
+                self.assertEqual(ctx.exception.slug, 'validation-error')
+                self.assertEqual(
+                    ctx.exception.errors,
+                    [{'pointer': '#/preferences', 'detail': 'The preferences must be a list of ids.'}],
+                )
 
 
 @override_settings(S3_BUCKET_NAME='test-bucket')
