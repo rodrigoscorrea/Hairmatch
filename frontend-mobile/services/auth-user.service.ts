@@ -2,14 +2,10 @@ import axios from 'axios';
 import { API_BACKEND_URL } from '@/app/_layout';
 import { HairdresserDescriptionAIRequest } from '../models/Hairdresser.types';
 import axiosInstance from './axios-instance';
-export const getCustomerHomeInfo = async (email?: string | undefined) => {
+// The home of the logged customer: the backend takes the customer from the session.
+export const getCustomerHomeInfo = async () => {
     try {
-        let response;
-        if(!email) {
-            response = await axiosInstance.get(`${API_BACKEND_URL}/api/customer/home`);
-        } else {
-            response = await axiosInstance.get(`${API_BACKEND_URL}/api/customer/home/${email}`);
-        }
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/customers/me/home`);
         return response.data;
     } catch (error) {
         console.error("Error in get customer home info:", error);
@@ -19,7 +15,7 @@ export const getCustomerHomeInfo = async (email?: string | undefined) => {
 
 export const requestAiResume = async (data: HairdresserDescriptionAIRequest) => {
     try {
-        const response: any = await axiosInstance.post(`${API_BACKEND_URL}/api/hairdresser/gemini_completion`, data)
+        const response: any = await axiosInstance.post(`${API_BACKEND_URL}/api/hairdressers/description-drafts`, data)
         return response.data.result
     } catch (error) {
         console.error("Error in request Ai resume:", error);
@@ -29,8 +25,8 @@ export const requestAiResume = async (data: HairdresserDescriptionAIRequest) => 
 
 export async function searchHairdressers(query: string) {
   try {
-    const response = await axiosInstance.get(`${API_BACKEND_URL}/api/user/search`, {
-      params: { search: query },
+    const response = await axiosInstance.get(`${API_BACKEND_URL}/api/search`, {
+      params: { q: query },
     });
     return response.data;
   } catch (error) {

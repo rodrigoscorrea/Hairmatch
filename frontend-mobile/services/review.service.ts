@@ -3,7 +3,7 @@ import axiosInstance from "./axios-instance";
 export const createReview = async (reviewData: FormData) => {
     try {
         // The instance defaults to JSON, and axios 1.x would turn the FormData into JSON with that header.
-        await axiosInstance.post('/api/review/register', reviewData, {
+        await axiosInstance.post('/api/reviews', reviewData, {
             withCredentials: true,
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -18,7 +18,7 @@ export const createReview = async (reviewData: FormData) => {
 
 export const deleteReview = async (reviewId: string | number) => {
     try {
-        await axiosInstance.delete(`/api/review/remove/${reviewId}`, {withCredentials: true});
+        await axiosInstance.delete(`/api/reviews/${reviewId}`, {withCredentials: true});
         return true;
     } catch (error) {
         console.error("Error in delete reserve:", error);

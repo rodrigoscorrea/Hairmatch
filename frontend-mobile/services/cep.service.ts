@@ -9,6 +9,6 @@ export type CepAddress = {
 };
 
 export const lookupCep = async (cep: string): Promise<CepAddress> => {
-  const response = await axiosInstance.get<CepAddress>(`/api/address/cep/${cep}`);
+  const response = await axiosInstance.get<CepAddress>(`/api/postal-codes/${cep}`);
   return response.data;
 };

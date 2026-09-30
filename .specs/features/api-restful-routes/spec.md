@@ -336,12 +336,12 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-63 | P1: Consultas por query string | Execute | Done |
 | RT-64 | P1: Consultas por query string | Execute | Done |
 | RT-65 | P1: Consultas por query string | Execute | Done |
-| RT-70 | P1: App usa as rotas novas | - | Pending |
+| RT-70 | P1: App usa as rotas novas | Execute | Done |
 | RT-71 | P1: App usa as rotas novas | Execute | Done |
 | RT-72 | P1: App usa as rotas novas | Execute | Done |
 | RT-73 | P1: App usa as rotas novas | Execute | Done |
-| RT-74 | P1: App usa as rotas novas | - | Pending |
-| RT-75 | P1: App usa as rotas novas | - | Pending |
+| RT-74 | P1: App usa as rotas novas | Execute | Done |
+| RT-75 | P1: App usa as rotas novas | Execute | Done |
 | RT-76 | P2: Webhook do chatbot | Execute | Done |
 | RT-77 | P2: Webhook do chatbot | - | Pending |
 | RT-80 | Edge Cases | Execute | Done |

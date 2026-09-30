@@ -281,9 +281,9 @@ Phase 4:  T13
 
 **Done when**:
 
-- [ ] Rotas e métodos da tabela respondem com a regra de negócio da rota antiga
-- [ ] Gate check passes
-- [ ] Test count: >= baseline, none removed or skipped
+- [x] Rotas e métodos da tabela respondem com a regra de negócio da rota antiga
+- [x] Gate check passes
+- [x] Test count: >= baseline, none removed or skipped
 
 **Tests**: none
 **Gate**: build

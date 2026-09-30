@@ -30,7 +30,7 @@ export const useCustomerHome = () => {
       }
       setLoading(true);
       try {
-        const response = await getCustomerHomeInfo(userInfo.customer.user.email);
+        const response = await getCustomerHomeInfo();
         setCustomerHomeInfo(response);
       } catch (err) {
         console.error("Failed to get customer info:", err);

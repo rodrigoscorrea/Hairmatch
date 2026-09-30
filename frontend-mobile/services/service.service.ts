@@ -9,7 +9,7 @@ export const listServicesByHairdresser = async (hairdresserId: number | undefine
     }
     
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/service/hairdresser/${hairdresserId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/hairdressers/${hairdresserId}/services`);
         return response.data;
     } catch (error) {
         console.error("Error in list services by hairdresser:", error);
@@ -24,7 +24,7 @@ export const getServiceById = async (serviceId: number | undefined) => {
     }
     
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/service/list/${serviceId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/services/${serviceId}`);
         return response.data;
     } catch (error) {
         console.error("Error in get service by id:", error);
@@ -38,7 +38,7 @@ export const createService = async (data: ServiceRequest) => {
         return;
     }
     try {
-        await axiosInstance.post(`${API_BACKEND_URL}/api/service/create`, data);
+        await axiosInstance.post(`${API_BACKEND_URL}/api/services`, data);
     } catch (error) {
         console.error("Error create service:", error);
         throw error;
@@ -51,7 +51,7 @@ export const editService = async (data: ServiceRequest) => {
         return;
     }
     try {
-        await axiosInstance.put(`${API_BACKEND_URL}/api/service/update/${data.id}`, data);
+        await axiosInstance.put(`${API_BACKEND_URL}/api/services/${data.id}`, data);
     } catch (error) {
         console.error("Error in service edition:", error);
         throw error;
@@ -64,7 +64,7 @@ export const deleteService = async (serviceId: number) => {
         return;
     }
     try {
-        await axiosInstance.delete(`${API_BACKEND_URL}/api/service/remove/${serviceId}`);
+        await axiosInstance.delete(`${API_BACKEND_URL}/api/services/${serviceId}`);
     } catch (error) {
         console.error("Error to delete service:", error);
         throw error;

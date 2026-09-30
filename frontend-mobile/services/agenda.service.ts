@@ -8,7 +8,7 @@ export const listAgendaByHairdresser = async (hairdresserId: number | undefined)
     }
     
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/agenda/list/${hairdresserId}`);
+        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/hairdressers/${hairdresserId}/agenda`);
         return response.data;
     } catch (error) {
         console.error("Error in list agenda by hairdresser:", error);
@@ -23,7 +23,7 @@ export const createAgendaApointment = async (data: any) => {
     }
     
     try {
-        await axiosInstance.post(`${API_BACKEND_URL}/api/agenda/create`, data);
+        await axiosInstance.post(`${API_BACKEND_URL}/api/agenda`, data);
     } catch (error) {
         console.error("Error create agenda:", error);
         throw error;
@@ -41,7 +41,7 @@ export const updateAvailability = async (data: AvailabilityRequest[], hairdresse
         return;
     }
     try {
-        await axios.put(`${API_BACKEND_URL}/api/availability/update/multiple/${hairdresserId}`, {availabilities: data});
+        await axios.put(`${API_BACKEND_URL}/api/hairdressers/${hairdresserId}/availabilities`, {availabilities: data});
     } catch (error) {
         console.error("Error updating availability:", error);
         throw error;
