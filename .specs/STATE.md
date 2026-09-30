@@ -50,6 +50,14 @@
 - **Date**: 2026-09-30
 - **Status**: active
 
+### AD-007
+- **Decision**: As rotas de `/api/` seguem a Route Table do spec `api-restful-routes`: recurso no plural, sem verbo no path, filho sob o pai (`/hairdressers/{id}/services`), filtro na query, `me` para o usuário da sessão e o método HTTP como verbo (`PUT` substitui, `PATCH` atualiza parte, `DELETE` remove). Cada app monta o seu `urls.py` em `api/`, e um path com vários métodos é uma classe que herda das views (`class ServiceDetail(ListService, UpdateService, RemoveService)`), então o `Allow` do 405 sai do DRF. `hairmatch/test_routes.py` compara os `urlpatterns` resolvidos com a tabela e falha se uma rota entra ou sai sem o spec. Rota antiga responde 404 e não há alias nem `/v1`. O app compara as exclusões do refresh por método e pathname exatos (`frontend-mobile/services/auth-routes.ts`). Muda os caminhos citados no AD-002 (`/api/postal-codes/{cep}`) e no AD-004 (`POST /api/users` cadastra; `POST /api/auth/register` deixou de existir); as decisões em si seguem valendo.
+- **Reason**: A issue #163 pede rotas avaliadas contra a RFC 3986. A RFC não obriga a trocar nenhuma rota atual, porque todas são URIs válidas; o redesenho segue a hierarquia do path (§3.3), o dado não hierárquico na query (§3.4) e o percent-encoding (§2.1, o que tira o e-mail do path), mais a convenção REST e a RFC 9110 para os métodos.
+- **Trade-off**: Corte único: o app antigo quebra contra o backend novo, então os dois saem no mesmo release. A URL do webhook do chatbot mora na Evolution API, fora do repositório, e precisa ser reconfigurada com autorização antes do deploy em produção. `reverse()` acompanha a rota nova, então só `test_routes.py` prova o path.
+- **Scope**: Todo o `backend` sob `/api/` e o `frontend-mobile`. Fora: `admin/`. Rota nova entra na Route Table do spec antes de entrar no código.
+- **Date**: 2026-09-30
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `api-problem-details` (issue #161, parte RFC 9457, mensagens em inglês e status corretos). A parte de rotas da issue é a feature `api-restful-routes`, que depende desta.

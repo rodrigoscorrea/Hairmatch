@@ -343,7 +343,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-74 | P1: App usa as rotas novas | Execute | Done |
 | RT-75 | P1: App usa as rotas novas | Execute | Done |
 | RT-76 | P2: Webhook do chatbot | Execute | Done |
-| RT-77 | P2: Webhook do chatbot | - | Pending |
+| RT-77 | P2: Webhook do chatbot | Execute | Done |
 | RT-80 | Edge Cases | Execute | Done |
 | RT-81 | Edge Cases | Execute | Done |
 | RT-82 | Edge Cases | Execute | Done |
