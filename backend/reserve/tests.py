@@ -1,9 +1,9 @@
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from django.utils import timezone
 
 from users.models import User, Customer, Hairdresser
@@ -12,6 +12,7 @@ from reserve.models import Reserve
 from agenda.models import Agenda
 from availability.models import Availability
 from users.cognito import get_cognito
+from hairmatch.local_time import make_local_aware
 
 
 class ReserveTestCase(TestCase):
@@ -501,3 +502,111 @@ class ReserveSlotTest(ReserveTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['available_slots'], [])
+
+def next_monday():
+    today = timezone.now().date()
+    return today + timedelta(days=7 - today.weekday())
+
+
+def reserve_views():
+    # Imported late: importing reserve.views before users.serializers hits the users/service serializers import cycle
+    from reserve import views
+    return views
+
+
+class GenerateTimeSlotsTest(SimpleTestCase):
+    DAY = date(2026, 10, 5)
+
+    def test_the_last_slot_is_closing_time_minus_the_service_duration(self):
+        slots = reserve_views().generate_time_slots(self.DAY, time(9, 0), time(17, 0), [], 60)
+
+        self.assertEqual(slots[0], '09:00')
+        self.assertEqual(slots[-1], '16:00')
+        self.assertNotIn('16:30', slots)
+
+    def test_no_slot_overlaps_the_break(self):
+        slots = reserve_views().generate_time_slots(self.DAY, time(9, 0), time(17, 0), [], 60, time(12, 0), time(13, 0))
+
+        self.assertIn('11:00', slots)
+        for slot in ('11:30', '12:00', '12:30'):
+            self.assertNotIn(slot, slots)
+        self.assertIn('13:00', slots)
+        self.assertEqual(slots[-1], '16:00')
+
+
+class ReserveInManausTimeTest(ReserveTestCase):
+    """The app and the chatbot send the slot as a naive Manaus time (UTC-4), the clock the slots are listed in."""
+
+    def get_slots(self, hairdresser, service, day):
+        response = self.client.post(
+            self.get_slots_url(hairdresser.id),
+            data=json.dumps({'date': day.isoformat(), 'service': service.id}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response.json()['available_slots']
+
+    def test_a_booked_slot_is_no_longer_listed(self):
+        day = next_monday()
+        self.login(self.customer_user)
+
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps({
+                'start_time': f'{day.isoformat()}T09:00:00',
+                'hairdresser': self.hairdresser.id,
+                'service': self.service.id,
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Reserve.objects.exclude(id=self.reserve.id).get()
+        self.assertEqual(created.start_time, datetime(day.year, day.month, day.day, 13, 0, tzinfo=dt_timezone.utc))
+        slots = self.get_slots(self.hairdresser, self.service, day)
+        self.assertNotIn('09:00', slots)
+        self.assertNotIn('09:30', slots)
+        self.assertIn('10:00', slots)
+        self.assertEqual(slots[-1], '16:00')
+
+    def test_a_booking_late_in_the_evening_blocks_its_slot(self):
+        """21:00 in Manaus is already the next day in UTC, and still belongs to the Manaus day being listed"""
+        day = next_monday()
+        Availability.objects.create(
+            hairdresser=self.other_hairdresser, weekday='monday',
+            start_time=time(18, 0), end_time=time(23, 0),
+        )
+        start = make_local_aware(datetime.combine(day, time(21, 0)))
+        Agenda.objects.create(
+            start_time=start, end_time=start + timedelta(minutes=self.other_service.duration),
+            hairdresser=self.other_hairdresser, service=self.other_service,
+        )
+
+        slots = self.get_slots(self.other_hairdresser, self.other_service, day)
+
+        self.assertIn('20:30', slots)
+        self.assertNotIn('21:00', slots)
+        self.assertIn('21:30', slots)
+
+
+class CreateNewReserveTest(ReserveTestCase):
+    """The chatbot's booking path"""
+
+    def test_a_clash_with_another_reserve_of_the_customer_is_refused(self):
+        clashing_start = self.reserve_start_time + timedelta(minutes=30)
+
+        result = reserve_views().create_new_reserve(self.customer.id, self.other_service.id, self.other_hairdresser.id, clashing_start)
+
+        self.assertEqual(result, {'error': 'Você já tem outra reserva agendada para o mesmo horário'})
+        self.assertEqual(Reserve.objects.count(), 1)
+        self.assertFalse(Agenda.objects.filter(hairdresser=self.other_hairdresser).exists())
+
+    def test_a_free_slot_is_booked(self):
+        start = self.reserve_start_time + timedelta(hours=3)
+
+        result = reserve_views().create_new_reserve(self.customer.id, self.other_service.id, self.other_hairdresser.id, start)
+
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result['reserve'].start_time, start)
+        agenda = Agenda.objects.get(hairdresser=self.other_hairdresser)
+        self.assertEqual(agenda.end_time, start + timedelta(minutes=self.other_service.duration))

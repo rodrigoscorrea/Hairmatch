@@ -47,6 +47,12 @@ GOOGLE_SIGNUP_REQUIRED_FIELDS = [
 ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
 PASSWORD_POLICY_MESSAGE = 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'
 EMAIL_TAKEN_MESSAGE = 'Usuário já está cadastrado na nossa base de dados'
+PHONE_TAKEN_MESSAGE = 'O número de telefone inserido já está cadastrado na nossa base de dados'
+
+
+def normalize_phone(phone):
+    """The stored form of a phone typed at sign-up: its digits after the country code 55 (the chatbot looks users up by it)."""
+    return f"55{''.join(ch for ch in str(phone) if ch.isdigit())}"
 
 
 def _cognito_error_response(error):
@@ -93,9 +99,7 @@ class RegisterView(APIView):
         role = request.data.get('role')
         if User.objects.filter(email=email).exists():
             return JsonResponse({'error': EMAIL_TAKEN_MESSAGE}, status=409)
-        if User.objects.filter(phone=phone).exists():
-            return JsonResponse({'error': 'O número de telefone inserido já está cadastrado na nossa base de dados'}, status=409)
-        
+
         if role is None or role is None or role == '':
             return JsonResponse({'error': 'No role assigned to user'}, status=400)
         if email is None or email is None or email == '':
@@ -106,6 +110,8 @@ class RegisterView(APIView):
             return JsonResponse({'error': 'No phone assigned to user'}, status=400)
         if  len(phone) < 10:
             return JsonResponse({'error': 'Phone number is too short'}, status=400)
+        if User.objects.filter(phone=normalize_phone(phone)).exists():
+            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
 
         try:
             cognito_sub = get_cognito().sign_up_confirmed(email, password)
@@ -121,7 +127,7 @@ class RegisterView(APIView):
                 user = User.objects.create(
                     first_name=request.data.get('first_name'),
                     last_name=request.data.get('last_name'),
-                    phone=f"55{request.data.get('phone')}",
+                    phone=normalize_phone(phone),
                     complement=request.data.get('complement'),
                     neighborhood=request.data.get('neighborhood'),
                     city=request.data.get('city'),
@@ -179,15 +185,15 @@ class RegisterView(APIView):
             return JsonResponse({'error': 'Usuário já está cadastrado na nossa base de dados'}, status=409)
         if User.objects.filter(google_id=google_id).exists():
             return JsonResponse({'error': 'Esta conta Google já está cadastrada na nossa base de dados'}, status=409)
-        if User.objects.filter(phone=f"55{phone}").exists():
-            return JsonResponse({'error': 'O número de telefone inserido já está cadastrado na nossa base de dados'}, status=409)
+        if User.objects.filter(phone=normalize_phone(phone)).exists():
+            return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
 
         try:
             with transaction.atomic():
                 user = User.objects.create(
                     first_name=data.get('first_name'),
                     last_name=data.get('last_name'),
-                    phone=f"55{phone}",
+                    phone=normalize_phone(phone),
                     complement=data.get('complement'),
                     neighborhood=data.get('neighborhood'),
                     city=data.get('city'),
@@ -435,6 +441,12 @@ class UserInfoCookieView(APIView):
         # The e-mail is the Cognito username, and changing it there needs a verification step.
         if 'email' in data and data['email'] != user.email:
             return JsonResponse({'error': 'A troca de e-mail não é suportada.'}, status=400)
+
+        # Unlike sign-up, the phone here is the full stored number (55 included), as GET returns it.
+        if 'phone' in data:
+            data['phone'] = ''.join(ch for ch in str(data['phone']) if ch.isdigit())
+            if User.objects.filter(phone=data['phone']).exclude(id=user.id).exists():
+                return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',

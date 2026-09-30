@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.utils import timezone
 
 from users.models import User, Hairdresser
@@ -214,6 +214,19 @@ class CreateAgendaTest(AgendaTestCase):
         # This will fail with an exception due to field mismatch
         # After fixing, it should return HTTP 201
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_agenda_with_a_naive_start_time_blocks_it_in_manaus_time(self):
+        """A time without offset is the salon's wall clock (UTC-4), not UTC"""
+        day = (timezone.now() + timedelta(days=3)).date()
+        agenda_data = {'start_time': f'{day.isoformat()}T09:00:00', 'service': self.service.id}
+
+        response = self.client.post(self.create_url, data=json.dumps(agenda_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Agenda.objects.exclude(id=self.agenda.id).get()
+        expected_start = datetime(day.year, day.month, day.day, 13, 0, tzinfo=dt_timezone.utc)
+        self.assertEqual(created.start_time, expected_start)
+        self.assertEqual(created.end_time, expected_start + timedelta(minutes=self.service.duration))
 
 
 class ListAgendaTest(AgendaTestCase):

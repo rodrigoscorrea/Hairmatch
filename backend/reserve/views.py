@@ -15,14 +15,25 @@ import calendar
 from django.db import transaction
 from rest_framework import status
 from django.utils.dateparse import parse_datetime
-from zoneinfo import ZoneInfo
 from users.authentication import authenticated_user, authenticated_customer, forbidden
+from hairmatch.local_time import LOCAL_TIMEZONE, make_local_aware, local_day_bounds, local_today
 
 # Create your views here.
-LOCAL_TIMEZONE = ZoneInfo('America/Manaus')
+CUSTOMER_CONFLICT_MESSAGE = 'Você já tem outra reserva agendada para o mesmo horário'
+
 def _is_reserve_party(user, reserve):
     """The reserve's customer and the hairdresser who owns its service are the only ones allowed to see or cancel it."""
     return reserve.customer.user_id == user.id or reserve.service.hairdresser.user_id == user.id
+
+
+def customer_has_conflicting_reserve(customer, start_time, end_time):
+    """Whether one of the customer's reserves, with any hairdresser, overlaps [start_time, end_time)."""
+    for reservation in Reserve.objects.filter(customer=customer).select_related('service'):
+        existing_start = reservation.start_time
+        existing_end = calculate_end_time(existing_start, reservation.service.duration)
+        if existing_start < end_time and start_time < existing_end:
+            return True
+    return False
 
 
 class ReserveById(APIView):
@@ -78,8 +89,8 @@ class CreateReserve(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if timezone.is_naive(start_time):
-             start_time = timezone.make_aware(start_time)
+        # The app sends the slot as a naive Manaus time, the clock the slots are listed in.
+        start_time = make_local_aware(start_time)
 
         end_time = calculate_end_time(start_time, service_instance.duration)
         hairdresser_overlap = Agenda.objects.filter(
@@ -94,20 +105,11 @@ class CreateReserve(APIView):
                 status=status.HTTP_409_CONFLICT
             )
 
-        customer_reservations = Reserve.objects.filter(customer=customer_instance).select_related('service')
-        for reservation in customer_reservations:
-            existing_start = reservation.start_time
-
-            if timezone.is_naive(existing_start):
-                existing_start = timezone.make_aware(existing_start)
-            
-            existing_end = calculate_end_time(existing_start, reservation.service.duration)
-            
-            if existing_start < end_time and start_time < existing_end:
-                 return JsonResponse(
-                     {'error': 'Você já tem outra reserva agendada para o mesmo horário'},
-                     status=status.HTTP_409_CONFLICT
-                 )
+        if customer_has_conflicting_reserve(customer_instance, start_time, end_time):
+            return JsonResponse(
+                {'error': CUSTOMER_CONFLICT_MESSAGE},
+                status=status.HTTP_409_CONFLICT
+            )
 
         try:
             with transaction.atomic():
@@ -194,10 +196,9 @@ class ReserveSlot(APIView):
             return JsonResponse({'available_slots': []})
 
         now = timezone.now()
-        is_today = (selected_date == now.date())
+        is_today = (selected_date == local_today())
 
-        start_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()))
-        end_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.max.time()))
+        start_of_day, end_of_day = local_day_bounds(selected_date)
 
         bookings = Agenda.objects.filter(
             hairdresser=hairdresser,
@@ -259,11 +260,13 @@ def generate_time_slots(date, start_time, end_time, bookings, service_duration,
     
     # The last possible start time must account for the service's duration
     service_delta = timedelta(minutes=service_duration)
-    end_dt -= timedelta(minutes=service_duration)
-    
+
     slot_duration = timedelta(minutes=30) 
     last_possible_start_dt = end_dt - service_delta
-    blocked_periods = [(b.start_time, b.end_time) for b in bookings]
+    # In local time: the loop jumps to a blocked period's end and prints the next slots from there
+    blocked_periods = [
+        (b.start_time.astimezone(LOCAL_TIMEZONE), b.end_time.astimezone(LOCAL_TIMEZONE)) for b in bookings
+    ]
     if break_start and break_end: 
         naive_break_start = datetime.combine(date, break_start)
         naive_break_end = datetime.combine(date, break_end)
@@ -320,8 +323,7 @@ def get_available_slots(hairdresser_id, service_id, date_str):
     if not availability:
         return {'available_slots': []}
 
-    start_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()))
-    end_of_day = timezone.make_aware(datetime.combine(selected_date, datetime.max.time()))
+    start_of_day, end_of_day = local_day_bounds(selected_date)
 
     bookings = Agenda.objects.filter(
         hairdresser=hairdresser,
@@ -357,19 +359,23 @@ def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
             end_time__gt=start_time_dt
         ).exists():
             return {'error': 'Desculpe, este horário foi agendado por outra pessoa. Por favor, escolha outro.'}
-        
-        reserve = Reserve.objects.create(
-            start_time=start_time_dt,
-            customer=customer_instance,
-            service=service_instance
-        )
-        Agenda.objects.create(
-            start_time=start_time_dt,
-            end_time=end_time_dt,
-            hairdresser=hairdresser_instance,
-            service=service_instance
-        )
-            
+
+        if customer_has_conflicting_reserve(customer_instance, start_time_dt, end_time_dt):
+            return {'error': CUSTOMER_CONFLICT_MESSAGE}
+
+        with transaction.atomic():
+            reserve = Reserve.objects.create(
+                start_time=start_time_dt,
+                customer=customer_instance,
+                service=service_instance
+            )
+            Agenda.objects.create(
+                start_time=start_time_dt,
+                end_time=end_time_dt,
+                hairdresser=hairdresser_instance,
+                service=service_instance
+            )
+
         return {'success': True, 'reserve': reserve}
     except Customer.DoesNotExist:
         return {'error': 'Customer not found'}
