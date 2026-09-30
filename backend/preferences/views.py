@@ -10,19 +10,7 @@ import json
 from users.authentication import authenticated_user
 
 # Create your views here.
-class CreatePreferences(APIView):
-    def post(self, request):       
-        try:
-            data = json.loads(request.body)
-
-            preferences = Preferences.objects.create(
-                name=data['name'],
-                picture=data.get('picture', ''),
-            )
-            return JsonResponse({'message': "Preferences registered successfully"}, status=201)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-        
+# The catalog comes from the populate_preferences seed; the API does not create, edit or remove it.
 class AssignPreferenceToUser(APIView):
     def post(self, request, preference_id):
         session, error = authenticated_user(request)
@@ -30,29 +18,6 @@ class AssignPreferenceToUser(APIView):
             return error
         try:
             user = session.user
-
-            preference = Preferences.objects.filter(id=preference_id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
-
-            preference.users.add(user)
-
-            return JsonResponse({'message': 'Preference assigned to user successfully'}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-        
-class AssignPreferenceToUserNoCookie(APIView):
-    def post(self, request, preference_id):
-        try:
-            data = json.loads(request.body)
-            user_id = data.get('user_id')
-
-            if not user_id:
-                return JsonResponse({'error': 'User ID is required'}, status=400)
-
-            user = User.objects.filter(id=user_id).first()
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
 
             preference = Preferences.objects.filter(id=preference_id).first()
             if not preference:
@@ -114,35 +79,3 @@ class ListUsersPerPreference(APIView):
             return Response({'data':serializer.data},  status=200)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
-
-
-class UpdatePreferences(APIView):
-    def put(self, request, id): # Preference ID
-        try:
-            data = json.loads(request.body)
-            preference = Preferences.objects.filter(id=id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
-            if 'name' in data:
-                preference.name = data['name']
-            if 'picture' in data:
-                preference.picture = data['picture']
-            preference.save()
-            return JsonResponse({'message': 'Preference updated successfully'}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-
-
-            
-
-class RemovePreferences(APIView):
-    def delete(self, request, id): # Preference ID
-        try:
-            preference = Preferences.objects.filter(id=id).first()
-            if not preference:
-                return JsonResponse({'error': 'Preference not found'}, status=404)
-            preference.delete()
-            return JsonResponse({'message': 'Preference removed successfully'}, status=200)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-            

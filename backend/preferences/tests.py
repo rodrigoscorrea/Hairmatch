@@ -1,5 +1,5 @@
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from users.models import User
@@ -16,7 +16,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 class PreferencesTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.create_url = reverse('create_preferences')
         self.list_all_url = reverse('list_all_preferences')
         self.login_url = reverse('login')
         self.register_url = reverse('register')
@@ -68,57 +67,6 @@ class PreferencesTestCase(TestCase):
             content_type='application/json'
         )
         return response
-
-
-class CreatePreferencesTest(PreferencesTestCase):
-    def test_create_preferences_success(self):
-        """Test successful preference creation"""
-        preference_data = {
-            'name': 'Long Hair'
-        }
-        
-        response = self.client.post(
-            self.create_url,
-            data=json.dumps(preference_data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Preferences.objects.count(), 2)  # 1 from setup + 1 new
-        self.assertEqual(Preferences.objects.filter(name='Long Hair').count(), 1)
-    
-    def test_create_preferences_with_picture(self):
-        """Test creating preference with a picture"""
-        preference_data = {
-            'name': 'Curly Hair',
-            'picture': 'test_image_path.jpg'
-        }
-        
-        response = self.client.post(
-            self.create_url,
-            data=json.dumps(preference_data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Preferences.objects.count(), 2)  # 1 from setup + 1 new
-        self.assertEqual(Preferences.objects.filter(name='Curly Hair').count(), 1)
-    
-    def test_create_preferences_no_name(self):
-        """Test preference creation with missing name"""
-        preference_data = {
-            'picture': 'test_image_path.jpg'
-        }
-        
-        response = self.client.post(
-            self.create_url,
-            data=json.dumps(preference_data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Preference count should still be 1 from setup
-        self.assertEqual(Preferences.objects.count(), 1)
 
 
 class ListPreferencesTest(PreferencesTestCase):
@@ -278,66 +226,6 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
         self.assertEqual(len(response.data['data']), 2)
     
 
-class UpdatePreferencesTest(PreferencesTestCase):
-    def test_update_preferences_success(self):
-        """Test successful preference update"""
-        update_url = reverse('update_preferences', args=[self.preference.id])
-        
-        update_data = {
-            'name': 'Updated Hair Style'
-        }
-        
-        response = self.client.put(
-            update_url,
-            data=json.dumps(update_data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Refresh from database
-        self.preference.refresh_from_db()
-        self.assertEqual(self.preference.name, 'Updated Hair Style')
-    
-    def test_update_preferences_not_found(self):
-        """Test updating a non-existent preference"""
-        update_url = reverse('update_preferences', args=[999])  # Non-existent ID
-        
-        update_data = {
-            'name': 'Updated Hair Style'
-        }
-        
-        response = self.client.put(
-            update_url,
-            data=json.dumps(update_data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-
-class RemovePreferencesTest(PreferencesTestCase):
-    def test_remove_preferences_success(self):
-        """Test successful preference removal"""
-        # Create a preference to be removed
-        pref_to_remove = Preferences.objects.create(name="Remove Me")
-        remove_url = reverse('remove_preferences', args=[pref_to_remove.id])
-        
-        response = self.client.delete(remove_url)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Preferences.objects.count(), 1)  # Only the one from setup remains
-        self.assertFalse(Preferences.objects.filter(name="Remove Me").exists())
-    
-    def test_remove_preferences_not_found(self):
-        """Test removing a non-existent preference"""
-        remove_url = reverse('remove_preferences', args=[999])  # Non-existent ID
-        
-        response = self.client.delete(remove_url)
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(Preferences.objects.count(), 1)  # The one from setup remains
-
-
 class AssignPreferenceToUserTest(PreferencesTestCase):
     def test_assign_preference_to_user_success(self):
         """Test successfully assigning a preference to a user"""
@@ -379,75 +267,6 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         assign_url = reverse('assign_preferences_to_user', args=[999])  # Non-existent ID
         
         response = self.client.post(assign_url)
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-
-class AssignPreferenceToUserNoCookieTest(PreferencesTestCase):
-    def test_assign_preference_to_user_no_cookie_success(self):
-        """Test successfully assigning a preference to a user without cookie authentication"""
-        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
-        
-        data = {
-            'user_id': self.user.id
-        }
-        
-        response = self.client.post(
-            assign_url,
-            data=json.dumps(data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Refresh the preference from the database to get updated users
-        self.preference.refresh_from_db()
-        self.assertTrue(self.user in self.preference.users.all())
-    
-    def test_assign_preference_no_cookie_missing_user_id(self):
-        """Test assigning a preference without providing user_id"""
-        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
-        
-        data = {}  # Empty data, missing user_id
-        
-        response = self.client.post(
-            assign_url,
-            data=json.dumps(data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(self.user in self.preference.users.all())
-    
-    def test_assign_preference_no_cookie_invalid_user_id(self):
-        """Test assigning a preference with invalid user_id"""
-        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[self.preference.id])
-        
-        data = {
-            'user_id': 999  # Non-existent user ID
-        }
-        
-        response = self.client.post(
-            assign_url,
-            data=json.dumps(data),
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertFalse(self.user in self.preference.users.all())
-    
-    def test_assign_preference_no_cookie_nonexistent_preference(self):
-        """Test assigning a non-existent preference with no_cookie method"""
-        assign_url = reverse('assign_preferences_to_user_no_cookie', args=[999])  # Non-existent preference ID
-        
-        data = {
-            'user_id': self.user.id
-        }
-        
-        response = self.client.post(
-            assign_url,
-            data=json.dumps(data),
-            content_type='application/json'
-        )
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -566,3 +385,28 @@ class PreferenceSessionTest(PreferencesTestCase):
                     self.assertEqual(response.status_code, 401)
                     self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
         self.assertTrue(self.preference.users.filter(id=self.user.id).exists())
+
+
+class RemovedCatalogRoutesTest(PreferencesTestCase):
+    """The catalog CRUD and the cookie-less assign had no auth and were removed (#152)."""
+
+    def test_removed_routes_no_longer_exist_and_change_nothing(self):
+        routes = [
+            ('create_preferences', [], 'post', '/api/preferences/create', {'name': 'PENTEST_INJECTED'}),
+            ('update_preferences', [self.preference.id], 'put',
+             f'/api/preferences/update/{self.preference.id}', {'name': 'HACKED'}),
+            ('remove_preferences', [self.preference.id], 'delete',
+             f'/api/preferences/remove/{self.preference.id}', None),
+            ('assign_preferences_to_user_no_cookie', [self.preference.id], 'post',
+             f'/api/preferences/assign/{self.preference.id}', {'user_id': self.user.id}),
+        ]
+        for name, args, method, path, body in routes:
+            with self.subTest(route=name):
+                with self.assertRaises(NoReverseMatch):
+                    reverse(name, args=args)
+                kwargs = {'data': json.dumps(body), 'content_type': 'application/json'} if body else {}
+                response = getattr(self.client, method)(path, **kwargs)
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(list(Preferences.objects.values_list('name', flat=True)), ['Short Hair'])
+        self.assertFalse(self.preference.users.filter(id=self.user.id).exists())
