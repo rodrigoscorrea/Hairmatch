@@ -10,6 +10,15 @@ class UserSerializer(serializers.ModelSerializer):
             'complement', 'neighborhood', 'city', 'state', 'profile_picture'
         ]
 
+class PublicUserSerializer(serializers.ModelSerializer):
+    """What anyone may see of a hairdresser: no e-mail, phone or CEP. The address is the salon's, shown to book."""
+    class Meta:
+        model = User
+        fields = [
+            'id', 'first_name', 'last_name', 'profile_picture', 'rating', 'role',
+            'address', 'number', 'complement', 'neighborhood', 'city', 'state',
+        ]
+
 class UserNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -24,6 +33,13 @@ class HairdresserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hairdresser
         exclude = ('experience_time', 'products', 'experiences', 'experience_years') 
+
+class PublicHairdresserSerializer(serializers.ModelSerializer):
+    """Hairdresser for public listings (search, home, profile page): no CNPJ nor contact data."""
+    user = PublicUserSerializer(read_only=True)
+    class Meta:
+        model = Hairdresser
+        fields = ['id', 'user', 'resume']
 
 class HairdresserFullInfoSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -71,8 +87,8 @@ class SearchResultSerializer(serializers.BaseSerializer):
     def to_representation(self, instance):
         # Check if the instance is a Hairdresser model
         if isinstance(instance, Hairdresser):
-            # Use the HairdresserSerializer to serialize the object
-            serializer = HairdresserSerializer(instance, context=self.context)
+            # Public listing: no contact data nor CNPJ
+            serializer = PublicHairdresserSerializer(instance, context=self.context)
             data = serializer.data
             # Add a type identifier for the frontend
             data['result_type'] = 'hairdresser'

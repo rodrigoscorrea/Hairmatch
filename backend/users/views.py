@@ -8,7 +8,7 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
+from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
 from .serializers import SearchResultSerializer # Import our new serializer
@@ -491,22 +491,22 @@ class GlobalSearchView(APIView):
 
 class UserInfoView(APIView):
     def get(self,request,email=None):
-        try:
-            user = User.objects.filter(email=email).filter(is_active=True).first()
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=404)
+        # Full personal data, so only for the account owner.
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        if not is_own_email(session, email):
+            return forbidden()
 
-        if user:
-            if (user.role == 'customer'):
-                customer = Customer.objects.get(user=user)
-                customer_serialized = CustomerSerializer(customer).data
-                return JsonResponse({'data': customer_serialized}, status=200)
-            else: 
-                hairdresser = Hairdresser.objects.get(user=user)
-                hairdresser_serialized = HairdresserSerializer(hairdresser).data
-                return JsonResponse({'data': hairdresser_serialized}, status=200)
-            
-        return JsonResponse({'error': 'User not found'}, status=404)
+        user = session.user
+        if (user.role == 'customer'):
+            customer = Customer.objects.get(user=user)
+            customer_serialized = CustomerSerializer(customer).data
+            return JsonResponse({'data': customer_serialized}, status=200)
+        else: 
+            hairdresser = Hairdresser.objects.get(user=user)
+            hairdresser_serialized = HairdresserSerializer(hairdresser).data
+            return JsonResponse({'data': hairdresser_serialized}, status=200)
 
     
     def delete(self, request, email=None):
@@ -528,9 +528,14 @@ class CustomerHomeView(APIView):
     def get(self, request, email=None):
         for_you_data = []
         if email:
-            try:
-                customer_user = User.objects.get(email=email, role='customer')
-            except User.DoesNotExist:
+            # The "for you" section reveals the customer's preferences, so it is only for that customer.
+            session, error = authenticated_user(request)
+            if error:
+                return error
+            if not is_own_email(session, email):
+                return forbidden()
+            customer_user = session.user
+            if customer_user.role != 'customer':
                 return JsonResponse({'error': 'User not found'}, status=404)
             customer_preferences = customer_user.preferences.all()
             
@@ -543,7 +548,7 @@ class CustomerHomeView(APIView):
             hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
             
             # Prepare data for for_you response
-            for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
+            for_you_data = PublicHairdresserSerializer(hairdressers_for_you, many=True).data
         
         # Get hairdressers for specific preferences
         specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
@@ -559,7 +564,7 @@ class CustomerHomeView(APIView):
                 ).distinct()[:10]
                 
                 hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
-                hairdressers_data = HairdresserSerializer(hairdressers_per_preference, many=True).data
+                hairdressers_data = PublicHairdresserSerializer(hairdressers_per_preference, many=True).data
                 
                 preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
             except Preferences.DoesNotExist:
@@ -585,5 +590,5 @@ class HairdresserInfoView(APIView):
         except Hairdresser.DoesNotExist:
             return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
-        hairdresser_serialized = HairdresserSerializer(hairdresser).data
+        hairdresser_serialized = PublicHairdresserSerializer(hairdresser).data
         return JsonResponse({'data': hairdresser_serialized}, status=200)

@@ -217,36 +217,49 @@ class CreateAgendaTest(AgendaTestCase):
 
 
 class ListAgendaTest(AgendaTestCase):
-    def test_list_all_agendas(self):
-        """Test listing all agendas"""
-        response = self.client.get(self.list_url)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()['data']), 1)
-        
-    def test_list_hairdresser_agendas(self):
-        """Test listing agendas for a specific hairdresser"""
-        # Create another agenda for a different hairdresser
-        Agenda.objects.create(
+    def setUp(self):
+        super().setUp()
+        # An agenda of a different hairdresser, which must never show up below
+        self.other_agenda = Agenda.objects.create(
             start_time=self.agenda_start_time,
             end_time=self.agenda_end_time,
             hairdresser=self.hairdresser2,
             service=self.service
         )
-        
-        # Create a list_hairdresser_url with the hairdresser's ID
-        list_hairdresser_url = reverse('list_agenda', args=[self.hairdresser.id])
-        
-        response = self.client.get(list_hairdresser_url)
-        
+
+    def test_list_without_id_returns_only_the_session_hairdresser_agenda(self):
+        """`list` no longer lists every agenda"""
+        self.login(self.hairdresser_user)
+
+        response = self.client.get(self.list_url)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()['data']), 1)
-        
-    def test_list_nonexistent_hairdresser_agendas(self):
-        """Test listing agendas for a non-existent hairdresser"""
-        list_hairdresser_url = reverse('list_agenda', args=[9999])  # Non-existent ID
+        self.assertEqual([a['id'] for a in response.json()['data']], [self.agenda.id])
+
+    def test_list_hairdresser_agendas(self):
+        """Test listing agendas for a specific hairdresser"""
+        self.login(self.hairdresser_user)
+        list_hairdresser_url = reverse('list_agenda', args=[self.hairdresser.id])
+
         response = self.client.get(list_hairdresser_url)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([a['id'] for a in response.json()['data']], [self.agenda.id])
+
+    def test_list_agenda_of_another_hairdresser_is_refused_with_403(self):
+        self.login(self.hairdresser_user2)
+
+        for hairdresser_id in (self.hairdresser.id, 9999):
+            with self.subTest(hairdresser_id=hairdresser_id):
+                response = self.client.get(reverse('list_agenda', args=[hairdresser_id]))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertNotIn('data', response.json())
+
+    def test_list_agenda_without_session_is_refused_with_401(self):
+        for url in (self.list_url, reverse('list_agenda', args=[self.hairdresser.id])):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 class RemoveAgendaTest(AgendaTestCase):
     def test_remove_agenda_success(self):

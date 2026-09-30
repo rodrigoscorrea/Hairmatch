@@ -70,11 +70,15 @@ class ListAllPreferences(APIView):
 
 class ListUsersPerPreference(APIView):
     def get(self, request, preference_id):
+        # Lists hairdressers only: customers' names and tastes are not public.
+        session, error = authenticated_user(request)
+        if error:
+            return error
         try:
             preference = Preferences.objects.filter(id=preference_id).first()
             if not preference:
                 return JsonResponse({'error': 'Preference not found'}, status=404)
-            users = preference.users.all()
+            users = preference.users.filter(role='hairdresser')
             serializer = UserNameSerializer(users, many=True)
             return Response({'data':serializer.data},  status=200)
         except Exception as e:

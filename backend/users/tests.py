@@ -856,6 +856,7 @@ class UserInfoViewTest(TestCase):
         )
 
     def test_get_customer_info_by_email(self):
+        self._login('customer@example.com', 'Customer_password1')
         url = reverse('user_info', kwargs={'email': 'customer@example.com'})
         response = self.client.get(url)
         
@@ -867,6 +868,7 @@ class UserInfoViewTest(TestCase):
         self.assertIn('cpf', user_data)
 
     def test_get_hairdresser_info_by_email(self):
+        self._login('hairdresser@example.com', 'Hairdresser_password1')
         url = reverse('user_info', kwargs={'email': 'hairdresser@example.com'})
         response = self.client.get(url)
         
@@ -877,12 +879,21 @@ class UserInfoViewTest(TestCase):
         self.assertEqual(user_data['user']['role'], 'hairdresser')
         self.assertIn('resume', user_data)
 
-    def test_get_nonexistent_user_info(self):
-        url = reverse('user_info', kwargs={'email': 'nonexistent@example.com'})
+    def test_get_user_info_without_session_is_refused_with_401(self):
+        url = reverse('user_info', kwargs={'email': 'customer@example.com'})
         response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 404)
-        self.assertIn('error', response.json())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn('data', response.json())
+
+    def test_get_another_user_info_is_refused_with_403(self):
+        self._login('hairdresser@example.com', 'Hairdresser_password1')
+
+        for email in ('customer@example.com', 'nonexistent@example.com'):
+            with self.subTest(email=email):
+                response = self.client.get(reverse('user_info', kwargs={'email': email}))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertNotIn('data', response.json())
 
     def _login(self, email, password):
         self.client.post(
@@ -1035,6 +1046,16 @@ class CustomerHomeViewTest(TestCase):
         self.hairdresser_user_1.preferences.add(self.coloracao_pref, self.barbearia_pref)
         self.hairdresser_user_2.preferences.add(self.cachos_pref, self.trancas_pref)
 
+        self._login('customer@example.com')
+
+    def _login(self, email, password='Customer_password1'):
+        self.client.cookies.clear()
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': email, 'password': password}),
+            content_type='application/json',
+        )
+
     def test_customer_home_with_matching_preferences(self):
         """Test customer home view returns hairdressers matching customer preferences"""
         url = reverse('customer_home_info', kwargs={'email': 'customer@example.com'})
@@ -1052,9 +1073,9 @@ class CustomerHomeViewTest(TestCase):
         self.assertGreater(len(for_you_data), 0)
         
         # Both hairdressers should be in for_you since they have preferences matching customer
-        hairdresser_emails = [h['user']['email'] for h in for_you_data]
-        self.assertIn('hairdresser1@example.com', hairdresser_emails)
-        self.assertIn('hairdresser2@example.com', hairdresser_emails)
+        hairdresser_ids = [h['id'] for h in for_you_data]
+        self.assertIn(self.hairdresser_user_1.hairdresser.id, hairdresser_ids)
+        self.assertIn(self.hairdresser_user_2.hairdresser.id, hairdresser_ids)
 
     def test_customer_home_with_specific_preference_categories(self):
         """Test that specific preference categories return correct hairdressers"""
@@ -1073,36 +1094,35 @@ class CustomerHomeViewTest(TestCase):
         
         # Check coloracao category contains hairdresser1
         coloracao_hairdressers = preferences_data['coloracao']
-        coloracao_emails = [h['user']['email'] for h in coloracao_hairdressers]
-        self.assertIn('hairdresser1@example.com', coloracao_emails)
+        coloracao_ids = [h['id'] for h in coloracao_hairdressers]
+        self.assertIn(self.hairdresser_user_1.hairdresser.id, coloracao_ids)
         
         # Check cachos category contains hairdresser2
         cachos_hairdressers = preferences_data['cachos']
-        cachos_emails = [h['user']['email'] for h in cachos_hairdressers]
-        self.assertIn('hairdresser2@example.com', cachos_emails)
+        cachos_ids = [h['id'] for h in cachos_hairdressers]
+        self.assertIn(self.hairdresser_user_2.hairdresser.id, cachos_ids)
         
         # Check barbearia category contains hairdresser1
         barbearia_hairdressers = preferences_data['barbearia']
-        barbearia_emails = [h['user']['email'] for h in barbearia_hairdressers]
-        self.assertIn('hairdresser1@example.com', barbearia_emails)
+        barbearia_ids = [h['id'] for h in barbearia_hairdressers]
+        self.assertIn(self.hairdresser_user_1.hairdresser.id, barbearia_ids)
         
         # Check trancas category contains hairdresser2
         trancas_hairdressers = preferences_data['trancas']
-        trancas_emails = [h['user']['email'] for h in trancas_hairdressers]
-        self.assertIn('hairdresser2@example.com', trancas_emails)
+        trancas_ids = [h['id'] for h in trancas_hairdressers]
+        self.assertIn(self.hairdresser_user_2.hairdresser.id, trancas_ids)
 
-    def test_customer_home_nonexistent_customer(self):
-        """Test customer home view with nonexistent customer email"""
-        url = reverse('customer_home_info', kwargs={'email': 'nonexistent@example.com'})
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 404)
-        data = response.json()
-        self.assertIn('error', data)
-        self.assertEqual(data['error'], 'User not found')
+    def test_customer_home_of_another_email_is_refused_with_403(self):
+        """The "for you" section reveals the customer's preferences, so only that customer sees it"""
+        for email in ('nonexistent@example.com', 'hairdresser1@example.com'):
+            with self.subTest(email=email):
+                response = self.client.get(reverse('customer_home_info', kwargs={'email': email}))
+                self.assertEqual(response.status_code, 403)
+                self.assertNotIn('for_you', response.json())
 
     def test_customer_home_hairdresser_email(self):
-        """Test customer home view with hairdresser email (should return 404)"""
+        """A hairdresser asking for their own customer home gets 404"""
+        self._login('hairdresser1@example.com', 'Hairdresser_password1')
         url = reverse('customer_home_info', kwargs={'email': 'hairdresser1@example.com'})
         response = self.client.get(url)
         
@@ -1110,6 +1130,36 @@ class CustomerHomeViewTest(TestCase):
         data = response.json()
         self.assertIn('error', data)
         self.assertEqual(data['error'], 'User not found')
+
+    def test_customer_home_by_email_without_session_is_refused_with_401(self):
+        self.client.cookies.clear()
+
+        response = self.client.get(reverse('customer_home_info', kwargs={'email': 'customer@example.com'}))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn('for_you', response.json())
+
+    def test_customer_home_email_is_compared_case_insensitively(self):
+        response = self.client.get(reverse('customer_home_info', kwargs={'email': 'Customer@Example.COM'}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['for_you']), 2)
+
+    def test_public_customer_home_has_no_contact_data(self):
+        """Without an e-mail the home is public: categories only, and no PII of the hairdressers"""
+        self.client.cookies.clear()
+
+        response = self.client.get(reverse('customer_home_info'))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['for_you'], [])
+        coloracao = data['hairdressers_by_preferences']['coloracao']
+        self.assertEqual([h['id'] for h in coloracao], [self.hairdresser_user_1.hairdresser.id])
+        for hairdresser in coloracao:
+            self.assertNotIn('cnpj', hairdresser)
+            for field in ('email', 'phone', 'postal_code'):
+                self.assertNotIn(field, hairdresser['user'])
 
     def test_customer_home_no_matching_preferences(self):
         """Test customer home view when customer has no matching preferences"""
@@ -1141,6 +1191,7 @@ class CustomerHomeViewTest(TestCase):
         # Add a preference that no hairdresser has
         customer_user_no_match = User.objects.get(email='nomatch@example.com')
         customer_user_no_match.preferences.add(self.other_pref)
+        self._login('nomatch@example.com')
         
         url = reverse('customer_home_info', kwargs={'email': 'nomatch@example.com'})
         response = self.client.get(url)
@@ -1181,6 +1232,7 @@ class CustomerHomeViewTest(TestCase):
             data=customer_empty,
         )
         
+        self._login('empty@example.com')
         url = reverse('customer_home_info', kwargs={'email': 'empty@example.com'})
         response = self.client.get(url)
         
@@ -1228,7 +1280,7 @@ class CustomerHomeViewTest(TestCase):
         if data['for_you']:
             hairdresser = data['for_you'][0]
             self.assertIn('user', hairdresser)
-            self.assertIn('email', hairdresser['user'])
+            self.assertNotIn('email', hairdresser['user'])
             self.assertIn('role', hairdresser['user'])
             self.assertEqual(hairdresser['user']['role'], 'hairdresser')
         
@@ -1241,7 +1293,7 @@ class CustomerHomeViewTest(TestCase):
             if preferences_data[category]:  # If not empty
                 hairdresser = preferences_data[category][0]
                 self.assertIn('user', hairdresser)
-                self.assertIn('email', hairdresser['user'])
+                self.assertNotIn('email', hairdresser['user'])
                 self.assertIn('role', hairdresser['user'])
                 self.assertEqual(hairdresser['user']['role'], 'hairdresser')
 class GlobalSearchViewTest(TestCase):
@@ -1506,8 +1558,11 @@ class GlobalSearchViewTest(TestCase):
             self.assertIn('result_type', hairdresser)
             self.assertEqual(hairdresser['result_type'], 'hairdresser')
             self.assertIn('user', hairdresser)
-            self.assertIn('cnpj', hairdresser)
             self.assertIn('resume', hairdresser)
+            # Public listing: no CNPJ nor contact data
+            self.assertNotIn('cnpj', hairdresser)
+            for field in ('email', 'phone', 'postal_code'):
+                self.assertNotIn(field, hairdresser['user'])
 
     def test_search_service_result_structure(self):
         """Test that service search results have correct structure"""
@@ -1747,7 +1802,7 @@ class HairdresserInfoViewTest(TestCase):
         
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
-    @patch('users.views.HairdresserSerializer')  # Replace 'your_app' with your actual app name
+    @patch('users.views.PublicHairdresserSerializer')
     def test_serializer_called_correctly(self, mock_serializer):
         """Test that the serializer is called with the correct hairdresser instance."""
         # Mock the serializer
