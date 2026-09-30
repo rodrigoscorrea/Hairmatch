@@ -4,7 +4,7 @@ import {styles} from '../../../styles/customer/styles/ProfileStyle';
 import Icon from '@expo/vector-icons/Feather';
 
 interface MenuItemProps {
-    iconName: string;
+    iconName: React.ComponentProps<typeof Icon>["name"];
     title: string;
     subtitle: string;
     onPress?: () => void;
