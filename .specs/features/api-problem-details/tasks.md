@@ -446,10 +446,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Aceita `AxiosError`, problem cru e JSON parseado
-- [ ] Sem resposta de rede devolve `Não foi possível conectar ao servidor.`
-- [ ] Slug fora do catálogo ou corpo não problem devolve o fallback da tela, e o `detail` nunca é devolvido
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Aceita `AxiosError`, problem cru e JSON parseado
+- [x] Sem resposta de rede devolve `Não foi possível conectar ao servidor.`
+- [x] Slug fora do catálogo ou corpo não problem devolve o fallback da tela, e o `detail` nunca é devolvido
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none
 **Gate**: build
