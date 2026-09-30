@@ -351,7 +351,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 
 **ID format:** `RT-NN`. As rotas são RT-01 a RT-49, e os comportamentos começam em RT-50. As lacunas (66-69, 78-79) separam as histórias e são intencionais.
 
-**Coverage:** 77 total, 0 mapped to tasks, 77 unmapped ⚠️ (Tasks ainda não criado).
+**Coverage:** 77 total, 77 mapped to tasks (T1 a T13), 77 done. UAT manual pendente.
 
 ---
 

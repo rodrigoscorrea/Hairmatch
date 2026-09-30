@@ -60,17 +60,16 @@
 
 ## Handoff
 
-- **Feature**: `api-problem-details` (issue #161, parte RFC 9457, mensagens em inglês e status corretos). A parte de rotas da issue é a feature `api-restful-routes`, que depende desta.
-- **Phase / Task**: Execute concluído (T1 a T18) e validado. `validation.md` com PASS nos gates automatizados. Falta o UAT das cinco telas do app.
+- **Feature**: `api-restful-routes` (issue #163). O `api-problem-details` (issue #161) está em `develop`.
+- **Phase / Task**: Execute concluído (T1 a T13) e verificado nos gates automatizados. `validation.md` com PASS. Faltam o UAT manual e a troca do webhook na Evolution API.
 - **Completed**:
-  - Backend: `hairmatch/problems.py`, handler do DRF, rota catch-all, middleware para a exceção que escapa do DRF, e todas as views de users, reserve, agenda, availability, service, review, preferences e chatbot em problem+json. 590 testes, nenhum removido ou pulado (463 antes).
-  - App: `utils/api-problem.ts` (normalizador e catálogo pt-BR), `_layout.tsx`, as cinco telas, `useServiceManager` e `useCepLookup` por slug. `npx tsc --noEmit` com exit 0 (os 4 erros antigos foram corrigidos só nos tipos).
-  - Sensor: 30 de 30 mutantes mortos. Servidor real (`DEBUG=True`) verificado por `curl`.
-  - AD-006 registrado.
+  - Backend: os `urls.py` de 8 apps montados em `api/`, 49 rotas da Route Table, `hairmatch/test_routes.py` comparando o URLconf com a tabela. 598 testes (590 antes). Sensor: 25 de 25 mutantes mortos.
+  - App: `services/auth-routes.ts` (refresh por método e pathname exatos), todos os serviços nas rotas novas, `npx tsc --noEmit` com exit 0 (o erro de `/review/{id}` em `useReserveDetails.ts` foi corrigido).
+  - README (rotas e webhook) e AD-007.
 - **In-progress** (file:line): none
 - **Next step**:
-  - UAT no app: login com senha errada (`E-mail ou senha inválidos.`), reserva em conflito (`Você já tem outra reserva agendada para o mesmo horário.`), exclusão de serviço com agendamento, CEP inexistente, e login/cadastro por Google. Depois disso, marcar PD-80 a PD-87 e PD-101 como Verified.
-  - Feature `api-restful-routes`: o Design dela parte do problem+json daqui. Os specs dela ainda não estão commitados.
-- **Blockers**: none. A troca do webhook do chatbot (RT-49, feature de rotas) exige autorização explícita antes do deploy em produção.
-- **Uncommitted files**: `.specs/features/api-restful-routes/` (specs da issue #162, de propósito fora deste PR). Já estavam pendentes antes: `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
-- **Branch**: 161-padronizacao-das-respostas-de-apis-para-rfcs-adequadas
+  - UAT no web e no Android: login, cadastro (e-mail e Google), home, busca, perfil do profissional, agendamento, reservas, avaliação, serviços, disponibilidade, agenda e logout. Depois marcar RT-70 a RT-75 como Verified.
+  - Produção: reconfigurar o webhook da Evolution API para `/api/chatbot/webhook` (README), só com autorização explícita.
+- **Blockers**: none
+- **Uncommitted files**: `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/` (pendentes antes desta feature, fora do PR de propósito).
+- **Branch**: 163-padronizacao-das-urls-de-apis-para-rfcs-adequadas

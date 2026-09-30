@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-09-30
 **Spec:** `.specs/features/api-restful-routes/spec.md`
-**Status:** Ready for design (aguardando confirmação do spec)
+**Status:** Implemented (spec aprovado pelo pedido de implementação da issue #163)
 
 ---
 
