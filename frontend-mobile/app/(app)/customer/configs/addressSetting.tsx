@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, SafeAreaView, ScrollView } fro
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
-import Icon from 'react-native-vector-icons/FontAwesome'; // or another icon library
+import Icon from '@expo/vector-icons/FontAwesome';
 import { styles } from '@/styles/customer/styles/AddressConfigStyles';
 import { useAddress } from '@/hooks/authHooks/useAddress';
 

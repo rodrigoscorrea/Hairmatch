@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, SafeAreaView, ScrollView } fro
 import { FormInput } from '@/components/formInputs/FormInput'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
-import Icon from 'react-native-vector-icons/FontAwesome'; // or another icon library
+import Icon from '@expo/vector-icons/FontAwesome';
 import { styles } from '@/styles/customer/styles/AddressConfigStyles';
 import { useAddress } from '@/hooks/authHooks/useAddress';
 

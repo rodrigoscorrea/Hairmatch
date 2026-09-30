@@ -7,7 +7,7 @@ import { ErrorModal } from '@/app/../components/modals/ErrorModal/ErrorModal';
 import { useRegisterForm } from '@/hooks/authHooks/useRegisterForm';
 import { formatCPF, formatCNPJ, formatPhone } from '@/app/../utils/forms';
 import { useRegistration } from '@/contexts/RegistrationContext';
-import Icon from 'react-native-vector-icons/FontAwesome'; 
+import Icon from '@expo/vector-icons/FontAwesome';
 import { useGoogleAuth } from '@/hooks/authHooks/useGoogleAuth';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 

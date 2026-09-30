@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Image, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from '@/styles/hairdresser/profile/styles/HairdresserSettingsStyle'; // Adjust path
-import Icon from 'react-native-vector-icons/Feather';
+import Icon from '@expo/vector-icons/Feather';
 import ConfirmationModal from "@/components/modals/confirmationModal/ConfirmationModal"; // Adjust path
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
