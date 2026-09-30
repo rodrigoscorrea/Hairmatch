@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
-# Python 3.9 (the container) has no .webp entry, and the upload would go out as octet-stream.
+# Python before 3.13 has no built-in .webp entry, and the upload would go out as octet-stream.
 mimetypes.add_type('image/webp', '.webp')
 
 
