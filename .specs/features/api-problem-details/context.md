@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-09-30
 **Spec:** `.specs/features/api-problem-details/spec.md`
-**Status:** Ready for design (aguardando confirmação do spec)
+**Status:** Implementado. Só o UAT das cinco telas do app está pendente (ver `validation.md`).
 
 ---
 

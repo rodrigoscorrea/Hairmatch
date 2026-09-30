@@ -350,71 +350,71 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PD-01 | P1: Formato único de erro | T1 | Implemented |
-| PD-02 | P1: Formato único de erro | T1 | Implemented |
-| PD-03 | P1: Formato único de erro | T1 | Implemented |
-| PD-04 | P1: Formato único de erro | T1 | Implemented |
-| PD-05 | P1: Formato único de erro | T1 | Implemented |
-| PD-06 | P1: Formato único de erro | T1 | Implemented |
-| PD-07 | P1: Formato único de erro | T1 | Implemented |
-| PD-10 | P1: Autenticação e autorização | T2 | Implemented |
-| PD-11 | P1: Autenticação e autorização | T2 | Implemented |
-| PD-12 | P1: Autenticação e autorização | T2 | Implemented |
-| PD-13 | P1: Autenticação e autorização | T2, T9 | Implemented |
-| PD-14 | P1: Autenticação e autorização | T2, T4, T11 | Implemented |
-| PD-15 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-16 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-17 | P1: Autenticação e autorização | T3, T4 | Implemented |
-| PD-18 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-19 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-20 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-21 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-22 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-23 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-24 | P1: Cadastro e conta | T5 | Implemented |
-| PD-25 | P1: Cadastro e conta | T5 | Implemented |
-| PD-26 | P1: Cadastro e conta | T5 | Implemented |
-| PD-27 | P1: Cadastro e conta | T5 | Implemented |
-| PD-28 | P1: Cadastro e conta | T4, T5 | Implemented |
-| PD-29 | P1: Cadastro e conta | T5 | Implemented |
-| PD-30 | P1: Cadastro e conta | T4, T5 | Implemented |
-| PD-31 | P1: Cadastro e conta | T5 | Implemented |
-| PD-32 | P1: Cadastro e conta | T5 | Implemented |
-| PD-33 | P1: Cadastro e conta | T5 | Implemented |
-| PD-34 | P1: Cadastro e conta | T5 | Implemented |
-| PD-35 | P1: Cadastro e conta | T4 | Implemented |
-| PD-36 | P1: Cadastro e conta | T4 | Implemented |
-| PD-37 | P1: Cadastro e conta | T4 | Implemented |
-| PD-40 | P1: Agendamento | T7 | Implemented |
-| PD-41 | P1: Agendamento | T7 | Implemented |
-| PD-42 | P1: Agendamento | T7 | Implemented |
-| PD-43 | P1: Agendamento | T7 | Implemented |
-| PD-44 | P1: Agendamento | T7 | Implemented |
-| PD-45 | P1: Agendamento | T7 | Implemented |
-| PD-46 | P1: Agendamento | T7 | Implemented |
-| PD-47 | P1: Agendamento | T7 | Implemented |
-| PD-48 | P1: Agendamento | T7 | Implemented |
-| PD-49 | P1: Agendamento | T8 | Implemented |
-| PD-50 | P1: Agendamento | T8 | Implemented |
-| PD-51 | P1: Agendamento | T8 | Implemented |
-| PD-52 | P1: Agendamento | T9 | Implemented |
-| PD-53 | P1: Agendamento | T9 | Implemented |
-| PD-54 | P1: Agendamento | T9 | Implemented |
-| PD-55 | P1: Agendamento | T10 | Implemented |
-| PD-56 | P1: Agendamento | T10 | Implemented |
-| PD-57 | P1: Agendamento | T6, T8, T9, T10, T12 | Implemented |
-| PD-60 | P1: Erros fora das views | T1 | Implemented |
-| PD-61 | P1: Erros fora das views | T1 | Implemented |
-| PD-62 | P1: Erros fora das views | T1, T4, T9 | Implemented |
-| PD-63 | P1: Erros fora das views | T1, T6 | Implemented |
-| PD-64 | P1: Erros fora das views | T1 | Implemented |
-| PD-65 | P1: Erros fora das views | T1 | Implemented |
-| PD-66 | P1: Erros fora das views | T1 | Implemented |
-| PD-67 | P1: Erros fora das views | T1 | Implemented |
-| PD-70 | P1: Mensagens em inglês | - | Pending |
-| PD-71 | P1: Mensagens em inglês | T7, T13 | Implemented |
-| PD-72 | P1: Mensagens em inglês | T4, T7, T8, T9, T10, T11 | Implemented |
-| PD-73 | P1: Mensagens em inglês | T4 | Implemented |
+| PD-01 | P1: Formato único de erro | T1 | Verified |
+| PD-02 | P1: Formato único de erro | T1 | Verified |
+| PD-03 | P1: Formato único de erro | T1 | Verified |
+| PD-04 | P1: Formato único de erro | T1 | Verified |
+| PD-05 | P1: Formato único de erro | T1 | Verified |
+| PD-06 | P1: Formato único de erro | T1 | Verified |
+| PD-07 | P1: Formato único de erro | T1 | Verified |
+| PD-10 | P1: Autenticação e autorização | T2 | Verified |
+| PD-11 | P1: Autenticação e autorização | T2 | Verified |
+| PD-12 | P1: Autenticação e autorização | T2 | Verified |
+| PD-13 | P1: Autenticação e autorização | T2, T9 | Verified |
+| PD-14 | P1: Autenticação e autorização | T2, T4, T11 | Verified |
+| PD-15 | P1: Autenticação e autorização | T3 | Verified |
+| PD-16 | P1: Autenticação e autorização | T3 | Verified |
+| PD-17 | P1: Autenticação e autorização | T3, T4 | Verified |
+| PD-18 | P1: Autenticação e autorização | T3 | Verified |
+| PD-19 | P1: Autenticação e autorização | T3 | Verified |
+| PD-20 | P1: Autenticação e autorização | T3 | Verified |
+| PD-21 | P1: Autenticação e autorização | T3 | Verified |
+| PD-22 | P1: Autenticação e autorização | T3 | Verified |
+| PD-23 | P1: Autenticação e autorização | T3 | Verified |
+| PD-24 | P1: Cadastro e conta | T5 | Verified |
+| PD-25 | P1: Cadastro e conta | T5 | Verified |
+| PD-26 | P1: Cadastro e conta | T5 | Verified |
+| PD-27 | P1: Cadastro e conta | T5 | Verified |
+| PD-28 | P1: Cadastro e conta | T4, T5 | Verified |
+| PD-29 | P1: Cadastro e conta | T5 | Verified |
+| PD-30 | P1: Cadastro e conta | T4, T5 | Verified |
+| PD-31 | P1: Cadastro e conta | T5 | Verified |
+| PD-32 | P1: Cadastro e conta | T5 | Verified |
+| PD-33 | P1: Cadastro e conta | T5 | Verified |
+| PD-34 | P1: Cadastro e conta | T5 | Verified |
+| PD-35 | P1: Cadastro e conta | T4 | Verified |
+| PD-36 | P1: Cadastro e conta | T4 | Verified |
+| PD-37 | P1: Cadastro e conta | T4 | Verified |
+| PD-40 | P1: Agendamento | T7 | Verified |
+| PD-41 | P1: Agendamento | T7 | Verified |
+| PD-42 | P1: Agendamento | T7 | Verified |
+| PD-43 | P1: Agendamento | T7 | Verified |
+| PD-44 | P1: Agendamento | T7 | Verified |
+| PD-45 | P1: Agendamento | T7 | Verified |
+| PD-46 | P1: Agendamento | T7 | Verified |
+| PD-47 | P1: Agendamento | T7 | Verified |
+| PD-48 | P1: Agendamento | T7 | Verified |
+| PD-49 | P1: Agendamento | T8 | Verified |
+| PD-50 | P1: Agendamento | T8 | Verified |
+| PD-51 | P1: Agendamento | T8 | Verified |
+| PD-52 | P1: Agendamento | T9 | Verified |
+| PD-53 | P1: Agendamento | T9 | Verified |
+| PD-54 | P1: Agendamento | T9 | Verified |
+| PD-55 | P1: Agendamento | T10 | Verified |
+| PD-56 | P1: Agendamento | T10 | Verified |
+| PD-57 | P1: Agendamento | T6, T8, T9, T10, T12 | Verified |
+| PD-60 | P1: Erros fora das views | T1 | Verified |
+| PD-61 | P1: Erros fora das views | T1 | Verified |
+| PD-62 | P1: Erros fora das views | T1, T4, T9 | Verified |
+| PD-63 | P1: Erros fora das views | T1, T6 | Verified |
+| PD-64 | P1: Erros fora das views | T1 | Verified |
+| PD-65 | P1: Erros fora das views | T1 | Verified |
+| PD-66 | P1: Erros fora das views | T1 | Verified |
+| PD-67 | P1: Erros fora das views | T1 | Verified |
+| PD-70 | P1: Mensagens em inglês | T1-T13, T18 | Verified |
+| PD-71 | P1: Mensagens em inglês | T7, T13 | Verified |
+| PD-72 | P1: Mensagens em inglês | T4, T7, T8, T9, T10, T11 | Verified |
+| PD-73 | P1: Mensagens em inglês | T4 | Verified |
 | PD-80 | P1: App mostra erros em pt-BR | T14, T15 | Implemented |
 | PD-81 | P1: App mostra erros em pt-BR | T14, T16 | Implemented |
 | PD-82 | P1: App mostra erros em pt-BR | T14, T15, T16 | Implemented |
@@ -422,35 +422,35 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-84 | P1: App mostra erros em pt-BR | T17 | Implemented |
 | PD-85 | P1: App mostra erros em pt-BR | T17 | Implemented |
 | PD-86 | P1: App mostra erros em pt-BR | T15 | Implemented |
-| PD-87 | P1: App mostra erros em pt-BR | T14, T17 | Implemented |
-| PD-90 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-91 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-92 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-93 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-94 | P2: Endpoints auxiliares | T6 | Implemented |
-| PD-95 | P2: Endpoints auxiliares | T11 | Implemented |
-| PD-96 | P2: Endpoints auxiliares | T11 | Implemented |
-| PD-97 | P2: Endpoints auxiliares | T11 | Implemented |
-| PD-98 | P2: Endpoints auxiliares | T11 | Implemented |
-| PD-99 | P2: Endpoints auxiliares | T12 | Implemented |
-| PD-100 | P2: Endpoints auxiliares | T13 | Implemented |
+| PD-87 | P1: App mostra erros em pt-BR | T14, T17, T18 | Implemented |
+| PD-90 | P2: Endpoints auxiliares | T6 | Verified |
+| PD-91 | P2: Endpoints auxiliares | T6 | Verified |
+| PD-92 | P2: Endpoints auxiliares | T6 | Verified |
+| PD-93 | P2: Endpoints auxiliares | T6 | Verified |
+| PD-94 | P2: Endpoints auxiliares | T6 | Verified |
+| PD-95 | P2: Endpoints auxiliares | T11 | Verified |
+| PD-96 | P2: Endpoints auxiliares | T11 | Verified |
+| PD-97 | P2: Endpoints auxiliares | T11 | Verified |
+| PD-98 | P2: Endpoints auxiliares | T11 | Verified |
+| PD-99 | P2: Endpoints auxiliares | T12 | Verified |
+| PD-100 | P2: Endpoints auxiliares | T13 | Verified |
 | PD-101 | P2: Fallbacks do app em português | T15, T16 | Implemented |
-| PD-110 | Edge Cases | T1 | Implemented |
-| PD-111 | Edge Cases | T1 | Implemented |
-| PD-112 | Edge Cases | T1 | Implemented |
-| PD-113 | Edge Cases | T1 | Implemented |
-| PD-114 | Edge Cases | T4 | Implemented |
+| PD-110 | Edge Cases | T1 | Verified |
+| PD-111 | Edge Cases | T1 | Verified |
+| PD-112 | Edge Cases | T1 | Verified |
+| PD-113 | Edge Cases | T1 | Verified |
+| PD-114 | Edge Cases | T4 | Verified |
 
 **ID format:** `PD-NN`. As lacunas na numeração (08-09, 38-39, 58-59 etc.) separam as histórias e são intencionais.
 
-**Coverage:** 90 total, 0 mapped to tasks, 90 unmapped ⚠️ (Tasks ainda não criado).
+**Coverage:** 90 total, 90 mapped to tasks, 0 unmapped. 81 Verified (backend, `validation.md`) e 9 Implemented (app, aguardam o UAT: PD-80 a PD-87 e PD-101).
 
 ---
 
 ## Success Criteria
 
-- [ ] Uma busca em `backend/**/views.py`, `users/authentication.py` e `hairmatch/ai_clients/gemini_client.py` não encontra nenhum `JsonResponse({'error'` nem `str(e)` em corpo de resposta.
-- [ ] Toda resposta de erro exercitada pela suíte do backend tem `Content-Type: application/problem+json` e um slug do catálogo.
-- [ ] A suíte do backend (`cd backend && python manage.py test`) passa, sem nenhum teste removido nem pulado.
+- [x] Uma busca em `backend/**/views.py`, `users/authentication.py` e `hairmatch/ai_clients/gemini_client.py` não encontra nenhum `JsonResponse({'error'` nem `str(e)` em corpo de resposta.
+- [x] Toda resposta de erro exercitada pela suíte do backend tem `Content-Type: application/problem+json` e um slug do catálogo.
+- [x] A suíte do backend (`cd backend && python manage.py test`) passa, sem nenhum teste removido nem pulado.
 - [ ] No UAT, cada uma das cinco telas que exibem erro mostra o texto pt-BR do catálogo em pelo menos um caso de erro real.
-- [ ] `npx tsc --noEmit` passa no `frontend-mobile`.
+- [x] `npx tsc --noEmit` passa no `frontend-mobile`.

@@ -1,7 +1,7 @@
 # Erros da API em RFC 9457 Design
 
 **Spec**: `.specs/features/api-problem-details/spec.md`
-**Status**: Approved (o usuário pediu a implementação de ponta a ponta, sem gates intermediários)
+**Status**: Implemented (o usuário pediu a implementação de ponta a ponta, sem gates intermediários)
 
 ---
 

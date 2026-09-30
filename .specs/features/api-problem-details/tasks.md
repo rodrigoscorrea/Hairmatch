@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/api-problem-details/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
@@ -545,7 +545,7 @@ T17 → T18
 **Where**: `.specs/STATE.md`
 **Depends on**: T17
 **Reuses**: `scripts/validate_state.py`, `scripts/validate_spec.py`
-**Requirement**: PD-01, PD-87
+**Requirement**: PD-70 (fecha as tarefas T1 a T13), PD-87
 
 **Tools**:
 
@@ -554,10 +554,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] AD-006 registrado, AD-004 marcado como parcialmente superado
-- [ ] Rastreabilidade do spec em `Verified` com evidência
-- [ ] `validation.md` com PASS e `file:line`, e `validate_state.py` com exit 0
-- [ ] Gate check passes: full e build
+- [x] AD-006 registrado, AD-004 marcado como parcialmente superado
+- [x] Rastreabilidade do spec em `Verified` com evidência
+- [x] `validation.md` com PASS e `file:line`, e `validate_state.py` com exit 0
+- [x] Gate check passes: full e build
 
 **Tests**: none
 **Gate**: full

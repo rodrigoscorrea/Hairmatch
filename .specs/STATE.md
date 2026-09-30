@@ -32,7 +32,7 @@
 - **Trade-off**: Passam a existir dois formatos de sessão, em vez do formato único do AD-001. Um access token revogado segue aceito até expirar (≤ 60 min), porque a verificação é local. Contas Google não têm refresh.
 - **Scope**: `backend/users`, `backend/availability`, `backend/review`, `backend/preferences` e o contexto de auth e o `axiosInstance` do `frontend-mobile`. Todo endpoint novo que exija login usa `authenticated_user`, e nenhuma view decodifica JWT.
 - **Date**: 2026-09-29
-- **Status**: active
+- **Status**: active, exceto o corpo `{"error"}` do 401 e do 503, superado pelo AD-006
 
 ### AD-005
 - **Decision**: Em dev, o Cognito roda no MiniStack (`ministackorg/ministack`, serviço `ministack` do compose, porta 4567 no host, `PERSIST_STATE=1`). S3, SES e o resto da nuvem local continuam no LocalStack. O backend alcança o MiniStack por `AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER=http://ministack:4566`, definido no compose. Os IDs do pool e do client vêm de `COGNITO_USER_POOL_ID` e `COGNITO_APP_CLIENT_ID`; vazios em dev, o backend busca `hairmatch-dev` e `hairmatch-backend` pelo nome.
@@ -42,17 +42,27 @@
 - **Date**: 2026-09-29
 - **Status**: active
 
+### AD-006
+- **Decision**: Todo erro sob `/api/` sai em `application/problem+json` (RFC 9457), com `type`, `title`, `status`, `detail` e `instance`, e a extensão `errors` (itens `{pointer}` ou `{parameter}`) só em `validation-error`. O `type` é `https://hairmatch.app/problems/<slug>`, com a base em `settings.PROBLEM_TYPE_BASE_URI`, e o slug vem do catálogo de 36 linhas do spec `api-problem-details`. Tudo passa por `backend/hairmatch/problems.py`: a view devolve `problem_response(request, slug, detail)`, um helper levanta `Problem`, e `exception_handler` (DRF) responde por qualquer exceção, inclusive as inesperadas (500 `internal-error`, logadas com traceback), sem nunca devolver `None`. Uma view no fim do `urlpatterns` responde 404 para `/api/` sem rota. Os helpers de sessão de `users/authentication.py` mantêm a tupla `(session, error)`, agora com problem+json (401 `invalid-session`, 503 `auth-unavailable`, 403 `hairdresser-required`, `customer-required` e `forbidden`). `detail` e `title` são sempre em inglês e nunca levam texto de exceção. O app traduz pelo slug do `type` (`frontend-mobile/utils/api-problem.ts`) e nunca mostra o `detail`. Um slug novo exige atualizar o catálogo do spec, `CATALOG` e o catálogo do app.
+- **Reason**: Cinco formatos de erro conviviam (`{"error"}`, `{"detail"}`, `{"status","message"}`, `str(e)` e HTML de 500 com `DEBUG=True`). Um contrato só deixa o app tratar erro em um ponto. O corpo do 401 mudou de `{"error"}` para problem+json, e o AD-004 fixava o formato antigo. Um handler que devolve `None` faria o DRF relançar a exceção, e o Django serviria HTML com `DEBUG=True` (fixo em `settings.py`), por isso o handler responde por tudo. `handler404` também é ignorado com `DEBUG=True`, por isso a rota catch-all.
+- **Trade-off**: A resposta de erro é `JsonResponse`, e não `Response` do DRF: não passa pelos renderers, então o Browsable API nunca devolve HTML de erro, mas os erros também não usam content negotiation. Backend e app mudam no mesmo release, sem período com `{"error"}`. O app depende do slug: um slug fora do catálogo cai no texto genérico da tela.
+- **Scope**: Todo o `backend` sob `/api/` (users, reserve, agenda, availability, service, review, preferences, chatbot, `hairmatch/ai_clients`) e o `frontend-mobile`. Fora: as mensagens do chatbot de WhatsApp (pt-BR) e `admin/`. Toda view nova devolve erro por `problem_response` ou `Problem`, e nenhuma monta `JsonResponse({'error': ...})`.
+- **Date**: 2026-09-30
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: cognito-auth (`.specs/features/cognito-auth/`), issue #139
-- **Phase / Task**: Tasks concluído. Aguardando aprovação do usuário para Execute (Phase 1 / T1).
-- **Completed**: `spec.md` (49 requisitos COG-01 a COG-49), `context.md`, `design.md` e `tasks.md` (24 tarefas em 5 fases).
-  - `validate_spec.py`: exit 0, sem avisos.
-  - `validate_tasks.py`: exit 0, com 8 avisos esperados (`Tests: none` nas camadas model, infra e app, conforme a matriz).
-  - AD-004 (supera o AD-001) e AD-005 registrados.
-  - Decisões do usuário: MiniStack para o Cognito, proxy no backend, sessão própria só para Google, descartar e re-seedar as contas bcrypt.
+- **Feature**: `api-problem-details` (issue #161, parte RFC 9457, mensagens em inglês e status corretos). A parte de rotas da issue é a feature `api-restful-routes`, que depende desta.
+- **Phase / Task**: Execute concluído (T1 a T18) e validado. `validation.md` com PASS nos gates automatizados. Falta o UAT das cinco telas do app.
+- **Completed**:
+  - Backend: `hairmatch/problems.py`, handler do DRF, rota catch-all, e todas as views de users, reserve, agenda, availability, service, review, preferences e chatbot em problem+json. 584 testes, nenhum removido ou pulado (463 antes).
+  - App: `utils/api-problem.ts` (normalizador e catálogo pt-BR), `_layout.tsx`, as cinco telas, `useServiceManager` e `useCepLookup` por slug. `npx tsc --noEmit` com exit 0 (os 4 erros antigos foram corrigidos só nos tipos).
+  - Sensor: 28 de 28 mutantes mortos. Servidor real (`DEBUG=True`) verificado por `curl`.
+  - AD-006 registrado.
 - **In-progress** (file:line): none
-- **Next step**: Confirmar o Test Coverage Matrix e os Gate Commands. Oferecer sub-agentes (cerca de 4 lotes) e executar T1–T24 na branch `139-troca-autenticacao-para-aws-cognito`. O reset do banco do Render é passo operacional e exige autorização explícita.
-- **Blockers**: none. Os testes precisam de Postgres. O T24 precisa do `docker compose up` com LocalStack (token atual) e MiniStack.
-- **Uncommitted files**: `.specs/features/cognito-auth/` (novo), `.specs/STATE.md`. Já estavam pendentes antes desta feature: `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
-- **Branch**: 139-troca-autenticacao-para-aws-cognito
+- **Next step**:
+  - UAT no app: login com senha errada (`E-mail ou senha inválidos.`), reserva em conflito (`Você já tem outra reserva agendada para o mesmo horário.`), exclusão de serviço com agendamento, CEP inexistente, e login/cadastro por Google. Depois disso, marcar PD-80 a PD-87 e PD-101 como Verified.
+  - Feature `api-restful-routes`: o Design dela parte do problem+json daqui. Os specs dela ainda não estão commitados.
+- **Blockers**: none. A troca do webhook do chatbot (RT-49, feature de rotas) exige autorização explícita antes do deploy em produção.
+- **Uncommitted files**: `.specs/features/api-restful-routes/` (specs da issue #162, de propósito fora deste PR). Já estavam pendentes antes: `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
+- **Branch**: 161-padronizacao-das-respostas-de-apis-para-rfcs-adequadas
