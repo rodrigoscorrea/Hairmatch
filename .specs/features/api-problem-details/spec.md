@@ -361,10 +361,10 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-11 | P1: Autenticação e autorização | T2 | Implemented |
 | PD-12 | P1: Autenticação e autorização | T2 | Implemented |
 | PD-13 | P1: Autenticação e autorização | T2 | Implemented |
-| PD-14 | P1: Autenticação e autorização | T2 | Implemented |
+| PD-14 | P1: Autenticação e autorização | T2, T4 | Implemented |
 | PD-15 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-16 | P1: Autenticação e autorização | T3 | Implemented |
-| PD-17 | P1: Autenticação e autorização | T3 | Implemented |
+| PD-17 | P1: Autenticação e autorização | T3, T4 | Implemented |
 | PD-18 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-19 | P1: Autenticação e autorização | T3 | Implemented |
 | PD-20 | P1: Autenticação e autorização | T3 | Implemented |
@@ -375,16 +375,16 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-25 | P1: Cadastro e conta | - | Pending |
 | PD-26 | P1: Cadastro e conta | - | Pending |
 | PD-27 | P1: Cadastro e conta | - | Pending |
-| PD-28 | P1: Cadastro e conta | - | Pending |
+| PD-28 | P1: Cadastro e conta | T4 | Implemented |
 | PD-29 | P1: Cadastro e conta | - | Pending |
-| PD-30 | P1: Cadastro e conta | - | Pending |
+| PD-30 | P1: Cadastro e conta | T4 | Implemented |
 | PD-31 | P1: Cadastro e conta | - | Pending |
 | PD-32 | P1: Cadastro e conta | - | Pending |
 | PD-33 | P1: Cadastro e conta | - | Pending |
 | PD-34 | P1: Cadastro e conta | - | Pending |
-| PD-35 | P1: Cadastro e conta | - | Pending |
-| PD-36 | P1: Cadastro e conta | - | Pending |
-| PD-37 | P1: Cadastro e conta | - | Pending |
+| PD-35 | P1: Cadastro e conta | T4 | Implemented |
+| PD-36 | P1: Cadastro e conta | T4 | Implemented |
+| PD-37 | P1: Cadastro e conta | T4 | Implemented |
 | PD-40 | P1: Agendamento | - | Pending |
 | PD-41 | P1: Agendamento | - | Pending |
 | PD-42 | P1: Agendamento | - | Pending |
@@ -405,7 +405,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-57 | P1: Agendamento | - | Pending |
 | PD-60 | P1: Erros fora das views | T1 | Implemented |
 | PD-61 | P1: Erros fora das views | T1 | Implemented |
-| PD-62 | P1: Erros fora das views | T1 | Implemented |
+| PD-62 | P1: Erros fora das views | T1, T4 | Implemented |
 | PD-63 | P1: Erros fora das views | T1 | Implemented |
 | PD-64 | P1: Erros fora das views | T1 | Implemented |
 | PD-65 | P1: Erros fora das views | T1 | Implemented |
@@ -413,8 +413,8 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-67 | P1: Erros fora das views | T1 | Implemented |
 | PD-70 | P1: Mensagens em inglês | - | Pending |
 | PD-71 | P1: Mensagens em inglês | - | Pending |
-| PD-72 | P1: Mensagens em inglês | - | Pending |
-| PD-73 | P1: Mensagens em inglês | - | Pending |
+| PD-72 | P1: Mensagens em inglês | T4 | Implemented |
+| PD-73 | P1: Mensagens em inglês | T4 | Implemented |
 | PD-80 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-81 | P1: App mostra erros em pt-BR | - | Pending |
 | PD-82 | P1: App mostra erros em pt-BR | - | Pending |
@@ -439,7 +439,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-111 | Edge Cases | T1 | Implemented |
 | PD-112 | Edge Cases | T1 | Implemented |
 | PD-113 | Edge Cases | T1 | Implemented |
-| PD-114 | Edge Cases | - | Pending |
+| PD-114 | Edge Cases | T4 | Implemented |
 
 **ID format:** `PD-NN`. As lacunas na numeração (08-09, 38-39, 58-59 etc.) separam as histórias e são intencionais.
 

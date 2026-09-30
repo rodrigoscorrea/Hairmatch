@@ -733,7 +733,8 @@ class UserInfoCookieViewTest(TestCase):
         self.client.cookies['jwt'] = self.customer_token
         
         response = self.client.delete(self.user_info_auth_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         
         # Verify user is deleted
         self.assertEqual(User.objects.filter(email='customer@example.com').count(), 0)
@@ -805,6 +806,23 @@ class UserInfoCookieViewTest(TestCase):
         self.assertEqual(updated_hairdresser.resume, 'Updated resume')
         self.assertEqual(updated_hairdresser.cnpj, '98765432000190')
 
+    def test_update_with_a_body_that_is_not_a_json_object_answers_400_malformed_request(self):
+        self.client.cookies['jwt'] = self.customer_token
+
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                response = self.client.put(self.user_info_auth_url, data=raw, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
+
+    def test_get_of_an_account_with_an_unsupported_role_answers_500_internal_error(self):
+        odd = _create_plain_user(email='odd@example.com', phone='5511999990077', role='staff', cognito_sub='sub-odd')
+        self.client.cookies['jwt'] = get_cognito().client.make_access_token(odd.cognito_sub)
+
+        response = self.client.get(self.user_info_auth_url)
+
+        assert_problem(response, 'internal-error', detail='The account has an unsupported role.')
+
     def test_update_with_existing_email(self):
         self.client.cookies['jwt'] = self.customer_token
         
@@ -819,8 +837,7 @@ class UserInfoCookieViewTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
+        assert_problem(response, 'email-change-unsupported', detail='Changing the email is not supported.')
 
 
 class UserInfoViewTest(TestCase):
@@ -936,7 +953,8 @@ class UserInfoViewTest(TestCase):
         url = reverse('user_info', kwargs={'email': 'customer@example.com'})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertEqual(User.objects.filter(email='customer@example.com').count(), 0)
         self.assertEqual(Customer.objects.count(), 0)
 
@@ -945,7 +963,7 @@ class UserInfoViewTest(TestCase):
 
         response = self.client.delete(reverse('user_info', kwargs={'email': 'Customer@Example.com'}))
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(email='customer@example.com').exists())
 
     def test_delete_user_by_email_without_session_is_refused_with_401(self):
@@ -1150,15 +1168,12 @@ class CustomerHomeViewTest(TestCase):
                 self.assertNotIn('for_you', response.json())
 
     def test_customer_home_hairdresser_email(self):
-        """A hairdresser asking for their own customer home gets 404"""
+        """A hairdresser asking for their own customer home gets 403"""
         self._login('hairdresser1@example.com', 'Hairdresser_password1')
         url = reverse('customer_home_info', kwargs={'email': 'hairdresser1@example.com'})
         response = self.client.get(url)
         
-        self.assertEqual(response.status_code, 404)
-        data = response.json()
-        self.assertIn('error', data)
-        self.assertEqual(data['error'], 'User not found')
+        assert_problem(response, 'customer-required', detail='Only customers can perform this action.')
 
     def test_customer_home_by_email_without_session_is_refused_with_401(self):
         self.client.cookies.clear()
@@ -4075,23 +4090,35 @@ class CognitoChangePasswordTest(TestCase):
     def test_wrong_current_password_answers_400_and_keeps_the_password(self):
         response = self._change({'old_password': 'Errada123', 'password': 'NovaSenha456'})
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'Senha atual incorreta.'})
+        assert_problem(response, 'incorrect-current-password', detail='The current password is incorrect.')
         self.assertEqual(self._fresh_login_status('Senha123'), 200)
 
     def test_new_password_outside_the_policy_answers_400(self):
         response = self._change({'old_password': 'Senha123', 'password': 'abc'})
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'})
+        assert_problem(
+            response, 'password-policy',
+            detail='The password must have at least 8 characters, with an uppercase letter, a lowercase letter and a number.',
+        )
         self.assertEqual(self._fresh_login_status('Senha123'), 200)
 
     def test_missing_old_or_new_password_answers_400_without_calling_cognito(self):
         for body in ({'password': 'NovaSenha456'}, {'old_password': 'Senha123'}, {}, {'old_password': '', 'password': 'NovaSenha456'}):
             with self.subTest(body=body):
                 response = self._change(body)
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertEqual(response.json(), {'error': 'Informe a senha atual e a nova senha.'})
+                expected = [
+                    {'pointer': f'#/{field}', 'detail': 'This field is required.'}
+                    for field in ('old_password', 'password') if not body.get(field)
+                ]
+                assert_problem(response, 'validation-error', errors=expected)
+        self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
+
+    def test_body_that_is_not_a_json_object_answers_400_malformed_request(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                response = self.client.put(self.change_url, data=raw, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
         self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
 
     def test_google_session_answers_403_without_calling_cognito(self):
@@ -4101,8 +4128,9 @@ class CognitoChangePasswordTest(TestCase):
 
         response = self._change({'old_password': 'Senha123', 'password': 'NovaSenha456'})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.json(), {'error': 'Esta conta usa login com Google e não tem senha.'})
+        assert_problem(
+            response, 'google-account-login', detail='This account uses Google sign-in and has no password.'
+        )
         self.assertEqual([n for n, _ in self.fake.calls if n == 'change_password'], [])
 
     def test_connection_error_answers_503_and_keeps_the_password(self):
@@ -4132,8 +4160,8 @@ class CognitoDeleteAccountTest(TestCase):
     def test_deleting_the_own_account_removes_the_cognito_user_the_row_and_the_cookies(self):
         response = self.client.delete(self.own_url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'message': 'user deleted'})
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertNotIn('nova@example.com', self.fake.users)
         self.assertFalse(User.objects.filter(email='nova@example.com').exists())
         for key in ('jwt', 'refresh_token'):
@@ -4144,13 +4172,15 @@ class CognitoDeleteAccountTest(TestCase):
 
         response = self.client.delete(self.own_url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertFalse(User.objects.filter(email='nova@example.com').exists())
 
     def test_deleting_by_email_removes_the_cognito_user_and_the_row(self):
         response = self.client.delete(self.by_email_url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertNotIn('nova@example.com', self.fake.users)
         self.assertFalse(User.objects.filter(email='nova@example.com').exists())
 
@@ -4159,7 +4189,8 @@ class CognitoDeleteAccountTest(TestCase):
 
         response = self.client.delete(self.by_email_url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
         self.assertFalse(User.objects.filter(email='nova@example.com').exists())
 
     def test_cognito_outage_answers_503_and_keeps_both_the_row_and_the_cognito_user(self):
@@ -4183,13 +4214,13 @@ class CognitoDeleteAccountTest(TestCase):
         self.client.cookies['jwt'] = issue_session_token(google_user)
 
         response = self.client.delete(reverse('user_info', args=['goo@example.com']))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(email='goo@example.com').exists())
 
         other_google = _create_plain_user(email='goo2@example.com', google_id='google-sub-2')
         self.client.cookies['jwt'] = issue_session_token(other_google)
         own_response = self.client.delete(self.own_url)
-        self.assertEqual(own_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(own_response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(email='goo2@example.com').exists())
         self.assertEqual(self.fake.calls, [])
 
@@ -4215,8 +4246,7 @@ class UpdateProfileEmailTest(TestCase):
 
         response = self._put({'email': 'outro@example.com', 'first_name': 'Trocado'})
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {'error': 'A troca de e-mail não é suportada.'})
+        assert_problem(response, 'email-change-unsupported', detail='Changing the email is not supported.')
         self.assertEqual(User.objects.values().get(email='nova@example.com'), before)
         self.assertFalse(User.objects.filter(email='outro@example.com').exists())
 
@@ -4247,7 +4277,7 @@ class UpdateProfilePhoneTest(TestCase):
     def test_a_phone_of_another_user_answers_409_and_changes_nothing(self):
         response = self._put({'phone': '+55 (92) 99888-7777', 'first_name': 'Trocado'})
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        assert_problem(response, 'phone-taken', detail='This phone number is already registered.')
         user = User.objects.get(email='nova@example.com')
         self.assertEqual((user.phone, user.first_name), ('5592991234567', 'Nova'))
 

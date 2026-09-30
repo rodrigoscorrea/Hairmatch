@@ -174,11 +174,11 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Troca de senha: campos ausentes em `errors`, senha atual errada `incorrect-current-password`, política `password-policy`, conta Google `google-account-login`
-- [ ] `PUT user/authenticated` com JSON inválido responde 400 `malformed-request` (era 500)
-- [ ] `GET customer/home/<email>` por não cliente responde 403 `customer-required` (era 404)
-- [ ] DELETE de conta responde 204 sem corpo e apaga os cookies
-- [ ] Gate check passes: quick (`users`)
+- [x] Troca de senha: campos ausentes em `errors`, senha atual errada `incorrect-current-password`, política `password-policy`, conta Google `google-account-login`
+- [x] `PUT user/authenticated` com JSON inválido responde 400 `malformed-request` (era 500)
+- [x] `GET customer/home/<email>` por não cliente responde 403 `customer-required` (era 404)
+- [x] DELETE de conta responde 204 sem corpo e apaga os cookies
+- [x] Gate check passes: quick (`users`)
 
 **Tests**: integration
 **Gate**: quick

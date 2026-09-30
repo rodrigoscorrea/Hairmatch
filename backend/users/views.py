@@ -5,7 +5,7 @@ from .models import User, Customer, Hairdresser
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
@@ -20,6 +20,7 @@ from preferences.models import Preferences
 from django.db import transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
+    CUSTOMER_REQUIRED_DETAIL,
     authenticate_request,
     authenticate_token,
     authenticated_user,
@@ -48,6 +49,8 @@ ROLE_DOCUMENT_FIELD = {'customer': 'cpf', 'hairdresser': 'cnpj'}
 PASSWORD_POLICY_MESSAGE = 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.'
 EMAIL_TAKEN_MESSAGE = 'Usuário já está cadastrado na nossa base de dados'
 PHONE_TAKEN_MESSAGE = 'O número de telefone inserido já está cadastrado na nossa base de dados'
+PASSWORD_POLICY_DETAIL = 'The password must have at least 8 characters, with an uppercase letter, a lowercase letter and a number.'
+PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
 
 
 def normalize_phone(phone):
@@ -81,7 +84,7 @@ def _delete_account(request, user):
         except CognitoError as err:
             return _cognito_error_response(request, err)
     user.delete()
-    return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
+    return clear_auth_cookies(HttpResponse(status=204))
 
 
 def _discard_cognito_user(email):
@@ -387,25 +390,21 @@ class ChangePasswordView(APIView):
             return error
 
         if session.provider != 'cognito':
-            return JsonResponse({'error': 'Esta conta usa login com Google e não tem senha.'}, status=403)
+            return problem_response(
+                request, 'google-account-login', 'This account uses Google sign-in and has no password.'
+            )
+
+        data = json_object(request)
+        errors = _string_field_errors(data, ['old_password', 'password'])
+        if errors:
+            raise validation_problem(errors)
 
         try:
-            data = json.loads(request.body)
-        except ValueError:
-            data = None
-        if not isinstance(data, dict):
-            data = {}
-        old_password = data.get('old_password')
-        new_password = data.get('password')
-        if not isinstance(old_password, str) or not isinstance(new_password, str) or not old_password or not new_password:
-            return JsonResponse({'error': 'Informe a senha atual e a nova senha.'}, status=400)
-
-        try:
-            get_cognito().change_password(session.access_token, old_password, new_password)
+            get_cognito().change_password(session.access_token, data['old_password'], data['password'])
         except InvalidCredentials:
-            return JsonResponse({'error': 'Senha atual incorreta.'}, status=400)
+            return problem_response(request, 'incorrect-current-password', 'The current password is incorrect.')
         except InvalidPassword:
-            return JsonResponse({'error': PASSWORD_POLICY_MESSAGE}, status=400)
+            return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except CognitoError as err:
             return _cognito_error_response(request, err)
         return JsonResponse({'message': 'Password updated successfully'}, status=200)
@@ -429,8 +428,8 @@ class UserInfoCookieView(APIView):
             hairdresser = Hairdresser.objects.filter(user=user).first()
             hairdresser_data = HairdresserSerializer(hairdresser).data
             return JsonResponse({'hairdresser': hairdresser_data}, status=200)    
-        else: 
-            return JsonResponse({'error': 'error retrieving user with role'}, status=500)
+        else:
+            return problem_response(request, 'internal-error', 'The account has an unsupported role.')
 
     def delete(self, request):
         session, error = authenticated_user(request)
@@ -446,17 +445,17 @@ class UserInfoCookieView(APIView):
             return error
 
         user = session.user
-        data = json.loads(request.body)
+        data = json_object(request)
 
         # The e-mail is the Cognito username, and changing it there needs a verification step.
         if 'email' in data and data['email'] != user.email:
-            return JsonResponse({'error': 'A troca de e-mail não é suportada.'}, status=400)
+            return problem_response(request, 'email-change-unsupported', 'Changing the email is not supported.')
 
         # Unlike sign-up, the phone here is the full stored number (55 included), as GET returns it.
         if 'phone' in data:
             data['phone'] = ''.join(ch for ch in str(data['phone']) if ch.isdigit())
             if User.objects.filter(phone=data['phone']).exclude(id=user.id).exists():
-                return JsonResponse({'error': PHONE_TAKEN_MESSAGE}, status=409)
+                return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',
@@ -558,7 +557,7 @@ class CustomerHomeView(APIView):
                 return forbidden(request)
             customer_user = session.user
             if customer_user.role != 'customer':
-                return JsonResponse({'error': 'User not found'}, status=404)
+                return problem_response(request, 'customer-required', CUSTOMER_REQUIRED_DETAIL)
             customer_preferences = customer_user.preferences.all()
             
             # Get hairdressers matching customer preferences
