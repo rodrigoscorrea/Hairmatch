@@ -16,42 +16,60 @@ from django.db import transaction
 from rest_framework import status
 from django.utils.dateparse import parse_datetime
 from zoneinfo import ZoneInfo
+from users.authentication import authenticated_user, authenticated_customer, forbidden
 
 # Create your views here.
 LOCAL_TIMEZONE = ZoneInfo('America/Manaus')
+def _is_reserve_party(user, reserve):
+    """The reserve's customer and the hairdresser who owns its service are the only ones allowed to see or cancel it."""
+    return reserve.customer.user_id == user.id or reserve.service.hairdresser.user_id == user.id
+
+
 class ReserveById(APIView):
     def get(self, request, id=None):
-    
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
         try:
-            reserve = Reserve.objects.get(id=id)
+            reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=id)
         except Reserve.DoesNotExist:
             return JsonResponse({'error': 'Reserve not found'}, status=404)
-        
+        if not _is_reserve_party(session.user, reserve):
+            return forbidden()
+
         result = ReserveFullInfoSerializer(reserve).data
         return JsonResponse({'data': result}, status=200) 
 
 
 class CreateReserve(APIView):
     def post(self, request):
+        # The customer always comes from the session; a `customer` in the body is ignored.
+        session, customer_instance, error = authenticated_customer(request)
+        if error:
+            return error
+
         try:
             data = json.loads(request.body)
-            customer_id = data['customer']
             hairdresser_id = data['hairdresser']
             service_id = data['service']
             start_time_str = data['start_time']
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
             return JsonResponse({'error': f'Invalid request body: {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            customer_instance = Customer.objects.get(id=customer_id)
             hairdresser_instance = Hairdresser.objects.get(id=hairdresser_id)
             service_instance = Service.objects.get(id=service_id)
-        except Customer.DoesNotExist:
-            return JsonResponse({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
         except Service.DoesNotExist:
             return JsonResponse({'error': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
         except Hairdresser.DoesNotExist:
             return JsonResponse({'error': 'Hairdresser not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if service_instance.hairdresser_id != hairdresser_instance.id:
+            return JsonResponse(
+                {'error': 'The service does not belong to this hairdresser.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         start_time = parse_datetime(start_time_str)
         if not start_time:
@@ -115,19 +133,16 @@ class CreateReserve(APIView):
 
 class ListReserve(APIView):
     def get(self, request, customer_id=None):
-        if(customer_id):
-            try:
-                customer = Customer.objects.get(id=customer_id)
-            except customer.DoesNotExist:
-                return JsonResponse({'error': 'Customer not found'}, status=404)
-            
-            reserves = Reserve.objects.filter(customer=customer_id).order_by('start_time')
-            result = ReserveFullInfoSerializer(reserves, many=True).data
-            return JsonResponse({'data': result}, status=200)
-            
-        reserves = Reserve.objects.all()
-        result = ReserveSerializer(reserves, many=True).data 
-        return JsonResponse({'data': result}, status=200)   
+        # Only the session customer's own reserves; `list` without an id lists them too.
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+        if customer_id is not None and customer_id != customer.id:
+            return forbidden()
+
+        reserves = Reserve.objects.filter(customer=customer).order_by('start_time')
+        result = ReserveFullInfoSerializer(reserves, many=True).data
+        return JsonResponse({'data': result}, status=200)
 
 class UpdateReserve(APIView):
     def put(self, request, reserve_id):
@@ -135,11 +150,16 @@ class UpdateReserve(APIView):
 
 class RemoveReserve(APIView):
     def delete(self, request, reserve_id):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
         try:
-            reserve = Reserve.objects.get(id=reserve_id)
+            reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=reserve_id)
         except Reserve.DoesNotExist:
             return JsonResponse({"error": "Result not found"}, status=404)
-        
+        if not _is_reserve_party(session.user, reserve):
+            return forbidden()
 
         reserve.delete()
         return JsonResponse({"data": "reserve deleted successfully"}, status=200)
