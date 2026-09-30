@@ -10,6 +10,11 @@ from service.models import Service
 from agenda.models import Agenda
 from django.utils import timezone
 from datetime import timedelta
+from users.cognito import get_cognito
+
+
+def login(client, user):
+    client.cookies['jwt'] = get_cognito().client.make_access_token(user.cognito_sub)
 
 
 class ServiceTestCase(TestCase):
@@ -38,7 +43,8 @@ class ServiceTestCase(TestCase):
             number="456",
             postal_code="69050750",
             role="hairdresser",
-            rating=4.5
+            rating=4.5,
+            cognito_sub="sub-hairdresser-1",
         )
         
         self.hairdresser = Hairdresser.objects.create(
@@ -63,7 +69,8 @@ class ServiceTestCase(TestCase):
             number="789",
             postal_code="69050750",
             role="hairdresser",
-            rating=3.0
+            rating=3.0,
+            cognito_sub="sub-hairdresser-2",
         )
         
         self.hairdresser2 = Hairdresser.objects.create(
@@ -92,6 +99,10 @@ class ServiceTestCase(TestCase):
         )
 
 class CreateServiceTest(ServiceTestCase):
+    def setUp(self):
+        super().setUp()
+        login(self.client, self.hairdresser_user)
+
     def test_create_service_success(self):
         """Test successful service creation"""
         service_data = {
@@ -119,25 +130,54 @@ class CreateServiceTest(ServiceTestCase):
         self.assertEqual(new_service.duration, 45)
         self.assertEqual(new_service.hairdresser, self.hairdresser)
         
-    def test_create_service_invalid_hairdresser(self):
-        """Test service creation with non-existent hairdresser"""
+    def test_create_service_ignores_the_hairdresser_in_the_body(self):
+        """The service belongs to the session hairdresser, whatever `hairdresser` the body sends"""
         service_data = {
             'name': 'Hair Styling',
             'description': 'Professional hair styling service',
             'price': '75.00',
             'duration': 45,
-            'hairdresser': 9999  # Non-existent ID
+            'hairdresser': self.hairdresser2.id
         }
-        
+
         response = self.client.post(
             self.create_url,
             data=json.dumps(service_data),
             content_type='application/json'
         )
-        
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json()['error'], 'Hairdresser not found')
-        self.assertEqual(Service.objects.count(), 2)  # No new service created
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Service.objects.get(name='Hair Styling').hairdresser, self.hairdresser)
+        self.assertEqual(Service.objects.filter(hairdresser=self.hairdresser2).count(), 1)
+
+    def test_create_service_without_session_is_refused_with_401(self):
+        self.client.cookies.pop('jwt')
+        service_data = {'name': 'X', 'description': '', 'price': '1', 'duration': 10, 'hairdresser': self.hairdresser.id}
+
+        response = self.client.post(self.create_url, data=json.dumps(service_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Service.objects.count(), 2)
+
+    def test_create_service_as_customer_is_refused_with_403(self):
+        customer_user = User.objects.create(
+            email="customer@example.com", first_name="C", last_name="C", phone="+5592984509999",
+            neighborhood="Downtown", city="Manaus", state="AM", address="Street",
+            postal_code="69050750", role="customer", cognito_sub="sub-customer-1",
+        )
+        login(self.client, customer_user)
+        service_data = {'name': 'X', 'description': '', 'price': '1', 'duration': 10}
+
+        response = self.client.post(self.create_url, data=json.dumps(service_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Service.objects.count(), 2)
+
+    def test_create_service_with_invalid_json_answers_400(self):
+        response = self.client.post(self.create_url, data='not json', content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Service.objects.count(), 2)
         
     def test_create_service_missing_required_fields(self):
         """Test service creation with missing required fields"""
@@ -325,6 +365,10 @@ class ListServiceHairdresserTest(TestCase):
         self.assertEqual(error_response['error'], 'Hairdresser not found')
 
 class UpdateServiceTest(ServiceTestCase):
+    def setUp(self):
+        super().setUp()
+        login(self.client, self.hairdresser_user)
+
     def test_update_service_success(self):
         """Test successful service update"""
         updated_data = {
@@ -371,6 +415,39 @@ class UpdateServiceTest(ServiceTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['error'], 'Service not found')
 
+    def test_update_service_of_another_hairdresser_is_refused_with_403(self):
+        updated_data = {'name': 'HACKED', 'description': '', 'price': '1.00', 'duration': 10}
+
+        response = self.client.put(
+            self.update_url(self.service2.id), data=json.dumps(updated_data), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.service2.refresh_from_db()
+        self.assertEqual(self.service2.name, 'Hair Coloring')
+        self.assertEqual(self.service2.price, Decimal('120.00'))
+
+    def test_update_service_without_session_is_refused_with_401(self):
+        self.client.cookies.pop('jwt')
+        updated_data = {'name': 'HACKED', 'description': '', 'price': '1.00', 'duration': 10}
+
+        response = self.client.put(
+            self.update_url(self.service.id), data=json.dumps(updated_data), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.service.refresh_from_db()
+        self.assertEqual(self.service.name, 'Haircut')
+
+    def test_update_service_with_missing_fields_answers_400(self):
+        response = self.client.put(
+            self.update_url(self.service.id), data=json.dumps({'name': 'Only name'}), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.service.refresh_from_db()
+        self.assertEqual(self.service.name, 'Haircut')
+
 
 class RemoveServiceViewTest(TestCase):
     def setUp(self):
@@ -391,7 +468,8 @@ class RemoveServiceViewTest(TestCase):
             address='123 Test St',
             number='123',
             postal_code='12345',
-            role='HAIRDRESSER'
+            role='HAIRDRESSER',
+            cognito_sub='sub-remove-1',
         )
         
         # Create a hairdresser instance
@@ -419,7 +497,8 @@ class RemoveServiceViewTest(TestCase):
             address='456 Test Ave',
             number='456',
             postal_code='67890',
-            role='HAIRDRESSER'
+            role='HAIRDRESSER',
+            cognito_sub='sub-remove-2',
         )
         
         self.hairdresser_2 = Hairdresser.objects.create(
@@ -453,6 +532,8 @@ class RemoveServiceViewTest(TestCase):
             duration=45,
             hairdresser=self.hairdresser_2
         )
+
+        login(self.client, self.hairdresser_user)
 
     def test_delete_service_success(self):
         """Test successful deletion of a service with no appointments."""
@@ -598,17 +679,21 @@ class RemoveServiceViewTest(TestCase):
         self.assertEqual(response_data['error'], 'Unexpected error found.')
 
     def test_delete_service_different_hairdresser(self):
-        """Test deletion of service from different hairdresser."""
-        # This test verifies that the service can be deleted regardless of which hairdresser owns it
-        # (assuming no business logic prevents this)
-        
+        """A hairdresser cannot delete a service of another hairdresser."""
         url = reverse('remove_service', kwargs={'service_id': self.service_3.id})
         response = self.client.delete(url)
-        
-        self.assertEqual(response.status_code, 200)
-        
-        # Verify service was deleted
-        self.assertFalse(Service.objects.filter(id=self.service_3.id).exists())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Service.objects.filter(id=self.service_3.id).exists())
+
+    def test_delete_service_without_session_is_refused_with_401(self):
+        self.client.cookies.pop('jwt')
+        url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
 
     def test_service_deletion_cascade_behavior(self):
         """Test what happens to appointments when service is deleted (if cascade is implemented)."""
@@ -687,7 +772,8 @@ class RemoveServiceViewIntegrationTest(TestCase):
             address='Integration St',
             number='555',
             postal_code='55555',
-            role='HAIRDRESSER'
+            role='HAIRDRESSER',
+            cognito_sub='sub-integration-1',
         )
         
         self.hairdresser = Hairdresser.objects.create(
@@ -704,6 +790,7 @@ class RemoveServiceViewIntegrationTest(TestCase):
             duration=60,
             hairdresser=self.hairdresser
         )
+        login(self.client, self.user)
 
     def test_full_deletion_workflow(self):
         """Test the complete service deletion workflow."""
