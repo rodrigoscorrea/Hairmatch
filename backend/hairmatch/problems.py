@@ -194,3 +194,23 @@ def exception_handler(exc, context):
 def api_not_found(request):
     """Last route under /api/: a URL that matches nothing. Any method, so the CSRF check must not run."""
     return problem_response(request, 'not-found', 'Resource not found.')
+
+
+class ProblemDetailsMiddleware:
+    """
+    Answers in problem+json for an exception that escapes a view under /api/ without passing through
+    `exception_handler`. DRF's `dispatch` only wraps the view call: a view that returns nothing fails in
+    `finalize_response`, and data the JSON renderer cannot encode fails when Django renders the response.
+    Both reach Django, which would serve its HTML 500 page with DEBUG=True.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_exception(self, request, exception):
+        if not request.path.startswith('/api/'):
+            return None
+        return exception_handler(exception, {'request': request})

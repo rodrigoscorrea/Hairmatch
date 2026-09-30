@@ -3,14 +3,18 @@ from unittest.mock import patch
 
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.http import Http404
+from django.urls import path
 from django.test import Client, RequestFactory, TestCase, override_settings
 from rest_framework import exceptions
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.test import APIClient
 
 from hairmatch.problem_testing import assert_problem
 from hairmatch.problems import (
     CATALOG,
     Problem,
+    ProblemDetailsMiddleware,
     body_error,
     exception_handler,
     json_object,
@@ -259,4 +263,68 @@ class OutsideApiTest(TestCase):
     def test_unknown_path_outside_api_keeps_the_django_404(self):
         response = self.client.get('/not-an-api-path')
         self.assertEqual(response.status_code, 404)
+        self.assertNotEqual(response['Content-Type'], 'application/problem+json')
+
+
+class NoResponseView(APIView):
+    """A view that forgets to return a response: DRF asserts in finalize_response, outside its own handler."""
+
+    def get(self, request):
+        return None
+
+
+class UnrenderableView(APIView):
+    """A view whose data the JSON renderer cannot encode: it fails when Django renders the response."""
+
+    def get(self, request):
+        return Response({'value': object()})
+
+
+urlpatterns = [
+    path('api/no-response', NoResponseView.as_view()),
+    path('api/unrenderable', UnrenderableView.as_view()),
+    path('elsewhere/no-response', NoResponseView.as_view()),
+]
+
+
+@override_settings(ROOT_URLCONF='hairmatch.test_problems')
+class EscapedExceptionTest(TestCase):
+    """PD-64: an exception that DRF's handler never sees still answers in problem+json, with any DEBUG."""
+
+    def setUp(self):
+        self.client = APIClient(raise_request_exception=False)
+
+    def check_is_an_internal_error_problem(self, url):
+        with self.assertLogs('hairmatch.problems', level='ERROR') as logs:
+            response = self.client.get(url)
+
+        assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertIn(f'GET {url}', logs.records[0].getMessage())
+        self.assertIsNotNone(logs.records[0].exc_info)
+
+    def test_a_view_that_returns_nothing_debug_off(self):
+        self.check_is_an_internal_error_problem('/api/no-response')
+
+    @override_settings(DEBUG=True)
+    def test_a_view_that_returns_nothing_debug_on(self):
+        self.check_is_an_internal_error_problem('/api/no-response')
+
+    def test_a_response_that_cannot_be_rendered_debug_off(self):
+        self.check_is_an_internal_error_problem('/api/unrenderable')
+
+    @override_settings(DEBUG=True)
+    def test_a_response_that_cannot_be_rendered_debug_on(self):
+        self.check_is_an_internal_error_problem('/api/unrenderable')
+
+    def test_the_middleware_leaves_paths_outside_api_alone(self):
+        middleware = ProblemDetailsMiddleware(lambda request: None)
+
+        self.assertIsNone(middleware.process_exception(RequestFactory().get('/elsewhere/no-response'), RuntimeError()))
+        self.assertIsNone(middleware.process_exception(RequestFactory().get('/admin/'), RuntimeError()))
+
+    @override_settings(DEBUG=False)
+    def test_a_path_outside_api_keeps_the_django_500(self):
+        response = self.client.get('/elsewhere/no-response')
+
+        self.assertEqual(response.status_code, 500)
         self.assertNotEqual(response['Content-Type'], 'application/problem+json')
