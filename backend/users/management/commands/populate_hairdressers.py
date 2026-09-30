@@ -236,7 +236,7 @@ class Command(BaseCommand):
                     'first_name': first_name,
                     'last_name': fake.last_name(),
                     'cognito_sub': get_cognito().sign_up_confirmed(email, SEED_PASSWORD),
-                    'phone': fake.phone_number(),
+                    'phone': fake.unique.phone_number(),  # phone is unique
                     'state': state,
                     'complement': f"apt {random.randint(101, 999)}",
                     'neighborhood': neighborhood,

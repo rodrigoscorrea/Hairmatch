@@ -173,6 +173,28 @@ class RegisterViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(User.objects.count(), 1)  # No new user created
 
+    def test_register_with_a_phone_already_used_by_another_email_returns_409(self):
+        """The phone is stored with the country code 55; the check must compare that form"""
+        self.client.post(self.register_url, data=self.valid_customer_payload)
+        payload = dict(self.valid_customer_payload, email='other@example.com', cpf='98765432100')
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.json()['error'], 'O número de telefone inserido já está cadastrado na nossa base de dados')
+        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(User.objects.get().phone, '55123456789123')
+        self.assertNotIn('other@example.com', get_cognito().client.users)  # refused before signing up in Cognito
+
+    def test_register_with_the_same_phone_typed_with_a_mask_returns_409(self):
+        self.client.post(self.register_url, data=self.valid_customer_payload)
+        payload = dict(self.valid_customer_payload, email='other@example.com', phone='(12) 34567-89123')
+
+        response = self.client.post(self.register_url, data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(User.objects.count(), 1)
+
     def test_register_missing_role(self):
         invalid_payload = self.valid_hairdresser_payload.copy()
         invalid_payload['role'] = ''
@@ -3258,7 +3280,7 @@ class AuthenticationTest(TestCase):
     def setUp(self):
         self.fake = get_cognito().client
         self.user = _create_plain_user(email='cog@example.com', cognito_sub='sub-cognito-1')
-        self.google_user = _create_plain_user(email='goo@example.com', google_id='google-1')
+        self.google_user = _create_plain_user(email='goo@example.com', phone='5511999990001', google_id='google-1')
 
     def _request(self, token=None):
         request = RequestFactory().get('/')
@@ -3527,7 +3549,7 @@ def _register_payload(**overrides):
 
 def _hairdresser_payload(**overrides):
     payload = _register_payload(
-        role='hairdresser', email='cabelo@example.com', cnpj='12345678000190',
+        role='hairdresser', email='cabelo@example.com', phone='92992345678', cnpj='12345678000190',
         experience_time='5 anos', experiences='Cortes', products='Veganos', resume='Cachos',
         **overrides,
     )
@@ -3577,12 +3599,12 @@ class CognitoRegisterTest(TestCase):
 
     def test_local_validation_failures_answer_as_before_without_calling_cognito(self):
         User.objects.create(
-            first_name='A', last_name='B', phone='9299123456799', neighborhood='C', city='D',
+            first_name='A', last_name='B', phone='5592991234567', neighborhood='C', city='D',
             state='AM', address='E', postal_code='69000000', email='taken@example.com', role='customer',
         )
         cases = [
             (_register_payload(email='taken@example.com'), 409, 'Usuário já está cadastrado na nossa base de dados'),
-            (_register_payload(phone='9299123456799'), 409, 'O número de telefone inserido já está cadastrado na nossa base de dados'),
+            (_register_payload(phone='92991234567'), 409, 'O número de telefone inserido já está cadastrado na nossa base de dados'),
             (_register_payload(role=''), 400, 'No role assigned to user'),
             (_register_payload(email=''), 400, 'No email assigned to user'),
             (_register_payload(password=''), 400, 'No password assigned to user'),
@@ -4095,6 +4117,43 @@ class UpdateProfileEmailTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
+
+
+class UpdateProfilePhoneTest(TestCase):
+    """PUT /api/user/authenticated takes the full stored phone (55 included) and refuses one used by another user."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('user_info_auth')
+        self.client.post(reverse('register'), data=_register_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        _create_plain_user(email='other@example.com', phone='5592998887777')
+
+    def _put(self, body):
+        return self.client.put(self.own_url, data=json.dumps(body), content_type='application/json')
+
+    def test_a_phone_of_another_user_answers_409_and_changes_nothing(self):
+        response = self._put({'phone': '+55 (92) 99888-7777', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        user = User.objects.get(email='nova@example.com')
+        self.assertEqual((user.phone, user.first_name), ('5592991234567', 'Nova'))
+
+    def test_keeping_the_own_phone_still_updates_the_other_fields(self):
+        response = self._put({'phone': '5592991234567', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
+
+    def test_a_free_phone_is_stored_as_digits(self):
+        response = self._put({'phone': '+55 (92) 91111-2222'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.get(email='nova@example.com').phone, '5592911112222')
 
 
 class SessionFormatTest(TestCase):

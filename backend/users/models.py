@@ -18,7 +18,7 @@ class User(AbstractUser):
     
     email = models.EmailField(max_length=255,unique=True, blank=False, null=False)
     password = models.CharField(max_length=255, blank=True, null=True)
-    phone= models.CharField(max_length=20, blank=False, null=False)
+    phone= models.CharField(max_length=20, unique=True, blank=False, null=False)
 
     complement = models.CharField(max_length=150, blank=True, null=True)
     neighborhood = models.CharField(max_length=150, blank=False, null=False)
