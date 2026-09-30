@@ -340,10 +340,10 @@ T17 → T18
 
 **Done when**:
 
-- [ ] Corpo inválido responde `malformed-request`, campos ausentes viram itens de `errors`
-- [ ] Exclusão com reservas responde 409 `service-has-reservations` (era 400)
-- [ ] DELETE responde 204
-- [ ] Gate check passes: quick (`service`)
+- [x] Corpo inválido responde `malformed-request`, campos ausentes viram itens de `errors`
+- [x] Exclusão com reservas responde 409 `service-has-reservations` (era 400)
+- [x] DELETE responde 204
+- [x] Gate check passes: quick (`service`)
 
 **Tests**: integration
 **Gate**: quick

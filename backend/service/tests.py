@@ -11,6 +11,7 @@ from agenda.models import Agenda
 from django.utils import timezone
 from datetime import timedelta
 from users.cognito import get_cognito
+from hairmatch.problem_testing import assert_problem
 
 
 def login(client, user):
@@ -156,7 +157,7 @@ class CreateServiceTest(ServiceTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(service_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Service.objects.count(), 2)
 
     def test_create_service_as_customer_is_refused_with_403(self):
@@ -170,13 +171,13 @@ class CreateServiceTest(ServiceTestCase):
 
         response = self.client.post(self.create_url, data=json.dumps(service_data), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'hairdresser-required', detail='Only hairdressers can perform this action.')
         self.assertEqual(Service.objects.count(), 2)
 
     def test_create_service_with_invalid_json_answers_400(self):
         response = self.client.post(self.create_url, data='not json', content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'malformed-request')
         self.assertEqual(Service.objects.count(), 2)
         
     def test_create_service_missing_required_fields(self):
@@ -195,8 +196,9 @@ class CreateServiceTest(ServiceTestCase):
             content_type='application/json'
         )
         
-        # This should return an error due to the missing required field
-        self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/name', 'detail': 'This field is required.'},
+        ])
         
         # Missing price field
         service_data = {
@@ -212,8 +214,55 @@ class CreateServiceTest(ServiceTestCase):
             content_type='application/json'
         )
         
-        # This should return an error due to the missing required field
-        self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/price', 'detail': 'This field is required.'},
+        ])
+
+    def test_create_service_with_no_fields_reports_the_three_required_ones(self):
+        response = self.client.post(self.create_url, data='{}', content_type='application/json')
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/name', 'detail': 'This field is required.'},
+            {'pointer': '#/price', 'detail': 'This field is required.'},
+            {'pointer': '#/duration', 'detail': 'This field is required.'},
+        ])
+        self.assertEqual(Service.objects.count(), 2)
+
+    def test_create_service_with_a_price_and_duration_that_are_not_numbers_answers_400(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps({'name': 'X', 'price': 'cheap', 'duration': 'long'}),
+            content_type='application/json',
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/price', 'detail': 'This field must be a number.'},
+            {'pointer': '#/duration', 'detail': 'This field must be a whole number of minutes.'},
+        ])
+        self.assertEqual(Service.objects.count(), 2)
+
+    def test_create_service_with_a_body_that_is_not_a_json_object_answers_400(self):
+        response = self.client.post(self.create_url, data='[1]', content_type='application/json')
+
+        assert_problem(response, 'malformed-request')
+
+    def test_update_service_with_invalid_json_answers_400(self):
+        response = self.client.put(self.update_url(self.service.id), data='{nope', content_type='application/json')
+
+        assert_problem(response, 'malformed-request')
+        self.service.refresh_from_db()
+        self.assertEqual(self.service.name, 'Haircut')
+
+    def test_update_service_with_a_price_that_is_not_a_number_answers_400(self):
+        response = self.client.put(
+            self.update_url(self.service.id),
+            data=json.dumps({'name': 'X', 'price': 'free', 'duration': 30}),
+            content_type='application/json',
+        )
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/price', 'detail': 'This field must be a number.'},
+        ])
 
 
 class ListServiceTest(ServiceTestCase):
@@ -240,8 +289,7 @@ class ListServiceTest(ServiceTestCase):
         """Test listing a non-existent service"""
         response = self.client.get(self.list_service_url(9999))  # Non-existent ID
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        assert_problem(response, 'not-found', detail='Service not found.')
 
 class ListServiceHairdresserTest(TestCase):
     def setUp(self):
@@ -357,12 +405,7 @@ class ListServiceHairdresserTest(TestCase):
         
         response = self.client.get(self.list_services_url(nonexistent_hairdresser_id))
         
-        # Check for 404 Not Found status
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        
-        # Verify the error message
-        error_response = response.json()
-        self.assertEqual(error_response['error'], 'Hairdresser not found')
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
 
 class UpdateServiceTest(ServiceTestCase):
     def setUp(self):
@@ -412,8 +455,7 @@ class UpdateServiceTest(ServiceTestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Service not found')
+        assert_problem(response, 'not-found', detail='Service not found.')
 
     def test_update_service_of_another_hairdresser_is_refused_with_403(self):
         updated_data = {'name': 'HACKED', 'description': '', 'price': '1.00', 'duration': 10}
@@ -422,7 +464,7 @@ class UpdateServiceTest(ServiceTestCase):
             self.update_url(self.service2.id), data=json.dumps(updated_data), content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'forbidden')
         self.service2.refresh_from_db()
         self.assertEqual(self.service2.name, 'Hair Coloring')
         self.assertEqual(self.service2.price, Decimal('120.00'))
@@ -435,7 +477,7 @@ class UpdateServiceTest(ServiceTestCase):
             self.update_url(self.service.id), data=json.dumps(updated_data), content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
         self.service.refresh_from_db()
         self.assertEqual(self.service.name, 'Haircut')
 
@@ -444,7 +486,10 @@ class UpdateServiceTest(ServiceTestCase):
             self.update_url(self.service.id), data=json.dumps({'name': 'Only name'}), content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/price', 'detail': 'This field is required.'},
+            {'pointer': '#/duration', 'detail': 'This field is required.'},
+        ])
         self.service.refresh_from_db()
         self.assertEqual(self.service.name, 'Haircut')
 
@@ -543,9 +588,9 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 204)
         self.assertFalse(Service.objects.filter(id=self.service_1.id).exists())
-        self.assertEqual(response.content, b'{"message": "service deleted successfully"}')
+        self.assertEqual(response.content, b'')
 
     def test_delete_service_not_found(self):
         """Test deletion with non-existent service ID."""
@@ -553,11 +598,7 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': non_existent_id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 404)
-        
-        response_data = json.loads(response.content)
-        self.assertIn('error', response_data)
-        self.assertEqual(response_data['error'], 'Service not found.')
+        assert_problem(response, 'not-found', detail='Service not found.')
 
     def test_delete_service_with_existing_appointments(self):
         """Test that service cannot be deleted when appointments exist."""
@@ -578,11 +619,9 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 400)
-        
-        response_data = json.loads(response.content)
-        self.assertIn('error', response_data)
-        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        assert_problem(
+            response, 'service-has-reservations', detail='This service has reservations and cannot be deleted.'
+        )
         
         # Verify service still exists
         self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
@@ -609,10 +648,9 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': self.service_2.id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 400)
-        
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        assert_problem(
+            response, 'service-has-reservations', detail='This service has reservations and cannot be deleted.'
+        )
         
         # Verify service still exists
         self.assertTrue(Service.objects.filter(id=self.service_2.id).exists())
@@ -622,10 +660,7 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': 0})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 404)
-        
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['error'], 'Service not found.')
+        assert_problem(response, 'not-found', detail='Service not found.')
 
     def test_get_method_not_allowed(self):
         """Test that GET method is not allowed."""
@@ -660,8 +695,8 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': 99999})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response['Content-Type'], 'application/json')
+        assert_problem(response, 'not-found')
+        self.assertEqual(response['Content-Type'], 'application/problem+json')
 
     @patch('service.views.Service.objects.get')  # Replace 'service' with your actual app name
     def test_unexpected_error_handling(self, mock_get):
@@ -670,20 +705,18 @@ class RemoveServiceViewTest(TestCase):
         mock_get.side_effect = Exception("Unexpected database error")
         
         url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
-        response = self.client.delete(url)
-        
-        self.assertEqual(response.status_code, 500)
-        
-        response_data = json.loads(response.content)
-        self.assertIn('error', response_data)
-        self.assertEqual(response_data['error'], 'Unexpected error found.')
+        with self.assertLogs('hairmatch.problems', level='ERROR'):
+            response = self.client.delete(url)
+
+        body = assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertNotIn('Unexpected database error', json.dumps(body))
 
     def test_delete_service_different_hairdresser(self):
         """A hairdresser cannot delete a service of another hairdresser."""
         url = reverse('remove_service', kwargs={'service_id': self.service_3.id})
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, 403)
+        assert_problem(response, 'forbidden')
         self.assertTrue(Service.objects.filter(id=self.service_3.id).exists())
 
     def test_delete_service_without_session_is_refused_with_401(self):
@@ -692,7 +725,7 @@ class RemoveServiceViewTest(TestCase):
 
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, 401)
+        assert_problem(response, 'invalid-session')
         self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
 
     def test_service_deletion_cascade_behavior(self):
@@ -714,7 +747,7 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 400)
+        assert_problem(response, 'service-has-reservations')
         
         # Both service and appointment should still exist
         self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
@@ -747,7 +780,7 @@ class RemoveServiceViewTest(TestCase):
         url = reverse('remove_service', kwargs={'service_id': self.service_1.id})
         response = self.client.delete(url)
         
-        self.assertEqual(response.status_code, 400)
+        assert_problem(response, 'service-has-reservations')
         self.assertTrue(Service.objects.filter(id=self.service_1.id).exists())
 
 
@@ -802,7 +835,8 @@ class RemoveServiceViewIntegrationTest(TestCase):
         response = self.client.delete(url)
         
         # Verify successful deletion
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, b'')
         self.assertFalse(Service.objects.filter(id=self.service.id).exists())
 
     def test_business_logic_enforcement(self):
@@ -823,9 +857,9 @@ class RemoveServiceViewIntegrationTest(TestCase):
         response = self.client.delete(url)
         
         # Verify business rule enforcement
-        self.assertEqual(response.status_code, 400)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data['error'], 'There are already appointments for this service')
+        assert_problem(
+            response, 'service-has-reservations', detail='This service has reservations and cannot be deleted.'
+        )
         
         # Verify service preservation
         self.assertTrue(Service.objects.filter(id=self.service.id).exists())
