@@ -406,10 +406,9 @@ class CreateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        # Assertions
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        # An id that is not the session hairdresser's is refused
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Availability.objects.count(), 0)
-        self.assertIn('Hairdresser not found', str(response.content))
 
 class ListAvailabilityTest(TestCase):
     def setUp(self):
@@ -536,6 +535,12 @@ class RemoveAvailabilityTest(TestCase):
             data=self.hairdresser_payload,
         )
         
+        self.client.post(
+            self.login_url,
+            data=json.dumps({'email': 'hairdresser@example.com', 'password': 'Password123'}),
+            content_type='application/json'
+        )
+
         # Get hairdresser
         self.hairdresser = Hairdresser.objects.get(user__email="hairdresser@example.com")
         
@@ -603,6 +608,12 @@ class UpdateAvailabilityTest(TestCase):
             data=self.hairdresser_payload,
         )
         
+        self.client.post(
+            self.login_url,
+            data=json.dumps({'email': 'hairdresser@example.com', 'password': 'Password123'}),
+            content_type='application/json'
+        )
+
         # Get hairdresser
         self.hairdresser = Hairdresser.objects.get(user__email="hairdresser@example.com")
         
@@ -1026,9 +1037,9 @@ class UpdateMultipleAvailabilityTest(TestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        data = json.loads(response.content)
-        self.assertEqual(data['error'], 'Hairdresser not found')
+        # An id that is not the session hairdresser's is refused, and nothing is deleted
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Availability.objects.filter(hairdresser=self.hairdresser).count(), 2)
     
     def test_update_multiple_availability_empty_list(self):
         """Test update with empty availabilities list"""
@@ -1170,3 +1181,70 @@ class UpdateMultipleAvailabilityTest(TestCase):
         # New availabilities should exist
         self.assertTrue(Availability.objects.filter(hairdresser=self.hairdresser, weekday='wednesday').exists())
         self.assertTrue(Availability.objects.filter(hairdresser=self.hairdresser, weekday='saturday').exists())
+
+class AvailabilityOwnershipTest(TestCase):
+    """Every write endpoint requires a session of the hairdresser who owns the schedule."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.fake = get_cognito().client
+        self.owner = self._hairdresser('owner@example.com', 'sub-owner', '5592999990001')
+        self.intruder = self._hairdresser('intruder@example.com', 'sub-intruder', '5592999990002')
+        self.availability = Availability.objects.create(
+            hairdresser=self.owner, weekday='monday', start_time=time(9, 0), end_time=time(17, 0)
+        )
+        self.schedule = json.dumps({'availabilities': [
+            {'weekday': 'sunday', 'start_time': '01:00:00', 'end_time': '02:00:00'}
+        ]})
+
+    def _hairdresser(self, email, sub, phone):
+        user = User.objects.create(
+            first_name='Ana', last_name='Silva', phone=phone, neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', email=email, role='hairdresser',
+            cognito_sub=sub,
+        )
+        return Hairdresser.objects.create(user=user, cnpj='12345678901212')
+
+    def _requests(self):
+        return {
+            'create multiple': lambda: self.client.post(
+                reverse('create_multiple_availability', args=[self.owner.id]),
+                data=self.schedule, content_type='application/json'),
+            'update multiple': lambda: self.client.put(
+                reverse('update_multiple_availability', args=[self.owner.id]),
+                data=self.schedule, content_type='application/json'),
+            'update': lambda: self.client.put(
+                reverse('update_availability', args=[self.availability.id]),
+                data=json.dumps({'start_time': '01:00:00'}), content_type='application/json'),
+            'remove': lambda: self.client.delete(reverse('remove_availability', args=[self.availability.id])),
+        }
+
+    def _assert_schedule_untouched(self):
+        self.assertEqual(list(Availability.objects.values_list('id', flat=True)), [self.availability.id])
+        self.availability.refresh_from_db()
+        self.assertEqual(self.availability.start_time, time(9, 0))
+
+    def test_without_session_every_write_is_refused_with_401(self):
+        for name, send in self._requests().items():
+            with self.subTest(endpoint=name):
+                response = send()
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                self._assert_schedule_untouched()
+
+    def test_another_hairdresser_is_refused_with_403(self):
+        self.client.cookies['jwt'] = self.fake.make_access_token('sub-intruder')
+
+        for name, send in self._requests().items():
+            with self.subTest(endpoint=name):
+                response = send()
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self._assert_schedule_untouched()
+
+    def test_owner_replaces_own_schedule(self):
+        self.client.cookies['jwt'] = self.fake.make_access_token('sub-owner')
+
+        response = self._requests()['update multiple']()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Availability.objects.get()
+        self.assertEqual((created.hairdresser, created.weekday), (self.owner, 'sunday'))
