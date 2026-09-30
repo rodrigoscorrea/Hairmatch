@@ -313,12 +313,12 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-40 | Route Table: serviços | Execute | Done |
 | RT-41 | Route Table: serviços | Execute | Done |
 | RT-42 | Route Table: serviços | Execute | Done |
-| RT-43 | Route Table: reservas | - | Pending |
-| RT-44 | Route Table: reservas | - | Pending |
-| RT-45 | Route Table: reservas | - | Pending |
-| RT-46 | Route Table: reservas | - | Pending |
-| RT-47 | Route Table: reservas | - | Pending |
-| RT-48 | Route Table: reservas | - | Pending |
+| RT-43 | Route Table: reservas | Execute | Done |
+| RT-44 | Route Table: reservas | Execute | Done |
+| RT-45 | Route Table: reservas | Execute | Done |
+| RT-46 | Route Table: reservas | Execute | Done |
+| RT-47 | Route Table: reservas | Execute | Done |
+| RT-48 | Route Table: reservas | Execute | Done |
 | RT-49 | Route Table: chatbot | - | Pending |
 | RT-50 | P1: Rotas no padrão da tabela | - | Pending |
 | RT-51 | P1: Rotas no padrão da tabela | - | Pending |
@@ -333,8 +333,8 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-60 | P1: Conta e sessão | Execute | Done |
 | RT-61 | P1: Conta e sessão | Execute | Done |
 | RT-62 | P1: Conta e sessão | Execute | Done |
-| RT-63 | P1: Consultas por query string | - | Pending |
-| RT-64 | P1: Consultas por query string | - | Pending |
+| RT-63 | P1: Consultas por query string | Execute | Done |
+| RT-64 | P1: Consultas por query string | Execute | Done |
 | RT-65 | P1: Consultas por query string | - | Pending |
 | RT-70 | P1: App usa as rotas novas | - | Pending |
 | RT-71 | P1: App usa as rotas novas | - | Pending |
@@ -347,7 +347,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-80 | Edge Cases | - | Pending |
 | RT-81 | Edge Cases | - | Pending |
 | RT-82 | Edge Cases | - | Pending |
-| RT-83 | Edge Cases | - | Pending |
+| RT-83 | Edge Cases | Execute | Done |
 
 **ID format:** `RT-NN`. As rotas são RT-01 a RT-49, e os comportamentos começam em RT-50. As lacunas (66-69, 78-79) separam as histórias e são intencionais.
 

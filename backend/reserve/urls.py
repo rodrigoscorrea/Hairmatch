@@ -1,12 +1,9 @@
 from django.urls import path
-from .views import CreateReserve, ListReserve, UpdateReserve, RemoveReserve, ReserveSlot, ReserveById
+from .views import ReservationCollection, ReservationDetail, ListReserve, ReserveSlot
 
 urlpatterns = [
-    path('<int:id>', ReserveById.as_view(), name='retrieve_reserve_by_id'),
-    path('create', CreateReserve.as_view(), name='create_reserve'),
-    path('slots/<int:hairdresser_id>', ReserveSlot.as_view(), name="get_slots"),
-    path('list/<int:customer_id>', ListReserve.as_view(), name='list_reserve'),
-    path('list', ListReserve.as_view(), name='list_reserve'),
-    #path('update/<int:reserve_id>', UpdateReserve.as_view(), name='update_reserve'),
-    path('remove/<int:reserve_id>', RemoveReserve.as_view(), name='remove_reserve'),
+    path('reservations', ReservationCollection.as_view(), name='reservation_collection'),
+    path('reservations/<int:id>', ReservationDetail.as_view(), name='reservation_detail'),
+    path('customers/<int:customer_id>/reservations', ListReserve.as_view(), name='customer_reservations'),
+    path('hairdressers/<int:hairdresser_id>/available-slots', ReserveSlot.as_view(), name='get_slots'),
 ]

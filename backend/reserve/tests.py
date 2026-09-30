@@ -23,9 +23,9 @@ class ReserveTestCase(TestCase):
         self.client = APIClient()
         
         # URLs
-        self.create_url = reverse('create_reserve')
-        self.list_url = reverse('list_reserve')
-        self.remove_url = lambda reserve_id: reverse('remove_reserve', args=[reserve_id])
+        self.create_url = reverse('reservation_collection')
+        self.list_url = reverse('reservation_collection')
+        self.remove_url = lambda reserve_id: reverse('reservation_detail', args=[reserve_id])
         self.get_slots_url = lambda hairdresser_id: reverse('get_slots', args=[hairdresser_id])
         
         # Create test user (customer)
@@ -386,7 +386,7 @@ class ListReserveTest(ReserveTestCase):
     def test_list_user_reserves(self):
         """Test listing reserves for a specific user"""
         self.login(self.customer_user)
-        list_user_url = reverse('list_reserve', args=[self.customer.id])
+        list_user_url = reverse('customer_reservations', args=[self.customer.id])
 
         response = self.client.get(list_user_url)
 
@@ -396,13 +396,13 @@ class ListReserveTest(ReserveTestCase):
     def test_list_reserves_of_another_customer_is_refused_with_403(self):
         self.login(self.other_customer_user)
 
-        response = self.client.get(reverse('list_reserve', args=[self.customer.id]))
+        response = self.client.get(reverse('customer_reservations', args=[self.customer.id]))
 
         assert_problem(response, 'forbidden')
         self.assertNotIn('data', response.json())
 
     def test_list_without_session_is_refused_with_401(self):
-        for url in (self.list_url, reverse('list_reserve', args=[self.customer.id])):
+        for url in (self.list_url, reverse('customer_reservations', args=[self.customer.id])):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -410,7 +410,7 @@ class ListReserveTest(ReserveTestCase):
 
 class ReserveByIdTest(ReserveTestCase):
     def url(self, reserve_id):
-        return reverse('retrieve_reserve_by_id', args=[reserve_id])
+        return reverse('reservation_detail', args=[reserve_id])
 
     def test_reading_a_reserve_that_does_not_exist_answers_404(self):
         self.login(self.customer_user)
@@ -488,140 +488,93 @@ class RemoveReserveTest(ReserveTestCase):
 
 
 class ReserveSlotTest(ReserveTestCase):
+    def get_slots(self, hairdresser_id, **query):
+        return self.client.get(self.get_slots_url(hairdresser_id), query)
+
     def test_get_available_slots(self):
-        """Test getting available time slots for a hairdresser"""
+        """RT-63: the slots come from a GET with the service and the date in the query."""
         # Get tomorrow's date which is a Monday (to match our test availability)
         today = timezone.now().date()
         days_ahead = 7 - today.weekday()  # Next Monday
         next_monday = today + timedelta(days=days_ahead)
-        
-        slot_data = {
-            'date': next_monday.strftime('%Y-%m-%d'),
-            'service': self.service.id
-        }
-        
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id),
-            data=json.dumps(slot_data),
-            content_type='application/json'
-        )
-        
+
+        response = self.get_slots(self.hairdresser.id, date=next_monday.strftime('%Y-%m-%d'), service=self.service.id)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('available_slots', response.json())
-        # The number of slots depends on service duration and availability
-        # For a 60-minute service, 9am-5pm with 1hr lunch break,
-        # we expect approximately 14 half-hour slots
-        # This might need adjustment based on exact business logic
-        
+        self.assertEqual(list(response.json()), ['available_slots'])
+        # Monday's availability is 09:00 to 17:00 and the service lasts an hour or less.
+        self.assertIn('09:00', response.json()['available_slots'])
+
     def test_get_slots_without_service_and_date_reports_both(self):
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id), data='{}', content_type='application/json'
-        )
+        """RT-64: each missing parameter is a `parameter` item, not a body pointer."""
+        response = self.get_slots(self.hairdresser.id)
 
         assert_problem(response, 'validation-error', errors=[
-            {'pointer': '#/service', 'detail': 'This field is required.'},
-            {'pointer': '#/date', 'detail': 'This field is required.'},
+            {'parameter': 'service', 'detail': 'This field is required.'},
+            {'parameter': 'date', 'detail': 'This field is required.'},
         ])
 
-    def test_get_slots_with_a_missing_service_and_a_bad_date_reports_each_field(self):
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id), data=json.dumps({'date': '26/04/2025'}),
-            content_type='application/json',
-        )
+    def test_get_slots_with_a_missing_service_and_a_bad_date_reports_each_parameter(self):
+        response = self.get_slots(self.hairdresser.id, date='26/04/2025')
 
         assert_problem(response, 'validation-error', errors=[
-            {'pointer': '#/service', 'detail': 'This field is required.'},
-            {'pointer': '#/date', 'detail': 'The date must be in YYYY-MM-DD format.'},
+            {'parameter': 'service', 'detail': 'This field is required.'},
+            {'parameter': 'date', 'detail': 'The date must be in YYYY-MM-DD format.'},
         ])
-
-    def test_get_slots_with_a_body_that_is_not_json_answers_400(self):
-        for raw in ('{nope', '[1]'):
-            with self.subTest(raw=raw):
-                response = self.client.post(
-                    self.get_slots_url(self.hairdresser.id), data=raw, content_type='application/json'
-                )
-
-                assert_problem(response, 'malformed-request')
 
     def test_get_slots_with_a_service_that_is_not_an_integer_answers_400(self):
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id), data=json.dumps({'date': '2025-04-28', 'service': 'abc'}),
-            content_type='application/json',
-        )
+        for service in ('abc', '1.5', '--5'):
+            with self.subTest(service=service):
+                response = self.get_slots(self.hairdresser.id, date='2025-04-28', service=service)
 
-        assert_problem(response, 'validation-error', errors=[
-            {'pointer': '#/service', 'detail': 'This field must be an integer.'},
-        ])
+                assert_problem(response, 'validation-error', errors=[
+                    {'parameter': 'service', 'detail': 'This field must be an integer.'},
+                ])
+
+    def test_get_slots_with_a_repeated_parameter_uses_the_last_value(self):
+        """RT-83: `?date=bad&date=<monday>` is read as the Monday."""
+        today = timezone.now().date()
+        next_monday = today + timedelta(days=7 - today.weekday())
+        query = f'service={self.service.id}&date=not-a-date&date={next_monday:%Y-%m-%d}'
+
+        response = self.client.get(f'{self.get_slots_url(self.hairdresser.id)}?{query}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('09:00', response.json()['available_slots'])
 
     def test_get_slots_invalid_hairdresser(self):
         """Test getting slots for non-existent hairdresser"""
         today = timezone.now().date()
-        
-        slot_data = {
-            'date': today.strftime('%Y-%m-%d'),
-            'service': self.service.id
-        }
-        
-        response = self.client.post(
-            self.get_slots_url(9999),  # Non-existent ID
-            data=json.dumps(slot_data),
-            content_type='application/json'
-        )
-        
+
+        response = self.get_slots(9999, date=today.strftime('%Y-%m-%d'), service=self.service.id)
+
         assert_problem(response, 'not-found', detail='Hairdresser not found.')
-        
+
     def test_get_slots_invalid_service(self):
         """Test getting slots with non-existent service"""
         today = timezone.now().date()
-        
-        slot_data = {
-            'date': today.strftime('%Y-%m-%d'),
-            'service': 9999  # Non-existent ID
-        }
-        
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id),
-            data=json.dumps(slot_data),
-            content_type='application/json'
-        )
-        
+
+        response = self.get_slots(self.hairdresser.id, date=today.strftime('%Y-%m-%d'), service=9999)
+
         assert_problem(response, 'not-found', detail='Service not found.')
-        
+
     def test_get_slots_invalid_date_format(self):
         """Test getting slots with invalid date format"""
-        slot_data = {
-            'date': 'invalid-date',
-            'service': self.service.id
-        }
-        
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id),
-            data=json.dumps(slot_data),
-            content_type='application/json'
-        )
-        
+        response = self.get_slots(self.hairdresser.id, date='invalid-date', service=self.service.id)
+
         assert_problem(response, 'validation-error', errors=[
-            {'pointer': '#/date', 'detail': 'The date must be in YYYY-MM-DD format.'}
+            {'parameter': 'date', 'detail': 'The date must be in YYYY-MM-DD format.'}
         ])
-        
+
     def test_get_slots_no_availability(self):
         """Test getting slots when hairdresser has no availability for that day"""
         # Create a date for Tuesday, when we have no availability set
         today = timezone.now().date()
         days_ahead = (1 - today.weekday()) % 7 + 1  # Next Tuesday
         next_tuesday = today + timedelta(days=days_ahead)
-        
-        slot_data = {
-            'date': next_tuesday.strftime('%Y-%m-%d'),
-            'service': self.service.id
-        }
-        
-        response = self.client.post(
-            self.get_slots_url(self.hairdresser.id),
-            data=json.dumps(slot_data),
-            content_type='application/json'
-        )
-        
+
+        response = self.get_slots(self.hairdresser.id, date=next_tuesday.strftime('%Y-%m-%d'), service=self.service.id)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['available_slots'], [])
 
@@ -660,10 +613,8 @@ class ReserveInManausTimeTest(ReserveTestCase):
     """The app and the chatbot send the slot as a naive Manaus time (UTC-4), the clock the slots are listed in."""
 
     def get_slots(self, hairdresser, service, day):
-        response = self.client.post(
-            self.get_slots_url(hairdresser.id),
-            data=json.dumps({'date': day.isoformat(), 'service': service.id}),
-            content_type='application/json'
+        response = self.client.get(
+            self.get_slots_url(hairdresser.id), {'date': day.isoformat(), 'service': service.id}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         return response.json()['available_slots']

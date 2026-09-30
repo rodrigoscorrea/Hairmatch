@@ -24,7 +24,7 @@ urlpatterns = [
     path('api/', include('preferences.urls')),
     path('api/', include('review.urls')),
     path('api/', include('availability.urls')),
-    path('api/reserve/', include('reserve.urls')),
+    path('api/', include('reserve.urls')),
     path('api/', include('agenda.urls')),
     path('api/', include('service.urls')),
     path('api/chatbot/', include('chatbot.urls')),

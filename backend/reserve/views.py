@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import json
+import re
 from django.http import HttpResponse, JsonResponse
 from users.models import User, Customer, Hairdresser
 from reserve.models import Reserve
@@ -14,7 +15,7 @@ from availability.models import Availability
 import calendar
 from django.db import transaction
 from django.utils.dateparse import parse_datetime
-from hairmatch.problems import body_error, json_object, missing_field_errors, problem_response, validation_problem
+from hairmatch.problems import body_error, json_object, missing_field_errors, problem_response, query_error, validation_problem
 from users.authentication import authenticated_user, authenticated_customer, forbidden
 from hairmatch.local_time import LOCAL_TIMEZONE, make_local_aware, local_day_bounds, local_today
 
@@ -135,7 +136,7 @@ class CreateReserve(APIView):
 
 class ListReserve(APIView):
     def get(self, request, customer_id=None):
-        # Only the session customer's own reserves; `list` without an id lists them too.
+        # Only the session customer's own reserves; `/reservations` lists them without the id.
         session, customer, error = authenticated_customer(request)
         if error:
             return error
@@ -151,13 +152,13 @@ class UpdateReserve(APIView):
         pass
 
 class RemoveReserve(APIView):
-    def delete(self, request, reserve_id):
+    def delete(self, request, id):
         session, error = authenticated_user(request)
         if error:
             return error
 
         try:
-            reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=reserve_id)
+            reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=id)
         except Reserve.DoesNotExist:
             return problem_response(request, 'not-found', 'Reservation not found.')
         if not _is_reserve_party(session.user, reserve):
@@ -167,22 +168,29 @@ class RemoveReserve(APIView):
         return HttpResponse(status=204)
     
 class ReserveSlot(APIView):
-    def post(self, request, hairdresser_id):
-        data = json_object(request)
-        errors = missing_field_errors(data, ['service', 'date'])
-        errors += _integer_field_errors(data, ['service'])
+    def get(self, request, hairdresser_id):
+        # A repeated parameter keeps its last value, which is what QueryDict.get returns.
+        service_id = request.query_params.get('service')
+        date = request.query_params.get('date')
+        errors = []
+        if not service_id:
+            errors.append(query_error('service', 'This field is required.'))
+        elif not re.fullmatch(r'-?[0-9]+', service_id):
+            errors.append(query_error('service', 'This field must be an integer.'))
         selected_date = None
-        if data.get('date'):
+        if not date:
+            errors.append(query_error('date', 'This field is required.'))
+        else:
             try:
-                selected_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-            except (ValueError, TypeError):
-                errors.append(body_error('date', 'The date must be in YYYY-MM-DD format.'))
+                selected_date = datetime.strptime(date, '%Y-%m-%d').date()
+            except ValueError:
+                errors.append(query_error('date', 'The date must be in YYYY-MM-DD format.'))
         if errors:
             raise validation_problem(errors)
 
         try:
             hairdresser = Hairdresser.objects.get(id=hairdresser_id)
-            service = Service.objects.get(id=data['service'])
+            service = Service.objects.get(id=service_id)
         except Hairdresser.DoesNotExist:
             return problem_response(request, 'not-found', 'Hairdresser not found.')
         except Service.DoesNotExist:
@@ -389,3 +397,11 @@ def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
         # Catch any other unexpected errors
         print(f"An unexpected error occurred in create_new_reserve: {e}")
         return {'error': 'Ocorreu um erro inesperado ao tentar criar a reserva.'}
+
+
+class ReservationCollection(ListReserve, CreateReserve):
+    """`/api/reservations`: GET lists the logged customer's reservations and POST creates one."""
+
+
+class ReservationDetail(ReserveById, RemoveReserve):
+    """`/api/reservations/{id}`: GET reads and DELETE removes a reservation its party can see."""
