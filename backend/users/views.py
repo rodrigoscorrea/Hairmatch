@@ -508,7 +508,7 @@ class UserInfoView(APIView):
         if error:
             return error
         if not is_own_email(session, email):
-            return forbidden()
+            return forbidden(request)
 
         user = session.user
         if (user.role == 'customer'):
@@ -527,7 +527,7 @@ class UserInfoView(APIView):
         if error:
             return error
         if not is_own_email(session, email):
-            return forbidden()
+            return forbidden(request)
         return _delete_account(session.user)
 
 class CustomerHomeView(APIView):
@@ -545,7 +545,7 @@ class CustomerHomeView(APIView):
             if error:
                 return error
             if not is_own_email(session, email):
-                return forbidden()
+                return forbidden(request)
             customer_user = session.user
             if customer_user.role != 'customer':
                 return JsonResponse({'error': 'User not found'}, status=404)

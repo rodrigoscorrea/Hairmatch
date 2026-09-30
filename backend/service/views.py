@@ -82,7 +82,7 @@ class UpdateService(APIView):
         except Service.DoesNotExist:
             return JsonResponse({"error": "Service not found"}, status=404)
         if service.hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         data = _json_body(request)
         if data is None:
@@ -106,7 +106,7 @@ class RemoveService(APIView):
         try:
             service_to_delete = Service.objects.get(id=service_id)
             if service_to_delete.hairdresser_id != hairdresser.id:
-                return forbidden()
+                return forbidden(request)
             if Agenda.objects.filter(service=service_to_delete).exists():
                 return JsonResponse(
                     {"error": "There are already appointments for this service"},

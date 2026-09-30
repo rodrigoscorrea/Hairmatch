@@ -1,3 +1,4 @@
+from hairmatch.problem_testing import assert_problem
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -159,7 +160,7 @@ class CreateAvailabilityTest(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Availability.objects.count(), 0)
 
 
@@ -211,7 +212,7 @@ class CreateAvailabilitySessionTest(TestCase):
         response = self._post()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Availability.objects.count(), 0)
 
 

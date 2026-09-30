@@ -357,11 +357,11 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | PD-05 | P1: Formato único de erro | T1 | Implemented |
 | PD-06 | P1: Formato único de erro | T1 | Implemented |
 | PD-07 | P1: Formato único de erro | T1 | Implemented |
-| PD-10 | P1: Autenticação e autorização | - | Pending |
-| PD-11 | P1: Autenticação e autorização | - | Pending |
-| PD-12 | P1: Autenticação e autorização | - | Pending |
-| PD-13 | P1: Autenticação e autorização | - | Pending |
-| PD-14 | P1: Autenticação e autorização | - | Pending |
+| PD-10 | P1: Autenticação e autorização | T2 | Implemented |
+| PD-11 | P1: Autenticação e autorização | T2 | Implemented |
+| PD-12 | P1: Autenticação e autorização | T2 | Implemented |
+| PD-13 | P1: Autenticação e autorização | T2 | Implemented |
+| PD-14 | P1: Autenticação e autorização | T2 | Implemented |
 | PD-15 | P1: Autenticação e autorização | - | Pending |
 | PD-16 | P1: Autenticação e autorização | - | Pending |
 | PD-17 | P1: Autenticação e autorização | - | Pending |

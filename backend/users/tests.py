@@ -1,3 +1,4 @@
+from hairmatch.problem_testing import assert_problem
 from django.test import TestCase, Client, SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -58,7 +59,13 @@ from botocore.exceptions import (
 from types import SimpleNamespace
 from django.test import RequestFactory
 from . import authentication
-from .authentication import authenticate_request, authenticated_user
+from .authentication import (
+    authenticate_request,
+    authenticated_customer,
+    authenticated_hairdresser,
+    authenticated_user,
+    forbidden,
+)
 import unittest
 import boto3
 from hairmatch.test_runner import HairmatchTestRunner
@@ -580,7 +587,7 @@ class ChangePasswordViewTest(TestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
 
     def test_change_password_with_expired_token(self):
         # Create an expired token
@@ -607,7 +614,7 @@ class ChangePasswordViewTest(TestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
 
 
 class UserInfoCookieViewTest(TestCase):
@@ -720,7 +727,7 @@ class UserInfoCookieViewTest(TestCase):
         
         response = self.client.get(self.user_info_auth_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
 
     def test_delete_user(self):
         self.client.cookies['jwt'] = self.customer_token
@@ -737,7 +744,7 @@ class UserInfoCookieViewTest(TestCase):
         
         response = self.client.delete(self.user_info_auth_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         
         # Verify no users were deleted
         self.assertEqual(User.objects.count(), 2)
@@ -3370,7 +3377,60 @@ class AuthenticationTest(TestCase):
                 session, error = authenticated_user(self._request(token))
                 self.assertIsNone(session)
                 self.assertEqual(error.status_code, 401)
-                self.assertEqual(json.loads(error.content), {'error': 'Sessão inválida ou expirada.'})
+                assert_problem(error, 'invalid-session')
+
+    def test_authenticated_user_error_carries_the_request_path_as_instance(self):
+        session, error = authenticated_user(RequestFactory().get('/api/user/authenticated?x=1'))
+
+        body = assert_problem(error, 'invalid-session', detail='Your session is missing, invalid or expired.')
+        self.assertEqual(body['instance'], '/api/user/authenticated')
+
+    def test_forbidden_answers_403_forbidden(self):
+        assert_problem(
+            forbidden(self._request()), 'forbidden', detail='You do not have permission to access this resource.'
+        )
+
+    def test_authenticated_hairdresser_refuses_a_customer_with_403(self):
+        customer_user = _create_plain_user(email='cus@example.com', phone='5511999990002', cognito_sub='sub-customer-1')
+        Customer.objects.create(user=customer_user, cpf='12345678901')
+        token = self.fake.make_access_token(customer_user.cognito_sub)
+
+        session, hairdresser, error = authenticated_hairdresser(self._request(token))
+
+        self.assertIsNone(session)
+        self.assertIsNone(hairdresser)
+        assert_problem(error, 'hairdresser-required', detail='Only hairdressers can perform this action.')
+
+    def test_authenticated_customer_refuses_a_hairdresser_with_403(self):
+        Hairdresser.objects.create(user=self.user, cnpj='12345678901234')
+
+        session, customer, error = authenticated_customer(self._request(self._access_token()))
+
+        self.assertIsNone(session)
+        self.assertIsNone(customer)
+        assert_problem(error, 'customer-required', detail='Only customers can perform this action.')
+
+    def test_profile_helpers_answer_401_before_looking_at_the_profile(self):
+        _, _, hairdresser_error = authenticated_hairdresser(self._request())
+        _, _, customer_error = authenticated_customer(self._request())
+
+        assert_problem(hairdresser_error, 'invalid-session')
+        assert_problem(customer_error, 'invalid-session')
+
+    def test_profile_helpers_answer_503_when_the_keys_are_unreachable(self):
+        with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
+            _, _, error = authenticated_hairdresser(self._request(self._access_token()))
+
+        assert_problem(error, 'auth-unavailable')
+
+    def test_authenticated_profile_helpers_return_the_profile_for_the_right_role(self):
+        hairdresser = Hairdresser.objects.create(user=self.user, cnpj='12345678901234')
+
+        session, profile, error = authenticated_hairdresser(self._request(self._access_token()))
+
+        self.assertIsNone(error)
+        self.assertEqual(profile, hairdresser)
+        self.assertEqual(session.user, self.user)
 
     def test_authenticated_user_returns_the_session_without_an_error(self):
         session, error = authenticated_user(self._request(self._access_token()))
@@ -3416,11 +3476,7 @@ class AuthenticationTest(TestCase):
             session, error = authenticated_user(self._request(self._access_token()))
 
         self.assertIsNone(session)
-        self.assertEqual(error.status_code, 503)
-        self.assertEqual(
-            json.loads(error.content),
-            {'error': 'Serviço de autenticação indisponível. Tente novamente em instantes.'},
-        )
+        assert_problem(error, 'auth-unavailable', detail='The authentication service is unavailable. Try again shortly.')
 
     def test_google_session_does_not_need_the_jwks(self):
         with patch.object(get_cognito(), 'fetch_jwks', side_effect=CognitoUnavailable('down')):
@@ -3520,7 +3576,7 @@ class SessionReadersTest(TestCase):
                         }
                     response = getattr(self.client, method)(url, **extra)
                     self.assertEqual(response.status_code, 401)
-                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+                    assert_problem(response, 'invalid-session')
         self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
 
 
@@ -4176,7 +4232,7 @@ class SessionFormatTest(TestCase):
         auth_check = self.client.get(reverse('user_auth'))
 
         self.assertEqual(protected.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(protected.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(protected, 'invalid-session')
         self.assertEqual(auth_check.json(), {'authenticated': False})
 
     def test_the_google_signup_token_answers_401_on_a_protected_route(self):
@@ -4185,7 +4241,7 @@ class SessionFormatTest(TestCase):
         response = self.client.get(reverse('user_info_auth'))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
 
     def test_the_session_from_the_google_login_opens_the_protected_routes_of_other_apps(self):
         preference = Preferences.objects.create(name='Cachos')

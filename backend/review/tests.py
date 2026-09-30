@@ -1,3 +1,4 @@
+from hairmatch.problem_testing import assert_problem
 from io import BytesIO
 from django.core.files.storage import default_storage
 from django.test import TestCase
@@ -308,7 +309,7 @@ class CreateReviewTest(ReviewsTestCase):
         }
         response = self.client.post(self.create_url, data=review_data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
 class ListReviewTest(ReviewsTestCase):
     def setUp(self):
         super().setUp()
@@ -425,7 +426,7 @@ class UpdateReviewTest(ReviewsTestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         
         # Verify data was not updated
         self.review.refresh_from_db()
@@ -540,7 +541,7 @@ class RemoveReview(ReviewsTestCase):
         
         # The view should return 401 UNAUTHORIZED, not 200
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertEqual(Review.objects.count(), 1) # The review should NOT be deleted
 
     def test_delete_non_existent_review(self):
@@ -622,7 +623,7 @@ class ReviewSessionTest(ReviewsTestCase):
                     before = Review.objects.count()
                     response = self._call(route, token)
                     self.assertEqual(response.status_code, 401)
-                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+                    assert_problem(response, 'invalid-session')
                     # _call itself adds one review for update/delete, and the route must not change it
                     self.assertEqual(Review.objects.count(), before + (0 if route == 'create' else 1))
 

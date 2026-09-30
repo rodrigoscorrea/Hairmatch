@@ -1,3 +1,4 @@
+from hairmatch.problem_testing import assert_problem
 from django.test import TestCase
 from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
@@ -228,7 +229,7 @@ class AssignPreferenceToUserTest(PreferencesTestCase):
         response = self.client.post(assign_url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         self.assertFalse(self.user in self.preference.users.all())
     
     def test_assign_preference_not_found(self):
@@ -279,7 +280,7 @@ class UnassignPreferenceFromUserTest(PreferencesTestCase):
         response = self.client.post(unassign_url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+        assert_problem(response, 'invalid-session')
         # The user should still be assigned to the preference
         self.assertTrue(self.user in self.preference.users.all())
     
@@ -359,7 +360,7 @@ class PreferenceSessionTest(PreferencesTestCase):
                         self.client.cookies['jwt'] = token
                     response = self.client.post(url)
                     self.assertEqual(response.status_code, 401)
-                    self.assertEqual(response.json(), {'error': 'Sessão inválida ou expirada.'})
+                    assert_problem(response, 'invalid-session')
         self.assertTrue(self.preference.users.filter(id=self.user.id).exists())
 
 

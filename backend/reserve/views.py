@@ -47,7 +47,7 @@ class ReserveById(APIView):
         except Reserve.DoesNotExist:
             return JsonResponse({'error': 'Reserve not found'}, status=404)
         if not _is_reserve_party(session.user, reserve):
-            return forbidden()
+            return forbidden(request)
 
         result = ReserveFullInfoSerializer(reserve).data
         return JsonResponse({'data': result}, status=200) 
@@ -140,7 +140,7 @@ class ListReserve(APIView):
         if error:
             return error
         if customer_id is not None and customer_id != customer.id:
-            return forbidden()
+            return forbidden(request)
 
         reserves = Reserve.objects.filter(customer=customer).order_by('start_time')
         result = ReserveFullInfoSerializer(reserves, many=True).data
@@ -161,7 +161,7 @@ class RemoveReserve(APIView):
         except Reserve.DoesNotExist:
             return JsonResponse({"error": "Result not found"}, status=404)
         if not _is_reserve_party(session.user, reserve):
-            return forbidden()
+            return forbidden(request)
 
         reserve.delete()
         return JsonResponse({"data": "reserve deleted successfully"}, status=200)

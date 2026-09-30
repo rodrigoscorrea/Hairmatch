@@ -121,10 +121,9 @@ T17 → T18
 
 **Done when**:
 
-- [ ] 401 `invalid-session`, 503 `auth-unavailable`, 403 `forbidden`, 403 `hairdresser-required`, 403 `customer-required`
-- [ ] `POST /api/availability/create` por não profissional responde 403 (era 404)
-- [ ] Asserts de 401/403 reescritos em `users`, `service`, `agenda`, `availability`, `reserve`, `review`, `preferences`
-- [ ] Gate check passes: full
+- [x] 401 `invalid-session`, 503 `auth-unavailable`, 403 `forbidden`, 403 `hairdresser-required`, 403 `customer-required`
+- [x] Asserts de 401/403 reescritos em `users`, `service`, `agenda`, `availability`, `reserve`, `review`, `preferences`
+- [x] Gate check passes: full
 
 **Tests**: integration
 **Gate**: full
@@ -312,6 +311,7 @@ T17 → T18
 
 **Done when**:
 
+- [ ] `POST /api/availability/create` por não profissional responde 403 `hairdresser-required` (era 404)
 - [ ] Campos ausentes e `weekday` inválido apontados em `errors`, na criação unitária e em lote
 - [ ] Duplicidade responde 409 `availability-exists` (era 400)
 - [ ] `PUT update/multiple/<id>` responde 200 (era 201)

@@ -60,7 +60,7 @@ class CreateMultipleAvailability(APIView):
         if error:
             return error
         if hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         try:
             data = json.loads(request.body)
@@ -155,7 +155,7 @@ class RemoveAvailability(APIView):
         try:
             availability = Availability.objects.get(id=id)
             if availability.hairdresser_id != hairdresser.id:
-                return forbidden()
+                return forbidden(request)
             availability.delete()
             return JsonResponse({'message': 'Availability removed successfully'}, status=200)
         except Availability.DoesNotExist:
@@ -170,7 +170,7 @@ class UpdateMultipleAvailability(APIView):
         if error:
             return error
         if hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         try:
             data = json.loads(request.body)
@@ -219,7 +219,7 @@ class UpdateAvailability(APIView):
         try:
             availability = Availability.objects.get(id=id)
             if availability.hairdresser_id != hairdresser.id:
-                return forbidden()
+                return forbidden(request)
             data = json.loads(request.body)
 
             if 'weekday' in data:

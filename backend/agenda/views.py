@@ -32,7 +32,7 @@ class CreateAgenda(APIView):
         except (Service.DoesNotExist, ValueError, TypeError):
             return JsonResponse({'error': 'Service not found'}, status=500)
         if service_instance.hairdresser_id != hairdresser_instance.id:
-            return forbidden()
+            return forbidden(request)
         
         # Calculate end_time if not provided
         if 'end_time' not in data or not data['end_time']:
@@ -75,7 +75,7 @@ class ListAgenda(APIView):
         if error:
             return error
         if hairdresser_id is not None and hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         agenda_items = Agenda.objects.filter(hairdresser=hairdresser).select_related('service')
         if not agenda_items.exists():
@@ -112,7 +112,7 @@ class RemoveAgenda(APIView):
         except Agenda.DoesNotExist:
             return JsonResponse({"error": "Agenda not found"}, status=404)
         if agenda.hairdresser_id != hairdresser.id:
-            return forbidden()
+            return forbidden(request)
 
         agenda.delete()
         return JsonResponse({"data": "Agenda register deleted successfully"}, status=200)
