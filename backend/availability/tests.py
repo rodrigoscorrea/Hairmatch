@@ -272,7 +272,7 @@ class CreateMultipleAvailabilityTest(TestCase):
         self.hairdresser = Hairdresser.objects.get(user__email='rodrigosc615@gmail.com')
         
         # URL for creating multiple availabilities
-        self.create_multiple_url = reverse('create_multiple_availability', kwargs={'hairdresser_id': self.hairdresser.id})
+        self.create_multiple_url = reverse('hairdresser_availabilities', kwargs={'hairdresser_id': self.hairdresser.id})
     
     def test_create_multiple_availability_success(self):
         # Payload with multiple availabilities
@@ -394,7 +394,7 @@ class CreateMultipleAvailabilityTest(TestCase):
     
     def test_create_multiple_availability_nonexistent_hairdresser(self):
         # Try to create availability for a non-existent hairdresser
-        non_existent_url = reverse('create_multiple_availability', kwargs={'hairdresser_id': 9999})
+        non_existent_url = reverse('hairdresser_availabilities', kwargs={'hairdresser_id': 9999})
         
         payload = {
             'availabilities': [
@@ -473,7 +473,7 @@ class ListAvailabilityTest(TestCase):
         )
         
         # Create URL for list availability
-        self.list_url = reverse('list_availability', args=[self.hairdresser.id])
+        self.list_url = reverse('hairdresser_availabilities', args=[self.hairdresser.id])
         
     def test_list_availability_success(self):
         response = self.client.get(self.list_url)
@@ -494,7 +494,7 @@ class ListAvailabilityTest(TestCase):
         
     def test_list_availability_nonexistent_hairdresser(self):
         # Test with a non-existent hairdresser ID
-        nonexistent_url = reverse('list_availability', args=[999])
+        nonexistent_url = reverse('hairdresser_availabilities', args=[999])
         response = self.client.get(nonexistent_url)
         
         # The API should return an empty list rather than an error
@@ -557,7 +557,7 @@ class RemoveAvailabilityTest(TestCase):
         )
         
         # Create URL for remove availability
-        self.remove_url = reverse('remove_availability', args=[self.availability.id])
+        self.remove_url = reverse('availability_detail', args=[self.availability.id])
         
     def test_remove_availability_success(self):
         response = self.client.delete(self.remove_url)
@@ -568,7 +568,7 @@ class RemoveAvailabilityTest(TestCase):
         
     def test_remove_nonexistent_availability(self):
         # Test with a non-existent availability ID
-        nonexistent_url = reverse('remove_availability', args=[999])
+        nonexistent_url = reverse('availability_detail', args=[999])
         response = self.client.delete(nonexistent_url)
         
         assert_problem(response, 'not-found', detail='Availability not found.')
@@ -631,10 +631,10 @@ class UpdateAvailabilityTest(TestCase):
         )
         
         # Create URL for update availability
-        self.update_url = reverse('update_availability', args=[self.availability.id])
+        self.update_url = reverse('availability_detail', args=[self.availability.id])
         
     def test_update_availability_all_fields(self):
-        response = self.client.put(
+        response = self.client.patch(
             self.update_url,
             data=json.dumps({
                 'weekday': 'wednesday',
@@ -653,7 +653,7 @@ class UpdateAvailabilityTest(TestCase):
         self.assertEqual(str(self.availability.end_time), '18:00:00')
         
     def test_update_availability_partial(self):
-        response = self.client.put(
+        response = self.client.patch(
             self.update_url,
             data=json.dumps({
                 'weekday': 'friday'
@@ -672,8 +672,8 @@ class UpdateAvailabilityTest(TestCase):
         
     def test_update_nonexistent_availability(self):
         # Test with a non-existent availability ID
-        nonexistent_url = reverse('update_availability', args=[999])
-        response = self.client.put(
+        nonexistent_url = reverse('availability_detail', args=[999])
+        response = self.client.patch(
             nonexistent_url,
             data=json.dumps({
                 'weekday': 'saturday',
@@ -821,7 +821,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
         )
         
         # URL for updating multiple availabilities
-        self.update_multiple_url = reverse('update_multiple_availability', kwargs={'hairdresser_id': self.hairdresser.id})
+        self.update_multiple_url = reverse('hairdresser_availabilities', kwargs={'hairdresser_id': self.hairdresser.id})
     
     def test_update_multiple_availability_success(self):
         """Test successful update of multiple availabilities - should replace all existing ones"""
@@ -1024,7 +1024,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
     
     def test_update_multiple_availability_nonexistent_hairdresser(self):
         """Test update for non-existent hairdresser"""
-        non_existent_url = reverse('update_multiple_availability', kwargs={'hairdresser_id': 9999})
+        non_existent_url = reverse('hairdresser_availabilities', kwargs={'hairdresser_id': 9999})
         
         payload = {
             'availabilities': [
@@ -1209,15 +1209,15 @@ class AvailabilityOwnershipTest(TestCase):
     def _requests(self):
         return {
             'create multiple': lambda: self.client.post(
-                reverse('create_multiple_availability', args=[self.owner.id]),
+                reverse('hairdresser_availabilities', args=[self.owner.id]),
                 data=self.schedule, content_type='application/json'),
             'update multiple': lambda: self.client.put(
-                reverse('update_multiple_availability', args=[self.owner.id]),
+                reverse('hairdresser_availabilities', args=[self.owner.id]),
                 data=self.schedule, content_type='application/json'),
-            'update': lambda: self.client.put(
-                reverse('update_availability', args=[self.availability.id]),
+            'update': lambda: self.client.patch(
+                reverse('availability_detail', args=[self.availability.id]),
                 data=json.dumps({'start_time': '01:00:00'}), content_type='application/json'),
-            'remove': lambda: self.client.delete(reverse('remove_availability', args=[self.availability.id])),
+            'remove': lambda: self.client.delete(reverse('availability_detail', args=[self.availability.id])),
         }
 
     def _assert_schedule_untouched(self):
@@ -1265,8 +1265,8 @@ class AvailabilityProblemsTest(TestCase):
         self.hairdresser = Hairdresser.objects.create(user=self.user, cnpj='12345678901212')
         self.client.cookies['jwt'] = self.fake.make_access_token('sub-owner')
         self.create_url = reverse('create_availability')
-        self.create_multiple_url = reverse('create_multiple_availability', args=[self.hairdresser.id])
-        self.update_multiple_url = reverse('update_multiple_availability', args=[self.hairdresser.id])
+        self.create_multiple_url = reverse('hairdresser_availabilities', args=[self.hairdresser.id])
+        self.update_multiple_url = reverse('hairdresser_availabilities', args=[self.hairdresser.id])
         self.monday = {'weekday': 'monday', 'start_time': '09:00:00', 'end_time': '17:00:00'}
 
     def _send(self, method, url, body):
@@ -1403,9 +1403,9 @@ class AvailabilityProblemsTest(TestCase):
     def test_updating_one_availability_validates_the_fields_it_receives(self):
         availability = Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
                                                    start_time=time(8, 0), end_time=time(12, 0))
-        url = reverse('update_availability', args=[availability.id])
+        url = reverse('availability_detail', args=[availability.id])
 
-        response = self._send('put', url, {'weekday': 'someday', 'end_time': 'noon'})
+        response = self._send('patch', url, {'weekday': 'someday', 'end_time': 'noon'})
 
         assert_problem(response, 'validation-error', errors=[
             {'pointer': '#/weekday', 'detail': 'The weekday must be one of monday to sunday.'},
@@ -1418,14 +1418,14 @@ class AvailabilityProblemsTest(TestCase):
         availability = Availability.objects.create(hairdresser=self.hairdresser, weekday='friday',
                                                    start_time=time(8, 0), end_time=time(12, 0))
 
-        response = self._send('put', reverse('update_availability', args=[availability.id]), '{nope')
+        response = self._send('patch', reverse('availability_detail', args=[availability.id]), '{nope')
 
         assert_problem(response, 'malformed-request')
 
     def test_listing_answers_500_without_the_exception_text_when_the_read_fails(self):
         with patch('availability.views.get_hairdresser_availability', return_value={'error': 'db is down'}):
             with self.assertLogs('availability.views', level='ERROR'):
-                response = self.client.get(reverse('list_availability', args=[self.hairdresser.id]))
+                response = self.client.get(reverse('hairdresser_availabilities', args=[self.hairdresser.id]))
 
         body = assert_problem(response, 'internal-error', detail='The availabilities could not be listed.')
         self.assertNotIn('db is down', json.dumps(body))

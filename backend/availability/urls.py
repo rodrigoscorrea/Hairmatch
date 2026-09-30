@@ -1,11 +1,8 @@
 from django.urls import path
-from .views import CreateAvailability, CreateMultipleAvailability,ListAvailability, RemoveAvailability, UpdateAvailability, UpdateMultipleAvailability
+from .views import CreateAvailability, HairdresserAvailabilities, AvailabilityDetail
 
 urlpatterns = [
-    path('create', CreateAvailability.as_view(), name='create_availability'),
-    path('create/multiple/<int:hairdresser_id>', CreateMultipleAvailability.as_view(), name='create_multiple_availability'),
-    path('list/<int:hairdresser_id>', ListAvailability.as_view(), name='list_availability'),
-    path('remove/<int:id>', RemoveAvailability.as_view(), name='remove_availability'),
-    path('update/multiple/<int:hairdresser_id>', UpdateMultipleAvailability.as_view(), name='update_multiple_availability'),
-    path('update/<int:id>', UpdateAvailability.as_view(), name='update_availability'),
+    path('availabilities', CreateAvailability.as_view(), name='create_availability'),
+    path('availabilities/<int:id>', AvailabilityDetail.as_view(), name='availability_detail'),
+    path('hairdressers/<int:hairdresser_id>/availabilities', HairdresserAvailabilities.as_view(), name='hairdresser_availabilities'),
 ]
