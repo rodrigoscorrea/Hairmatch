@@ -8,7 +8,7 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer
+from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
 from .serializers import SearchResultSerializer # Import our new serializer
@@ -24,6 +24,8 @@ from .authentication import (
     authenticate_request,
     authenticate_token,
     authenticated_user,
+    forbidden,
+    is_own_email,
 )
 from .cognito import (
     CognitoError,
@@ -51,6 +53,17 @@ def _cognito_error_response(error):
     if isinstance(error, TooManyRequests):
         return JsonResponse({'error': 'Muitas tentativas. Aguarde e tente novamente.'}, status=429)
     return JsonResponse({'error': AUTH_UNAVAILABLE_MESSAGE}, status=503)
+
+
+def _delete_account(user):
+    """Deletes the Cognito user (e-mail accounts) and the row, and clears the session cookies."""
+    if user.cognito_sub:
+        try:
+            get_cognito().admin_delete_user(user.email)
+        except CognitoError as err:
+            return _cognito_error_response(err)
+    user.delete()
+    return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
 
 
 def _discard_cognito_user(email):
@@ -408,14 +421,7 @@ class UserInfoCookieView(APIView):
         if error:
             return error
 
-        user = session.user
-        if user.cognito_sub:
-            try:
-                get_cognito().admin_delete_user(user.email)
-            except CognitoError as err:
-                return _cognito_error_response(err)
-        user.delete()
-        return clear_auth_cookies(JsonResponse({'message': 'user deleted'}, status=200))
+        return _delete_account(session.user)
 
     #This function does not handle password update procedure
     def put(self, request):
@@ -485,42 +491,33 @@ class GlobalSearchView(APIView):
 
 class UserInfoView(APIView):
     def get(self,request,email=None):
-        try:
-            user = User.objects.filter(email=email).filter(is_active=True).first()
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=404)
+        # Full personal data, so only for the account owner.
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        if not is_own_email(session, email):
+            return forbidden()
 
-        if user:
-            if (user.role == 'customer'):
-                customer = Customer.objects.get(user=user)
-                customer_serialized = CustomerSerializer(customer).data
-                return JsonResponse({'data': customer_serialized}, status=200)
-            else: 
-                hairdresser = Hairdresser.objects.get(user=user)
-                hairdresser_serialized = HairdresserSerializer(hairdresser).data
-                return JsonResponse({'data': hairdresser_serialized}, status=200)
-            
-        return JsonResponse({'error': 'User not found'}, status=404)
+        user = session.user
+        if (user.role == 'customer'):
+            customer = Customer.objects.get(user=user)
+            customer_serialized = CustomerSerializer(customer).data
+            return JsonResponse({'data': customer_serialized}, status=200)
+        else: 
+            hairdresser = Hairdresser.objects.get(user=user)
+            hairdresser_serialized = HairdresserSerializer(hairdresser).data
+            return JsonResponse({'data': hairdresser_serialized}, status=200)
 
     
     def delete(self, request, email=None):
-        token = request.COOKIES.get('jwt')
-            
-        user = User.objects.filter(email=email).filter(is_active=True).first()  
-        if user:
-            if user.cognito_sub:
-                try:
-                    get_cognito().admin_delete_user(user.email)
-                except CognitoError as err:
-                    return _cognito_error_response(err)
-            user.delete()
-            response = JsonResponse({'message': 'user deleted'}, status=200)
+        # Only the account owner can delete it; the e-mail in the URL must be the session's.
+        session, error = authenticated_user(request)
+        if error:
+            return error
+        if not is_own_email(session, email):
+            return forbidden()
+        return _delete_account(session.user)
 
-            if token:
-                response.delete_cookie('jwt')
-            return response
-        else:
-            return JsonResponse({'error': 'User not found'}, status=400)
 class CustomerHomeView(APIView):
     """
     API view for customer home page that returns:
@@ -531,9 +528,14 @@ class CustomerHomeView(APIView):
     def get(self, request, email=None):
         for_you_data = []
         if email:
-            try:
-                customer_user = User.objects.get(email=email, role='customer')
-            except User.DoesNotExist:
+            # The "for you" section reveals the customer's preferences, so it is only for that customer.
+            session, error = authenticated_user(request)
+            if error:
+                return error
+            if not is_own_email(session, email):
+                return forbidden()
+            customer_user = session.user
+            if customer_user.role != 'customer':
                 return JsonResponse({'error': 'User not found'}, status=404)
             customer_preferences = customer_user.preferences.all()
             
@@ -546,7 +548,7 @@ class CustomerHomeView(APIView):
             hairdressers_for_you = Hairdresser.objects.filter(user__in=hairdressers_users)
             
             # Prepare data for for_you response
-            for_you_data = HairdresserSerializer(hairdressers_for_you, many=True).data
+            for_you_data = PublicHairdresserSerializer(hairdressers_for_you, many=True).data
         
         # Get hairdressers for specific preferences
         specific_preferences = ["Coloração", "Cachos", "Barbearia", "Tranças"]
@@ -562,7 +564,7 @@ class CustomerHomeView(APIView):
                 ).distinct()[:10]
                 
                 hairdressers_per_preference = Hairdresser.objects.filter(user__in=hairdressers_users)
-                hairdressers_data = HairdresserSerializer(hairdressers_per_preference, many=True).data
+                hairdressers_data = PublicHairdresserSerializer(hairdressers_per_preference, many=True).data
                 
                 preference_hairdressers[formated_preferences_name[i]] = hairdressers_data
             except Preferences.DoesNotExist:
@@ -575,9 +577,22 @@ class CustomerHomeView(APIView):
         }     
         return JsonResponse(response_data, status=200)
     
+class GeminiCompletionThrottle(AnonRateThrottle):
+    scope = 'gemini_completion'
+    rate = '10/hour'
+
 class GeminiChatView(APIView):
+    # Anonymous on purpose: the hairdresser sign-up calls it before the account exists.
+    # The throttle caps the Gemini cost per IP.
+    throttle_classes = [GeminiCompletionThrottle]
+
     def post(self, request):
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return JsonResponse({'error': 'Invalid request body'}, status=400)
         result = hairdresser_profile_ai_completion(data)
         return result
     
@@ -588,5 +603,5 @@ class HairdresserInfoView(APIView):
         except Hairdresser.DoesNotExist:
             return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
-        hairdresser_serialized = HairdresserSerializer(hairdresser).data
+        hairdresser_serialized = PublicHairdresserSerializer(hairdresser).data
         return JsonResponse({'data': hairdresser_serialized}, status=200)

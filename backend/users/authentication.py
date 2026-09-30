@@ -7,11 +7,12 @@ from django.http import JsonResponse
 from jwt.algorithms import RSAAlgorithm
 
 from .cognito import CognitoUnavailable, get_cognito
-from .models import User
+from .models import Customer, Hairdresser, User
 
 SESSION_ISSUER = 'hairmatch'
 INVALID_SESSION_MESSAGE = 'Sessão inválida ou expirada.'
 AUTH_UNAVAILABLE_MESSAGE = 'Serviço de autenticação indisponível. Tente novamente em instantes.'
+FORBIDDEN_MESSAGE = 'Você não tem permissão para acessar este recurso.'
 
 SessionUser = namedtuple('SessionUser', ['user', 'provider', 'access_token'])
 
@@ -58,6 +59,36 @@ def authenticated_user(request):
     if session is None:
         return None, JsonResponse({'error': INVALID_SESSION_MESSAGE}, status=401)
     return session, None
+
+
+def forbidden():
+    """403 for a valid session that does not own the resource."""
+    return JsonResponse({'error': FORBIDDEN_MESSAGE}, status=403)
+
+
+def authenticated_hairdresser(request):
+    """Returns (SessionUser, Hairdresser, None) or (None, None, JsonResponse): 401/503 without a session, 403 for non-hairdressers."""
+    return _authenticated_profile(request, Hairdresser, 'Apenas profissionais podem realizar esta ação.')
+
+
+def authenticated_customer(request):
+    """Returns (SessionUser, Customer, None) or (None, None, JsonResponse): 401/503 without a session, 403 for non-customers."""
+    return _authenticated_profile(request, Customer, 'Apenas clientes podem realizar esta ação.')
+
+
+def is_own_email(session, email):
+    """Whether the e-mail in the URL is the session user's. Case-insensitive, since Cognito lowercases usernames."""
+    return isinstance(email, str) and email.lower() == session.user.email.lower()
+
+
+def _authenticated_profile(request, model, message):
+    session, error = authenticated_user(request)
+    if error:
+        return None, None, error
+    profile = model.objects.filter(user_id=session.user.id).first()
+    if profile is None:
+        return None, None, JsonResponse({'error': message}, status=403)
+    return session, profile, None
 
 
 def _authenticate_cognito(token, header):

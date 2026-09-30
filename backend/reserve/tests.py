@@ -11,6 +11,7 @@ from service.models import Service
 from reserve.models import Reserve
 from agenda.models import Agenda
 from availability.models import Availability
+from users.cognito import get_cognito
 
 
 class ReserveTestCase(TestCase):
@@ -37,7 +38,8 @@ class ReserveTestCase(TestCase):
             address="Customer Street",
             number="123",
             postal_code="69050750",
-            role="customer"
+            role="customer",
+            cognito_sub="sub-customer-1",
         )
         
         self.customer = Customer.objects.create(
@@ -59,7 +61,8 @@ class ReserveTestCase(TestCase):
             address="Hairdresser Street",
             number="456",
             postal_code="69050750",
-            role="hairdresser"
+            role="hairdresser",
+            cognito_sub="sub-hairdresser-1",
         )
         
         self.hairdresser = Hairdresser.objects.create(
@@ -105,8 +108,38 @@ class ReserveTestCase(TestCase):
             service=self.service
         )
 
+        # A second customer and a second hairdresser, to try each other's resources
+        self.other_customer_user = User.objects.create(
+            email="other.customer@example.com", first_name="Other", last_name="Customer",
+            phone="+5592984503333", neighborhood="Downtown", city="Manaus", state="AM",
+            address="Other Street", postal_code="69050750", role="customer",
+            cognito_sub="sub-customer-2",
+        )
+        self.other_customer = Customer.objects.create(user=self.other_customer_user, cpf="12345678902")
+        self.other_hairdresser_user = User.objects.create(
+            email="other.hairdresser@example.com", first_name="Other", last_name="Hairdresser",
+            phone="+5592984504444", neighborhood="Downtown", city="Manaus", state="AM",
+            address="Other Street", postal_code="69050750", role="hairdresser",
+            cognito_sub="sub-hairdresser-2",
+        )
+        self.other_hairdresser = Hairdresser.objects.create(user=self.other_hairdresser_user, cnpj="12345678901213")
+        self.other_service = Service.objects.create(
+            name="Beard", description="Beard trim", price=30.00, duration=30,
+            hairdresser=self.other_hairdresser,
+        )
+
+    def login(self, user):
+        self.client.cookies['jwt'] = get_cognito().client.make_access_token(user.cognito_sub)
+
+    def logout(self):
+        self.client.cookies.pop('jwt', None)
+
 
 class CreateReserveTest(ReserveTestCase):
+    def setUp(self):
+        super().setUp()
+        self.login(self.customer_user)
+
     def test_create_reserve_success(self):
         """Test successful reserve creation"""
         # Create a new start time that doesn't conflict with the existing reserve
@@ -149,25 +182,70 @@ class CreateReserveTest(ReserveTestCase):
         self.assertEqual(response.json()['error'], 'The hairdresser is not available during this time slot.')
         self.assertEqual(Reserve.objects.count(), 1)  # No new reserve created
         
-    def test_create_reserve_invalid_customer(self):
-        """Test reserve creation with non-existent customer"""
+    def test_create_reserve_ignores_the_customer_in_the_body(self):
+        """The reserve belongs to the session customer, whatever `customer` the body sends"""
         new_start_time = self.reserve_start_time + timedelta(hours=2)
-        
+
         reserve_data = {
             'start_time': new_start_time.isoformat(),
-            'customer': 9999,  # Non-existent ID
+            'customer': self.other_customer.id,
             'hairdresser': self.hairdresser.id,
             'service': self.service.id
         }
-        
+
         response = self.client.post(
             self.create_url,
             data=json.dumps(reserve_data),
             content_type='application/json'
         )
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()['error'], 'Customer not found')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Reserve.objects.exclude(id=self.reserve.id).get()
+        self.assertEqual(created.customer, self.customer)
+        self.assertEqual(created.service, self.service)
+        self.assertFalse(Reserve.objects.filter(customer=self.other_customer).exists())
+
+    def test_create_reserve_without_session_is_refused_with_401(self):
+        self.logout()
+        reserve_data = {
+            'start_time': (self.reserve_start_time + timedelta(hours=2)).isoformat(),
+            'customer': self.customer.id,
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id
+        }
+
+        response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Reserve.objects.count(), 1)
+        self.assertEqual(Agenda.objects.count(), 1)
+
+    def test_create_reserve_as_hairdresser_is_refused_with_403(self):
+        self.login(self.hairdresser_user)
+        reserve_data = {
+            'start_time': (self.reserve_start_time + timedelta(hours=2)).isoformat(),
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id
+        }
+
+        response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Reserve.objects.count(), 1)
+
+    def test_create_reserve_with_a_service_of_another_hairdresser_is_refused(self):
+        """The agenda block must land on the hairdresser who owns the service"""
+        reserve_data = {
+            'start_time': (self.reserve_start_time + timedelta(hours=2)).isoformat(),
+            'hairdresser': self.hairdresser.id,
+            'service': self.other_service.id
+        }
+
+        response = self.client.post(self.create_url, data=json.dumps(reserve_data), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Reserve.objects.count(), 1)
+        self.assertEqual(Agenda.objects.count(), 1)
         
     def test_create_reserve_invalid_hairdresser(self):
         """Test reserve creation with non-existent hairdresser"""
@@ -213,38 +291,116 @@ class CreateReserveTest(ReserveTestCase):
 
 
 class ListReserveTest(ReserveTestCase):
-    def test_list_all_reserves(self):
-        """Test listing all reserves"""
+    def setUp(self):
+        super().setUp()
+        # A reserve of another customer, which must never show up in the lists below
+        Reserve.objects.create(
+            start_time=self.reserve_start_time, customer=self.other_customer, service=self.other_service
+        )
+
+    def test_list_without_id_returns_only_the_session_customer_reserves(self):
+        self.login(self.customer_user)
+
         response = self.client.get(self.list_url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()['data']), 1)
-        
+        self.assertEqual([r['id'] for r in response.json()['data']], [self.reserve.id])
+
     def test_list_user_reserves(self):
         """Test listing reserves for a specific user"""
-        
-        # Create a list_user_url with the customer's user ID
+        self.login(self.customer_user)
         list_user_url = reverse('list_reserve', args=[self.customer.id])
-        
+
         response = self.client.get(list_user_url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([r['id'] for r in response.json()['data']], [self.reserve.id])
+
+    def test_list_reserves_of_another_customer_is_refused_with_403(self):
+        self.login(self.other_customer_user)
+
+        response = self.client.get(reverse('list_reserve', args=[self.customer.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotIn('data', response.json())
+
+    def test_list_without_session_is_refused_with_401(self):
+        for url in (self.list_url, reverse('list_reserve', args=[self.customer.id])):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ReserveByIdTest(ReserveTestCase):
+    def url(self, reserve_id):
+        return reverse('retrieve_reserve_by_id', args=[reserve_id])
+
+    def test_customer_reads_own_reserve(self):
+        self.login(self.customer_user)
+
+        response = self.client.get(self.url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['data']['id'], self.reserve.id)
+
+    def test_hairdresser_of_the_service_reads_the_reserve(self):
+        self.login(self.hairdresser_user)
+
+        response = self.client.get(self.url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_other_customer_and_other_hairdresser_are_refused_with_403(self):
+        for user in (self.other_customer_user, self.other_hairdresser_user):
+            with self.subTest(user=user.email):
+                self.login(user)
+                response = self.client.get(self.url(self.reserve.id))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertNotIn('data', response.json())
+
+    def test_without_session_is_refused_with_401(self):
+        response = self.client.get(self.url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class RemoveReserveTest(ReserveTestCase):
     def test_remove_reserve_success(self):
         """Test successful reserve removal"""
+        self.login(self.customer_user)
         response = self.client.delete(self.remove_url(self.reserve.id))
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['data'], 'reserve deleted successfully')
         self.assertEqual(Reserve.objects.count(), 0)
         
+    def test_hairdresser_of_the_service_removes_the_reserve(self):
+        self.login(self.hairdresser_user)
+
+        response = self.client.delete(self.remove_url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(Reserve.objects.exists())
+
     def test_remove_nonexistent_reserve(self):
         """Test removing a non-existent reserve"""
-        
+        self.login(self.customer_user)
         response = self.client.delete(self.remove_url(9999))  # Non-existent ID
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_remove_reserve_of_someone_else_is_refused_with_403(self):
+        for user in (self.other_customer_user, self.other_hairdresser_user):
+            with self.subTest(user=user.email):
+                self.login(user)
+                response = self.client.delete(self.remove_url(self.reserve.id))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertTrue(Reserve.objects.filter(id=self.reserve.id).exists())
+
+    def test_remove_without_session_is_refused_with_401(self):
+        response = self.client.delete(self.remove_url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(Reserve.objects.filter(id=self.reserve.id).exists())
 
 
 class ReserveSlotTest(ReserveTestCase):

@@ -5,23 +5,38 @@ from service.serializers import ServiceSerializer, ServiceWithHairdresserSeriali
 from rest_framework.views import APIView
 from django.http import JsonResponse
 from agenda.models import Agenda
+from users.authentication import authenticated_hairdresser, forbidden
 import json
 # Create your views here.
 
+INVALID_BODY = {'error': 'Invalid request body'}
+
+
+def _json_body(request):
+    """The request body as a dict, or None when it is not a JSON object."""
+    try:
+        data = json.loads(request.body)
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
 class CreateService(APIView):
     def post(self, request):
-        data = json.loads(request.body)
-        try:
-            hairdresser_instance = Hairdresser.objects.get(id=data['hairdresser'])
-        except Hairdresser.DoesNotExist:
-            return JsonResponse({'error': 'Hairdresser not found'}, status=500)
-        
+        # The service always belongs to the session hairdresser; a `hairdresser` in the body is ignored.
+        session, hairdresser_instance, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        data = _json_body(request)
+        if data is None:
+            return JsonResponse(INVALID_BODY, status=400)
         if not data.get('name') or not data.get('price') or not data.get('duration'):
             return JsonResponse({'error': 'One of the following required fields is missing: name, price, duration'}, status=400)
 
         Service.objects.create(
             name=data['name'],
-            description=data['description'],
+            description=data.get('description', ''),
             price=data['price'],
             duration=data['duration'],
             hairdresser=hairdresser_instance,
@@ -58,14 +73,25 @@ class ListServiceHairdresser(APIView):
         
 class UpdateService(APIView):
     def put(self, request, service_id):
-        data = json.loads(request.body)
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
         try:
             service = Service.objects.get(id=service_id)
         except Service.DoesNotExist:
             return JsonResponse({"error": "Service not found"}, status=404)
-        
+        if service.hairdresser_id != hairdresser.id:
+            return forbidden()
+
+        data = _json_body(request)
+        if data is None:
+            return JsonResponse(INVALID_BODY, status=400)
+        if not data.get('name') or not data.get('price') or not data.get('duration'):
+            return JsonResponse({'error': 'One of the following required fields is missing: name, price, duration'}, status=400)
+
         service.name = data['name']
-        service.description=data['description']
+        service.description=data.get('description', service.description)
         service.price=data['price']
         service.duration=data['duration']
         service.save()
@@ -73,8 +99,14 @@ class UpdateService(APIView):
         
 class RemoveService(APIView):
     def delete(self, request, service_id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
         try:
             service_to_delete = Service.objects.get(id=service_id)
+            if service_to_delete.hairdresser_id != hairdresser.id:
+                return forbidden()
             if Agenda.objects.filter(service=service_to_delete).exists():
                 return JsonResponse(
                     {"error": "There are already appointments for this service"},

@@ -6,7 +6,7 @@ from users.models import Hairdresser
 from .serializers import AvailabilitySerializer
 from django.http import JsonResponse
 import json, datetime
-from users.authentication import authenticated_user
+from users.authentication import authenticated_user, authenticated_hairdresser, forbidden
 # Create your views here.
 
 class CreateAvailability(APIView):
@@ -55,14 +55,17 @@ class CreateAvailability(APIView):
 
 class CreateMultipleAvailability(APIView):
     def post(self, request, hairdresser_id):
+        # The hairdresser comes from the session; the id in the URL must be the session's.
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+        if hairdresser_id != hairdresser.id:
+            return forbidden()
+
         try:
             data = json.loads(request.body)
             availabilities = data['availabilities']
             weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-            
-            hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
-            if not hairdresser:
-                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
             for availability in availabilities:
                 if not availability.get('weekday') or not availability.get('start_time') or not availability.get('end_time'):
@@ -145,8 +148,14 @@ class ListAvailability(APIView):
 
 class RemoveAvailability(APIView):
     def delete(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
         try:
             availability = Availability.objects.get(id=id)
+            if availability.hairdresser_id != hairdresser.id:
+                return forbidden()
             availability.delete()
             return JsonResponse({'message': 'Availability removed successfully'}, status=200)
         except Availability.DoesNotExist:
@@ -156,16 +165,19 @@ class RemoveAvailability(APIView):
 
 class UpdateMultipleAvailability(APIView):
     def put(self, request, hairdresser_id):
+        # Replaces the whole work schedule, so only its owner can call it.
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+        if hairdresser_id != hairdresser.id:
+            return forbidden()
+
         try:
             data = json.loads(request.body)
             availabilities = data['availabilities']
             weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-            
-            hairdresser = Hairdresser.objects.filter(id=hairdresser_id).first()
-            if not hairdresser:
-                return JsonResponse({'error': 'Hairdresser not found'}, status=404)
 
-            are_availabilities_deleted = delete_all_availabilities_by_hairdresser_safe(hairdresser_id)
+            are_availabilities_deleted = delete_all_availabilities_by_hairdresser_safe(hairdresser.id)
             if not are_availabilities_deleted:
                 return JsonResponse({'error': 'Unable to delete hairdresser availabilities'}, status=500)
             
@@ -200,8 +212,14 @@ class UpdateMultipleAvailability(APIView):
 
 class UpdateAvailability(APIView):
     def put(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
         try:
             availability = Availability.objects.get(id=id)
+            if availability.hairdresser_id != hairdresser.id:
+                return forbidden()
             data = json.loads(request.body)
 
             if 'weekday' in data:
