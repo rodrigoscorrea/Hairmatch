@@ -4146,3 +4146,42 @@ class SessionFormatTest(TestCase):
         self.assertEqual(own.status_code, status.HTTP_200_OK)
         self.assertEqual(assign.status_code, status.HTTP_200_OK)
         self.assertTrue(preference.users.filter(id=self.user.id).exists())
+
+
+class GeminiChatViewTest(TestCase):
+    """The AI description stays anonymous (hairdresser sign-up needs it) but is throttled per IP."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('gemini_completion')
+        self.payload = json.dumps({'first_name': 'Ana', 'last_name': 'Silva', 'preferences': []})
+
+    def _post(self, data=None):
+        return self.client.post(self.url, data=data or self.payload, content_type='application/json')
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_anonymous_request_gets_the_generated_description(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'result': 'Descrição'})
+        completion.assert_called_once_with({'first_name': 'Ana', 'last_name': 'Silva', 'preferences': []})
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_body_that_is_not_a_json_object_answers_400_without_calling_gemini(self, completion):
+        for body in ('[]', 'not json', '"text"'):
+            with self.subTest(body=body):
+                response = self._post(body)
+                self.assertEqual(response.status_code, 400)
+        completion.assert_not_called()
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_the_eleventh_request_in_an_hour_is_throttled_with_429(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+
+        statuses = [self._post().status_code for _ in range(11)]
+
+        self.assertEqual(statuses, [200] * 10 + [429])
+        self.assertEqual(completion.call_count, 10)

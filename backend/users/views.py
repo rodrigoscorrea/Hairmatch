@@ -577,9 +577,22 @@ class CustomerHomeView(APIView):
         }     
         return JsonResponse(response_data, status=200)
     
+class GeminiCompletionThrottle(AnonRateThrottle):
+    scope = 'gemini_completion'
+    rate = '10/hour'
+
 class GeminiChatView(APIView):
+    # Anonymous on purpose: the hairdresser sign-up calls it before the account exists.
+    # The throttle caps the Gemini cost per IP.
+    throttle_classes = [GeminiCompletionThrottle]
+
     def post(self, request):
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return JsonResponse({'error': 'Invalid request body'}, status=400)
         result = hairdresser_profile_ai_completion(data)
         return result
     
