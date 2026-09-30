@@ -13,7 +13,7 @@ Um módulo único no backend (`hairmatch/problems.py`) é a fonte da verdade do 
 2. A view ou um helper profundo faz `raise Problem(slug, detail, errors)`. O handler de exceções do DRF renderiza.
 3. Erro do framework ou exceção inesperada: o mesmo handler mapeia a exceção para um slug genérico.
 
-Uma view catch-all no fim do `urlpatterns` cobre a URL inexistente sob `/api/`. O app tem um módulo único (`utils/api-problem.ts`) que converte a resposta de erro em `ApiProblem` e traduz o slug em texto pt-BR.
+Uma view catch-all no fim do `urlpatterns` cobre a URL inexistente sob `/api/`, e um middleware restrito a `/api/` cobre a exceção que escapa do handler do DRF. O app tem um módulo único (`utils/api-problem.ts`) que converte a resposta de erro em `ApiProblem` e traduz o slug em texto pt-BR.
 
 ```mermaid
 graph TD
@@ -68,6 +68,7 @@ graph TD
   - `json_object(request) -> dict`: parse do corpo, levanta `Problem('malformed-request')`.
   - `exception_handler(exc, context) -> JsonResponse`: trata qualquer exceção, nunca devolve `None`.
   - `api_not_found(request)`: view catch-all.
+  - `ProblemDetailsMiddleware`: `process_exception` restrito a `/api/`, que passa pelo mesmo `exception_handler`. O DRF só envolve a chamada da view no `try`, então uma view que não devolve resposta (assert do `finalize_response`) ou dados que o renderer JSON não codifica (falha ao renderizar) chegariam ao Django, que serve o HTML de 500 com `DEBUG=True`.
 - **Reuses**: `settings.PROBLEM_TYPE_BASE_URI`.
 
 ### Exception handler: mapa de exceções
@@ -126,7 +127,7 @@ interface ApiProblem {
 | JSON inválido | `json_object` levanta `Problem('malformed-request')` | Mensagem genérica do slug |
 | Exceção inesperada em view | Handler devolve 500 `internal-error`, loga traceback | "Ocorreu um erro no servidor..." |
 | URL inexistente sob `/api/` | View catch-all devolve 404 `not-found` | Mensagem genérica |
-| Exceção fora de view (middleware) | Fora do escopo: o DRF cobre as views e o catch-all cobre o roteamento | Nenhum |
+| Exceção que escapa do handler do DRF (`finalize_response`, render) | `ProblemDetailsMiddleware` devolve 500 `internal-error` e loga o traceback | "Ocorreu um erro no servidor..." |
 
 ---
 
@@ -148,7 +149,8 @@ interface ApiProblem {
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
 | Tipo da resposta | `JsonResponse` com `content_type='application/problem+json'` | Não passa pelos renderers do DRF (o Browsable API devolveria HTML). |
-| Rota inexistente | View catch-all em vez de `handler404` ou middleware | `handler404` é ignorado com `DEBUG=True`. A view funciona com qualquer valor. |
+| Rota inexistente | View catch-all em vez de `handler404` | `handler404` é ignorado com `DEBUG=True`. A view funciona com qualquer valor. |
+| Exceção fora do `try` do DRF | Middleware com `process_exception`, só sob `/api/` | O Django chama o hook também quando a renderização da resposta falha. O handler do DRF sozinho não cobre esse caso (achado na revisão final, com teste que reproduz). |
 | Exceção do DRF | Handler próprio que nunca devolve `None` | O handler padrão devolve `None` para exceção que não é `APIException`, e o Django serve HTML. |
 | `forbidden` | Recebe `request` | O `instance` precisa do path. |
 | DELETE 204 | `HttpResponse(status=204)` | Sem corpo, e `clear_auth_cookies` funciona sobre ele. |

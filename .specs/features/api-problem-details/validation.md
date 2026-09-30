@@ -12,14 +12,14 @@
 
 | Gate | Comando | Resultado |
 | ---- | ------- | --------- |
-| Backend completo | `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput'` | 584 testes, OK, 0 pulados. Linha de base antes da feature: 463. |
+| Backend completo | `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput'` | 590 testes, OK, 0 pulados. Linha de base antes da feature: 463. |
 | Tipos do app | `cd frontend-mobile && npx tsc --noEmit` | exit 0. Antes: 4 erros que já existiam em `_layout.tsx` (customer e hairdresser), `BottomBar.tsx` e `availability-formater.ts`, corrigidos só nos tipos no commit `fix(app): clear the four type errors that kept tsc red`. |
 | Normalizador do app | jest temporário (não commitado) sobre `frontend-mobile/utils/api-problem.ts` | 10 testes: `AxiosError`, problema cru, string JSON, sem resposta, slug desconhecido, `__proto__`, `toString`, os 36 slugs. |
 | Servidor real (`DEBUG=True` fixo) | `curl` em `http://localhost:8000` | `/api/does-not-exist` 404, `PATCH /api/auth/login` 405 com `Allow`, `/api/address/cep/123` 400, `/api/service/list/999999` 404, `/api/user/authenticated` 401, login desconhecido 401, corpo vazio 400 com dois itens em `errors`, JSON inválido 400. Todos `application/problem+json`. `/admin/nope/` segue com o HTML do Django. |
 
 ## Test integrity
 
-- Definições `def test_`: 465 antes, 586 depois. Nenhuma removida (`git diff 34e9afb HEAD -- 'backend/*/tests.py'` não tem linha `-  def test_`), nenhuma pulada.
+- Definições `def test_`: 465 antes, 592 depois. Nenhuma removida (`git diff 34e9afb HEAD -- 'backend/*/tests.py'` não tem linha `-  def test_`), nenhuma pulada.
 - Os asserts de texto em português, de `{"error"}` e de `Content-Type: application/json` em resposta de erro foram reescritos para o outcome do spec (`assert_problem`, que confere status, `Content-Type`, o conjunto exato de membros, `type`, `title`, `status`, `detail` terminado em ponto e, quando dado, `errors`). Nenhum assert de status ou de efeito colateral foi removido.
 
 ## Spec-anchored outcome check
@@ -85,7 +85,7 @@ Cada requisito foi ligado a uma linha de implementação e a um teste cujo asser
 | PD-61 | `backend/hairmatch/problems.py:173` | `backend/hairmatch/test_problems.py:116` |
 | PD-62 | `backend/hairmatch/problems.py:115` | `backend/users/tests.py:3932` |
 | PD-63 | `backend/hairmatch/problems.py:182` | `backend/hairmatch/test_problems.py:218` |
-| PD-64 | `backend/hairmatch/problems.py:190` | `backend/hairmatch/test_problems.py:240` |
+| PD-64 | `backend/hairmatch/problems.py:190`, `backend/hairmatch/problems.py:199` | `backend/hairmatch/test_problems.py:240`, `backend/hairmatch/test_problems.py:309` |
 | PD-65 | `backend/hairmatch/problems.py:189` | `backend/hairmatch/test_problems.py:147` |
 | PD-66 | `backend/hairmatch/urls.py:32` | `backend/hairmatch/test_problems.py:184` |
 | PD-67 | `backend/hairmatch/urls.py:22` | `backend/hairmatch/test_problems.py:253` |
@@ -131,7 +131,7 @@ O spec não define o texto exato nestes pontos, então os testes fixam o texto e
 
 ## Discrimination sensor
 
-28 falhas de comportamento injetadas em uma worktree descartável (`git worktree`, montada em um segundo container). O baseline sem mutação passou na suíte completa no mesmo harness. Cada mutante foi morto por falha de teste, nunca por erro de carga. Depois, a worktree foi removida e o `git status --porcelain` da árvore real ficou idêntico ao de antes.
+30 falhas de comportamento injetadas em uma worktree descartável (`git worktree`, montada em um segundo container). O baseline sem mutação passou na suíte completa no mesmo harness. Cada mutante foi morto por falha de teste, nunca por erro de carga. Depois, a worktree foi removida e o `git status --porcelain` da árvore real ficou idêntico ao de antes.
 
 | Mutante | Resultado |
 | ------- | --------- |
@@ -163,6 +163,8 @@ O spec não define o texto exato nestes pontos, então os testes fixam o texto e
 | M26 webhook engole o 400 | KILLED (`test_a_body_that_is_not_a_json_object_answers_400_malformed_request`) |
 | M27 `json_object` aceita lista | KILLED (`test_json_that_is_not_an_object_is_malformed_request`) |
 | M28 `errors` só com o primeiro item | KILLED (`test_missing_old_or_new_password_answers_400_without_calling_cognito`) |
+| M29 middleware nunca trata a exceção | KILLED (`test_a_response_that_cannot_be_rendered_debug_off`) |
+| M30 middleware também trata caminhos fora de `/api/` | KILLED (`test_a_path_outside_api_keeps_the_django_500`) |
 
 Nenhum mutante sobreviveu, então não há lição a registrar (um PASS limpo não grava nada).
 
@@ -174,10 +176,12 @@ Nenhum mutante sobreviveu, então não há lição a registrar (um PASS limpo n�
 - **Lote de disponibilidade valida antes de escrever.** Um item inválido não cria nem apaga nada. A duplicidade no meio do lote continua parcial (Deferred Ideas do spec: tornar o lote atômico).
 - **`get_available_slots`** devolve `status: 404` no dict interno para serviço ausente (era 500). Só o chatbot lê esse dict.
 - **`hairdresser_profile_ai_completion`** valida `preferences` e devolve 400 quando não é uma lista de ids. Antes um corpo sem `preferences` dava 500.
+- **`ProblemDetailsMiddleware`, fora do design original.** A revisão final apontou que o DRF só envolve a chamada da view: uma view que não devolve resposta, ou dados que o renderer JSON não codifica, escapam do `exception_handler` e o Django serve HTML de 500 com `DEBUG=True`. O caso foi reproduzido por teste antes da correção. As views com `pass` (`UpdateReserve`, `UpdateAgenda`) têm a rota comentada e respondem 404 problem+json, então não eram alcançáveis.
 - **App:** a descrição por IA no cadastro mostra o texto do catálogo para `too-many-requests` e `ai-service-unavailable`.
 
 ## Não verificado
 
+- **Leitores de status e corpo no app:** conferido por busca (`grep`), não por execução. Só `deleteService` e `deleteReview` chamam DELETE e nenhum lê o corpo, e nenhuma tela compara status das rotas que mudaram (201→200, 400→409).
 - **UAT das cinco telas** (login por e-mail, login e cadastro por Google, cadastro com descrição e preferências, confirmação de reserva). Precisa do app rodando (web ou Android) contra o backend. O que está provado é o contrato do servidor real, o mapeamento slug → texto no jest e a compilação de tipos. Não está provado o texto na tela.
 - **Tela de exclusão de serviço** com um serviço que tem agendamento (PD-84) e **busca de CEP** com CEP inexistente (PD-85), também só no UAT.
 - **Fluxos com Cognito real na AWS.** Os testes usam o Cognito em memória, e o servidor real rodou contra o MiniStack.
