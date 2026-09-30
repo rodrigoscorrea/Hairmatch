@@ -25,7 +25,7 @@ urlpatterns = [
     path('api/', include('review.urls')),
     path('api/', include('availability.urls')),
     path('api/reserve/', include('reserve.urls')),
-    path('api/agenda/', include('agenda.urls')),
+    path('api/', include('agenda.urls')),
     path('api/service/', include('service.urls')),
     path('api/chatbot/', include('chatbot.urls')),
     # Must stay last: a URL under /api/ that no route matched.

@@ -1,9 +1,7 @@
 from django.urls import path
-from .views import ListAgenda, CreateAgenda, RemoveAgenda
+from .views import AgendaCollection, ListAgenda, RemoveAgenda
 urlpatterns = [
-    path('create', CreateAgenda.as_view(), name='create_agenda'),
-    path('list/<int:hairdresser_id>', ListAgenda.as_view(), name='list_agenda'),
-    path('list', ListAgenda.as_view(), name='list_agenda'),
-    #path('update/<int:agenda_id>', UpdateAgenda.as_view(), name='update_agenda'),
-    path('remove/<int:agenda_id>', RemoveAgenda.as_view(), name='remove_agenda'),
+    path('agenda', AgendaCollection.as_view(), name='agenda_collection'),
+    path('agenda/<int:agenda_id>', RemoveAgenda.as_view(), name='agenda_detail'),
+    path('hairdressers/<int:hairdresser_id>/agenda', ListAgenda.as_view(), name='hairdresser_agenda'),
 ]

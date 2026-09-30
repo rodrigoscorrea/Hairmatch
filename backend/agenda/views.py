@@ -132,3 +132,7 @@ class RemoveAgenda(APIView):
 
         agenda.delete()
         return HttpResponse(status=204)
+
+
+class AgendaCollection(ListAgenda, CreateAgenda):
+    """`/api/agenda`: GET lists the logged hairdresser's agenda and POST adds an entry to it."""

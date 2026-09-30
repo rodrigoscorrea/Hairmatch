@@ -303,10 +303,10 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-30 | Route Table: disponibilidade | Execute | Done |
 | RT-31 | Route Table: disponibilidade | Execute | Done |
 | RT-32 | Route Table: disponibilidade | Execute | Done |
-| RT-33 | Route Table: agenda | - | Pending |
-| RT-34 | Route Table: agenda | - | Pending |
-| RT-35 | Route Table: agenda | - | Pending |
-| RT-36 | Route Table: agenda | - | Pending |
+| RT-33 | Route Table: agenda | Execute | Done |
+| RT-34 | Route Table: agenda | Execute | Done |
+| RT-35 | Route Table: agenda | Execute | Done |
+| RT-36 | Route Table: agenda | Execute | Done |
 | RT-37 | Route Table: serviços | - | Pending |
 | RT-38 | Route Table: serviços | - | Pending |
 | RT-39 | Route Table: serviços | - | Pending |
