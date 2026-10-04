@@ -330,12 +330,12 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-04 | P1: Cadastro pendente, AC2 | Tasks | Implementing |
 | EMC-05 | P1: Cadastro pendente, AC3 | Tasks | Implementing |
 | EMC-06 | P1: Cadastro pendente, AC4 | Tasks | Implementing |
-| EMC-07 | P1: Substituição, AC1 | Tasks | Pending |
-| EMC-08 | P1: Substituição, AC2 | Tasks | Pending |
-| EMC-09 | P1: Substituição, AC3 | Tasks | Pending |
-| EMC-10 | P1: Substituição, AC4 | Tasks | Pending |
-| EMC-11 | P1: Substituição, AC5 | Tasks | Pending |
-| EMC-12 | P1: Substituição, AC6 | Tasks | Pending |
+| EMC-07 | P1: Substituição, AC1 | Tasks | Implementing |
+| EMC-08 | P1: Substituição, AC2 | Tasks | Implementing |
+| EMC-09 | P1: Substituição, AC3 | Tasks | Implementing |
+| EMC-10 | P1: Substituição, AC4 | Tasks | Implementing |
+| EMC-11 | P1: Substituição, AC5 | Tasks | Implementing |
+| EMC-12 | P1: Substituição, AC6 | Tasks | Implementing |
 | EMC-13 | P1: Confirmar, AC1 | Tasks | Pending |
 | EMC-14 | P1: Confirmar, AC2 | Tasks | Pending |
 | EMC-15 | P1: Confirmar, AC3 | Tasks | Pending |

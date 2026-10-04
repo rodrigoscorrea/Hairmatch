@@ -144,6 +144,29 @@ def _delete_stored_files(names):
             logger.exception('Could not delete %s from the media storage', name)
 
 
+# An e-mail account that never confirmed its address: it holds its e-mail and phone for no one.
+_PENDING_ACCOUNT = Q(is_active=False, cognito_sub__isnull=False)
+
+
+def _pending_accounts(email=None, phone=None):
+    """The pending accounts that hold this e-mail (any case) or this stored phone."""
+    holders = Q(pk__in=[])
+    if email:
+        holders |= Q(email__iexact=email)
+    if phone:
+        holders |= Q(phone=phone)
+    return User.objects.filter(_PENDING_ACCOUNT, holders)
+
+
+def _replace_pending_account(user):
+    """
+    Deletes a pending account in Cognito and then in Postgres, so a Cognito outage leaves both untouched.
+    Raises CognitoError when Cognito cannot delete the user.
+    """
+    get_cognito().admin_delete_user(user.email)
+    user.delete()
+
+
 def _discard_cognito_user(email):
     """Undoes a sign-up whose Postgres rows could not be created."""
     try:
@@ -186,13 +209,16 @@ class RegisterView(APIView):
         email = data['email']
         role = data['role']
         phone = data['phone']
-        if User.objects.filter(email__iexact=email).exists():
+        stored_phone = normalize_phone(phone)
+        if User.objects.filter(email__iexact=email).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
-        if User.objects.filter(phone=normalize_phone(phone)).exists():
+        if User.objects.filter(phone=stored_phone).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            cognito_sub = get_cognito().sign_up(email, data['password'])
+            for pending in _pending_accounts(email, stored_phone):
+                _replace_pending_account(pending)
+            cognito_sub = self._sign_up(email, data['password'])
         except InvalidPassword:
             return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except UserAlreadyExists:
@@ -240,6 +266,21 @@ class RegisterView(APIView):
 
         _discard_cognito_user(email)
         return failure
+
+    @staticmethod
+    def _sign_up(email, password):
+        """
+        SignUp, retried once when the pool still holds an UNCONFIRMED user nobody here owns (a sign-up
+        whose rows were lost). Any other user in the pool keeps the e-mail taken.
+        """
+        cognito = get_cognito()
+        try:
+            return cognito.sign_up(email, password)
+        except UserAlreadyExists:
+            if cognito.admin_get_status(email) != 'UNCONFIRMED':
+                raise
+            cognito.admin_delete_user(email)
+            return cognito.sign_up(email, password)
 
     def _register_with_google(self, request, data):
         try:

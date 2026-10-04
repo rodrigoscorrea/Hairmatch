@@ -362,16 +362,16 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Pendente `a@x.com` + cadastro `A@x.com` → 201, um único `User` com esse e-mail, e `admin_delete_user` antes de `sign_up` em `fake.calls` (EMC-07)
-  - [ ] Pendente com telefone X + cadastro com outro e-mail e telefone X → 201, e a conta antiga sumiu (EMC-08)
-  - [ ] Ativo com telefone X → 409 `phone-taken`, sem chamadas ao fake (EMC-09)
-  - [ ] Órfão `UNCONFIRMED` só no fake → 201 depois de `admin_delete_user` + segundo `sign_up` (EMC-10)
-  - [ ] Órfão `CONFIRMED` só no fake → 409 `email-taken`, sem `admin_delete_user` (EMC-10)
-  - [ ] `fail_next('admin_delete_user', EndpointConnectionError)` → 503 `auth-unavailable`, e a conta antiga continua no fake e no Postgres (EMC-11)
-  - [ ] Falha no insert depois da substituição → a compensação apaga a conta nova, e a antiga continua apagada (EMC-12)
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T6 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Pendente `a@x.com` + cadastro `A@x.com` → 201, um único `User` com esse e-mail, e `admin_delete_user` antes de `sign_up` em `fake.calls` (EMC-07)
+  - [x] Pendente com telefone X + cadastro com outro e-mail e telefone X → 201, e a conta antiga sumiu (EMC-08)
+  - [x] Ativo com telefone X → 409 `phone-taken`, sem chamadas ao fake (EMC-09)
+  - [x] Órfão `UNCONFIRMED` só no fake → 201 depois de `admin_delete_user` + segundo `sign_up` (EMC-10)
+  - [x] Órfão `CONFIRMED` só no fake → 409 `email-taken`, sem `admin_delete_user` (EMC-10)
+  - [x] `fail_next('admin_delete_user', EndpointConnectionError)` → 503 `auth-unavailable`, e a conta antiga continua no fake e no Postgres (EMC-11)
+  - [x] Falha no insert depois da substituição → a compensação apaga a conta nova, e a antiga continua apagada (EMC-12)
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T6 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

@@ -4136,6 +4136,7 @@ class CognitoRegisterTest(TestCase):
 
     def test_email_that_only_exists_in_cognito_answers_409_and_creates_nothing(self):
         self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Senha123')
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='nova@example.com')
 
         response = self.client.post(self.register_url, data=_register_payload())
 
@@ -4180,6 +4181,127 @@ class CognitoRegisterTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         assert_auth_unavailable(response)
+        self.assertEqual(self.fake.users, {})
+        self._assert_no_rows()
+
+    def _pending_account(self, **overrides):
+        payload = _register_payload(**overrides)
+        self.assertEqual(self.client.post(self.register_url, data=payload).status_code, status.HTTP_201_CREATED)
+        return User.objects.get(email=payload['email'])
+
+    def _operations(self):
+        return [name for name, _ in self.fake.calls]
+
+    def test_a_pending_account_is_replaced_by_a_sign_up_with_the_same_email_in_another_case(self):
+        """EMC-07"""
+        old = self._pending_account(email='a@x.com')
+        old_sub = old.cognito_sub
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.filter(email__iexact='a@x.com').count(), 1)
+        replaced = User.objects.get(email__iexact='a@x.com')
+        self.assertEqual(replaced.email, 'A@x.com')
+        self.assertNotEqual(replaced.cognito_sub, old_sub)
+        self.assertFalse(replaced.is_active)
+        self.assertEqual(list(self.fake.users), ['a@x.com'])
+        self.assertEqual(self.fake.users['a@x.com']['sub'], replaced.cognito_sub)
+        self.assertEqual(self._operations().index('admin_delete_user') < self._operations().index('sign_up'), True)
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_a_pending_account_that_holds_the_phone_is_replaced_even_with_another_email(self):
+        """EMC-08"""
+        self._pending_account(email='a@x.com', phone='92991234567')
+
+        response = self.client.post(
+            self.register_url, data=_register_payload(email='b@x.com', phone='(92) 99123-4567')
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['b@x.com'])
+        self.assertEqual(list(self.fake.users), ['b@x.com'])
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_an_active_account_that_holds_the_phone_answers_409_without_calling_cognito(self):
+        """EMC-09"""
+        self._pending_account(email='a@x.com', phone='92991234567')
+        activate_account('a@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='b@x.com', phone='92991234567'))
+
+        assert_phone_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['a@x.com'])
+
+    def test_an_active_phone_holder_keeps_the_pending_account_with_the_email_untouched(self):
+        """EMC-09: nothing is deleted before the conflict is known."""
+        self._pending_account(email='a@x.com', phone='92991111111')
+        self._pending_account(email='b@x.com', phone='92992222222')
+        activate_account('b@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='a@x.com', phone='92992222222'))
+
+        assert_phone_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertTrue(User.objects.filter(email='a@x.com').exists())
+        self.assertIn('a@x.com', self.fake.users)
+
+    def test_an_unconfirmed_orphan_in_cognito_is_deleted_and_the_sign_up_is_repeated_once(self):
+        """EMC-10"""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        orphan_sub = self.fake.users['nova@example.com']['sub']
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            [op for op in self._operations() if op in ('sign_up', 'admin_delete_user')],
+            ['sign_up', 'admin_delete_user', 'sign_up'],
+        )
+        user = User.objects.get(email='nova@example.com')
+        self.assertNotEqual(user.cognito_sub, orphan_sub)
+        self.assertEqual(user.cognito_sub, self.fake.users['nova@example.com']['sub'])
+        self.assertEqual(self.fake.users['nova@example.com']['password'], 'Senha123')
+
+    def test_a_second_sign_up_that_fails_the_same_way_answers_409(self):
+        """EMC-10"""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        self.fake.fail_next('sign_up', 'UsernameExistsException')
+        self.fake.fail_next('sign_up', 'UsernameExistsException')
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_email_taken(response)
+        self.assertEqual(self._operations().count('sign_up'), 3)
+        self._assert_no_rows()
+
+    def test_a_cognito_outage_while_deleting_the_old_account_answers_503_and_keeps_it(self):
+        """EMC-11"""
+        old = self._pending_account(email='a@x.com')
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        assert_auth_unavailable(response)
+        self.assertEqual(self._operations(), ['admin_delete_user'])
+        self.assertEqual(list(User.objects.values_list('pk', flat=True)), [old.pk])
+        self.assertEqual(self.fake.users['a@x.com']['sub'], old.cognito_sub)
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_a_failed_insert_after_the_replacement_deletes_the_new_user_and_the_old_one_stays_deleted(self):
+        """EMC-12"""
+        self._pending_account(email='a@x.com')
+        with patch.object(Customer.objects, 'create', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('users.views', level='ERROR'):
+                response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        assert_problem(response, 'internal-error', detail='The account could not be created.')
         self.assertEqual(self.fake.users, {})
         self._assert_no_rows()
 
