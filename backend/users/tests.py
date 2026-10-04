@@ -2339,6 +2339,44 @@ class GoogleAuthViewTest(TestCase):
         auth_response = self.client.get(self.user_auth_url)
         self.assertEqual(auth_response.json(), {'authenticated': True})
 
+    def _pending_email_account(self, email='Ana@gmail.com', phone='92991234567'):
+        response = self.client.post(reverse('register'), data=_register_payload(email=email, phone=phone))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        get_cognito().client.calls.clear()
+        return User.objects.get(email=email)
+
+    def test_a_pending_account_with_the_same_email_is_replaced_and_never_linked(self):
+        """EMC-52"""
+        self._pending_email_account('Ana@gmail.com')
+        self.mock_verify.return_value = self._identity(email='ana@gmail.com')
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['status'], 'signup_required')
+        self.assertTrue(response.json()['signup_token'])
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(User.objects.count(), 0)
+        self.assertFalse(User.objects.filter(google_id='google-sub-123').exists())
+        self.assertEqual(get_cognito().client.users, {})
+        self.assertEqual([name for name, _ in get_cognito().client.calls], ['admin_delete_user'])
+
+    def test_a_cognito_outage_while_replacing_the_pending_account_answers_503_and_keeps_it(self):
+        """EMC-55"""
+        pending = self._pending_email_account('ana@gmail.com')
+        get_cognito().client.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        assert_auth_unavailable(response)
+        self.assertNotIn('jwt', response.cookies)
+        pending.refresh_from_db()
+        self.assertIsNone(pending.google_id)
+        self.assertFalse(pending.is_active)
+        self.assertIn('ana@gmail.com', get_cognito().client.users)
+        self.assertEqual(User.objects.count(), 1)
+
     def test_linked_google_account_is_authenticated(self):
         user = _create_plain_user(email='ana@gmail.com', google_id='google-sub-123')
         self.mock_verify.return_value = self._identity()
@@ -2517,6 +2555,65 @@ class GoogleRegisterTest(TestCase):
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
         self.assertEqual(auth_response.json(), {'authenticated': True})
+
+    def _pending_email_account(self, email, phone):
+        response = self.client.post(reverse('register'), data=_register_payload(email=email, phone=phone))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        get_cognito().client.calls.clear()
+        return User.objects.get(email=email)
+
+    def test_google_signup_replaces_a_pending_account_that_holds_the_token_email(self):
+        """EMC-53"""
+        self._pending_email_account('Ana@gmail.com', '92990000000')
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.email, 'ana@gmail.com')
+        self.assertEqual(user.google_id, 'google-sub-123')
+        self.assertTrue(user.is_active)
+        self.assertIsNone(user.cognito_sub)
+        self.assertEqual(get_cognito().client.users, {})
+        self.assertEqual(Customer.objects.count(), 1)
+        self._assert_session_cookie_for(response, user)
+
+    def test_google_signup_replaces_a_pending_account_that_holds_the_phone(self):
+        """EMC-53"""
+        self._pending_email_account('outra@example.com', '92991234567')
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['ana@gmail.com'])
+        self.assertTrue(User.objects.get().is_active)
+        self.assertEqual(get_cognito().client.users, {})
+
+    def test_google_signup_with_an_active_phone_holder_answers_409_and_keeps_the_pending_account(self):
+        """EMC-53: nothing is replaced before the conflict is known."""
+        self._pending_email_account('ana@gmail.com', '92990000000')
+        active = _create_plain_user(email='ativa@example.com', phone='5592991234567')
+        get_cognito().client.calls.clear()
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        assert_phone_taken(response)
+        self.assertEqual(get_cognito().client.calls, [])
+        self.assertEqual(User.objects.count(), 2)
+        self.assertTrue(User.objects.filter(pk=active.pk).exists())
+
+    def test_a_cognito_outage_while_replacing_on_google_signup_answers_503_and_creates_nothing(self):
+        """EMC-55"""
+        pending = self._pending_email_account('ana@gmail.com', '92990000000')
+        get_cognito().client.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        assert_auth_unavailable(response)
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(list(User.objects.values_list('pk', 'google_id')), [(pending.pk, None)])
+        self.assertIn('ana@gmail.com', get_cognito().client.users)
+        self.assertEqual(Customer.objects.count(), 1)
 
     def test_google_customer_signup_creates_user_customer_and_session(self):
         pref1 = Preferences.objects.create(name='Coloração')

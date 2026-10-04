@@ -160,6 +160,12 @@ def _pending_accounts(email=None, phone=None):
     return User.objects.filter(_PENDING_ACCOUNT, holders)
 
 
+def _replace_pending_accounts(email, phone=None):
+    """Replaces every pending account holding this e-mail or phone. Raises CognitoError, leaving the rest untouched."""
+    for pending in _pending_accounts(email, phone):
+        _replace_pending_account(pending)
+
+
 def _replace_pending_account(user):
     """
     Deletes a pending account in Cognito and then in Postgres, so a Cognito outage leaves both untouched.
@@ -218,8 +224,7 @@ class RegisterView(APIView):
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            for pending in _pending_accounts(email, stored_phone):
-                _replace_pending_account(pending)
+            _replace_pending_accounts(email, stored_phone)
             cognito_sub = self._sign_up(email, data['password'])
         except InvalidPassword:
             return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
@@ -305,12 +310,19 @@ class RegisterView(APIView):
         # The e-mail comes from the signup token; form email/password fields are ignored.
         email = claims['email']
         google_id = claims['sub']
-        if User.objects.filter(email__iexact=email).exists():
+        stored_phone = normalize_phone(phone)
+        if User.objects.filter(email__iexact=email).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(google_id=google_id).exists():
             return problem_response(request, 'google-account-taken', 'This Google account is already registered.')
-        if User.objects.filter(phone=normalize_phone(phone)).exists():
+        if User.objects.filter(phone=stored_phone).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
+
+        # Google proved the e-mail, so a pending account that holds it or the phone is replaced, never inherited.
+        try:
+            _replace_pending_accounts(email, stored_phone)
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
 
         try:
             with transaction.atomic():
@@ -473,6 +485,11 @@ class GoogleAuthView(APIView):
 
         user = User.objects.filter(google_id=identity['sub']).first()
         if user is None:
+            # A pending account is never linked: the person who typed that e-mail may not own it.
+            try:
+                _replace_pending_accounts(identity['email'])
+            except CognitoError as err:
+                return _cognito_error_response(request, err)
             user = User.objects.filter(email__iexact=identity['email']).first()
             if user is not None:
                 if user.google_id:

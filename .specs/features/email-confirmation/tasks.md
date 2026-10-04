@@ -425,13 +425,13 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Conta pendente `Ana@gmail.com` + `POST /api/auth/google` com identidade `ana@gmail.com` → 200 com `signup_token`; a conta sumiu do fake e do Postgres; nenhum `User` tem o `google_id` (EMC-52)
-  - [ ] Conta **ativa** com o mesmo e-mail continua sendo vinculada como hoje (GAUTH, sem regressão)
-  - [ ] Conta pendente com o telefone X + cadastro Google com telefone X → 201, e a conta Google nasce ativa (EMC-53)
-  - [ ] `fail_next('admin_delete_user', EndpointConnectionError)` nos dois caminhos → 503 `auth-unavailable`, e a conta pendente fica intacta, sem `google_id` (EMC-55)
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T8 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Conta pendente `Ana@gmail.com` + `POST /api/auth/google` com identidade `ana@gmail.com` → 200 com `signup_token`; a conta sumiu do fake e do Postgres; nenhum `User` tem o `google_id` (EMC-52)
+  - [x] Conta **ativa** com o mesmo e-mail continua sendo vinculada como hoje (GAUTH, sem regressão)
+  - [x] Conta pendente com o telefone X + cadastro Google com telefone X → 201, e a conta Google nasce ativa (EMC-53)
+  - [x] `fail_next('admin_delete_user', EndpointConnectionError)` nos dois caminhos → 503 `auth-unavailable`, e a conta pendente fica intacta, sem `google_id` (EMC-55)
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T8 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

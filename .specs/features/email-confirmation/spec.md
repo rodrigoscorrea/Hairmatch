@@ -375,10 +375,10 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-49 | P1: Contrato de erro, AC3 | Tasks | Pending |
 | EMC-50 | P1: Contrato de erro, AC4 | Tasks | Pending |
 | EMC-51 | P2: Documentação, AC1 | Tasks | Pending |
-| EMC-52 | P1: Google, AC1 | Tasks | Pending |
-| EMC-53 | P1: Google, AC2 | Tasks | Pending |
+| EMC-52 | P1: Google, AC1 | Tasks | Implementing |
+| EMC-53 | P1: Google, AC2 | Tasks | Implementing |
 | EMC-54 | P1: Reenviar, AC5 | Tasks | Pending |
-| EMC-55 | P1: Google, AC3 | Tasks | Pending |
+| EMC-55 | P1: Google, AC3 | Tasks | Implementing |
 
 **ID format:** `EMC-NN`
 
