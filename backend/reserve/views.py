@@ -29,6 +29,17 @@ def _is_reserve_party(user, reserve):
     return reserve.customer.user_id == user.id or reserve.service.hairdresser.user_id == user.id
 
 
+def cancel_reserve(reserve):
+    """Deletes the reserve and the agenda slot it blocked, matched by (service, start_time) as ListAgenda pairs them."""
+    with transaction.atomic():
+        Agenda.objects.filter(
+            hairdresser_id=reserve.service.hairdresser_id,
+            service_id=reserve.service_id,
+            start_time=reserve.start_time,
+        ).delete()
+        reserve.delete()
+
+
 def customer_has_conflicting_reserve(customer, start_time, end_time):
     """Whether one of the customer's reserves, with any hairdresser, overlaps [start_time, end_time)."""
     for reservation in Reserve.objects.filter(customer=customer).select_related('service'):
@@ -164,7 +175,7 @@ class RemoveReserve(APIView):
         if not _is_reserve_party(session.user, reserve):
             return forbidden(request)
 
-        reserve.delete()
+        cancel_reserve(reserve)
         return HttpResponse(status=204)
     
 class ReserveSlot(APIView):

@@ -210,4 +210,7 @@ CORS_ALLOW_HEADERS = [
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'hairmatch.problems.exception_handler',
+    # Proxies in front of Django. 0 identifies a client by REMOTE_ADDR alone; without it DRF would trust
+    # an X-Forwarded-For sent by the client and the throttles could be dodged by changing that header.
+    'NUM_PROXIES': int(os.getenv('BACKEND_NUM_PROXIES', '0')),
 }

@@ -11,6 +11,11 @@ from .models import User, Customer, Hairdresser, user_profile_picture_path
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
+from agenda.models import Agenda
+from availability.models import Availability
+from reserve.models import Reserve
+from review.models import Review
+from django.utils import timezone
 import base64
 from unittest.mock import patch, MagicMock
 from django.conf import settings
@@ -2662,6 +2667,7 @@ class GoogleRegisterTest(TestCase):
 
         for label, base_payload, missing_field in cases:
             with self.subTest(case=label):
+                cache.clear()  # 13 sign-ups from one IP would pass the 10/hour register throttle
                 payload = {k: v for k, v in base_payload.items() if k != missing_field}
 
                 response = self.client.post(self.register_url, data=payload)
@@ -2675,6 +2681,7 @@ class GoogleRegisterTest(TestCase):
         )
         for label, override, expected_error in invalid_values:
             with self.subTest(case=label):
+                cache.clear()
                 response = self.client.post(self.register_url, data={**self.customer_payload, **override})
 
                 assert_problem(response, 'validation-error', errors=[expected_error])
@@ -3728,6 +3735,20 @@ class CognitoRegisterTest(TestCase):
         self.assertEqual(Hairdresser.objects.count(), 0)
         self.assertEqual(User.preferences.through.objects.count(), 0)
 
+    def test_the_eleventh_sign_up_in_an_hour_is_throttled_and_creates_nothing(self):
+        for i in range(10):
+            self.client.post(self.register_url, data=_register_payload(
+                email=f'conta{i}@example.com', phone=f'9299100000{i}',
+            ))
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='extra@example.com'))
+
+        assert_problem(response, 'too-many-requests')
+        self.assertEqual(User.objects.count(), 10)
+        self.assertFalse(User.objects.filter(email='extra@example.com').exists())
+        self.assertEqual(self.fake.calls, [])
+
     def test_customer_and_hairdresser_are_created_with_the_cognito_sub_and_no_password(self):
         for payload, model in ((_register_payload(), Customer), (_hairdresser_payload(), Hairdresser)):
             with self.subTest(role=payload['role']):
@@ -3918,6 +3939,18 @@ class CognitoLoginTest(TestCase):
     def _assert_no_cookies(self, response):
         self.assertNotIn('jwt', response.cookies)
         self.assertNotIn('refresh_token', response.cookies)
+
+    def test_the_eleventh_login_in_a_minute_is_throttled_without_reaching_cognito(self):
+        statuses = [self._login(password=f'Errada{i}').status_code for i in range(10)]
+        self.fake.calls.clear()
+
+        response = self._login()
+
+        self.assertEqual(statuses, [status.HTTP_401_UNAUTHORIZED] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+        self._assert_no_cookies(response)
 
     def test_login_sets_the_access_and_refresh_cookies_and_the_session_is_accepted(self):
         response = self._login()
@@ -4284,6 +4317,88 @@ class CognitoDeleteAccountTest(TestCase):
                 self.assertTrue(User.objects.filter(email='nova@example.com').exists())
                 self.assertIn('nova@example.com', self.fake.users)
 
+    def _hairdresser_with_bookings(self):
+        """A hairdresser account (logged in) with a service, availability, a manual block and a past and a future booking."""
+        self.client.post(reverse('register'), data=_hairdresser_payload(profile_picture=make_upload('foto.png', fmt='PNG')))
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        hairdresser = Hairdresser.objects.get(user__email='cabelo@example.com')
+        customer = Customer.objects.get(user__email='nova@example.com')
+        service = Service.objects.create(name='Corte', price=50, duration=60, hairdresser=hairdresser)
+        Availability.objects.create(
+            hairdresser=hairdresser, weekday='monday', start_time=datetime.time(9), end_time=datetime.time(17)
+        )
+        now = timezone.now().replace(microsecond=0)
+        for start in (now - datetime.timedelta(days=7), now + datetime.timedelta(days=7), now + datetime.timedelta(days=8)):
+            Agenda.objects.create(start_time=start, end_time=start + datetime.timedelta(hours=1),
+                                  hairdresser=hairdresser, service=service)
+        past = Reserve.objects.create(start_time=now - datetime.timedelta(days=7), customer=customer, service=service)
+        Reserve.objects.create(start_time=now + datetime.timedelta(days=7), customer=customer, service=service)
+        past.review = Review.objects.create(
+            rating=5, customer=customer, hairdresser=hairdresser, picture=make_upload('corte.png', fmt='PNG')
+        )
+        past.save()
+        return hairdresser
+
+    def test_a_hairdresser_account_is_deleted_with_its_services_agenda_and_cancelled_bookings(self):
+        hairdresser = self._hairdresser_with_bookings()
+        pictures = [hairdresser.user.profile_picture.name, Review.objects.get().picture.name]
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertNotIn('cabelo@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='cabelo@example.com').exists())
+        for model in (Hairdresser, Service, Availability, Agenda, Reserve, Review):
+            with self.subTest(model=model.__name__):
+                self.assertFalse(model.objects.exists())
+        for name in pictures:
+            with self.subTest(picture=name):
+                self.assertFalse(default_storage.exists(name))
+        self.assertTrue(User.objects.filter(email='nova@example.com').exists())
+
+    def test_a_customer_account_is_deleted_with_its_bookings_and_frees_the_agenda(self):
+        hairdresser = self._hairdresser_with_bookings()
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        picture = Review.objects.get().picture.name
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(Customer.objects.exists())
+        self.assertFalse(Reserve.objects.exists())
+        self.assertFalse(Review.objects.exists())
+        self.assertFalse(default_storage.exists(picture))
+        # Only the slot without a booking (the hairdresser's own block) is left in the agenda.
+        self.assertEqual(Agenda.objects.count(), 1)
+        self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
+
+    def test_a_cognito_outage_keeps_the_hairdresser_rows_and_pictures(self):
+        hairdresser = self._hairdresser_with_bookings()
+        picture = hairdresser.user.profile_picture.name
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('cabelo@example.com', self.fake.users)
+        self.assertEqual(Reserve.objects.count(), 2)
+        self.assertEqual(Agenda.objects.count(), 3)
+        self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
+        self.assertTrue(Review.objects.exists())
+        self.assertTrue(default_storage.exists(picture))
+
     def test_google_accounts_are_deleted_without_calling_cognito(self):
         google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
         self.fake.calls.clear()
@@ -4331,6 +4446,51 @@ class UpdateProfileEmailTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
+
+
+class RatingIsNotUserSettableTest(TestCase):
+    """The rating ranks hairdressers publicly, so neither sign-up nor PATCH /api/users/me takes it from the body."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_sign_up_by_email_ignores_the_rating(self):
+        for payload in (_register_payload(rating=1), _hairdresser_payload(rating=32767)):
+            with self.subTest(role=payload['role']):
+                response = self.client.post(reverse('register'), data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(User.objects.get(email=payload['email']).rating, 5)
+
+    def test_sign_up_with_google_ignores_the_rating(self):
+        payload = {
+            **_register_payload(rating=32767),
+            'google_signup_token': create_signup_token('ana@gmail.com', 'google-sub-123'),
+        }
+
+        response = self.client.post(reverse('register'), data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.get(email='ana@gmail.com').rating, 5)
+
+    def test_patch_ignores_the_rating_and_updates_the_other_fields(self):
+        self.client.post(reverse('register'), data=_hairdresser_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+        response = self.client.patch(
+            reverse('current_user'),
+            data=json.dumps({'rating': 32767, 'first_name': 'Trocado'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(email='cabelo@example.com')
+        self.assertEqual(user.rating, 5)
+        self.assertEqual(user.first_name, 'Trocado')
 
 
 class UpdateProfilePhoneTest(TestCase):
@@ -4495,3 +4655,31 @@ class GeminiChatViewTest(TestCase):
 
         self.assertEqual(statuses, [200] * 10 + [429])
         self.assertEqual(completion.call_count, 10)
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_a_spoofed_x_forwarded_for_does_not_escape_the_throttle(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+        for i in range(10):
+            self.client.post(self.url, data=self.payload, content_type='application/json',
+                             HTTP_X_FORWARDED_FOR=f'10.9.0.{i}')
+
+        response = self.client.post(self.url, data=self.payload, content_type='application/json',
+                                    HTTP_X_FORWARDED_FOR='10.9.1.1')
+
+        assert_problem(response, 'too-many-requests')
+        self.assertEqual(completion.call_count, 10)
+
+    @override_settings(REST_FRAMEWORK={**settings.REST_FRAMEWORK, 'NUM_PROXIES': 1})
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_behind_one_proxy_the_throttle_counts_the_ip_the_proxy_appended(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+
+        def post(forwarded_for):
+            return self.client.post(self.url, data=self.payload, content_type='application/json',
+                                    HTTP_X_FORWARDED_FOR=forwarded_for)
+
+        for i in range(10):
+            post(f'10.9.0.{i}, 203.0.113.7')
+
+        assert_problem(post('10.9.1.1, 203.0.113.7'), 'too-many-requests')
+        self.assertEqual(post('203.0.113.8').status_code, 200)

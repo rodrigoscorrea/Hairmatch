@@ -12,6 +12,10 @@ on:
       - develop
       - main
 
+# The job only checks out and runs the tests: the token needs no write access.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Django Tests

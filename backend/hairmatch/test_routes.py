@@ -1,8 +1,11 @@
+import importlib
 import re
 
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import get_resolver
 from django.urls.resolvers import URLPattern, URLResolver
+
+import hairmatch.urls
 
 # The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49), one (method, route) pair per row.
 # `{id}` is an integer segment and `{cep}` is free text.
@@ -151,3 +154,21 @@ class RouteBehaviorTests(TestCase):
     def test_non_integer_id_answers_404(self):
         """RT-81."""
         self.assert_problem(self.client.get('/api/services/abc'), 404, 'not-found')
+
+
+class AdminRouteTests(SimpleTestCase):
+    """The Django admin is only mounted with DEBUG; the test runner runs with DEBUG=False."""
+
+    def _route_prefixes_with_debug(self, debug):
+        with override_settings(DEBUG=debug):
+            module = importlib.reload(hairmatch.urls)
+        self.addCleanup(importlib.reload, hairmatch.urls)
+        return [str(pattern.pattern) for pattern in module.urlpatterns]
+
+    def test_admin_is_not_routed_without_debug(self):
+        self.assertEqual(self.client.get('/admin/').status_code, 404)
+        self.assertEqual(self.client.get('/admin/login/').status_code, 404)
+
+    def test_admin_is_mounted_only_when_debug_is_on(self):
+        self.assertNotIn('admin/', self._route_prefixes_with_debug(False))
+        self.assertIn('admin/', self._route_prefixes_with_debug(True))

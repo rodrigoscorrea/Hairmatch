@@ -22,6 +22,8 @@ from .models import Review
 from .serializers import ReviewSerializer
 
 RATING_DETAIL = 'This field must be a number.'
+RATING_RANGE_DETAIL = 'The rating must be between 1 and 5.'
+MIN_RATING, MAX_RATING = 1, 5
 
 
 def _is_id(value):
@@ -35,6 +37,16 @@ def _parse_rating(value):
     except (TypeError, ValueError):
         return None
     return rating if math.isfinite(rating) else None
+
+
+def _rating_error(value):
+    """The `errors` item for a rating that is not a number from 1 to 5, or None for a valid one."""
+    rating = _parse_rating(value)
+    if rating is None:
+        return body_error('rating', RATING_DETAIL)
+    if not MIN_RATING <= rating <= MAX_RATING:
+        return body_error('rating', RATING_RANGE_DETAIL)
+    return None
 
 
 # 2 - Cookie-based views (authenticated user)
@@ -58,8 +70,9 @@ class CreateReview(APIView):
         for field in ('reserve', 'hairdresser'):
             if data.get(field) and not _is_id(data[field]):
                 errors.append(body_error(field, 'This field must be an integer.'))
-        if data.get('rating') and _parse_rating(data['rating']) is None:
-            errors.append(body_error('rating', RATING_DETAIL))
+        rating_error = _rating_error(data['rating']) if data.get('rating') else None
+        if rating_error:
+            errors.append(rating_error)
         if errors:
             raise validation_problem(errors)
         rating = _parse_rating(data['rating'])
@@ -120,13 +133,13 @@ class UpdateReview(APIView):
         data = json_object(request)
         if 'rating' not in data:
             raise validation_problem([body_error('rating', 'This field is required.')])
-        rating = _parse_rating(data['rating'])
-        if rating is None:
-            raise validation_problem([body_error('rating', RATING_DETAIL)])
+        rating_error = _rating_error(data['rating'])
+        if rating_error:
+            raise validation_problem([rating_error])
 
-        review.rating = rating
+        review.rating = _parse_rating(data['rating'])
         review.comment = data.get('comment', review.comment)
-        review.picture = data.get('picture', review.picture)
+        # The picture only arrives as an upload on create: a JSON string here would become an arbitrary storage key.
         review.save()
         return JsonResponse({'message': "Review updated successfully"}, status=200)
     
