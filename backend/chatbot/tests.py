@@ -116,6 +116,15 @@ class AiUtilsTest(TestCase):
 
                 self.assertEqual([m['hairdresser']['user']['first_name'] for m in matches], ['Joana'])
 
+    def test_the_fallback_after_an_error_skips_a_hairdresser_pending_email_confirmation(self):
+        """EMC-39: the except branch of the recommendation lists hairdressers too."""
+        User.objects.filter(pk=self.hairdresser_user2.pk).update(is_active=False)
+
+        with patch.object(Preferences.objects, 'filter', side_effect=Exception('boom')):
+            matches = AiUtils.get_hairdressers_by_preferences(['moderno'])
+
+        self.assertEqual([m['hairdresser']['user']['first_name'] for m in matches], ['Joana'])
+
     def test_get_hairdressers_by_preferences_no_list(self):
         """Test that it returns all hairdressers if no preferences are provided."""
         matches = AiUtils.get_hairdressers_by_preferences([], limit=2)
@@ -391,6 +400,26 @@ class ChatbotViewTest(TestCase):
         mock_send_message.assert_called_with(self.sender_number, ResponseMessage.SERVICE_TYPE_SEARCH)
         self.assertEqual(user_states.get(self.sender_number), 'collecting_preferences')
         self.assertIn(self.sender_number, user_chats) # Chat session should be created
+
+    @patch('chatbot.views.AiUtils.send_whatsapp_message')
+    def test_name_search_finds_an_active_hairdresser_and_never_a_pending_one(self, mock_send_message):
+        """EMC-39: the search by name offers only hairdressers whose e-mail is confirmed."""
+        for is_active, expected_ids in ((True, [self.hairdresser1.id]), (False, None)):
+            with self.subTest(is_active=is_active):
+                User.objects.filter(pk=self.hairdresser_user1.pk).update(is_active=is_active)
+                recommended_or_searched_hairdressers.pop(self.sender_number, None)
+                user_states[self.sender_number] = 'find_specific_hairdresser'
+
+                response = self.client.post(
+                    self.evolution_api_url, data=self._create_webhook_payload("joana"), content_type='application/json'
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(recommended_or_searched_hairdressers.get(self.sender_number), expected_ids)
+                if expected_ids is None:
+                    self.assertIn("Não encontrei nenhum cabeleireiro", mock_send_message.call_args[0][1])
+                else:
+                    self.assertIn("Joana Silva", mock_send_message.call_args[0][1])
 
     @patch('chatbot.views.AiUtils.send_whatsapp_message')
     @patch('chatbot.views.get_available_slots')
