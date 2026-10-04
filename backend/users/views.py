@@ -24,7 +24,7 @@ from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
 from django.core.files.storage import default_storage
-from django.db import connection, transaction
+from django.db import IntegrityError, connection, transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
     CUSTOMER_REQUIRED_DETAIL,
@@ -278,6 +278,12 @@ class RegisterView(APIView):
             failure = problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
         except Problem as problem:
             failure = problem_response(request, problem.slug, problem.detail, problem.errors)
+        except IntegrityError:
+            # A sign-up that ran at the same time took the e-mail or the phone after the checks above.
+            if User.objects.filter(email__iexact=email).exists():
+                # The pool user with this e-mail is the other request's: it is not discarded.
+                return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
+            failure = problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
         except Exception:
             logger.exception('E-mail sign-up failed')
             failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
@@ -299,7 +305,8 @@ class RegisterView(APIView):
         try:
             return cognito.sign_up(email, password)
         except UserAlreadyExists:
-            if cognito.admin_get_status(email) != 'UNCONFIRMED':
+            # A user here owns that pool user (a request that is signing up at the same time): not an orphan.
+            if User.objects.filter(email__iexact=email).exists() or cognito.admin_get_status(email) != 'UNCONFIRMED':
                 raise
             cognito.admin_delete_user(email)
             return cognito.sign_up(email, password)

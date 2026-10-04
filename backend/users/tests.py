@@ -45,6 +45,8 @@ from .google_auth import verify_google_id_token, GoogleTokenError
 from google.auth.exceptions import GoogleAuthError
 import requests as http_requests
 from django.core.cache import cache
+from django.db import IntegrityError, connection
+from .views import RegisterView
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 import os
 import tempfile
@@ -4636,6 +4638,58 @@ class CognitoRegisterTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_a_pool_user_whose_email_a_user_here_already_has_is_not_an_orphan(self):
+        """EMC-10: the precondition is that no User has the e-mail. A sign-up running at the same time must not delete it."""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        _create_plain_user(email='nova@example.com', phone='5592990009999')
+        self.fake.calls.clear()
+
+        with self.assertRaises(UserAlreadyExists):
+            RegisterView._sign_up('nova@example.com', 'Senha123')
+
+        self.assertNotIn('admin_delete_user', self._operations())
+        self.assertIn('nova@example.com', self.fake.users)
+
+    def test_a_sign_up_that_loses_the_race_for_the_email_answers_409_and_keeps_the_winners_pool_user(self):
+        """Edge case: two sign-ups with the same e-mail at the same time; the unique constraint answers 409."""
+        def winner_commits_first(email, password):
+            _create_plain_user(email=email, phone='5592990009999')
+            return 'loser-sub'
+
+        with patch.object(RegisterView, '_sign_up', side_effect=winner_commits_first):
+            response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_email_taken(response)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertNotIn('admin_delete_user', self._operations())
+
+    def test_a_sign_up_that_loses_the_race_for_the_phone_answers_409_and_deletes_its_own_pool_user(self):
+        """Edge case: the phone is taken between the checks and the insert."""
+        def winner_commits_first(email, password):
+            _create_plain_user(email='outro@example.com', phone='5592991234567')
+            return self.fake.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username=email, Password=password
+            )['UserSub']
+
+        with patch.object(RegisterView, '_sign_up', side_effect=winner_commits_first):
+            response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_phone_taken(response)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['outro@example.com'])
+        self.assertEqual(self.fake.users, {})
+
+    def test_an_inactive_account_without_a_cognito_sub_is_never_replaced(self):
+        """EMC-07, EMC-08: only an inactive account that has a cognito_sub is pending."""
+        _create_plain_user(email='nova@example.com', phone='5592991234567', is_active=False)
+
+        by_email = self.client.post(self.register_url, data=_register_payload(phone='92990000000'))
+        by_phone = self.client.post(self.register_url, data=_register_payload(email='b@x.com'))
+
+        assert_email_taken(by_email)
+        assert_phone_taken(by_phone)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertNotIn('admin_delete_user', self._operations())
+
     def test_google_signup_makes_no_cognito_call(self):
         payload = _register_payload(google_signup_token=create_signup_token('ana@gmail.com', 'google-sub-1'))
         del payload['email'], payload['password']
@@ -4926,11 +4980,15 @@ class EmailConfirmationViewTest(TestCase):
         """EMC-48, EMC-49"""
         self.fake.fail_next('confirm_sign_up', EndpointConnectionError(endpoint_url='http://x'))
 
-        with self.assertLogs('users.cognito', 'WARNING') as logs:
+        with self.assertLogs(level='WARNING') as every_logger:
             response = self._confirm()
+        logs = SimpleNamespace(output=[line for line in every_logger.output if 'cognito' in line])
 
         assert_auth_unavailable(response)
         self.assertFalse(self._active())
+        for line in every_logger.output:  # whatever logger the route writes to
+            self.assertNotIn(self.code, line)
+            self.assertNotIn('nova@example.com', line)
         self.assertEqual(len(logs.output), 1)
         self.assertIn('confirm_sign_up', logs.output[0])
         self.assertIn('EndpointConnectionError', logs.output[0])
@@ -5214,6 +5272,17 @@ class CognitoLoginTest(TestCase):
         assert_problem(response, 'email-not-confirmed')
         self._assert_no_cookies(response)
         self.assertEqual(len(response.cookies), 0)
+
+    def test_login_of_a_pending_account_finds_it_whatever_the_case_of_the_email(self):
+        """EMC-25: the pool ignores the case, and so must the pending check."""
+        self._pending_account()
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='pendente@example.com')
+
+        response = self._login('PENDENTE@Example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
 
     def test_login_of_an_account_confirmed_in_the_pool_but_inactive_here_answers_403_without_cookies(self):
         """EMC-25: the emulator signs an UNCONFIRMED user in; the database is the second barrier."""
