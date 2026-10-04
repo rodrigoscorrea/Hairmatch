@@ -4495,3 +4495,31 @@ class GeminiChatViewTest(TestCase):
 
         self.assertEqual(statuses, [200] * 10 + [429])
         self.assertEqual(completion.call_count, 10)
+
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_a_spoofed_x_forwarded_for_does_not_escape_the_throttle(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+        for i in range(10):
+            self.client.post(self.url, data=self.payload, content_type='application/json',
+                             HTTP_X_FORWARDED_FOR=f'10.9.0.{i}')
+
+        response = self.client.post(self.url, data=self.payload, content_type='application/json',
+                                    HTTP_X_FORWARDED_FOR='10.9.1.1')
+
+        assert_problem(response, 'too-many-requests')
+        self.assertEqual(completion.call_count, 10)
+
+    @override_settings(REST_FRAMEWORK={**settings.REST_FRAMEWORK, 'NUM_PROXIES': 1})
+    @patch('users.views.hairdresser_profile_ai_completion')
+    def test_behind_one_proxy_the_throttle_counts_the_ip_the_proxy_appended(self, completion):
+        completion.return_value = JsonResponse({'result': 'Descrição'}, status=200)
+
+        def post(forwarded_for):
+            return self.client.post(self.url, data=self.payload, content_type='application/json',
+                                    HTTP_X_FORWARDED_FOR=forwarded_for)
+
+        for i in range(10):
+            post(f'10.9.0.{i}, 203.0.113.7')
+
+        assert_problem(post('10.9.1.1, 203.0.113.7'), 'too-many-requests')
+        self.assertEqual(post('203.0.113.8').status_code, 200)
