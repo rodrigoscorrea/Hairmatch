@@ -234,10 +234,10 @@ Atualizar `len(CATALOG)` de 36 para 39 em `hairmatch/test_problems.py` e as trê
 
 **Done when**:
 
-- [ ] `test_problems.py` afirma 39 slugs, e cada slug novo tem o status e o título do spec
-- [ ] A tabela de `.specs/features/api-problem-details/spec.md` tem as três linhas (slug, status, título, gatilho e texto em pt-BR do design)
-- [ ] Gate check passes: Quick (`hairmatch`)
-- [ ] Test count: 95 + novos em `hairmatch`, sem remoções
+- [x] `test_problems.py` afirma 39 slugs, e cada slug novo tem o status e o título do spec
+- [x] A tabela de `.specs/features/api-problem-details/spec.md` tem as três linhas (slug, status, título, gatilho e texto em pt-BR do design)
+- [x] Gate check passes: Quick (`hairmatch`)
+- [x] Test count: 95 + novos em `hairmatch`, sem remoções
 
 **Tests**: unit
 **Gate**: quick

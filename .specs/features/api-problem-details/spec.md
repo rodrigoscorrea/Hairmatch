@@ -84,6 +84,8 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | `password-policy` | 400 | Password does not meet the policy | Senha recusada pela política do Cognito | A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número. |
 | `incorrect-current-password` | 400 | Incorrect current password | Senha atual errada na troca de senha | Senha atual incorreta. |
 | `email-change-unsupported` | 400 | Email change not supported | `email` diferente no update da conta | A troca de e-mail não é suportada. |
+| `invalid-confirmation-code` | 400 | Invalid confirmation code | Código de confirmação de e-mail errado, ou e-mail sem conta pendente | Código inválido. Confira o e-mail ou peça um novo código. |
+| `confirmation-code-expired` | 400 | Confirmation code expired | Código de confirmação de e-mail vencido (24 h) | Este código venceu. Peça um novo código. |
 | `invalid-session` | 401 | Invalid or expired session | Sessão ausente, inválida ou expirada em endpoint protegido | Sua sessão expirou. Entre novamente. |
 | `invalid-credentials` | 401 | Invalid credentials | E-mail ou senha errados no login | E-mail ou senha inválidos. |
 | `session-expired` | 401 | Session expired | Refresh recusado | Sessão expirada. Entre novamente. |
@@ -94,6 +96,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | `customer-required` | 403 | Customer account required | Ação de cliente chamada por quem não é cliente | Apenas clientes podem realizar esta ação. |
 | `google-account-login` | 403 | Account uses Google sign-in | Login ou troca de senha por e-mail em conta Google | Esta conta usa login com Google. Use o botão Entrar com Google. |
 | `google-email-unverified` | 403 | Google email not verified | E-mail do Google não verificado | Seu e-mail do Google não está verificado. |
+| `email-not-confirmed` | 403 | Email not confirmed | Login de conta de e-mail/senha que ainda não confirmou o e-mail | Confirme seu e-mail para entrar. |
 | `not-found` | 404 | Resource not found | Recurso inexistente ou rota inexistente sob `/api/` | Não encontramos o que você procurou. |
 | `postal-code-not-found` | 404 | Postal code not found | CEP válido sem endereço nos provedores | CEP não encontrado. Confira o número ou preencha o endereço manualmente. |
 | `method-not-allowed` | 405 | Method not allowed | Método HTTP não suportado pela rota | Não foi possível processar a solicitação. Tente novamente. |
