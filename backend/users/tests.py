@@ -2667,6 +2667,7 @@ class GoogleRegisterTest(TestCase):
 
         for label, base_payload, missing_field in cases:
             with self.subTest(case=label):
+                cache.clear()  # 13 sign-ups from one IP would pass the 10/hour register throttle
                 payload = {k: v for k, v in base_payload.items() if k != missing_field}
 
                 response = self.client.post(self.register_url, data=payload)
@@ -2680,6 +2681,7 @@ class GoogleRegisterTest(TestCase):
         )
         for label, override, expected_error in invalid_values:
             with self.subTest(case=label):
+                cache.clear()
                 response = self.client.post(self.register_url, data={**self.customer_payload, **override})
 
                 assert_problem(response, 'validation-error', errors=[expected_error])
@@ -3733,6 +3735,20 @@ class CognitoRegisterTest(TestCase):
         self.assertEqual(Hairdresser.objects.count(), 0)
         self.assertEqual(User.preferences.through.objects.count(), 0)
 
+    def test_the_eleventh_sign_up_in_an_hour_is_throttled_and_creates_nothing(self):
+        for i in range(10):
+            self.client.post(self.register_url, data=_register_payload(
+                email=f'conta{i}@example.com', phone=f'9299100000{i}',
+            ))
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='extra@example.com'))
+
+        assert_problem(response, 'too-many-requests')
+        self.assertEqual(User.objects.count(), 10)
+        self.assertFalse(User.objects.filter(email='extra@example.com').exists())
+        self.assertEqual(self.fake.calls, [])
+
     def test_customer_and_hairdresser_are_created_with_the_cognito_sub_and_no_password(self):
         for payload, model in ((_register_payload(), Customer), (_hairdresser_payload(), Hairdresser)):
             with self.subTest(role=payload['role']):
@@ -3923,6 +3939,18 @@ class CognitoLoginTest(TestCase):
     def _assert_no_cookies(self, response):
         self.assertNotIn('jwt', response.cookies)
         self.assertNotIn('refresh_token', response.cookies)
+
+    def test_the_eleventh_login_in_a_minute_is_throttled_without_reaching_cognito(self):
+        statuses = [self._login(password=f'Errada{i}').status_code for i in range(10)]
+        self.fake.calls.clear()
+
+        response = self._login()
+
+        self.assertEqual(statuses, [status.HTTP_401_UNAUTHORIZED] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+        self._assert_no_cookies(response)
 
     def test_login_sets_the_access_and_refresh_cookies_and_the_session_is_accepted(self):
         response = self._login()

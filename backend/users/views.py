@@ -157,9 +157,21 @@ def _discard_cognito_user(email):
 # 2 - user accessible views - cookie managed
 # 3 - user not acessible views - for admin or internal use only
 
+class RegisterThrottle(AnonRateThrottle):
+    scope = 'register'
+    rate = '10/hour'
+
+
+class LoginThrottle(AnonRateThrottle):
+    # Cognito has its own lockout; this caps the password guesses that reach it from one IP.
+    scope = 'login'
+    rate = '10/min'
+
+
 # 1 - The following views are related to user authentication procedures
 class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    throttle_classes = [RegisterThrottle]
 
     def post(self, request):
         data = request_data(request)
@@ -330,6 +342,8 @@ def _create_role_profile(user, data):
 
 
 class LoginView(APIView):
+    throttle_classes = [LoginThrottle]
+
     def post(self, request):
         data = json_object(request)
         errors = _string_field_errors(data, ['email', 'password'])
