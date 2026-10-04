@@ -657,10 +657,10 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] `docker restart hairmatch_ministack` com o volume atual. `describe-user-pool` mostra o template, a política de senha e `AutoVerifiedAttributes=["email"]`; `describe-user-pool-client` mostra `PreventUserExistenceErrors=ENABLED`, os auth flows e as validades; o `Id` do pool não mudou
-- [ ] Segundo restart → mesmo estado, e um único `hairmatch-dev` em `list-user-pools`
-- [ ] Login com um cabeleireiro do seed continua respondendo 200
-- [ ] Gate check passes: Build (verificação manual acima registrada no commit)
+- [x] `docker restart hairmatch_ministack` com o volume atual. `describe-user-pool` mostra o template, a política de senha e `AutoVerifiedAttributes=["email"]`; `describe-user-pool-client` mostra `PreventUserExistenceErrors=ENABLED`, os auth flows e as validades; o `Id` do pool não mudou
+- [x] Segundo restart → mesmo estado, e um único `hairmatch-dev` em `list-user-pools`
+- [x] Login com um cabeleireiro do seed continua respondendo 200
+- [x] Gate check passes: Build (verificação manual acima registrada no commit)
 
 **Tests**: none
 **Gate**: build

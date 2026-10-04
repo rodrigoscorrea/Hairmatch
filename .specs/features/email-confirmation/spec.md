@@ -324,8 +324,8 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| EMC-01 | P1: Cognito local, AC1 | Tasks | Pending |
-| EMC-02 | P1: Cognito local, AC2 | Tasks | Pending |
+| EMC-01 | P1: Cognito local, AC1 | Tasks | Verified |
+| EMC-02 | P1: Cognito local, AC2 | Tasks | Verified |
 | EMC-03 | P1: Cadastro pendente, AC1 | Tasks | Implementing |
 | EMC-04 | P1: Cadastro pendente, AC2 | Tasks | Implementing |
 | EMC-05 | P1: Cadastro pendente, AC3 | Tasks | Implementing |
