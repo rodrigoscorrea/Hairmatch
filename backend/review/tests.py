@@ -338,6 +338,20 @@ class CreateReviewProblemsTest(ReviewsTestCase):
                 ])
         self.assertEqual(Review.objects.filter(comment='ok').count(), 0)
 
+    def test_a_rating_outside_1_to_5_is_refused(self):
+        for rating in ('0', '0.9', '5.1', '6', '-1e300'):
+            with self.subTest(rating=rating):
+                assert_problem(self._post(rating=rating), 'validation-error', errors=[
+                    {'pointer': '#/rating', 'detail': 'The rating must be between 1 and 5.'},
+                ])
+        self.assertEqual(Review.objects.filter(comment='ok').count(), 0)
+
+    def test_the_lowest_rating_is_accepted(self):
+        response = self._post(rating='1')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.get(comment='ok').rating, 1)
+
     def test_ids_that_are_not_integers_are_refused(self):
         assert_problem(self._post(reserve='abc', hairdresser='x'), 'validation-error', errors=[
             {'pointer': '#/reserve', 'detail': 'This field must be an integer.'},
@@ -407,6 +421,30 @@ class UpdateReviewProblemsTest(ReviewsTestCase):
         ])
         self.review.refresh_from_db()
         self.assertEqual(self.review.rating, 4)
+
+    def test_a_rating_outside_1_to_5_answers_400_and_keeps_the_review(self):
+        for rating in (0, 6, -1e300):
+            with self.subTest(rating=rating):
+                assert_problem(self._put({'rating': rating}), 'validation-error', errors=[
+                    {'pointer': '#/rating', 'detail': 'The rating must be between 1 and 5.'},
+                ])
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.rating, 4)
+
+    def test_the_bounds_of_the_rating_are_accepted(self):
+        for rating in (1, 5):
+            with self.subTest(rating=rating):
+                self.assertEqual(self._put({'rating': rating}).status_code, status.HTTP_200_OK)
+                self.review.refresh_from_db()
+                self.assertEqual(self.review.rating, rating)
+
+    def test_a_picture_in_the_body_is_ignored(self):
+        response = self._put({'rating': 5, 'picture': '../../outro-usuario/profile_pictures/x.webp'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.review.refresh_from_db()
+        self.assertFalse(self.review.picture)
+        self.assertEqual(self.review.rating, 5)
 
 
 class ListReviewTest(ReviewsTestCase):
