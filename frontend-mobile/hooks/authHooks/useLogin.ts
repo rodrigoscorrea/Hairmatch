@@ -1,15 +1,18 @@
 // hooks/useLogin.ts
 
 import { useState } from 'react'; 
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/app/_layout';
 import { ERROR_MESSAGES } from '@/constants/errorMessages';
 import { useRegistration } from '@/contexts/RegistrationContext';
+import { EMAIL_CONFIRMED_PARAM } from '@/hooks/authHooks/useConfirmEmail';
 
 export const useLogin = () => {
     const router = useRouter();
     const { signIn } = useAuth();
-    const { resetRegistration } = useRegistration();
+    const { resetRegistration, setPendingConfirmation } = useRegistration();
+    const params = useLocalSearchParams();
+    const notice = params[EMAIL_CONFIRMED_PARAM] === '1' ? 'E-mail confirmado. Entre com sua senha.' : '';
 
     const [formData, setFormData] = useState({
         email: '',
@@ -59,6 +62,13 @@ export const useLogin = () => {
         const result = await signIn(formData.email, formData.password);
 
         if (!result.success) {
+            if (result.slug === 'email-not-confirmed') {
+                // Right password, e-mail not confirmed yet: the confirmation screen takes over, without an error modal.
+                // The password stays in memory only, to sign in once the code is accepted.
+                setPendingConfirmation({ email: formData.email, password: formData.password });
+                router.push('/(auth)/confirm-email');
+                return;
+            }
             setErrorModal({ visible: true, message: result.error || 'Ocorreu um erro desconhecido.' });
         }
     };
@@ -69,6 +79,7 @@ export const useLogin = () => {
         handleGoRegister,
         errors,
         errorModal,
+        notice,
         handleLogin,
         closeErrorModal: () => setErrorModal({ ...errorModal, visible: false }),
         passwordVisibility: {

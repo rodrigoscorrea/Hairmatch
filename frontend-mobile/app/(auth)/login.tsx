@@ -23,6 +23,7 @@ const LoginScreen = () => {
     handleGoRegister,
     errors,
     errorModal,
+    notice,
     handleLogin,
     closeErrorModal,
     passwordVisibility,
@@ -43,6 +44,7 @@ const LoginScreen = () => {
       </View>
 
       <View style={styles.formContainer}>
+        {notice !== '' && <Text style={googleStyles.notice}>{notice}</Text>}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Insira seu email</Text>
           <TextInput
@@ -110,6 +112,12 @@ const LoginScreen = () => {
 };
 
 const googleStyles = StyleSheet.create({
+  notice: {
+    color: '#2E7D32',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',

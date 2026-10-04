@@ -798,8 +798,8 @@ Sem `pendingConfirmation`, a tela volta para o login.
 
 **Done when**:
 
-- [ ] O tipo de retorno de `signIn` inclui `slug?: ProblemSlug`, e os outros chamadores continuam compilando
-- [ ] Gate check passes: App, sem erro novo
+- [x] O tipo de retorno de `signIn` inclui `slug?: ProblemSlug`, e os outros chamadores continuam compilando
+- [x] Gate check passes: App, sem erro novo
 
 **Tests**: none
 **Gate**: app
