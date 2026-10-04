@@ -3219,6 +3219,120 @@ class FakeCognitoIdpTest(SimpleTestCase):
             self._login()
         self.assertIn('AccessToken', self._login())
 
+    def _sign_up_pending(self, email='a@x.com'):
+        self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, Password='Senha123'
+        )
+
+    def _confirm(self, code, email='a@x.com'):
+        return self.cognito.confirm_sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, ConfirmationCode=code
+        )
+
+    def _resend(self, email='a@x.com'):
+        return self.cognito.resend_confirmation_code(
+            ClientId=cognito_fake.CLIENT_ID, Username=email
+        )
+
+    def _status(self, email='a@x.com'):
+        return self.cognito.admin_get_user(
+            UserPoolId=cognito_fake.POOL_ID, Username=email
+        )['UserStatus']
+
+    def _error_code(self, call, *args):
+        with self.assertRaises(ClientError) as ctx:
+            call(*args)
+        return ctx.exception.response['Error']['Code']
+
+    def test_sign_up_stores_a_six_digit_code_and_the_right_code_confirms_the_user(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertRegex(code, r'^\d{6}$')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+        self._confirm(code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_confirming_with_a_different_code_is_a_mismatch_and_leaves_the_user_unconfirmed(self):
+        self._sign_up_pending()
+        wrong = '000000' if self.cognito.confirmation_code('a@x.com') != '000000' else '111111'
+
+        self.assertEqual(self._error_code(self._confirm, wrong), 'CodeMismatchException')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+
+    def test_confirming_an_expired_code_is_rejected_as_expired(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self.cognito.expire_code('a@x.com')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'ExpiredCodeException')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+
+    def test_confirming_an_already_confirmed_user_is_not_authorized(self):
+        self._sign_up_confirmed()
+        code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'NotAuthorizedException')
+
+    def test_an_unknown_user_looks_like_a_wrong_code_and_a_delivered_resend(self):
+        self.assertEqual(self._error_code(self._confirm, '123456', 'nobody@x.com'), 'CodeMismatchException')
+        details = self._resend('nobody@x.com')['CodeDeliveryDetails']
+        self.assertEqual(details['DeliveryMedium'], 'EMAIL')
+        self.assertEqual(self.cognito.users, {})
+
+    def test_resend_issues_a_new_code_and_the_old_one_stops_working(self):
+        self._sign_up_pending()
+        old_code = self.cognito.confirmation_code('a@x.com')
+
+        self._resend()
+        new_code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertRegex(new_code, r'^\d{6}$')
+        self.assertNotEqual(new_code, old_code)
+        self.assertEqual(self._error_code(self._confirm, old_code), 'CodeMismatchException')
+        self._confirm(new_code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_resend_gives_an_expired_code_a_fresh_validity(self):
+        self._sign_up_pending()
+        self.cognito.expire_code('a@x.com')
+
+        self._resend()
+        self._confirm(self.cognito.confirmation_code('a@x.com'))
+
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_resend_for_a_confirmed_user_is_an_invalid_parameter(self):
+        self._sign_up_confirmed()
+
+        self.assertEqual(self._error_code(self._resend), 'InvalidParameterException')
+
+    def test_confirm_and_resend_are_case_insensitive_on_the_email(self):
+        self._sign_up_pending(email='A@x.com')
+
+        self._resend('a@X.com')
+        self._confirm(self.cognito.confirmation_code('A@x.com'), 'a@X.com')
+
+        self.assertEqual(self._status('A@x.com'), 'CONFIRMED')
+
+    def test_fail_next_on_confirm_sign_up_raises_exactly_once(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self.cognito.fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'TooManyFailedAttemptsException')
+        self._confirm(code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_calls_record_the_operation_but_never_the_confirmation_code(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self._confirm(code)
+
+        names = [name for name, _ in self.cognito.calls]
+        self.assertIn('confirm_sign_up', names)
+        self.assertNotIn(code, json.dumps(self.cognito.calls))
+
 
 class CognitoServiceTest(SimpleTestCase):
     def setUp(self):

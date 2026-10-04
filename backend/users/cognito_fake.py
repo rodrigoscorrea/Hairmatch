@@ -8,6 +8,7 @@ key generated once per process; ``jwks()`` publishes the matching public key.
 """
 import json
 import re
+import secrets
 import time
 import uuid
 from collections import defaultdict, deque
@@ -26,6 +27,7 @@ CLIENT_ID = 'fakeclientid0123456789'
 KID = 'fake-key-1'
 ACCESS_TOKEN_TTL = 3600
 REFRESH_TOKEN_TTL = 30 * 24 * 3600
+CONFIRMATION_CODE_TTL = 24 * 3600
 
 PASSWORD_MIN_LENGTH = 8
 
@@ -109,6 +111,21 @@ class FakeCognitoIdp:
         self.access_tokens[token] = sub
         return token
 
+    def confirmation_code(self, email):
+        """The code Cognito would have e-mailed to this user."""
+        return self.users[email.lower()]['code']
+
+    def expire_code(self, email):
+        self.users[email.lower()]['code_expires_at'] = time.time() - 1
+
+    def _issue_code(self, user):
+        previous = user.get('code')
+        code = previous
+        while code == previous:
+            code = f'{secrets.randbelow(10 ** 6):06d}'
+        user['code'] = code
+        user['code_expires_at'] = time.time() + CONFIRMATION_CODE_TTL
+
     def fail_next(self, operation, error):
         """Make the next ``operation`` call raise ``error`` (an exception or a Cognito error code)."""
         self._failures[operation].append(error)
@@ -152,7 +169,41 @@ class FakeCognitoIdp:
             'password': Password,
             'confirmed': False,
         }
+        self._issue_code(self.users[key])
         return {'UserConfirmed': False, 'UserSub': sub}
+
+    def confirm_sign_up(self, ClientId, Username, ConfirmationCode, **kwargs):
+        # The code is not recorded: it is a secret and the calls list is read by tests that log it.
+        self._begin('confirm_sign_up', ClientId=ClientId, Username=Username)
+        user = self.users.get(Username.lower())
+        if user is None:
+            # PreventUserExistenceErrors is on: an unknown user looks like a wrong code.
+            raise _client_error('CodeMismatchException', 'ConfirmSignUp')
+        if user['confirmed']:
+            raise _client_error('NotAuthorizedException', 'ConfirmSignUp')
+        if time.time() > user['code_expires_at']:
+            raise _client_error('ExpiredCodeException', 'ConfirmSignUp')
+        if ConfirmationCode != user['code']:
+            raise _client_error('CodeMismatchException', 'ConfirmSignUp')
+        user['confirmed'] = True
+        return {}
+
+    def resend_confirmation_code(self, ClientId, Username, **kwargs):
+        self._begin('resend_confirmation_code', ClientId=ClientId, Username=Username)
+        user = self.users.get(Username.lower())
+        if user is not None:
+            if user['confirmed']:
+                raise _client_error(
+                    'InvalidParameterException', 'ResendConfirmationCode', 'User is already confirmed.'
+                )
+            self._issue_code(user)
+        return {
+            'CodeDeliveryDetails': {
+                'Destination': 'a***@x***',
+                'DeliveryMedium': 'EMAIL',
+                'AttributeName': 'email',
+            }
+        }
 
     def admin_confirm_sign_up(self, UserPoolId, Username, **kwargs):
         self._begin('admin_confirm_sign_up', UserPoolId=UserPoolId, Username=Username)

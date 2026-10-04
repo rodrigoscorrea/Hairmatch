@@ -152,18 +152,18 @@ T22 → T23
 
 **Done when**:
 
-- [ ] Baseline confirmada: `python manage.py test --noinput` passa com 619 testes antes da mudança
-- [ ] `FakeCognitoIdpTest` cobre:
-  - [ ] `sign_up` → `confirmation_code(email)` tem 6 dígitos; `confirm_sign_up` com ele → `admin_get_user` mostra `CONFIRMED`
-  - [ ] Código diferente → `ClientError` `CodeMismatchException`, e o usuário segue `UNCONFIRMED`
-  - [ ] `expire_code(email)` + código certo → `ExpiredCodeException`
-  - [ ] Usuário já `CONFIRMED` → `NotAuthorizedException`
-  - [ ] Usuário inexistente → `CodeMismatchException` no confirm; `resend_confirmation_code` devolve `CodeDeliveryDetails` sem levantar
-  - [ ] `resend_confirmation_code` gera código novo, e o anterior passa a dar `CodeMismatchException`
-  - [ ] `resend_confirmation_code` para usuário `CONFIRMED` → `InvalidParameterException`
-  - [ ] `fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')` levanta exatamente uma vez
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: 288 + novos em `users`, sem remoções
+- [x] Baseline confirmada: `python manage.py test --noinput` passa com 617 testes executados antes da mudança (o `git grep -c "def test_"` conta 619; a diferença de 2 não foi investigada, e os dois números são acompanhados)
+- [x] `FakeCognitoIdpTest` cobre:
+  - [x] `sign_up` → `confirmation_code(email)` tem 6 dígitos; `confirm_sign_up` com ele → `admin_get_user` mostra `CONFIRMED`
+  - [x] Código diferente → `ClientError` `CodeMismatchException`, e o usuário segue `UNCONFIRMED`
+  - [x] `expire_code(email)` + código certo → `ExpiredCodeException`
+  - [x] Usuário já `CONFIRMED` → `NotAuthorizedException`
+  - [x] Usuário inexistente → `CodeMismatchException` no confirm; `resend_confirmation_code` devolve `CodeDeliveryDetails` sem levantar
+  - [x] `resend_confirmation_code` gera código novo, e o anterior passa a dar `CodeMismatchException`
+  - [x] `resend_confirmation_code` para usuário `CONFIRMED` → `InvalidParameterException`
+  - [x] `fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')` levanta exatamente uma vez
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: 288 + novos em `users`, sem remoções
 
 **Tests**: unit
 **Gate**: quick
