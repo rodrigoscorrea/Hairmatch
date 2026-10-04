@@ -221,5 +221,7 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'hairmatch_cache',
+        # The default of 300 entries would evict the throttle counters under load, and the CEP cache shares the table.
+        'OPTIONS': {'MAX_ENTRIES': 100000},
     }
 }

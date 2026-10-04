@@ -468,3 +468,26 @@ class DatabaseCacheTest(TestCase):
         with connection.cursor() as cursor:
             cursor.execute('SELECT COUNT(*) FROM hairmatch_cache')
             self.assertEqual(cursor.fetchone()[0], 1)
+
+    def test_the_cache_keeps_far_more_than_the_django_default_of_300_entries(self):
+        """Culling would evict throttle counters, so a bot could slip past a limit under load."""
+        from django.core.cache import caches
+
+        self.assertGreaterEqual(caches['default']._max_entries, 100000)
+
+    def test_the_migration_creates_the_cache_table_and_can_run_again(self):
+        """EMC-33: the test runner creates the table by itself, so the migration is run on its own here."""
+        import importlib
+        from types import SimpleNamespace
+        from django.db import connection
+
+        migration = importlib.import_module('users.migrations.0011_create_cache_table')
+        editor = SimpleNamespace(connection=connection)
+        with connection.cursor() as cursor:
+            cursor.execute('DROP TABLE hairmatch_cache')
+        self.assertNotIn('hairmatch_cache', connection.introspection.table_names())
+
+        migration.create_cache_table(None, editor)
+        migration.create_cache_table(None, editor)
+
+        self.assertIn('hairmatch_cache', connection.introspection.table_names())
