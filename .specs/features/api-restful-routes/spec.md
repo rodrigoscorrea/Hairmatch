@@ -148,6 +148,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-47 | `DELETE /api/reservations/{id}` | `DELETE /api/reserve/remove/<id>` | parte da reserva | - |
 | RT-48 | `GET /api/hairdressers/{id}/available-slots?service=&date=` | `POST /api/reserve/slots/<id>` com corpo `{service, date}` | nenhuma | POST → GET; corpo → query |
 | RT-49 | `POST /api/chatbot/webhook` | `POST /api/chatbot/test` | nenhuma (como hoje) | - |
+| RT-84 | `POST /api/auth/email-confirmations` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
 
 ---
 

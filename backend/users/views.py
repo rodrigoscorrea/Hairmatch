@@ -6,6 +6,7 @@ from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
 import logging
+import re
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
@@ -32,8 +33,11 @@ from .authentication import (
     authenticated_user,
 )
 from .cognito import (
+    AlreadyConfirmed,
     CognitoError,
     CognitoUnavailable,
+    ExpiredConfirmationCode,
+    InvalidConfirmationCode,
     InvalidCredentials,
     InvalidPassword,
     TooManyRequests,
@@ -41,7 +45,11 @@ from .cognito import (
     UserNotConfirmed,
     get_cognito,
 )
-from .throttles import RegisterEmailThrottle
+from .throttles import (
+    ConfirmEmailThrottle,
+    ConfirmIpThrottle,
+    RegisterEmailThrottle,
+)
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
@@ -69,6 +77,7 @@ EMAIL_TAKEN_DETAIL = 'This email is already registered.'
 INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
 ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
 EMAIL_NOT_CONFIRMED_DETAIL = 'Confirm your email with the code we sent to sign in.'
+CONFIRMATION_CODE_PATTERN = re.compile(r'[0-9]{6}')
 
 
 def normalize_phone(phone):
@@ -442,6 +451,45 @@ class LoginView(APIView):
             'jwt': tokens.access_token
         }
         return response
+
+
+class EmailConfirmationView(APIView):
+    throttle_classes = [ConfirmIpThrottle, ConfirmEmailThrottle]
+
+    def post(self, request):
+        data = request_data(request)
+        errors = _string_field_errors(data, ['email', 'code'])
+        code = data.get('code')
+        if isinstance(code, str) and code and not CONFIRMATION_CODE_PATTERN.fullmatch(code):
+            errors.append(body_error('code', 'The code must have 6 digits.'))
+        if errors:
+            raise validation_problem(errors)
+
+        confirmed = JsonResponse({'message': 'Email confirmed'}, status=200)
+        # An unknown e-mail answers like a wrong code, so this route does not tell which accounts exist.
+        invalid_code = problem_response(request, 'invalid-confirmation-code', 'The confirmation code is invalid.')
+        user = User.objects.filter(email__iexact=data['email'].strip(), cognito_sub__isnull=False).first()
+        if user is None:
+            return invalid_code
+        if user.is_active:
+            return confirmed
+
+        try:
+            get_cognito().confirm_sign_up(user.email, code)
+        except AlreadyConfirmed:
+            pass  # confirmed in the pool earlier; only the database is behind
+        except InvalidConfirmationCode:
+            return invalid_code
+        except ExpiredConfirmationCode:
+            return problem_response(
+                request, 'confirmation-code-expired', 'The confirmation code has expired. Request a new one.'
+            )
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        return confirmed
 
 
 class SessionView(APIView):

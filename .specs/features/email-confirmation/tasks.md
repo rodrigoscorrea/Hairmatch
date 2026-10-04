@@ -517,22 +517,22 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Código lido do fake → 200 `{"message": "Email confirmed"}`, sem `Set-Cookie`, `is_active=True`, e o login seguinte → 200 (EMC-13)
-  - [ ] Código errado → 400 `invalid-confirmation-code`, e a conta segue inativa (EMC-14)
-  - [ ] `expire_code` → 400 `confirmation-code-expired` (EMC-15)
-  - [ ] E-mail sem conta → 400 com o mesmo `type`, `title`, `status` e `detail` do código errado, sem chamadas ao fake (EMC-16)
-  - [ ] Sem `email`, sem `code`, `code="12345"` e `code="abcdef"` → 400 `validation-error` com os `pointer`s, sem chamadas ao fake (EMC-17)
-  - [ ] Conta já ativa → 200, sem chamadas ao fake (EMC-18)
-  - [ ] `fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')` → 429, e a conta segue inativa (EMC-19)
-  - [ ] Confirmada no fake e inativa no Postgres → 200, e `is_active=True` (EMC-20)
-  - [ ] E-mail em outra caixa (`A@X.com`) → 200 (Edge Case)
-  - [ ] 11ª chamada do mesmo IP em 1 minuto → 429 + `Retry-After` (EMC-28)
-  - [ ] 11ª tentativa para o mesmo e-mail vinda de IPs alternados → 429 (EMC-29)
-  - [ ] `EndpointConnectionError` → 503, `is_active` não muda, e o `assertLogs` não contém o código (EMC-48, EMC-49)
-- [ ] `test_routes.py` passa com `('POST', 'auth/email-confirmations')`
-- [ ] Gate check passes: Full
-- [ ] Test count: T11 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Código lido do fake → 200 `{"message": "Email confirmed"}`, sem `Set-Cookie`, `is_active=True`, e o login seguinte → 200 (EMC-13)
+  - [x] Código errado → 400 `invalid-confirmation-code`, e a conta segue inativa (EMC-14)
+  - [x] `expire_code` → 400 `confirmation-code-expired` (EMC-15)
+  - [x] E-mail sem conta → 400 com o mesmo `type`, `title`, `status` e `detail` do código errado, sem chamadas ao fake (EMC-16)
+  - [x] Sem `email`, sem `code`, `code="12345"` e `code="abcdef"` → 400 `validation-error` com os `pointer`s, sem chamadas ao fake (EMC-17)
+  - [x] Conta já ativa → 200, sem chamadas ao fake (EMC-18)
+  - [x] `fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')` → 429, e a conta segue inativa (EMC-19)
+  - [x] Confirmada no fake e inativa no Postgres → 200, e `is_active=True` (EMC-20)
+  - [x] E-mail em outra caixa (`A@X.com`) → 200 (Edge Case)
+  - [x] 11ª chamada do mesmo IP em 1 minuto → 429 + `Retry-After` (EMC-28)
+  - [x] 11ª tentativa para o mesmo e-mail vinda de IPs alternados → 429 (EMC-29)
+  - [x] `EndpointConnectionError` → 503, `is_active` não muda, e o `assertLogs` não contém o código (EMC-48, EMC-49)
+- [x] `test_routes.py` passa com `('POST', 'auth/email-confirmations')`
+- [x] Gate check passes: Full
+- [x] Test count: T11 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: full

@@ -336,14 +336,14 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-10 | P1: Substituição, AC4 | Tasks | Implementing |
 | EMC-11 | P1: Substituição, AC5 | Tasks | Implementing |
 | EMC-12 | P1: Substituição, AC6 | Tasks | Implementing |
-| EMC-13 | P1: Confirmar, AC1 | Tasks | Pending |
-| EMC-14 | P1: Confirmar, AC2 | Tasks | Pending |
-| EMC-15 | P1: Confirmar, AC3 | Tasks | Pending |
-| EMC-16 | P1: Confirmar, AC4 | Tasks | Pending |
-| EMC-17 | P1: Confirmar, AC5 | Tasks | Pending |
-| EMC-18 | P1: Confirmar, AC6 | Tasks | Pending |
-| EMC-19 | P1: Confirmar, AC7 | Tasks | Pending |
-| EMC-20 | P1: Confirmar, AC8 | Tasks | Pending |
+| EMC-13 | P1: Confirmar, AC1 | Tasks | Implementing |
+| EMC-14 | P1: Confirmar, AC2 | Tasks | Implementing |
+| EMC-15 | P1: Confirmar, AC3 | Tasks | Implementing |
+| EMC-16 | P1: Confirmar, AC4 | Tasks | Implementing |
+| EMC-17 | P1: Confirmar, AC5 | Tasks | Implementing |
+| EMC-18 | P1: Confirmar, AC6 | Tasks | Implementing |
+| EMC-19 | P1: Confirmar, AC7 | Tasks | Implementing |
+| EMC-20 | P1: Confirmar, AC8 | Tasks | Implementing |
 | EMC-21 | P1: Reenviar, AC1 | Tasks | Pending |
 | EMC-22 | P1: Reenviar, AC2 | Tasks | Pending |
 | EMC-23 | P1: Reenviar, AC3 | Tasks | Pending |
@@ -351,8 +351,8 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-25 | P1: Login pendente, AC1 | Tasks | Implementing |
 | EMC-26 | P1: Login pendente, AC2 | Tasks | Implementing |
 | EMC-27 | P1: Login pendente, AC3 | Tasks | Implementing |
-| EMC-28 | P1: Rate limit, AC1 | Tasks | Pending |
-| EMC-29 | P1: Rate limit, AC2 | Tasks | Pending |
+| EMC-28 | P1: Rate limit, AC1 | Tasks | Implementing |
+| EMC-29 | P1: Rate limit, AC2 | Tasks | Implementing |
 | EMC-30 | P1: Rate limit, AC3 | Tasks | Pending |
 | EMC-31 | P1: Rate limit, AC4 | Tasks | Pending |
 | EMC-32 | P1: Rate limit, AC5 | Tasks | Implementing |
@@ -371,8 +371,8 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-45 | P1: App, AC6 | Tasks | Pending |
 | EMC-46 | P1: App, AC7 | Tasks | Pending |
 | EMC-47 | P1: Contrato de erro, AC1 | Tasks | Pending |
-| EMC-48 | P1: Contrato de erro, AC2 | Tasks | Pending |
-| EMC-49 | P1: Contrato de erro, AC3 | Tasks | Pending |
+| EMC-48 | P1: Contrato de erro, AC2 | Tasks | Implementing |
+| EMC-49 | P1: Contrato de erro, AC3 | Tasks | Implementing |
 | EMC-50 | P1: Contrato de erro, AC4 | Tasks | Pending |
 | EMC-51 | P2: Documentação, AC1 | Tasks | Pending |
 | EMC-52 | P1: Google, AC1 | Tasks | Implementing |

@@ -7,7 +7,7 @@ from django.urls.resolvers import URLPattern, URLResolver
 
 import hairmatch.urls
 
-# The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49), one (method, route) pair per row.
+# The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49, plus RT-84 from email-confirmation), one (method, route) pair per row.
 # `{id}` is an integer segment and `{cep}` is free text.
 ROUTE_TABLE = {
     ('POST', 'users'),                                            # RT-01
@@ -58,6 +58,7 @@ ROUTE_TABLE = {
     ('DELETE', 'reservations/{id}'),                              # RT-47
     ('GET', 'hairdressers/{id}/available-slots'),                 # RT-48
     ('POST', 'chatbot/webhook'),                                  # RT-49
+    ('POST', 'auth/email-confirmations'),                         # RT-84
 }
 
 # RT-54: the only singular or non-plural segments the table allows.
