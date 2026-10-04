@@ -11,6 +11,11 @@ from .models import User, Customer, Hairdresser, user_profile_picture_path
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
+from agenda.models import Agenda
+from availability.models import Availability
+from reserve.models import Reserve
+from review.models import Review
+from django.utils import timezone
 import base64
 from unittest.mock import patch, MagicMock
 from django.conf import settings
@@ -4283,6 +4288,88 @@ class CognitoDeleteAccountTest(TestCase):
                 assert_auth_unavailable(response)
                 self.assertTrue(User.objects.filter(email='nova@example.com').exists())
                 self.assertIn('nova@example.com', self.fake.users)
+
+    def _hairdresser_with_bookings(self):
+        """A hairdresser account (logged in) with a service, availability, a manual block and a past and a future booking."""
+        self.client.post(reverse('register'), data=_hairdresser_payload(profile_picture=make_upload('foto.png', fmt='PNG')))
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        hairdresser = Hairdresser.objects.get(user__email='cabelo@example.com')
+        customer = Customer.objects.get(user__email='nova@example.com')
+        service = Service.objects.create(name='Corte', price=50, duration=60, hairdresser=hairdresser)
+        Availability.objects.create(
+            hairdresser=hairdresser, weekday='monday', start_time=datetime.time(9), end_time=datetime.time(17)
+        )
+        now = timezone.now().replace(microsecond=0)
+        for start in (now - datetime.timedelta(days=7), now + datetime.timedelta(days=7), now + datetime.timedelta(days=8)):
+            Agenda.objects.create(start_time=start, end_time=start + datetime.timedelta(hours=1),
+                                  hairdresser=hairdresser, service=service)
+        past = Reserve.objects.create(start_time=now - datetime.timedelta(days=7), customer=customer, service=service)
+        Reserve.objects.create(start_time=now + datetime.timedelta(days=7), customer=customer, service=service)
+        past.review = Review.objects.create(
+            rating=5, customer=customer, hairdresser=hairdresser, picture=make_upload('corte.png', fmt='PNG')
+        )
+        past.save()
+        return hairdresser
+
+    def test_a_hairdresser_account_is_deleted_with_its_services_agenda_and_cancelled_bookings(self):
+        hairdresser = self._hairdresser_with_bookings()
+        pictures = [hairdresser.user.profile_picture.name, Review.objects.get().picture.name]
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertNotIn('cabelo@example.com', self.fake.users)
+        self.assertFalse(User.objects.filter(email='cabelo@example.com').exists())
+        for model in (Hairdresser, Service, Availability, Agenda, Reserve, Review):
+            with self.subTest(model=model.__name__):
+                self.assertFalse(model.objects.exists())
+        for name in pictures:
+            with self.subTest(picture=name):
+                self.assertFalse(default_storage.exists(name))
+        self.assertTrue(User.objects.filter(email='nova@example.com').exists())
+
+    def test_a_customer_account_is_deleted_with_its_bookings_and_frees_the_agenda(self):
+        hairdresser = self._hairdresser_with_bookings()
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        picture = Review.objects.get().picture.name
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertNotIn('nova@example.com', self.fake.users)
+        self.assertFalse(Customer.objects.exists())
+        self.assertFalse(Reserve.objects.exists())
+        self.assertFalse(Review.objects.exists())
+        self.assertFalse(default_storage.exists(picture))
+        # Only the slot without a booking (the hairdresser's own block) is left in the agenda.
+        self.assertEqual(Agenda.objects.count(), 1)
+        self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
+
+    def test_a_cognito_outage_keeps_the_hairdresser_rows_and_pictures(self):
+        hairdresser = self._hairdresser_with_bookings()
+        picture = hairdresser.user.profile_picture.name
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('cabelo@example.com', self.fake.users)
+        self.assertEqual(Reserve.objects.count(), 2)
+        self.assertEqual(Agenda.objects.count(), 3)
+        self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
+        self.assertTrue(Review.objects.exists())
+        self.assertTrue(default_storage.exists(picture))
 
     def test_google_accounts_are_deleted_without_calling_cognito(self):
         google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')

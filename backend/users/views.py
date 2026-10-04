@@ -15,10 +15,15 @@ from .filters import HairdresserFilter
 from .serializers import SearchResultSerializer # Import our new serializer
 from .filters import HairdresserFilter
 from service.models import Service
+from agenda.models import Agenda
+from reserve.models import Reserve
+from reserve.views import cancel_reserve
+from review.models import Review
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
-from django.db import transaction
+from django.core.files.storage import default_storage
+from django.db import connection, transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
     CUSTOMER_REQUIRED_DETAIL,
@@ -87,14 +92,56 @@ def _string_field_errors(data, fields):
 
 
 def _delete_account(request, user):
-    """Deletes the Cognito user (e-mail accounts) and the row, and clears the session cookies."""
-    if user.cognito_sub:
-        try:
-            get_cognito().admin_delete_user(user.email)
-        except CognitoError as err:
-            return _cognito_error_response(request, err)
-    user.delete()
+    """
+    Deletes the user's rows and then the Cognito user (e-mail accounts), all or nothing, and clears the
+    session cookies. The stored pictures go once the deletion is committed.
+    """
+    email, cognito_sub = user.email, user.cognito_sub
+    try:
+        with transaction.atomic():
+            pictures = _delete_account_rows(user)
+            # The foreign keys are checked at commit: check them now, before Cognito is touched.
+            connection.check_constraints()
+            if cognito_sub:
+                get_cognito().admin_delete_user(email)
+            transaction.on_commit(lambda: _delete_stored_files(pictures))
+    except CognitoError as err:
+        return _cognito_error_response(request, err)
     return clear_auth_cookies(HttpResponse(status=204))
+
+
+def _delete_account_rows(user):
+    """
+    Deletes the user and every row that points at them, and returns the storage names of their pictures.
+    Their reservations are cancelled, as a customer and as a hairdresser: the customers of a hairdresser
+    who leaves are not notified yet (#171).
+    """
+    reserves = Reserve.objects.filter(
+        Q(customer__user=user) | Q(service__hairdresser__user=user)
+    ).select_related('service')
+    for reserve in reserves:
+        cancel_reserve(reserve)
+    Agenda.objects.filter(hairdresser__user=user).delete()
+    Service.objects.filter(hairdresser__user=user).delete()
+
+    # Reviews written and received go with the profiles (CASCADE); their pictures stay in storage otherwise.
+    pictures = [
+        name for name in Review.objects.filter(
+            Q(customer__user=user) | Q(hairdresser__user=user)
+        ).values_list('picture', flat=True) if name
+    ]
+    if user.profile_picture:
+        pictures.append(user.profile_picture.name)
+    user.delete()
+    return pictures
+
+
+def _delete_stored_files(names):
+    for name in names:
+        try:
+            default_storage.delete(name)
+        except Exception:
+            logger.exception('Could not delete %s from the media storage', name)
 
 
 def _discard_cognito_user(email):
