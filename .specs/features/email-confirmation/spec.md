@@ -326,43 +326,43 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | -------------- | ----- | ----- | ------ |
 | EMC-01 | P1: Cognito local, AC1 | Tasks | Verified |
 | EMC-02 | P1: Cognito local, AC2 | Tasks | Verified |
-| EMC-03 | P1: Cadastro pendente, AC1 | Tasks | Implementing |
-| EMC-04 | P1: Cadastro pendente, AC2 | Tasks | Implementing |
-| EMC-05 | P1: Cadastro pendente, AC3 | Tasks | Implementing |
-| EMC-06 | P1: Cadastro pendente, AC4 | Tasks | Implementing |
-| EMC-07 | P1: Substituição, AC1 | Tasks | Implementing |
-| EMC-08 | P1: Substituição, AC2 | Tasks | Implementing |
-| EMC-09 | P1: Substituição, AC3 | Tasks | Implementing |
-| EMC-10 | P1: Substituição, AC4 | Tasks | Implementing |
-| EMC-11 | P1: Substituição, AC5 | Tasks | Implementing |
-| EMC-12 | P1: Substituição, AC6 | Tasks | Implementing |
-| EMC-13 | P1: Confirmar, AC1 | Tasks | Implementing |
-| EMC-14 | P1: Confirmar, AC2 | Tasks | Implementing |
-| EMC-15 | P1: Confirmar, AC3 | Tasks | Implementing |
-| EMC-16 | P1: Confirmar, AC4 | Tasks | Implementing |
-| EMC-17 | P1: Confirmar, AC5 | Tasks | Implementing |
-| EMC-18 | P1: Confirmar, AC6 | Tasks | Implementing |
-| EMC-19 | P1: Confirmar, AC7 | Tasks | Implementing |
-| EMC-20 | P1: Confirmar, AC8 | Tasks | Implementing |
-| EMC-21 | P1: Reenviar, AC1 | Tasks | Implementing |
-| EMC-22 | P1: Reenviar, AC2 | Tasks | Implementing |
-| EMC-23 | P1: Reenviar, AC3 | Tasks | Implementing |
-| EMC-24 | P1: Reenviar, AC4 | Tasks | Implementing |
-| EMC-25 | P1: Login pendente, AC1 | Tasks | Implementing |
-| EMC-26 | P1: Login pendente, AC2 | Tasks | Implementing |
-| EMC-27 | P1: Login pendente, AC3 | Tasks | Implementing |
-| EMC-28 | P1: Rate limit, AC1 | Tasks | Implementing |
-| EMC-29 | P1: Rate limit, AC2 | Tasks | Implementing |
-| EMC-30 | P1: Rate limit, AC3 | Tasks | Implementing |
-| EMC-31 | P1: Rate limit, AC4 | Tasks | Implementing |
-| EMC-32 | P1: Rate limit, AC5 | Tasks | Implementing |
-| EMC-33 | P1: Rate limit, AC6 | Tasks | Implementing |
-| EMC-34 | P1: Expurgo, AC1 | Tasks | Implementing |
-| EMC-35 | P1: Expurgo, AC2 | Tasks | Implementing |
-| EMC-36 | P1: Expurgo, AC3 | Tasks | Implementing |
-| EMC-37 | P1: Expurgo, AC4 | Tasks | Implementing |
-| EMC-38 | P1: Expurgo, AC5 | Tasks | Implementing |
-| EMC-39 | P1: Listagens, AC1 | Tasks | Implementing |
+| EMC-03 | P1: Cadastro pendente, AC1 | Tasks | Verified |
+| EMC-04 | P1: Cadastro pendente, AC2 | Tasks | Verified |
+| EMC-05 | P1: Cadastro pendente, AC3 | Tasks | Verified |
+| EMC-06 | P1: Cadastro pendente, AC4 | Tasks | Verified |
+| EMC-07 | P1: Substituição, AC1 | Tasks | Verified |
+| EMC-08 | P1: Substituição, AC2 | Tasks | Verified |
+| EMC-09 | P1: Substituição, AC3 | Tasks | Verified |
+| EMC-10 | P1: Substituição, AC4 | Tasks | Verified |
+| EMC-11 | P1: Substituição, AC5 | Tasks | Verified |
+| EMC-12 | P1: Substituição, AC6 | Tasks | Verified |
+| EMC-13 | P1: Confirmar, AC1 | Tasks | Verified |
+| EMC-14 | P1: Confirmar, AC2 | Tasks | Verified |
+| EMC-15 | P1: Confirmar, AC3 | Tasks | Verified |
+| EMC-16 | P1: Confirmar, AC4 | Tasks | Verified |
+| EMC-17 | P1: Confirmar, AC5 | Tasks | Verified |
+| EMC-18 | P1: Confirmar, AC6 | Tasks | Verified |
+| EMC-19 | P1: Confirmar, AC7 | Tasks | Verified |
+| EMC-20 | P1: Confirmar, AC8 | Tasks | Verified |
+| EMC-21 | P1: Reenviar, AC1 | Tasks | Verified |
+| EMC-22 | P1: Reenviar, AC2 | Tasks | Verified |
+| EMC-23 | P1: Reenviar, AC3 | Tasks | Verified |
+| EMC-24 | P1: Reenviar, AC4 | Tasks | Verified |
+| EMC-25 | P1: Login pendente, AC1 | Tasks | Verified |
+| EMC-26 | P1: Login pendente, AC2 | Tasks | Verified |
+| EMC-27 | P1: Login pendente, AC3 | Tasks | Verified |
+| EMC-28 | P1: Rate limit, AC1 | Tasks | Verified |
+| EMC-29 | P1: Rate limit, AC2 | Tasks | Verified |
+| EMC-30 | P1: Rate limit, AC3 | Tasks | Verified |
+| EMC-31 | P1: Rate limit, AC4 | Tasks | Verified |
+| EMC-32 | P1: Rate limit, AC5 | Tasks | Verified |
+| EMC-33 | P1: Rate limit, AC6 | Tasks | Verified |
+| EMC-34 | P1: Expurgo, AC1 | Tasks | Verified |
+| EMC-35 | P1: Expurgo, AC2 | Tasks | Verified |
+| EMC-36 | P1: Expurgo, AC3 | Tasks | Verified |
+| EMC-37 | P1: Expurgo, AC4 | Tasks | Verified |
+| EMC-38 | P1: Expurgo, AC5 | Tasks | Verified |
+| EMC-39 | P1: Listagens, AC1 | Tasks | Verified |
 | EMC-40 | P1: App, AC1 | Tasks | Implementing |
 | EMC-41 | P1: App, AC2 | Tasks | Implementing |
 | EMC-42 | P1: App, AC3 | Tasks | Implementing |
@@ -370,15 +370,15 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-44 | P1: App, AC5 | Tasks | Implementing |
 | EMC-45 | P1: App, AC6 | Tasks | Implementing |
 | EMC-46 | P1: App, AC7 | Tasks | Implementing |
-| EMC-47 | P1: Contrato de erro, AC1 | Tasks | Pending |
-| EMC-48 | P1: Contrato de erro, AC2 | Tasks | Implementing |
-| EMC-49 | P1: Contrato de erro, AC3 | Tasks | Implementing |
-| EMC-50 | P1: Contrato de erro, AC4 | Tasks | Implementing |
+| EMC-47 | P1: Contrato de erro, AC1 | Tasks | Verified |
+| EMC-48 | P1: Contrato de erro, AC2 | Tasks | Verified |
+| EMC-49 | P1: Contrato de erro, AC3 | Tasks | Verified |
+| EMC-50 | P1: Contrato de erro, AC4 | Tasks | Verified |
 | EMC-51 | P2: Documentação, AC1 | Tasks | Implementing |
-| EMC-52 | P1: Google, AC1 | Tasks | Implementing |
-| EMC-53 | P1: Google, AC2 | Tasks | Implementing |
-| EMC-54 | P1: Reenviar, AC5 | Tasks | Implementing |
-| EMC-55 | P1: Google, AC3 | Tasks | Implementing |
+| EMC-52 | P1: Google, AC1 | Tasks | Verified |
+| EMC-53 | P1: Google, AC2 | Tasks | Verified |
+| EMC-54 | P1: Reenviar, AC5 | Tasks | Verified |
+| EMC-55 | P1: Google, AC3 | Tasks | Verified |
 
 **ID format:** `EMC-NN`
 

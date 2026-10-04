@@ -88,17 +88,20 @@
 ## Handoff
 
 - **Feature**: `email-confirmation` (issue #141).
-- **Phase / Task**: Specify, Design e Tasks concluídos. `validate_spec.py` e `validate_tasks.py` com exit 0, e 55 requisitos (EMC-01 a EMC-55) mapeados em 23 tarefas. Execute não começou.
-- **Completed**: `.specs/features/email-confirmation/{spec,context,design,tasks}.md` e AD-008. Também a nota de 2026-10-04 no AD-005, sobre o SES embutido do MiniStack e o código aceito em qualquer valor.
+- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
+- **Completed**:
+  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
+  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
+  - MiniStack reconciliado pelo init, README e AD-008.
+  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
 - **In-progress** (file:line): none
 - **Next step**:
-  - Aprovar `tasks.md` e criar a branch da feature a partir de `develop` (por exemplo, `141-confirmacao-de-email-no-cadastro`).
-  - Começar o Execute pelo T1, com a oferta de sub-agentes em 3 lotes (A: Phases 1–2 com 9 tarefas, B: Phases 3–5, C: Phases 6–7).
+  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
+  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
 - **Pendências de features anteriores**:
-  - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API para `/api/chatbot/webhook` só acontece com autorização explícita.
+  - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
+  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**:
-  - `.specs/features/email-confirmation/` e esta atualização do `STATE.md`, não commitados por decisão do usuário: a entrega desta sessão são só os arquivos.
-  - `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/` já estavam pendentes antes.
-- **Branch**: 170-fix-security-correcoes-auditoria-outubro (checkout atual; a feature #141 terá branch própria)
+- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
+- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema

@@ -971,3 +971,14 @@ São 23 tarefas, o que dá mais de um lote de cerca de 7. No início do Execute,
 | T21: login | App | none | none | ✅ OK |
 | T22: README | Infra (README) | none | none | ✅ OK |
 | T23: UAT | Verificação | none | none | ✅ OK |
+
+---
+
+## Verification (Execute, step 9)
+
+`validation.md` has PASS after round 2. Round 0 was FAIL and its findings became these fix commits, each followed by a re-verification:
+- `bf56350`, `004bc4b`: pending hairdressers were still listed by `GET /api/preferences/{id}/users` and by the chatbot (EMC-39 widened).
+- `8c1527f`: the sign-up race (EMC-10 precondition, unique-constraint loss answers 409) and tests for the `cognito_sub` condition, the login case and the logger check.
+- `49bec88`: `CACHES` size and a test of migration `0011`.
+
+T23 stays open on purpose: the user runs the web and Android UAT. The requirements it covers (EMC-40 to EMC-46, EMC-51) stay `Implementing` in the Traceability until then.
