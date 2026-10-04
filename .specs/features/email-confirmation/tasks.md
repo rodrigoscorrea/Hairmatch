@@ -261,12 +261,12 @@ Atualizar `len(CATALOG)` de 36 para 39 em `hairmatch/test_problems.py` e as trê
 
 **Done when**:
 
-- [ ] Um teste em `backend/hairmatch/tests.py` afirma que `caches['default']` é `DatabaseCache` e que `cache.set`/`cache.get` funcionam no banco de teste
-- [ ] Os testes de throttle por IP e de cache do CEP continuam passando
-- [ ] `migrate` num banco limpo cria `hairmatch_cache`, e rodá-lo de novo não falha (`createcachetable` é idempotente)
-- [ ] A migração tem `reverse_code` no-op, e `makemigrations --check` não acusa pendência
-- [ ] Gate check passes: Full
-- [ ] Test count: 619 + novos, sem remoções
+- [x] Um teste em `backend/hairmatch/tests.py` afirma que `caches['default']` é `DatabaseCache` e que `cache.set`/`cache.get` funcionam no banco de teste
+- [x] Os testes de throttle por IP e de cache do CEP continuam passando
+- [x] `migrate` num banco limpo cria `hairmatch_cache`, e rodá-lo de novo não falha (`createcachetable` é idempotente)
+- [x] A migração tem `reverse_code` no-op, e `makemigrations --check` não acusa pendência
+- [x] Gate check passes: Full
+- [x] Test count: 619 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: full

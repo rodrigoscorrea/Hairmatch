@@ -13,7 +13,9 @@ class CognitoResetMixin:
     def startTest(self, test):
         reset_cognito()
         clear_jwks_cache()
-        cache.clear()
+        # The cache lives in the database, which a SimpleTestCase may not touch (and cannot have filled).
+        if 'default' in getattr(test, 'databases', ()):
+            cache.clear()
         super().startTest(test)
 
 

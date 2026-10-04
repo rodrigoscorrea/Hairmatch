@@ -446,3 +446,25 @@ class WebPImageFieldFileTest(SimpleTestCase):
 
     def test_field_deconstructs_to_its_own_import_path(self):
         self.assertEqual(WebPImageField().deconstruct()[1], 'hairmatch.images.WebPImageField')
+
+
+class DatabaseCacheTest(TestCase):
+    """EMC-33: the counters live in a cache shared by every process, not in one process's memory."""
+
+    def test_default_cache_is_the_database_cache(self):
+        from django.core.cache import caches
+        from django.core.cache.backends.db import DatabaseCache
+
+        self.assertIsInstance(caches['default'], DatabaseCache)
+        self.assertEqual(caches['default']._table, 'hairmatch_cache')
+
+    def test_a_value_is_stored_in_the_database_and_read_back(self):
+        from django.core.cache import cache
+        from django.db import connection
+
+        cache.set('emc-33', {'count': 3}, 60)
+
+        self.assertEqual(cache.get('emc-33'), {'count': 3})
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT COUNT(*) FROM hairmatch_cache')
+            self.assertEqual(cursor.fetchone()[0], 1)

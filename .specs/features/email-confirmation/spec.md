@@ -356,7 +356,7 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-30 | P1: Rate limit, AC3 | Tasks | Pending |
 | EMC-31 | P1: Rate limit, AC4 | Tasks | Pending |
 | EMC-32 | P1: Rate limit, AC5 | Tasks | Pending |
-| EMC-33 | P1: Rate limit, AC6 | Tasks | Pending |
+| EMC-33 | P1: Rate limit, AC6 | Tasks | Implementing |
 | EMC-34 | P1: Expurgo, AC1 | Tasks | Pending |
 | EMC-35 | P1: Expurgo, AC2 | Tasks | Pending |
 | EMC-36 | P1: Expurgo, AC3 | Tasks | Pending |
