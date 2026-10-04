@@ -621,14 +621,14 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] `PurgeUnconfirmedUsersCommandTest` (com `date_joined` ajustado via `update()`):
-  - [ ] Pendentes de 8 dias, de 7 dias exatos e de 1 hora, uma conta ativa de 30 dias e uma conta Google inativa de 30 dias → só a de 8 dias some do fake e do Postgres (EMC-34, EMC-35)
-  - [ ] `admin_delete_user` aparece em `fake.calls` antes da remoção da linha
-  - [ ] `fail_next('admin_delete_user', EndpointConnectionError)` com duas elegíveis → uma apagada e uma mantida, WARNING com o id, sem exceção (EMC-36)
-  - [ ] `assertLogs` INFO com `deleted=1 kept=1`; uma segunda execução → `deleted=0` (EMC-37)
-- [ ] `entrypoint.sh` chama `purge_unconfirmed_users` (EMC-38; conferido no T23)
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T14 + novos, sem remoções
+- [x] `PurgeUnconfirmedUsersCommandTest` (com `date_joined` ajustado via `update()`):
+  - [x] Pendentes de 8 dias, de 7 dias exatos e de 1 hora, uma conta ativa de 30 dias e uma conta Google inativa de 30 dias → só a de 8 dias some do fake e do Postgres (EMC-34, EMC-35)
+  - [x] `admin_delete_user` aparece em `fake.calls` antes da remoção da linha
+  - [x] `fail_next('admin_delete_user', EndpointConnectionError)` com duas elegíveis → uma apagada e uma mantida, WARNING com o id, sem exceção (EMC-36)
+  - [x] `assertLogs` INFO com `deleted=1 kept=1`; uma segunda execução → `deleted=0` (EMC-37)
+- [x] `entrypoint.sh` chama `purge_unconfirmed_users` (EMC-38; conferido no T23)
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T14 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

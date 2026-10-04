@@ -52,7 +52,7 @@ from io import BytesIO, StringIO
 from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
-from .management.commands import populate_hairdressers
+from .management.commands import populate_hairdressers, purge_unconfirmed_users
 from . import cognito_fake
 from .cognito import (
     AlreadyConfirmed,
@@ -3250,6 +3250,126 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self.assertEqual([name for name, _ in fake.calls if name == 'sign_up'], [])
         self.assertEqual(dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub')), subs)
+
+class PurgeUnconfirmedUsersCommandTest(TestCase):
+    """EMC-34 to EMC-37: pending accounts older than seven days are deleted in Cognito and then in Postgres."""
+
+    NOW = timezone.now()
+    LOGGER = 'users.management.commands.purge_unconfirmed_users'
+
+    def setUp(self):
+        self.fake = get_cognito().client
+        patcher = patch.object(purge_unconfirmed_users.timezone, 'now', return_value=self.NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _account(self, email, age, is_active=False, in_cognito=True, google=False):
+        user = _create_plain_user(
+            email=email, phone=f'55920000{User.objects.count():05d}', is_active=is_active,
+            google_id='google-' + email if google else None,
+        )
+        if in_cognito and not google:
+            sub = self.fake.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username=email, Password='Senha123'
+            )['UserSub']
+            User.objects.filter(pk=user.pk).update(cognito_sub=sub)
+        User.objects.filter(pk=user.pk).update(date_joined=self.NOW - age)
+        return user
+
+    def _run(self):
+        out = StringIO()
+        with self.assertLogs(self.LOGGER, 'INFO') as logs:
+            call_command('purge_unconfirmed_users', stdout=out)
+        return logs, out.getvalue()
+
+    def test_only_the_pending_account_older_than_seven_days_is_deleted(self):
+        """EMC-34, EMC-35"""
+        old = self._account('oito-dias@example.com', datetime.timedelta(days=8))
+        week = self._account('sete-dias@example.com', datetime.timedelta(days=7))
+        fresh = self._account('uma-hora@example.com', datetime.timedelta(hours=1))
+        active = self._account('ativa@example.com', datetime.timedelta(days=30), is_active=True)
+        google = self._account('google@example.com', datetime.timedelta(days=30), google=True)
+
+        self._run()
+
+        self.assertEqual(
+            sorted(User.objects.values_list('email', flat=True)),
+            sorted(['sete-dias@example.com', 'uma-hora@example.com', 'ativa@example.com', 'google@example.com']),
+        )
+        self.assertEqual(
+            sorted(self.fake.users),
+            sorted(['sete-dias@example.com', 'uma-hora@example.com', 'ativa@example.com']),
+        )
+        self.assertFalse(User.objects.filter(pk=old.pk).exists())
+        for survivor in (week, fresh, active, google):
+            self.assertTrue(User.objects.filter(pk=survivor.pk).exists())
+
+    def test_the_cognito_user_is_deleted_by_the_command_with_the_account_e_mail(self):
+        """EMC-34"""
+        self._account('oito-dias@example.com', datetime.timedelta(days=8))
+        self.fake.calls.clear()
+
+        self._run()
+
+        deletions = [kwargs['Username'] for name, kwargs in self.fake.calls if name == 'admin_delete_user']
+        self.assertEqual(deletions, ['oito-dias@example.com'])
+
+    def test_a_cognito_outage_keeps_that_account_warns_with_its_id_and_goes_on(self):
+        """EMC-36"""
+        first = self._account('a@example.com', datetime.timedelta(days=9))
+        second = self._account('b@example.com', datetime.timedelta(days=9))
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs(self.LOGGER, 'WARNING') as logs:
+            call_command('purge_unconfirmed_users', stdout=StringIO())
+
+        remaining = list(User.objects.order_by('pk').values_list('pk', flat=True))
+        kept = remaining[0]
+        self.assertEqual(len(remaining), 1)
+        self.assertIn(kept, (first.pk, second.pk))
+        self.assertIn(User.objects.get(pk=kept).email, self.fake.users)
+        warnings = [r for r in logs.records if r.levelname == 'WARNING']
+        self.assertEqual(len(warnings), 1)
+        self.assertIn(str(kept), warnings[0].getMessage())
+        self.assertEqual(len(self.fake.users), 1)
+
+    def test_the_summary_is_logged_at_info_and_printed_and_a_second_run_deletes_nothing(self):
+        """EMC-37"""
+        self._account('a@example.com', datetime.timedelta(days=9))
+        self._account('b@example.com', datetime.timedelta(days=9))
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs(self.LOGGER, 'INFO') as logs:
+            out = StringIO()
+            call_command('purge_unconfirmed_users', stdout=out)
+        info = [r for r in logs.records if r.levelname == 'INFO']
+        self.assertEqual([r.getMessage() for r in info], ['purge_unconfirmed_users deleted=1 kept=1'])
+        self.assertIn('deleted=1 kept=1', out.getvalue())
+
+        logs, out = self._run()  # the kept account is retried and goes now
+        self.assertEqual([r.getMessage() for r in logs.records], ['purge_unconfirmed_users deleted=1 kept=0'])
+        logs, out = self._run()
+        self.assertEqual([r.getMessage() for r in logs.records], ['purge_unconfirmed_users deleted=0 kept=0'])
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_an_account_already_missing_from_cognito_is_still_deleted(self):
+        """EMC-34: UserNotFoundException is not a failure."""
+        self._account('a@example.com', datetime.timedelta(days=9), in_cognito=False)
+        User.objects.update(cognito_sub='sub-gone')
+
+        self._run()
+
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_the_entrypoint_runs_the_purge_after_the_migrations(self):
+        """EMC-38"""
+        with open(os.path.join(settings.BASE_DIR, 'entrypoint.sh')) as script:
+            lines = [line.strip() for line in script]
+
+        migrate = lines.index('python3 backend/manage.py migrate')
+        purge = lines.index('python3 backend/manage.py purge_unconfirmed_users')
+        self.assertLess(migrate, purge)
+
 
 class UserProfilePicturePathTest(SimpleTestCase):
     def test_path_is_scoped_by_user_id(self):
