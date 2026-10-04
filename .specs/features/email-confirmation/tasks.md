@@ -326,16 +326,16 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Cadastro de cliente e de cabeleireiro → 201 com o corpo exato de EMC-03, sem `Set-Cookie`, `is_active=False`, `cognito_sub` preenchido e o perfil criado
-  - [ ] `fake.calls` tem `sign_up` e não tem `admin_confirm_sign_up`
-  - [ ] Cadastro Google → `is_active=True`, sem chamadas ao fake (EMC-04)
-  - [ ] Conta ativa `a@x.com` + cadastro com `A@X.com` → 409 `email-taken`, sem chamadas ao fake (EMC-05)
-  - [ ] `populate_hairdressers` → cabeleireiros com `is_active=True`, e login com `Senha123` → 200 (EMC-06)
-  - [ ] `test_failed_confirmation_answers_503_and_leaves_no_cognito_user_or_rows` (`users/tests.py:3884`), que injeta falha em `admin_confirm_sign_up` pelo `RegisterView`, passa a injetar `fail_next('sign_up', 'InternalErrorException')` e afirma 503 sem linhas nem usuário no fake. Ganha nome novo e mantém a contagem. O caso do `admin_confirm_sign_up` fica coberto no serviço (`users/tests.py:3309`)
-  - [ ] Os demais testes de compensação de COG-10 (insert, foto e preferências) continuam passando
-- [ ] Gate check passes: Full
-- [ ] Test count: T5 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Cadastro de cliente e de cabeleireiro → 201 com o corpo exato de EMC-03, sem `Set-Cookie`, `is_active=False`, `cognito_sub` preenchido e o perfil criado
+  - [x] `fake.calls` tem `sign_up` e não tem `admin_confirm_sign_up`
+  - [x] Cadastro Google → `is_active=True`, sem chamadas ao fake (EMC-04)
+  - [x] Conta ativa `a@x.com` + cadastro com `A@X.com` → 409 `email-taken`, sem chamadas ao fake (EMC-05)
+  - [x] `populate_hairdressers` → cabeleireiros com `is_active=True`, e login com `Senha123` → 200 (EMC-06)
+  - [x] `test_failed_confirmation_answers_503_and_leaves_no_cognito_user_or_rows` (`users/tests.py:3884`), que injeta falha em `admin_confirm_sign_up` pelo `RegisterView`, passa a injetar `fail_next('sign_up', 'InternalErrorException')` e afirma 503 sem linhas nem usuário no fake. Ganha nome novo e mantém a contagem. O caso do `admin_confirm_sign_up` fica coberto no serviço (`users/tests.py:3309`)
+  - [x] Os demais testes de compensação de COG-10 (insert, foto e preferências) continuam passando
+- [x] Gate check passes: Full
+- [x] Test count: T5 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: full

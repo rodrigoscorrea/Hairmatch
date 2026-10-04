@@ -3087,6 +3087,19 @@ class PopulateHairdressersCommandTest(TestCase):
             self.assertTrue(fake.users[user.email.lower()]['confirmed'])
         self.assertEqual(self._login_status(hairdressers.first().email), 200)
 
+    def test_seeded_hairdressers_are_created_active_by_the_seed_confirmation(self):
+        """EMC-06: the seed keeps SignUp + AdminConfirmSignUp, so no e-mail code is involved."""
+        fake = get_cognito().client
+
+        self._run()
+
+        hairdressers = User.objects.filter(role='hairdresser')
+        self.assertEqual(hairdressers.filter(is_active=True).count(), 40)
+        names = [name for name, _ in fake.calls]
+        self.assertEqual(names.count('admin_confirm_sign_up'), 40)
+        self.assertNotIn('confirm_sign_up', names)
+        self.assertEqual(self._login_status(hairdressers.first().email), 200)
+
     def test_recreates_users_missing_from_cognito_and_fills_a_missing_sub_without_new_rows(self):
         fake = get_cognito().client
         self._run()
@@ -4004,19 +4017,44 @@ class CognitoRegisterTest(TestCase):
         self.assertFalse(User.objects.filter(email='extra@example.com').exists())
         self.assertEqual(self.fake.calls, [])
 
-    def test_customer_and_hairdresser_are_created_with_the_cognito_sub_and_no_password(self):
+    def test_customer_and_hairdresser_are_created_pending_with_the_cognito_sub_and_no_password(self):
+        """EMC-03"""
         for payload, model in ((_register_payload(), Customer), (_hairdresser_payload(), Hairdresser)):
             with self.subTest(role=payload['role']):
                 response = self.client.post(self.register_url, data=payload)
 
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertEqual(response.json(), {'message': f"{payload['role']} user registered successfully"})
+                self.assertEqual(
+                    response.json(),
+                    {'message': f"{payload['role']} user registered successfully", 'confirmation_required': True},
+                )
                 self.assertEqual(len(response.cookies), 0)
                 user = User.objects.get(email=payload['email'])
                 self.assertEqual(user.cognito_sub, self.fake.users[payload['email']]['sub'])
                 self.assertIsNone(user.password)
+                self.assertFalse(user.is_active)
                 self.assertTrue(model.objects.filter(user=user).exists())
-                self.assertTrue(self.fake.users[payload['email']]['confirmed'])
+                self.assertFalse(self.fake.users[payload['email']]['confirmed'])
+
+    def test_sign_up_calls_only_sign_up_and_never_confirms_the_account_for_the_user(self):
+        """EMC-03"""
+        self.client.post(self.register_url, data=_register_payload())
+
+        names = [name for name, _ in self.fake.calls]
+        self.assertIn('sign_up', names)
+        self.assertNotIn('admin_confirm_sign_up', names)
+
+    def test_an_active_account_with_the_same_email_in_another_case_answers_409_without_calling_cognito(self):
+        """EMC-05"""
+        self.client.post(self.register_url, data=_register_payload(email='a@x.com'))
+        activate_account('a@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@X.com', phone='92998887777'))
+
+        assert_email_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(User.objects.count(), 1)
 
     def test_password_reaches_cognito_exactly_as_typed(self):
         response = self.client.post(self.register_url, data=_register_payload(password='Senha 123'))
@@ -4135,14 +4173,15 @@ class CognitoRegisterTest(TestCase):
         retry = self.client.post(self.register_url, data=_register_payload())
         self.assertEqual(retry.status_code, status.HTTP_201_CREATED)
 
-    def test_failed_confirmation_answers_503_and_leaves_no_cognito_user_or_rows(self):
-        self.fake.fail_next('admin_confirm_sign_up', 'InternalErrorException')
+    def test_failed_sign_up_answers_503_and_leaves_no_cognito_user_or_rows(self):
+        self.fake.fail_next('sign_up', 'InternalErrorException')
 
         response = self.client.post(self.register_url, data=_register_payload())
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         assert_auth_unavailable(response)
-        self._assert_cognito_user_was_deleted()
+        self.assertEqual(self.fake.users, {})
+        self._assert_no_rows()
 
     def test_google_signup_makes_no_cognito_call(self):
         payload = _register_payload(google_signup_token=create_signup_token('ana@gmail.com', 'google-sub-1'))
@@ -4153,6 +4192,7 @@ class CognitoRegisterTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.fake.calls, [])
         self.assertIsNone(User.objects.get().cognito_sub)
+        self.assertTrue(User.objects.get().is_active)
 
     def test_connection_error_answers_503_and_creates_nothing(self):
         self.fake.fail_next('sign_up', EndpointConnectionError(endpoint_url='http://x'))

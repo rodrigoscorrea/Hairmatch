@@ -186,13 +186,13 @@ class RegisterView(APIView):
         email = data['email']
         role = data['role']
         phone = data['phone']
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(phone=normalize_phone(phone)).exists():
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            cognito_sub = get_cognito().sign_up_confirmed(email, data['password'])
+            cognito_sub = get_cognito().sign_up(email, data['password'])
         except InvalidPassword:
             return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except UserAlreadyExists:
@@ -217,6 +217,8 @@ class RegisterView(APIView):
                     password=None,
                     cognito_sub=cognito_sub,
                     role=role,
+                    # Pending until the e-mailed code is confirmed (POST /api/auth/email-confirmations).
+                    is_active=False,
                 )
 
                 if 'profile_picture' in request.FILES:
@@ -232,7 +234,9 @@ class RegisterView(APIView):
             logger.exception('E-mail sign-up failed')
             failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
-            return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
+            return JsonResponse(
+                {'message': f"{role} user registered successfully", 'confirmation_required': True}, status=201
+            )
 
         _discard_cognito_user(email)
         return failure
