@@ -742,7 +742,8 @@ class GlobalSearchView(APIView):
         if not query:
             return JsonResponse({'data': []}, status=200)
 
-        hairdresser_queryset = Hairdresser.objects.all()
+        # A hairdresser whose e-mail is not confirmed is not on the platform yet.
+        hairdresser_queryset = Hairdresser.objects.filter(user__is_active=True)
         hairdresser_filter = HairdresserFilter({'search': query}, queryset=hairdresser_queryset)
         hairdresser_results = hairdresser_filter.qs
 
@@ -763,8 +764,10 @@ def _home_response(for_you_data):
     for i in range(len(specific_preferences)):
         try:
             preference = Preferences.objects.get(name=specific_preferences[i])
+            # The filter comes before the slice, or pending hairdressers would shrink the list.
             hairdressers_users = User.objects.filter(
                 role='hairdresser',
+                is_active=True,
                 preferences=preference
             ).distinct()[:10]
 
@@ -804,6 +807,7 @@ class CustomerHomeView(APIView):
         # Get hairdressers matching customer preferences
         hairdressers_users = User.objects.filter(
             role='hairdresser',
+            is_active=True,
             preferences__in=customer_preferences
         ).distinct()
 

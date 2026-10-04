@@ -593,11 +593,11 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Um cabeleireiro ativo e um pendente com o mesmo nome e a mesma preferência → a busca pelo nome, a lista da preferência em `GET /api/home` e o `for_you` de `GET /api/customers/me/home` trazem só o ativo
-  - [ ] Onze cabeleireiros ativos e um pendente na mesma preferência → a lista da home traz dez ativos
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T13 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Um cabeleireiro ativo e um pendente com o mesmo nome e a mesma preferência → a busca pelo nome, a lista da preferência em `GET /api/home` e o `for_you` de `GET /api/customers/me/home` trazem só o ativo
+  - [x] Onze cabeleireiros ativos e um pendente na mesma preferência → a lista da home traz dez ativos
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T13 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

@@ -4548,6 +4548,70 @@ class CognitoRegisterTest(TestCase):
                 self._assert_no_rows()
 
 
+class PendingHairdresserListingTest(TestCase):
+    """EMC-39: a hairdresser whose e-mail is not confirmed is on no listing."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.preference = Preferences.objects.create(name='Coloração')
+        self.active = self._hairdresser('ativa@example.com', '5592990000001', is_active=True)
+        self.pending = self._hairdresser('pendente@example.com', '5592990000002', is_active=False)
+
+    def _hairdresser(self, email, phone, is_active, name='Marina'):
+        user = _create_plain_user(
+            email=email, phone=phone, first_name=name, last_name='Cabelos', role='hairdresser',
+            is_active=is_active, cognito_sub=f'sub-{email}',
+        )
+        Hairdresser.objects.create(user=user, cnpj='12345678000190', resume='Cortes')
+        self.preference.users.add(user)
+        return user
+
+    def _ids(self, hairdressers):
+        return sorted(item['id'] for item in hairdressers)
+
+    def _hairdresser_id(self, user):
+        return Hairdresser.objects.get(user=user).id
+
+    def test_the_global_search_by_name_returns_only_the_active_hairdresser(self):
+        response = self.client.get(reverse('global_search'), {'q': 'Marina'})
+
+        found = [item for item in response.json()['data'] if item['result_type'] == 'hairdresser']
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._ids(found), [self._hairdresser_id(self.active)])
+
+    def test_the_public_home_lists_only_the_active_hairdresser_by_preference(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(
+            self._ids(response.json()['hairdressers_by_preferences']['coloracao']), [self._hairdresser_id(self.active)]
+        )
+
+    def test_the_customer_home_for_you_lists_only_the_active_hairdresser(self):
+        customer = _create_plain_user(
+            email='cliente@example.com', phone='5592990000003', role='customer', cognito_sub='sub-cliente',
+        )
+        self.preference.users.add(customer)
+        self.client.cookies['jwt'] = get_cognito().client.make_access_token('sub-cliente')
+
+        response = self.client.get(reverse('customer_home'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._ids(response.json()['for_you']), [self._hairdresser_id(self.active)])
+        self.assertEqual(
+            self._ids(response.json()['hairdressers_by_preferences']['coloracao']), [self._hairdresser_id(self.active)]
+        )
+
+    def test_pending_hairdressers_do_not_take_a_place_among_the_ten_of_a_preference(self):
+        for i in range(10):
+            self._hairdresser(f'extra{i}@example.com', f'559299100000{i}', is_active=True, name=f'Extra{i}')
+
+        response = self.client.get(reverse('home'))
+
+        listed = self._ids(response.json()['hairdressers_by_preferences']['coloracao'])
+        self.assertEqual(len(listed), 10)
+        self.assertNotIn(self._hairdresser_id(self.pending), listed)
+
+
 class EmailConfirmationViewTest(TestCase):
     """POST /api/auth/email-confirmations: the e-mailed code turns a pending account into an active one."""
 
