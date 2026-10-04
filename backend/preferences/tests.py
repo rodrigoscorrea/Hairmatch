@@ -4,6 +4,7 @@ from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from users.models import User
+from users.testing import activate_account
 from preferences.models import Preferences
 import jwt
 import json
@@ -46,6 +47,7 @@ class PreferencesTestCase(TestCase):
             self.register_url,
             data=self.user_payload
         )
+        activate_account(self.user_payload['email'])
         
         # Get user object for testing
         self.user = User.objects.get(email=self.user_payload['email'])
@@ -144,6 +146,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             self.register_url,
             data=self.user2_payload,
         )
+        activate_account(self.user2_payload['email'])
         
         # Get user2 object
         self.user2 = User.objects.get(email=self.user2_payload['email'])

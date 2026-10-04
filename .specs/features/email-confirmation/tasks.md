@@ -290,11 +290,11 @@ Atualizar `len(CATALOG)` de 36 para 39 em `hairmatch/test_problems.py` e as trê
 
 **Done when**:
 
-- [ ] `grep -rn "activate_account" backend --include=*.py` encontra o helper e as chamadas em cada helper de login que passa pelo cadastro (`preferences/tests.py:58`, `review/tests.py:138,152`, `availability/tests.py` e as classes de `users/tests.py` que cadastram e logam)
-- [ ] Levantamento registrado no commit: `grep -n "reverse('register')" backend/*/tests.py` e, para cada ocorrência, se a conta é usada depois (login, listagem ou perfil) e se recebeu o helper
-- [ ] Verificação antecipada: com `is_active=False` forçado temporariamente no `RegisterView` (sem commit), a suíte só falha nos testes do próprio cadastro que o T6 vai ajustar
-- [ ] Gate check passes: Full
-- [ ] Test count: igual ao do T4, sem remoções
+- [x] `grep -rn "activate_account" backend --include=*.py` encontra o helper e as chamadas em cada helper de login que passa pelo cadastro (`preferences/tests.py:58`, `review/tests.py:138,152`, `availability/tests.py` e as classes de `users/tests.py` que cadastram e logam)
+- [x] Levantamento registrado no commit: `grep -n "reverse('register')" backend/*/tests.py` e, para cada ocorrência, se a conta é usada depois (login, listagem ou perfil) e se recebeu o helper
+- [x] Verificação antecipada: com `is_active=False` forçado temporariamente no `RegisterView` (sem commit), a suíte só falha nos testes do próprio cadastro que o T6 vai ajustar
+- [x] Gate check passes: Full
+- [x] Test count: igual ao do T4, sem remoções
 
 **Tests**: integration
 **Gate**: full

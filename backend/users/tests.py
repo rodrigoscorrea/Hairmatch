@@ -8,6 +8,7 @@ import json
 import jwt
 import datetime
 from .models import User, Customer, Hairdresser, user_profile_picture_path
+from .testing import activate_account
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
@@ -167,6 +168,7 @@ class RegisterViewTest(TestCase):
             self.register_url,
             data=self.valid_customer_payload,
         )
+        activate_account(self.valid_customer_payload['email'])
         
         # Duplicate registration attempt
         response = self.client.post(
@@ -182,6 +184,7 @@ class RegisterViewTest(TestCase):
             self.register_url,
             data=self.valid_customer_payload,
         )
+        activate_account(self.valid_customer_payload['email'])
         
         # Duplicate registration attempt
         response = self.client.post(
@@ -194,6 +197,7 @@ class RegisterViewTest(TestCase):
     def test_register_with_a_phone_already_used_by_another_email_returns_409(self):
         """The phone is stored with the country code 55; the check must compare that form"""
         self.client.post(self.register_url, data=self.valid_customer_payload)
+        activate_account(self.valid_customer_payload['email'])
         payload = dict(self.valid_customer_payload, email='other@example.com', cpf='98765432100')
 
         response = self.client.post(self.register_url, data=payload)
@@ -205,6 +209,7 @@ class RegisterViewTest(TestCase):
 
     def test_register_with_the_same_phone_typed_with_a_mask_returns_409(self):
         self.client.post(self.register_url, data=self.valid_customer_payload)
+        activate_account(self.valid_customer_payload['email'])
         payload = dict(self.valid_customer_payload, email='other@example.com', phone='(12) 34567-89123')
 
         response = self.client.post(self.register_url, data=payload)
@@ -405,6 +410,7 @@ class LoginViewTest(TestCase):
             self.register_url,
             data=self.user_data,
         )
+        activate_account(self.user_data['email'])
 
     def test_login_valid(self):
         login_payload = {
@@ -533,6 +539,7 @@ class ChangePasswordViewTest(TestCase):
             self.register_url,
             data=self.user_data,
         )
+        activate_account(self.user_data['email'])
         
         # Login to get token
         login_payload = {
@@ -680,11 +687,13 @@ class UserInfoCookieViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data,
         )
+        activate_account(self.hairdresser_data['email'])
         
         # Helper method to login and get token
         self.customer_token = self._get_token('customer@example.com', 'Customer_password1')
@@ -930,11 +939,13 @@ class UserInfoViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data,
         )
+        activate_account(self.hairdresser_data['email'])
 
     def test_get_customer_info_of_the_session(self):
         self._login('customer@example.com', 'Customer_password1')
@@ -1082,16 +1093,19 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data_1,
         )
+        activate_account(self.hairdresser_data_1['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data_2,
         )
+        activate_account(self.hairdresser_data_2['email'])
         
         # Get created users and add preferences
         self.customer_user = User.objects.get(email='customer@example.com')
@@ -1237,6 +1251,7 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=customer_no_match,
         )
+        activate_account(customer_no_match['email'])
         
         # Add a preference that no hairdresser has
         customer_user_no_match = User.objects.get(email='nomatch@example.com')
@@ -1281,6 +1296,7 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=customer_empty,
         )
+        activate_account(customer_empty['email'])
         
         self._login('empty@example.com')
         url = reverse('customer_home')
@@ -4166,6 +4182,7 @@ class CognitoLoginTest(TestCase):
         self.login_url = reverse('login')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.fake.calls.clear()
         self.client.cookies.clear()
 
@@ -4310,6 +4327,7 @@ class CognitoRefreshTest(TestCase):
         self.refresh_url = reverse('refresh')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.login_response = self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4374,6 +4392,7 @@ class CognitoLogoutTest(TestCase):
         self.logout_url = reverse('logout')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         login = self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4425,6 +4444,7 @@ class CognitoChangePasswordTest(TestCase):
         self.change_url = reverse('password_change')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self._login('Senha123')  # leaves the session cookies on the client
         self.fake.calls.clear()
 
@@ -4517,6 +4537,7 @@ class CognitoDeleteAccountTest(TestCase):
         self.own_url = reverse('current_user')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4559,6 +4580,7 @@ class CognitoDeleteAccountTest(TestCase):
     def _hairdresser_with_bookings(self):
         """A hairdresser account (logged in) with a service, availability, a manual block and a past and a future booking."""
         self.client.post(reverse('register'), data=_hairdresser_payload(profile_picture=make_upload('foto.png', fmt='PNG')))
+        activate_account('cabelo@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
@@ -4662,6 +4684,7 @@ class UpdateProfileEmailTest(TestCase):
         self.client = APIClient()
         self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4714,6 +4737,7 @@ class RatingIsNotUserSettableTest(TestCase):
 
     def test_patch_ignores_the_rating_and_updates_the_other_fields(self):
         self.client.post(reverse('register'), data=_hairdresser_payload())
+        activate_account('cabelo@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
@@ -4739,6 +4763,7 @@ class UpdateProfilePhoneTest(TestCase):
         self.client = APIClient()
         self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),

@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch
 from users.models import User, Customer, Hairdresser
+from users.testing import activate_account
 from availability.models import Availability
 from datetime import time, datetime, timedelta
 import jwt
@@ -50,6 +51,7 @@ class CreateAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Login
         login_payload = {
@@ -87,6 +89,7 @@ class CreateAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Login
         login_payload = {
@@ -122,6 +125,7 @@ class CreateAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Login
         login_payload = {
@@ -256,6 +260,7 @@ class CreateMultipleAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Login
         login_payload = {
@@ -453,6 +458,7 @@ class ListAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Get hairdresser
         self.hairdresser = Hairdresser.objects.get(user__email="hairdresser@example.com")
@@ -538,6 +544,7 @@ class RemoveAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         self.client.post(
             self.login_url,
@@ -612,6 +619,7 @@ class UpdateAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         self.client.post(
             self.login_url,
@@ -789,6 +797,7 @@ class UpdateMultipleAvailabilityTest(TestCase):
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         login_payload = {
             'email': 'rodrigosc615@gmail.com',
