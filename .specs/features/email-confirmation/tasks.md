@@ -773,8 +773,8 @@ Sem `pendingConfirmation`, a tela volta para o login.
 
 **Done when**:
 
-- [ ] Os dois hooks não têm mais o alert "Cadastro concluído!" no modo e-mail
-- [ ] Gate check passes: App, sem erro novo
+- [x] Os dois hooks não têm mais o alert "Cadastro concluído!" no modo e-mail
+- [x] Gate check passes: App, sem erro novo
 
 **Tests**: none
 **Gate**: app
