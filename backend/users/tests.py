@@ -4262,6 +4262,7 @@ class CognitoRegisterTest(TestCase):
         ]
         for index, (payload, assert_body) in enumerate(cases):
             with self.subTest(case=index):
+                cache.clear()  # the cases share one e-mail; the per-e-mail counter must not carry over
                 response = self.client.post(self.register_url, data=payload)
                 assert_body(response)
         self.assertEqual(self._called('sign_up'), [])
@@ -4286,6 +4287,7 @@ class CognitoRegisterTest(TestCase):
         for preferences in ('{"a": 1}', '5', '["a"]', '[true]'):
             with self.subTest(preferences=preferences):
                 self.fake.calls.clear()
+                cache.clear()  # the cases share one e-mail; the per-e-mail counter must not carry over
 
                 response = self.client.post(self.register_url, data=_register_payload(preferences=preferences))
 
@@ -4485,6 +4487,34 @@ class CognitoRegisterTest(TestCase):
         assert_problem(response, 'internal-error', detail='The account could not be created.')
         self.assertEqual(self.fake.users, {})
         self._assert_no_rows()
+
+    def test_the_fourth_sign_up_for_one_email_in_an_hour_is_throttled_whatever_the_ip(self):
+        """EMC-32: each sign-up replaces the pending one, so only the e-mail counter can stop it."""
+        statuses = []
+        for ip in ('10.0.0.1', '10.0.0.2', '10.0.0.1'):
+            statuses.append(self.client.post(
+                self.register_url, data=_register_payload(email='alvo@example.com'), REMOTE_ADDR=ip,
+            ).status_code)
+        self.fake.calls.clear()
+
+        response = self.client.post(
+            self.register_url, data=_register_payload(email='ALVO@example.com'), REMOTE_ADDR='10.0.0.2',
+        )
+
+        self.assertEqual(statuses, [status.HTTP_201_CREATED] * 3)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(User.objects.get().email, 'alvo@example.com')
+
+    def test_sign_ups_for_other_emails_are_not_counted_against_a_throttled_one(self):
+        """EMC-32"""
+        for _ in range(3):
+            self.client.post(self.register_url, data=_register_payload(email='alvo@example.com'))
+
+        response = self.client.post(self.register_url, data=_register_payload(email='outro@example.com'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_google_signup_makes_no_cognito_call(self):
         payload = _register_payload(google_signup_token=create_signup_token('ana@gmail.com', 'google-sub-1'))

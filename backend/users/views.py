@@ -41,6 +41,7 @@ from .cognito import (
     UserNotConfirmed,
     get_cognito,
 )
+from .throttles import RegisterEmailThrottle
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 from rest_framework.throttling import AnonRateThrottle
@@ -202,7 +203,8 @@ class LoginThrottle(AnonRateThrottle):
 # 1 - The following views are related to user authentication procedures
 class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-    throttle_classes = [RegisterThrottle]
+    # Per IP against sweeps, per e-mail against spam to one inbox: each sign-up sends a verification e-mail.
+    throttle_classes = [RegisterThrottle, RegisterEmailThrottle]
 
     def post(self, request):
         data = request_data(request)

@@ -490,10 +490,10 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Teste de integração: quatro cadastros de `a@x.com` alternando `REMOTE_ADDR` entre dois IPs (o primeiro é substituído pelos seguintes) → o quarto responde 429 `too-many-requests` com `Retry-After`, e `fake.calls` tem só três `sign_up`
-- [ ] O teste de 10/hora por IP continua passando
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T10 + novos, sem remoções
+- [x] Teste de integração: quatro cadastros de `a@x.com` alternando `REMOTE_ADDR` entre dois IPs (o primeiro é substituído pelos seguintes) → o quarto responde 429 `too-many-requests` com `Retry-After`, e `fake.calls` tem só três `sign_up`
+- [x] O teste de 10/hora por IP continua passando
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T10 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick
