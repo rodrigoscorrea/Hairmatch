@@ -716,8 +716,8 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] `grep -n "AsyncStorage\|console.log" hooks/authHooks/useConfirmEmail.ts contexts/RegistrationContext.tsx` não mostra a senha sendo gravada nem logada
-- [ ] Gate check passes: App, sem erro novo
+- [x] `grep -n "AsyncStorage\|console.log" hooks/authHooks/useConfirmEmail.ts contexts/RegistrationContext.tsx` não mostra a senha sendo gravada nem logada
+- [x] Gate check passes: App, sem erro novo
 
 **Tests**: none
 **Gate**: app

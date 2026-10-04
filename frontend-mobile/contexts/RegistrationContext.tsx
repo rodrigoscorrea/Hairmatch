@@ -34,11 +34,21 @@ interface IRegistrationData {
   google_signup_token?: string;
 }
 
+// The e-mail account waiting for its confirmation code. The password, when the app still has it, signs the user in
+// right after the confirmation. It lives in memory only: never in storage, a URL or a log.
+interface IPendingConfirmation {
+  email: string;
+  password?: string;
+}
+
 // Define what our context will provide
 interface IRegistrationContext {
   registrationData: IRegistrationData;
   setRegistrationData: Dispatch<SetStateAction<IRegistrationData>>;
   resetRegistration: () => void;
+  pendingConfirmation: IPendingConfirmation | null;
+  setPendingConfirmation: (pending: IPendingConfirmation) => void;
+  clearPendingConfirmation: () => void;
 }
 
 // Create the context with a default value
@@ -80,11 +90,23 @@ export const INITIAL_REGISTRATION_DATA: IRegistrationData = {
 // Create the Provider component
 export const RegistrationProvider = ({ children }: { children: React.ReactNode }) => {
   const [registrationData, setRegistrationData] = useState<IRegistrationData>(INITIAL_REGISTRATION_DATA);
+  const [pendingConfirmation, setPendingConfirmationState] = useState<IPendingConfirmation | null>(null);
 
   const resetRegistration = () => setRegistrationData(INITIAL_REGISTRATION_DATA);
+  const setPendingConfirmation = (pending: IPendingConfirmation) => setPendingConfirmationState(pending);
+  const clearPendingConfirmation = () => setPendingConfirmationState(null);
 
   return (
-    <RegistrationContext.Provider value={{ registrationData, setRegistrationData, resetRegistration }}>
+    <RegistrationContext.Provider
+      value={{
+        registrationData,
+        setRegistrationData,
+        resetRegistration,
+        pendingConfirmation,
+        setPendingConfirmation,
+        clearPendingConfirmation,
+      }}
+    >
       {children}
     </RegistrationContext.Provider>
   );

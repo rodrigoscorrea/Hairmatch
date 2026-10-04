@@ -365,10 +365,10 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-39 | P1: Listagens, AC1 | Tasks | Implementing |
 | EMC-40 | P1: App, AC1 | Tasks | Pending |
 | EMC-41 | P1: App, AC2 | Tasks | Pending |
-| EMC-42 | P1: App, AC3 | Tasks | Pending |
-| EMC-43 | P1: App, AC4 | Tasks | Pending |
-| EMC-44 | P1: App, AC5 | Tasks | Pending |
-| EMC-45 | P1: App, AC6 | Tasks | Pending |
+| EMC-42 | P1: App, AC3 | Tasks | Implementing |
+| EMC-43 | P1: App, AC4 | Tasks | Implementing |
+| EMC-44 | P1: App, AC5 | Tasks | Implementing |
+| EMC-45 | P1: App, AC6 | Tasks | Implementing |
 | EMC-46 | P1: App, AC7 | Tasks | Implementing |
 | EMC-47 | P1: Contrato de erro, AC1 | Tasks | Pending |
 | EMC-48 | P1: Contrato de erro, AC2 | Tasks | Implementing |
