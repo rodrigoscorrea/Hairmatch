@@ -485,6 +485,41 @@ class RemoveReserveTest(ReserveTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(Reserve.objects.filter(id=self.reserve.id).exists())
+        self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
+
+    def test_cancelling_frees_the_agenda_slot_and_keeps_the_hairdressers_other_blocks(self):
+        manual_block = Agenda.objects.create(
+            start_time=self.reserve_start_time + timedelta(hours=3),
+            end_time=self.reserve_start_time + timedelta(hours=4),
+            hairdresser=self.hairdresser,
+            service=self.service,
+        )
+        self.login(self.customer_user)
+
+        response = self.client.delete(self.remove_url(self.reserve.id))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Agenda.objects.filter(id=self.agenda.id).exists())
+        self.assertTrue(Agenda.objects.filter(id=manual_block.id).exists())
+
+    def test_a_cancelled_slot_can_be_booked_again(self):
+        today = timezone.now().date()
+        next_monday = today + timedelta(days=7 - today.weekday())
+        slots_query = {'date': next_monday.strftime('%Y-%m-%d'), 'service': self.service.id}
+        self.login(self.customer_user)
+        booked = self.client.post(self.create_url, data=json.dumps({
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id,
+            'start_time': f'{next_monday.isoformat()}T14:00:00',
+        }), content_type='application/json')
+        self.assertEqual(booked.status_code, status.HTTP_201_CREATED)
+        slots = lambda: self.client.get(self.get_slots_url(self.hairdresser.id), slots_query).json()['available_slots']
+        self.assertNotIn('14:00', slots())
+
+        reserve = Reserve.objects.get(start_time=make_local_aware(datetime.combine(next_monday, time(14, 0))))
+        self.assertEqual(self.client.delete(self.remove_url(reserve.id)).status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertIn('14:00', slots())
 
 
 class ReserveSlotTest(ReserveTestCase):
