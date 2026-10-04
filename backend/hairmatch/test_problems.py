@@ -255,8 +255,9 @@ class OutsideApiTest(TestCase):
 
     @override_settings(DEBUG=False)
     def test_admin_is_untouched(self):
+        # Without DEBUG the admin is not mounted (AdminRouteTests): its path gets Django's own 404, not a problem.
         response = self.client.get('/admin/', follow=False)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 404)
         self.assertNotEqual(response.get('Content-Type'), 'application/problem+json')
 
     @override_settings(DEBUG=False)
