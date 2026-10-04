@@ -9,6 +9,14 @@ import jwt
 import datetime
 from .models import User, Customer, Hairdresser, user_profile_picture_path
 from .testing import activate_account
+from .throttles import (
+    ConfirmEmailThrottle,
+    ConfirmIpThrottle,
+    EmailRateThrottle,
+    RegisterEmailThrottle,
+    ResendCodeEmailThrottle,
+    ResendCodeIpThrottle,
+)
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
@@ -70,6 +78,8 @@ from botocore.exceptions import (
 )
 from types import SimpleNamespace
 from django.test import RequestFactory
+from rest_framework.test import APIRequestFactory
+from rest_framework.views import APIView
 from . import authentication
 from .authentication import (
     authenticate_request,
@@ -3750,6 +3760,80 @@ class CognitoServiceTest(SimpleTestCase):
             self.assertEqual(logs.records[logs.output.index(line)].levelname, 'WARNING')
             for secret in ('987654', 'Senha123', 'a@x.com'):
                 self.assertNotIn(secret, line)
+
+
+class EmailThrottleTest(SimpleTestCase):
+    """EMC-29, EMC-31, EMC-32: the counters are per target e-mail, and the e-mail is never stored in clear."""
+
+    def _key(self, throttle_class, body, format='json'):
+        factory = APIRequestFactory()
+        request = APIView().initialize_request(factory.post('/api/x', body, format=format))
+        return throttle_class().get_cache_key(request, None)
+
+    def test_the_key_ignores_the_case_and_the_spaces_around_the_email(self):
+        self.assertEqual(
+            self._key(ConfirmEmailThrottle, {'email': ' A@X.com '}),
+            self._key(ConfirmEmailThrottle, {'email': 'a@x.com'}),
+        )
+
+    def test_different_emails_get_different_keys(self):
+        self.assertNotEqual(
+            self._key(ConfirmEmailThrottle, {'email': 'a@x.com'}),
+            self._key(ConfirmEmailThrottle, {'email': 'b@x.com'}),
+        )
+
+    def test_the_key_does_not_contain_the_email(self):
+        key = self._key(ResendCodeEmailThrottle, {'email': 'Ana.Souza@x.com'})
+
+        self.assertTrue(key.startswith('throttle_resend_code_email_'))
+        for fragment in ('ana', 'souza', '@x.com'):
+            self.assertNotIn(fragment, key.lower())
+
+    def test_two_routes_never_share_the_counter_of_the_same_email(self):
+        keys = {
+            self._key(throttle, {'email': 'a@x.com'})
+            for throttle in (ConfirmEmailThrottle, ResendCodeEmailThrottle, RegisterEmailThrottle)
+        }
+
+        self.assertEqual(len(keys), 3)
+
+    def test_a_form_body_is_keyed_like_a_json_body(self):
+        self.assertEqual(
+            self._key(RegisterEmailThrottle, {'email': 'A@x.com'}, format='multipart'),
+            self._key(RegisterEmailThrottle, {'email': 'a@x.com'}),
+        )
+
+    def test_a_body_without_a_usable_email_is_not_counted(self):
+        for body in ({}, {'email': ''}, {'email': '   '}, {'email': 123}, {'email': ['a@x.com']}, [1, 2]):
+            with self.subTest(body=body):
+                self.assertIsNone(self._key(ConfirmEmailThrottle, body))
+
+    def test_a_google_sign_up_is_not_counted_by_email(self):
+        self.assertIsNone(self._key(RegisterEmailThrottle, {'email': 'a@x.com', 'google_signup_token': 'tok'}))
+
+    def test_the_rates_are_the_ones_of_the_spec(self):
+        self.assertEqual(
+            {cls.__name__: cls.rate for cls in (
+                ConfirmIpThrottle, ConfirmEmailThrottle, ResendCodeIpThrottle,
+                ResendCodeEmailThrottle, RegisterEmailThrottle,
+            )},
+            {
+                'ConfirmIpThrottle': '10/min',
+                'ConfirmEmailThrottle': '10/hour',
+                'ResendCodeIpThrottle': '10/hour',
+                'ResendCodeEmailThrottle': '3/hour',
+                'RegisterEmailThrottle': '3/hour',
+            },
+        )
+
+    def test_every_throttle_has_its_own_scope(self):
+        scopes = [cls.scope for cls in (
+            ConfirmIpThrottle, ConfirmEmailThrottle, ResendCodeIpThrottle,
+            ResendCodeEmailThrottle, RegisterEmailThrottle,
+        )]
+
+        self.assertEqual(len(set(scopes)), 5)
+        self.assertTrue(issubclass(ConfirmEmailThrottle, EmailRateThrottle))
 
 
 class AuthenticationTest(TestCase):

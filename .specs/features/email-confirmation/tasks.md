@@ -459,14 +459,14 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] `EmailThrottleTest` (`APIRequestFactory`):
-  - [ ] `" A@X.com "` e `"a@x.com"` → a mesma chave
-  - [ ] A chave não contém o e-mail em claro
-  - [ ] Corpo sem e-mail → `None`
-  - [ ] Corpo com `google_signup_token` → `None`
-  - [ ] Os rates de cada classe são os do spec
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T8 + novos, sem remoções
+- [x] `EmailThrottleTest` (`APIRequestFactory`):
+  - [x] `" A@X.com "` e `"a@x.com"` → a mesma chave
+  - [x] A chave não contém o e-mail em claro
+  - [x] Corpo sem e-mail → `None`
+  - [x] Corpo com `google_signup_token` → `None`
+  - [x] Os rates de cada classe são os do spec
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T8 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: quick
