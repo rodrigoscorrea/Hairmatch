@@ -827,8 +827,8 @@ Sem `pendingConfirmation`, a tela volta para o login.
 
 **Done when**:
 
-- [ ] O README tem os dois blocos, e os comandos citados existem
-- [ ] Gate check passes: Build (suíte do backend inalterada)
+- [x] O README tem os dois blocos, e os comandos citados existem
+- [x] Gate check passes: Build (suíte do backend inalterada)
 
 **Tests**: none
 **Gate**: build
