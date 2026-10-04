@@ -4333,6 +4333,51 @@ class UpdateProfileEmailTest(TestCase):
         self.assertEqual(User.objects.get(email='nova@example.com').first_name, 'Trocado')
 
 
+class RatingIsNotUserSettableTest(TestCase):
+    """The rating ranks hairdressers publicly, so neither sign-up nor PATCH /api/users/me takes it from the body."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_sign_up_by_email_ignores_the_rating(self):
+        for payload in (_register_payload(rating=1), _hairdresser_payload(rating=32767)):
+            with self.subTest(role=payload['role']):
+                response = self.client.post(reverse('register'), data=payload)
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(User.objects.get(email=payload['email']).rating, 5)
+
+    def test_sign_up_with_google_ignores_the_rating(self):
+        payload = {
+            **_register_payload(rating=32767),
+            'google_signup_token': create_signup_token('ana@gmail.com', 'google-sub-123'),
+        }
+
+        response = self.client.post(reverse('register'), data=payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.get(email='ana@gmail.com').rating, 5)
+
+    def test_patch_ignores_the_rating_and_updates_the_other_fields(self):
+        self.client.post(reverse('register'), data=_hairdresser_payload())
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+        response = self.client.patch(
+            reverse('current_user'),
+            data=json.dumps({'rating': 32767, 'first_name': 'Trocado'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(email='cabelo@example.com')
+        self.assertEqual(user.rating, 5)
+        self.assertEqual(user.first_name, 'Trocado')
+
+
 class UpdateProfilePhoneTest(TestCase):
     """PATCH /api/users/me takes the full stored phone (55 included) and refuses one used by another user."""
 

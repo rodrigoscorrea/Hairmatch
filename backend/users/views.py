@@ -158,7 +158,6 @@ class RegisterView(APIView):
                     password=None,
                     cognito_sub=cognito_sub,
                     role=role,
-                    rating=data.get('rating'),
                 )
 
                 if 'profile_picture' in request.FILES:
@@ -224,7 +223,6 @@ class RegisterView(APIView):
                     password=None,
                     google_id=google_id,
                     role=role,
-                    rating=data.get('rating'),
                 )
                 if 'profile_picture' in request.FILES:
                     user.profile_picture = request.FILES['profile_picture']
@@ -485,9 +483,10 @@ class CurrentUserView(APIView):
             if User.objects.filter(phone=data['phone']).exclude(id=user.id).exists():
                 return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
+        # The rating is not the user's to set: it is the public score hairdressers are ranked by.
         allowed_fields = [
             'first_name', 'last_name', 'phone', 'email',
-            'address', 'number', 'postal_code', 'rating',
+            'address', 'number', 'postal_code',
             'complement', 'neighborhood', 'city', 'state'
         ]
 
