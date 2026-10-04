@@ -395,13 +395,13 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Cadastro + login sem confirmar → 403 `email-not-confirmed`, sem `Set-Cookie` (`UserNotConfirmedException` do fake)
-  - [ ] Conta confirmada no fake, mas `is_active=False` no Postgres → 403 `email-not-confirmed`, sem `Set-Cookie`
-  - [ ] Senha errada de conta pendente → 401 `invalid-credentials` (EMC-26)
-  - [ ] Access token válido de `User` inativo em `GET /api/users/me` → 401 `invalid-session` (EMC-27)
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T7 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Cadastro + login sem confirmar → 403 `email-not-confirmed`, sem `Set-Cookie` (`UserNotConfirmedException` do fake)
+  - [x] Conta confirmada no fake, mas `is_active=False` no Postgres → 403 `email-not-confirmed`, sem `Set-Cookie`
+  - [x] Senha errada de conta pendente → 401 `invalid-credentials` (EMC-26)
+  - [x] Access token válido de `User` inativo em `GET /api/users/me` → 401 `invalid-session` (EMC-27)
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T7 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick

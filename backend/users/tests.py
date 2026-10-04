@@ -4445,6 +4445,56 @@ class CognitoLoginTest(TestCase):
         assert_invalid_credentials(response)
         self._assert_no_cookies(response)
 
+    def _pending_account(self, email='pendente@example.com'):
+        self.client.post(reverse('register'), data=_register_payload(email=email, phone='92998887766'))
+        self.client.cookies.clear()
+        self.fake.calls.clear()
+
+    def test_login_of_a_pending_account_with_the_right_password_answers_403_without_cookies(self):
+        """EMC-25: the pool refuses it with UserNotConfirmedException."""
+        self._pending_account()
+
+        response = self._login('pendente@example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
+        self.assertEqual(len(response.cookies), 0)
+
+    def test_login_of_an_account_confirmed_in_the_pool_but_inactive_here_answers_403_without_cookies(self):
+        """EMC-25: the emulator signs an UNCONFIRMED user in; the database is the second barrier."""
+        self._pending_account()
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='pendente@example.com')
+
+        response = self._login('pendente@example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': False})
+
+    def test_login_of_a_pending_account_with_the_wrong_password_answers_401_as_for_any_account(self):
+        """EMC-26"""
+        self._pending_account()
+
+        response = self._login('pendente@example.com', 'Errada123')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_invalid_credentials(response)
+        self._assert_no_cookies(response)
+
+    def test_a_valid_access_token_of_an_inactive_user_is_an_invalid_session(self):
+        """EMC-27"""
+        self._pending_account()
+        sub = User.objects.get(email='pendente@example.com').cognito_sub
+        self.client.cookies['jwt'] = self.fake.make_access_token(sub)
+
+        response = self.client.get(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': False})
+
     def test_missing_or_empty_email_and_password_answer_400_without_calling_cognito(self):
         bodies = [{}, {'email': 'nova@example.com'}, {'password': 'Senha123'},
                   {'email': '', 'password': 'Senha123'}, {'email': 'nova@example.com', 'password': ''}]

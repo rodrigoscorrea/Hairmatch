@@ -38,6 +38,7 @@ from .cognito import (
     InvalidPassword,
     TooManyRequests,
     UserAlreadyExists,
+    UserNotConfirmed,
     get_cognito,
 )
 from .google_auth import verify_google_id_token, GoogleTokenError
@@ -66,6 +67,7 @@ PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
 EMAIL_TAKEN_DETAIL = 'This email is already registered.'
 INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
 ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
+EMAIL_NOT_CONFIRMED_DETAIL = 'Confirm your email with the code we sent to sign in.'
 
 
 def normalize_phone(phone):
@@ -405,9 +407,15 @@ class LoginView(APIView):
             )
 
         invalid_credentials = problem_response(request, 'invalid-credentials', 'Invalid email or password.')
+        email_not_confirmed = problem_response(request, 'email-not-confirmed', EMAIL_NOT_CONFIRMED_DETAIL)
         try:
             tokens = get_cognito().authenticate(email, password)
+            # A pool that lets an UNCONFIRMED user sign in (the local emulator) must not open a session for it.
+            if _pending_accounts(email).exists():
+                return email_not_confirmed
             session = authenticate_token(tokens.access_token)
+        except UserNotConfirmed:
+            return email_not_confirmed
         except InvalidCredentials:
             return invalid_credentials
         except CognitoError as err:

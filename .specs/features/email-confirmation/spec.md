@@ -348,9 +348,9 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 | EMC-22 | P1: Reenviar, AC2 | Tasks | Pending |
 | EMC-23 | P1: Reenviar, AC3 | Tasks | Pending |
 | EMC-24 | P1: Reenviar, AC4 | Tasks | Pending |
-| EMC-25 | P1: Login pendente, AC1 | Tasks | Pending |
-| EMC-26 | P1: Login pendente, AC2 | Tasks | Pending |
-| EMC-27 | P1: Login pendente, AC3 | Tasks | Pending |
+| EMC-25 | P1: Login pendente, AC1 | Tasks | Implementing |
+| EMC-26 | P1: Login pendente, AC2 | Tasks | Implementing |
+| EMC-27 | P1: Login pendente, AC3 | Tasks | Implementing |
 | EMC-28 | P1: Rate limit, AC1 | Tasks | Pending |
 | EMC-29 | P1: Rate limit, AC2 | Tasks | Pending |
 | EMC-30 | P1: Rate limit, AC3 | Tasks | Pending |
