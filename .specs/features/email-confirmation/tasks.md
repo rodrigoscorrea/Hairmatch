@@ -686,9 +686,9 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Baseline de `npx tsc --noEmit` registrada antes da mudança
-- [ ] `utils/api-problem.ts` e `services/auth-routes.ts` têm os itens novos
-- [ ] Gate check passes: App, sem erro novo
+- [x] Baseline de `npx tsc --noEmit` registrada antes da mudança
+- [x] `utils/api-problem.ts` e `services/auth-routes.ts` têm os itens novos
+- [x] Gate check passes: App, sem erro novo
 
 **Tests**: none
 **Gate**: app

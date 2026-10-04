@@ -12,6 +12,8 @@ export type ProblemSlug =
   | 'password-policy'
   | 'incorrect-current-password'
   | 'email-change-unsupported'
+  | 'invalid-confirmation-code'
+  | 'confirmation-code-expired'
   | 'invalid-session'
   | 'invalid-credentials'
   | 'session-expired'
@@ -22,6 +24,7 @@ export type ProblemSlug =
   | 'customer-required'
   | 'google-account-login'
   | 'google-email-unverified'
+  | 'email-not-confirmed'
   | 'not-found'
   | 'postal-code-not-found'
   | 'method-not-allowed'
@@ -69,6 +72,8 @@ export const PROBLEM_MESSAGES: Record<ProblemSlug, string> = {
   'password-policy': 'A senha deve ter ao menos 8 caracteres, com letra maiúscula, letra minúscula e número.',
   'incorrect-current-password': 'Senha atual incorreta.',
   'email-change-unsupported': 'A troca de e-mail não é suportada.',
+  'invalid-confirmation-code': 'Código inválido. Confira o e-mail ou peça um novo código.',
+  'confirmation-code-expired': 'Este código venceu. Peça um novo código.',
   'invalid-session': 'Sua sessão expirou. Entre novamente.',
   'invalid-credentials': 'E-mail ou senha inválidos.',
   'session-expired': 'Sessão expirada. Entre novamente.',
@@ -79,6 +84,7 @@ export const PROBLEM_MESSAGES: Record<ProblemSlug, string> = {
   'customer-required': 'Apenas clientes podem realizar esta ação.',
   'google-account-login': 'Esta conta usa login com Google. Use o botão Entrar com Google.',
   'google-email-unverified': 'Seu e-mail do Google não está verificado.',
+  'email-not-confirmed': 'Confirme seu e-mail para entrar.',
   'not-found': 'Não encontramos o que você procurou.',
   'postal-code-not-found': ERROR_MESSAGES.cep_not_found,
   'method-not-allowed': GENERIC_MESSAGE,
