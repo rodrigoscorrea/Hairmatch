@@ -230,7 +230,7 @@ A issue #141 pede que o cadastro só seja oficializado depois que o dono do e-ma
 **Why P1**: A issue diz que a conta só passa a valer na plataforma depois da confirmação. Hoje um cabeleireiro criado por bot aparece na busca.
 
 **Acceptance Criteria**:
-1. **EMC-39** WHEN a busca global (`GlobalSearchView`), a listagem por preferência ou a listagem "para você" monta a lista de cabeleireiros THEN o backend SHALL excluir todo `Hairdresser` cujo `user.is_active` é `False`.
+1. **EMC-39** WHEN a busca global (`GlobalSearchView`), a listagem por preferência ou a listagem "para você" monta a lista de cabeleireiros THEN o backend SHALL excluir todo `Hairdresser` cujo `user.is_active` é `False`. O mesmo vale para a listagem de cabeleireiros por preferência (`GET /api/preferences/{id}/users`) e para as listas do chatbot (busca por nome e recomendação por preferência). *(Ampliado depois da verificação: o Verificador achou essas listagens ainda mostrando a conta pendente.)*
 
 **Independent Test**: nos testes, criar um cabeleireiro ativo e um pendente com o mesmo nome. A busca pelo nome devolve só o ativo, e o mesmo vale nas duas listagens.
 

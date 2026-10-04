@@ -181,6 +181,19 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             {'id': self.hairdresser_user.id, 'first_name': 'Hair', 'last_name': 'Dresser'}
         ])
 
+    def test_list_users_skips_a_hairdresser_pending_email_confirmation(self):
+        """EMC-39: a hairdresser whose e-mail is not confirmed is on no listing."""
+        pending = User.objects.create(
+            email="pending@example.com", first_name="Pen", last_name="Ding", phone="+5592984504444",
+            neighborhood="Centro", city="Manaus", state="AM", address="Salon Street", postal_code="69050750",
+            role="hairdresser", is_active=False,
+        )
+        self.preference.users.add(pending)
+
+        response = self.client.get(self.list_users_url1)
+
+        self.assertEqual([item['id'] for item in response.data['data']], [self.hairdresser_user.id])
+
     def test_list_users_for_nonexistent_preference(self):
         """Test listing users for a preference that doesn't exist"""
         response = self.client.get(self.list_users_nonexistent_url)

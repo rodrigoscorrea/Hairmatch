@@ -106,6 +106,16 @@ class AiUtilsTest(TestCase):
         self.assertEqual(matches[0]['hairdresser']['user']['first_name'], 'Pedro') # Pedro matches 2
         self.assertEqual(matches[1]['hairdresser']['user']['first_name'], 'Joana') # Joana matches 1
 
+    def test_get_hairdressers_by_preferences_skips_a_hairdresser_pending_email_confirmation(self):
+        """EMC-39: with matches, with no list and with no match, a pending hairdresser is never offered."""
+        User.objects.filter(pk=self.hairdresser_user2.pk).update(is_active=False)
+
+        for preferences in (['moderno', 'coloração'], [], ['nada que combine']):
+            with self.subTest(preferences=preferences):
+                matches = AiUtils.get_hairdressers_by_preferences(preferences)
+
+                self.assertEqual([m['hairdresser']['user']['first_name'] for m in matches], ['Joana'])
+
     def test_get_hairdressers_by_preferences_no_list(self):
         """Test that it returns all hairdressers if no preferences are provided."""
         matches = AiUtils.get_hairdressers_by_preferences([], limit=2)

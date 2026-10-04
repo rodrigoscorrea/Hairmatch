@@ -158,7 +158,7 @@ class EvolutionApi(APIView):
                     hairdresser_name = incoming_text.lower()
                     try:
                         hairdressers = User.objects.filter(
-                            role='hairdresser'
+                            role='hairdresser', is_active=True
                         ).filter(
                             Q(hairdresser__isnull=False) & (
                                 Q(first_name__icontains=hairdresser_name) |
