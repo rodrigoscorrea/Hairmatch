@@ -748,8 +748,8 @@ Sem `pendingConfirmation`, a tela volta para o login.
 
 **Done when**:
 
-- [ ] Gate check passes: App, sem erro novo
-- [ ] A rota aparece no Stack de `app/(auth)/_layout.tsx` (se o layout lista as telas)
+- [x] Gate check passes: App, sem erro novo
+- [x] A rota aparece no Stack de `app/(auth)/_layout.tsx` (se o layout lista as telas)
 
 **Tests**: none
 **Gate**: app
