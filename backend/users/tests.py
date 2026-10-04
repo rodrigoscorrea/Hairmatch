@@ -4763,6 +4763,150 @@ class EmailConfirmationViewTest(TestCase):
         self.assertFalse(self._active())
 
 
+class ConfirmationCodeViewTest(TestCase):
+    """POST /api/auth/confirmation-codes: a new e-mailed code for a pending account, with one answer for every e-mail."""
+
+    ACCEPTED = {'message': 'If the account is pending confirmation, a new code was sent'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('confirmation_codes')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload(email='Nova@example.com'))
+        self.first_code = self.fake.confirmation_code('nova@example.com')
+        self.fake.calls.clear()
+
+    def _resend(self, email='nova@example.com', **extra):
+        return self.client.post(
+            self.url, data=json.dumps({'email': email}), content_type='application/json', **extra,
+        )
+
+    def _resend_calls(self):
+        return [kwargs for name, kwargs in self.fake.calls if name == 'resend_confirmation_code']
+
+    def _active(self):
+        return User.objects.get(email='Nova@example.com').is_active
+
+    def test_a_pending_account_gets_a_new_code_and_the_old_one_stops_working(self):
+        """EMC-21"""
+        response = self._resend()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), self.ACCEPTED)
+        self.assertEqual([call['Username'] for call in self._resend_calls()], ['nova@example.com'])
+        new_code = self.fake.confirmation_code('nova@example.com')
+        self.assertNotEqual(new_code, self.first_code)
+        confirm_url = reverse('email_confirmations')
+        stale = self.client.post(
+            confirm_url, data=json.dumps({'email': 'nova@example.com', 'code': self.first_code}),
+            content_type='application/json',
+        )
+        assert_problem(stale, 'invalid-confirmation-code')
+        fresh = self.client.post(
+            confirm_url, data=json.dumps({'email': 'nova@example.com', 'code': new_code}),
+            content_type='application/json',
+        )
+        self.assertEqual(fresh.status_code, status.HTTP_200_OK)
+
+    def test_an_expired_code_is_replaced_by_a_resend(self):
+        """Edge case: the code lasts 24 h, and a resend issues a new one."""
+        self.fake.expire_code('nova@example.com')
+
+        self._resend()
+
+        self.assertEqual(self.fake.confirm_sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com',
+            ConfirmationCode=self.fake.confirmation_code('nova@example.com'),
+        ), {})
+
+    def test_an_unknown_active_or_google_email_gets_the_same_answer_without_calling_cognito(self):
+        """EMC-22"""
+        activate_account('nova@example.com')
+        _create_plain_user(email='google@example.com', google_id='google-sub-1', phone='5592990001111')
+        for email in ('ninguem@example.com', 'nova@example.com', 'google@example.com'):
+            with self.subTest(email=email):
+                self.fake.calls.clear()
+
+                response = self._resend(email)
+
+                self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+                self.assertEqual(response.json(), self.ACCEPTED)
+                self.assertEqual(self.fake.calls, [])
+
+    def test_a_missing_or_empty_email_answers_400_validation_error_without_calling_cognito(self):
+        """EMC-23"""
+        for body in ({}, {'email': ''}):
+            with self.subTest(body=body):
+                response = self.client.post(self.url, data=json.dumps(body), content_type='application/json')
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/email', 'detail': 'This field is required.'},
+                ])
+        self.assertEqual(self.fake.calls, [])
+
+    def test_pool_limits_answer_429(self):
+        """EMC-24"""
+        for code in ('LimitExceededException', 'TooManyRequestsException'):
+            with self.subTest(code=code):
+                cache.clear()
+                self.fake.fail_next('resend_confirmation_code', code)
+
+                assert_throttled(self._resend())
+
+    def test_the_eleventh_call_from_one_ip_in_an_hour_answers_429_without_calling_cognito(self):
+        """EMC-30"""
+        statuses = [self._resend(email=f'ninguem{i}@example.com').status_code for i in range(10)]
+        self.fake.calls.clear()
+
+        response = self._resend(email='outro@example.com')
+
+        self.assertEqual(statuses, [status.HTTP_202_ACCEPTED] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_fourth_request_for_one_email_in_an_hour_answers_429_from_any_ip(self):
+        """EMC-31"""
+        statuses = [
+            self._resend(email=email, REMOTE_ADDR=ip).status_code
+            for email, ip in (('nova@example.com', '10.0.0.1'), ('NOVA@example.com', '10.0.0.2'), (' nova@example.com', '10.0.0.1'))
+        ]
+
+        response = self._resend(REMOTE_ADDR='10.0.0.2')
+
+        self.assertEqual(statuses, [status.HTTP_202_ACCEPTED] * 3)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(len(self._resend_calls()), 3)
+
+    def test_a_pool_outage_answers_503(self):
+        """EMC-48"""
+        self.fake.fail_next('resend_confirmation_code', EndpointConnectionError(endpoint_url='http://x'))
+
+        assert_auth_unavailable(self._resend())
+        self.assertFalse(self._active())
+
+    def test_an_account_already_confirmed_in_the_pool_is_activated_and_answers_202(self):
+        """EMC-54"""
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='nova@example.com')
+
+        response = self._resend()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), self.ACCEPTED)
+        self.assertTrue(self._active())
+        self.assertIn('admin_get_user', [name for name, _ in self.fake.calls])
+
+    def test_a_rejected_resend_for_an_unconfirmed_account_answers_503_and_keeps_it_pending(self):
+        """EMC-54"""
+        self.fake.fail_next('resend_confirmation_code', 'InvalidParameterException')
+
+        response = self._resend()
+
+        assert_auth_unavailable(response)
+        self.assertFalse(self._active())
+
+
 class CognitoLoginTest(TestCase):
 
     def setUp(self):

@@ -40,6 +40,7 @@ from .cognito import (
     InvalidConfirmationCode,
     InvalidCredentials,
     InvalidPassword,
+    ResendRejected,
     TooManyRequests,
     UserAlreadyExists,
     UserNotConfirmed,
@@ -49,6 +50,8 @@ from .throttles import (
     ConfirmEmailThrottle,
     ConfirmIpThrottle,
     RegisterEmailThrottle,
+    ResendCodeEmailThrottle,
+    ResendCodeIpThrottle,
 )
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
@@ -78,6 +81,7 @@ INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
 ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
 EMAIL_NOT_CONFIRMED_DETAIL = 'Confirm your email with the code we sent to sign in.'
 CONFIRMATION_CODE_PATTERN = re.compile(r'[0-9]{6}')
+CONFIRMATION_CODE_RESENT_MESSAGE = 'If the account is pending confirmation, a new code was sent'
 
 
 def normalize_phone(phone):
@@ -490,6 +494,38 @@ class EmailConfirmationView(APIView):
         user.is_active = True
         user.save(update_fields=['is_active'])
         return confirmed
+
+
+class ConfirmationCodeView(APIView):
+    throttle_classes = [ResendCodeIpThrottle, ResendCodeEmailThrottle]
+
+    def post(self, request):
+        data = request_data(request)
+        errors = _string_field_errors(data, ['email'])
+        if errors:
+            raise validation_problem(errors)
+
+        # Always 202, so this route does not tell which accounts exist or are pending.
+        accepted = JsonResponse({'message': CONFIRMATION_CODE_RESENT_MESSAGE}, status=202)
+        user = User.objects.filter(
+            _PENDING_ACCOUNT, email__iexact=data['email'].strip()
+        ).first()
+        if user is None:
+            return accepted
+
+        cognito = get_cognito()
+        try:
+            try:
+                cognito.resend_confirmation_code(user.email)
+            except ResendRejected:
+                # The pool refuses a user that is already confirmed. The status tells that from a real fault.
+                if cognito.admin_get_status(user.email) != 'CONFIRMED':
+                    raise CognitoUnavailable('ResendRejected')
+                user.is_active = True
+                user.save(update_fields=['is_active'])
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
+        return accepted
 
 
 class SessionView(APIView):

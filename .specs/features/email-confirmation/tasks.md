@@ -556,18 +556,18 @@ O caminho Google e o seed continuam criando contas ativas.
 
 **Done when**:
 
-- [ ] Testes de integração:
-  - [ ] Conta pendente → 202 com o corpo de EMC-21, `resend_confirmation_code` em `fake.calls`, e o código antigo passa a falhar na confirmação
-  - [ ] E-mail inexistente, conta ativa e conta Google → 202 com corpo idêntico (exceto `instance`, que nem existe no 202), sem chamadas ao fake (EMC-22)
-  - [ ] Sem `email` → 400 `validation-error` com `pointer` `/email` (EMC-23)
-  - [ ] `fail_next('resend_confirmation_code', 'LimitExceededException')` → 429 (EMC-24)
-  - [ ] 11ª chamada do mesmo IP em 1 hora → 429 + `Retry-After` (EMC-30)
-  - [ ] 4º pedido para o mesmo e-mail vindo de IPs alternados → 429, e só três `resend_confirmation_code` em `fake.calls` (EMC-31)
-  - [ ] `EndpointConnectionError` → 503 (EMC-48)
-  - [ ] Conta `CONFIRMED` no fake e inativa no Postgres → o fake levanta `InvalidParameterException`, o backend consulta o status, ativa o `User` e responde 202; com status `UNCONFIRMED` e o mesmo erro injetado por `fail_next` → 503 (EMC-54)
-- [ ] `test_routes.py` passa com `('POST', 'auth/confirmation-codes')`
-- [ ] Gate check passes: Full
-- [ ] Test count: T12 + novos, sem remoções
+- [x] Testes de integração:
+  - [x] Conta pendente → 202 com o corpo de EMC-21, `resend_confirmation_code` em `fake.calls`, e o código antigo passa a falhar na confirmação
+  - [x] E-mail inexistente, conta ativa e conta Google → 202 com corpo idêntico (exceto `instance`, que nem existe no 202), sem chamadas ao fake (EMC-22)
+  - [x] Sem `email` → 400 `validation-error` com `pointer` `/email` (EMC-23)
+  - [x] `fail_next('resend_confirmation_code', 'LimitExceededException')` → 429 (EMC-24)
+  - [x] 11ª chamada do mesmo IP em 1 hora → 429 + `Retry-After` (EMC-30)
+  - [x] 4º pedido para o mesmo e-mail vindo de IPs alternados → 429, e só três `resend_confirmation_code` em `fake.calls` (EMC-31)
+  - [x] `EndpointConnectionError` → 503 (EMC-48)
+  - [x] Conta `CONFIRMED` no fake e inativa no Postgres → o fake levanta `InvalidParameterException`, o backend consulta o status, ativa o `User` e responde 202; com status `UNCONFIRMED` e o mesmo erro injetado por `fail_next` → 503 (EMC-54)
+- [x] `test_routes.py` passa com `('POST', 'auth/confirmation-codes')`
+- [x] Gate check passes: Full
+- [x] Test count: T12 + novos, sem remoções
 
 **Tests**: integration
 **Gate**: full
