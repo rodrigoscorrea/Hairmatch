@@ -192,20 +192,20 @@ T22 → T23
 
 **Done when**:
 
-- [ ] `CognitoServiceTest` cobre:
-  - [ ] `CodeMismatchException` → `InvalidConfirmationCode`
-  - [ ] `ExpiredCodeException` → `ExpiredConfirmationCode`
-  - [ ] `UserNotConfirmedException` (no `authenticate`) → `UserNotConfirmed`
-  - [ ] `TooManyFailedAttemptsException` → `TooManyRequests`
-  - [ ] `NotAuthorizedException` no `confirm_sign_up` → `AlreadyConfirmed`, e no `authenticate` continua `InvalidCredentials`
-  - [ ] `sign_up` não chama `admin_confirm_sign_up` (`fake.calls`), e `sign_up_confirmed` chama
-  - [ ] `admin_get_status` → `UNCONFIRMED`, `CONFIRMED` e `None` (inexistente)
-  - [ ] `InvalidParameterException` no `resend_confirmation_code` → `ResendRejected`
-  - [ ] O teste de compensação de `sign_up_confirmed` (`fail_next('admin_confirm_sign_up', ...)`, `users/tests.py:3309`) continua passando
-  - [ ] `confirm_sign_up` e `resend_confirmation_code` mandam o e-mail em minúsculas
-  - [ ] `assertLogs('users.cognito', 'WARNING')` numa falha de `confirm_sign_up` não contém o código enviado (EMC-49)
-- [ ] Gate check passes: Quick (`users`)
-- [ ] Test count: T1 + novos, sem remoções
+- [x] `CognitoServiceTest` cobre:
+  - [x] `CodeMismatchException` → `InvalidConfirmationCode`
+  - [x] `ExpiredCodeException` → `ExpiredConfirmationCode`
+  - [x] `UserNotConfirmedException` (no `authenticate`) → `UserNotConfirmed`
+  - [x] `TooManyFailedAttemptsException` → `TooManyRequests`
+  - [x] `NotAuthorizedException` no `confirm_sign_up` → `AlreadyConfirmed`, e no `authenticate` continua `InvalidCredentials`
+  - [x] `sign_up` não chama `admin_confirm_sign_up` (`fake.calls`), e `sign_up_confirmed` chama
+  - [x] `admin_get_status` → `UNCONFIRMED`, `CONFIRMED` e `None` (inexistente)
+  - [x] `InvalidParameterException` no `resend_confirmation_code` → `ResendRejected`
+  - [x] O teste de compensação de `sign_up_confirmed` (`fail_next('admin_confirm_sign_up', ...)`, `users/tests.py:3309`) continua passando
+  - [x] `confirm_sign_up` e `resend_confirmation_code` mandam o e-mail em minúsculas
+  - [x] `assertLogs('users.cognito', 'WARNING')` numa falha de `confirm_sign_up` não contém o código enviado (EMC-49)
+- [x] Gate check passes: Quick (`users`)
+- [x] Test count: T1 + novos, sem remoções
 
 **Tests**: unit
 **Gate**: quick

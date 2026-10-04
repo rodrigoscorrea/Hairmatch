@@ -46,13 +46,18 @@ from django.core.management import call_command
 from .management.commands import populate_hairdressers
 from . import cognito_fake
 from .cognito import (
+    AlreadyConfirmed,
     CognitoService,
+    ExpiredConfirmationCode,
+    InvalidConfirmationCode,
+    ResendRejected,
     Tokens,
     CognitoUnavailable,
     InvalidCredentials,
     InvalidPassword,
     TooManyRequests,
     UserAlreadyExists,
+    UserNotConfirmed,
     get_cognito,
     reset_cognito,
 )
@@ -3499,6 +3504,126 @@ class CognitoServiceTest(SimpleTestCase):
             stream=StringIO(), resultclass=runner.get_resultclass()
         ).run(suite)
         self.assertTrue(result.wasSuccessful(), result.failures)
+
+    def test_confirmation_error_codes_become_domain_errors(self):
+        cases = [
+            ('CodeMismatchException', InvalidConfirmationCode),
+            ('ExpiredCodeException', ExpiredConfirmationCode),
+            ('TooManyFailedAttemptsException', TooManyRequests),
+            ('LimitExceededException', TooManyRequests),
+            ('InternalErrorException', CognitoUnavailable),
+            (EndpointConnectionError(endpoint_url='http://x'), CognitoUnavailable),
+        ]
+        for error, expected in cases:
+            with self.subTest(error=error):
+                self.fake.fail_next('confirm_sign_up', error)
+                with self.assertRaises(expected) as ctx:
+                    self.service.confirm_sign_up('a@x.com', '123456')
+                self.assertIs(type(ctx.exception), expected)
+
+    def test_login_of_an_unconfirmed_user_is_user_not_confirmed(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        with self.assertRaises(UserNotConfirmed) as ctx:
+            self.service.authenticate('a@x.com', 'Senha123')
+        self.assertIs(type(ctx.exception), UserNotConfirmed)
+
+    def test_not_authorized_on_confirm_means_already_confirmed_but_on_login_stays_invalid_credentials(self):
+        self._sign_up()
+
+        with self.assertRaises(AlreadyConfirmed) as ctx:
+            self.service.confirm_sign_up('a@x.com', self.fake.confirmation_code('a@x.com'))
+        self.assertIs(type(ctx.exception), AlreadyConfirmed)
+        with self.assertRaises(InvalidCredentials) as ctx:
+            self.service.authenticate('a@x.com', 'Errada123')
+        self.assertIs(type(ctx.exception), InvalidCredentials)
+
+    def test_confirm_of_a_user_the_pool_does_not_know_is_an_invalid_code(self):
+        self.fake.fail_next('confirm_sign_up', 'UserNotFoundException')
+
+        with self.assertRaises(InvalidConfirmationCode):
+            self.service.confirm_sign_up('nobody@x.com', '123456')
+
+    def test_the_right_code_confirms_the_user_in_the_pool(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        self.service.confirm_sign_up('a@x.com', self.fake.confirmation_code('a@x.com'))
+
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'CONFIRMED')
+
+    def test_sign_up_leaves_the_user_unconfirmed_and_sign_up_confirmed_confirms_it(self):
+        pending_sub = self.service.sign_up('a@x.com', 'Senha123')
+        confirmed_sub = self.service.sign_up_confirmed('b@x.com', 'Senha123')
+
+        names = [name for name, _ in self.fake.calls]
+        self.assertEqual(names.count('admin_confirm_sign_up'), 1)
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'UNCONFIRMED')
+        self.assertEqual(self.service.admin_get_status('b@x.com'), 'CONFIRMED')
+        self.assertEqual(pending_sub, self.fake.users['a@x.com']['sub'])
+        self.assertEqual(confirmed_sub, self.fake.users['b@x.com']['sub'])
+
+    def test_admin_get_status_reports_the_status_or_none_for_an_unknown_user(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'UNCONFIRMED')
+        self.assertIsNone(self.service.admin_get_status('nobody@x.com'))
+
+    def test_admin_get_status_reports_an_outage_as_unavailable(self):
+        self.fake.fail_next('admin_get_user', 'InternalErrorException')
+
+        with self.assertRaises(CognitoUnavailable):
+            self.service.admin_get_status('a@x.com')
+
+    def test_resend_for_a_confirmed_user_is_rejected_and_any_other_failure_is_unavailable(self):
+        self._sign_up()
+        with self.assertRaises(ResendRejected) as ctx:
+            self.service.resend_confirmation_code('a@x.com')
+        self.assertIs(type(ctx.exception), ResendRejected)
+
+        self.fake.fail_next('resend_confirmation_code', 'InternalErrorException')
+        with self.assertRaises(CognitoUnavailable) as ctx:
+            self.service.resend_confirmation_code('a@x.com')
+        self.assertIs(type(ctx.exception), CognitoUnavailable)
+
+    def test_resend_limits_become_too_many_requests(self):
+        for code in ('LimitExceededException', 'TooManyRequestsException'):
+            with self.subTest(code=code):
+                self.fake.fail_next('resend_confirmation_code', code)
+                with self.assertRaises(TooManyRequests):
+                    self.service.resend_confirmation_code('a@x.com')
+
+    def test_confirm_and_resend_send_the_email_in_lower_case(self):
+        self.service.sign_up('A@X.com', 'Senha123')
+
+        self.service.resend_confirmation_code('A@X.com')
+        self.service.confirm_sign_up('A@X.com', self.fake.confirmation_code('a@x.com'))
+
+        sent = {name: kwargs['Username'] for name, kwargs in self.fake.calls if name in (
+            'sign_up', 'resend_confirmation_code', 'confirm_sign_up'
+        )}
+        self.assertEqual(sent, {
+            'sign_up': 'a@x.com',
+            'resend_confirmation_code': 'a@x.com',
+            'confirm_sign_up': 'a@x.com',
+        })
+
+    def test_a_failed_confirmation_is_logged_without_the_code_the_password_or_the_email(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+        with self.assertLogs('users.cognito', 'WARNING') as logs:
+            with self.assertRaises(InvalidConfirmationCode):
+                self.service.confirm_sign_up('a@x.com', '987654')
+            self.fake.fail_next('resend_confirmation_code', EndpointConnectionError(endpoint_url='http://x'))
+            with self.assertRaises(CognitoUnavailable):
+                self.service.resend_confirmation_code('a@x.com')
+
+        self.assertIn('confirm_sign_up', logs.output[0])
+        self.assertIn('CodeMismatchException', logs.output[0])
+        self.assertIn('resend_confirmation_code', logs.output[1])
+        self.assertIn('EndpointConnectionError', logs.output[1])
+        for line in logs.output:
+            self.assertEqual(logs.records[logs.output.index(line)].levelname, 'WARNING')
+            for secret in ('987654', 'Senha123', 'a@x.com'):
+                self.assertNotIn(secret, line)
 
 
 class AuthenticationTest(TestCase):
