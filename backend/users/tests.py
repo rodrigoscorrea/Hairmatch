@@ -8,6 +8,15 @@ import json
 import jwt
 import datetime
 from .models import User, Customer, Hairdresser, user_profile_picture_path
+from .testing import activate_account
+from .throttles import (
+    ConfirmEmailThrottle,
+    ConfirmIpThrottle,
+    EmailRateThrottle,
+    RegisterEmailThrottle,
+    ResendCodeEmailThrottle,
+    ResendCodeIpThrottle,
+)
 from hairmatch.image_fixtures import make_image_bytes, make_upload
 from preferences.models import Preferences
 from service.models import Service
@@ -36,6 +45,8 @@ from .google_auth import verify_google_id_token, GoogleTokenError
 from google.auth.exceptions import GoogleAuthError
 import requests as http_requests
 from django.core.cache import cache
+from django.db import IntegrityError, connection
+from .views import RegisterView
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 import os
 import tempfile
@@ -43,16 +54,21 @@ from io import BytesIO, StringIO
 from PIL import Image
 from django.core.files.storage import default_storage
 from django.core.management import call_command
-from .management.commands import populate_hairdressers
+from .management.commands import populate_hairdressers, purge_unconfirmed_users
 from . import cognito_fake
 from .cognito import (
+    AlreadyConfirmed,
     CognitoService,
+    ExpiredConfirmationCode,
+    InvalidConfirmationCode,
+    ResendRejected,
     Tokens,
     CognitoUnavailable,
     InvalidCredentials,
     InvalidPassword,
     TooManyRequests,
     UserAlreadyExists,
+    UserNotConfirmed,
     get_cognito,
     reset_cognito,
 )
@@ -64,6 +80,8 @@ from botocore.exceptions import (
 )
 from types import SimpleNamespace
 from django.test import RequestFactory
+from rest_framework.test import APIRequestFactory
+from rest_framework.views import APIView
 from . import authentication
 from .authentication import (
     authenticate_request,
@@ -162,6 +180,7 @@ class RegisterViewTest(TestCase):
             self.register_url,
             data=self.valid_customer_payload,
         )
+        activate_account(self.valid_customer_payload['email'])
         
         # Duplicate registration attempt
         response = self.client.post(
@@ -177,6 +196,7 @@ class RegisterViewTest(TestCase):
             self.register_url,
             data=self.valid_customer_payload,
         )
+        activate_account(self.valid_customer_payload['email'])
         
         # Duplicate registration attempt
         response = self.client.post(
@@ -189,6 +209,7 @@ class RegisterViewTest(TestCase):
     def test_register_with_a_phone_already_used_by_another_email_returns_409(self):
         """The phone is stored with the country code 55; the check must compare that form"""
         self.client.post(self.register_url, data=self.valid_customer_payload)
+        activate_account(self.valid_customer_payload['email'])
         payload = dict(self.valid_customer_payload, email='other@example.com', cpf='98765432100')
 
         response = self.client.post(self.register_url, data=payload)
@@ -200,6 +221,7 @@ class RegisterViewTest(TestCase):
 
     def test_register_with_the_same_phone_typed_with_a_mask_returns_409(self):
         self.client.post(self.register_url, data=self.valid_customer_payload)
+        activate_account(self.valid_customer_payload['email'])
         payload = dict(self.valid_customer_payload, email='other@example.com', phone='(12) 34567-89123')
 
         response = self.client.post(self.register_url, data=payload)
@@ -400,6 +422,7 @@ class LoginViewTest(TestCase):
             self.register_url,
             data=self.user_data,
         )
+        activate_account(self.user_data['email'])
 
     def test_login_valid(self):
         login_payload = {
@@ -528,6 +551,7 @@ class ChangePasswordViewTest(TestCase):
             self.register_url,
             data=self.user_data,
         )
+        activate_account(self.user_data['email'])
         
         # Login to get token
         login_payload = {
@@ -675,11 +699,13 @@ class UserInfoCookieViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data,
         )
+        activate_account(self.hairdresser_data['email'])
         
         # Helper method to login and get token
         self.customer_token = self._get_token('customer@example.com', 'Customer_password1')
@@ -925,11 +951,13 @@ class UserInfoViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data,
         )
+        activate_account(self.hairdresser_data['email'])
 
     def test_get_customer_info_of_the_session(self):
         self._login('customer@example.com', 'Customer_password1')
@@ -1077,16 +1105,19 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=self.customer_data,
         )
+        activate_account(self.customer_data['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data_1,
         )
+        activate_account(self.hairdresser_data_1['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_data_2,
         )
+        activate_account(self.hairdresser_data_2['email'])
         
         # Get created users and add preferences
         self.customer_user = User.objects.get(email='customer@example.com')
@@ -1232,6 +1263,7 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=customer_no_match,
         )
+        activate_account(customer_no_match['email'])
         
         # Add a preference that no hairdresser has
         customer_user_no_match = User.objects.get(email='nomatch@example.com')
@@ -1276,6 +1308,7 @@ class CustomerHomeViewTest(TestCase):
             self.register_url,
             data=customer_empty,
         )
+        activate_account(customer_empty['email'])
         
         self._login('empty@example.com')
         url = reverse('customer_home')
@@ -2318,6 +2351,44 @@ class GoogleAuthViewTest(TestCase):
         auth_response = self.client.get(self.user_auth_url)
         self.assertEqual(auth_response.json(), {'authenticated': True})
 
+    def _pending_email_account(self, email='Ana@gmail.com', phone='92991234567'):
+        response = self.client.post(reverse('register'), data=_register_payload(email=email, phone=phone))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        get_cognito().client.calls.clear()
+        return User.objects.get(email=email)
+
+    def test_a_pending_account_with_the_same_email_is_replaced_and_never_linked(self):
+        """EMC-52"""
+        self._pending_email_account('Ana@gmail.com')
+        self.mock_verify.return_value = self._identity(email='ana@gmail.com')
+
+        response = self._post()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['status'], 'signup_required')
+        self.assertTrue(response.json()['signup_token'])
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(User.objects.count(), 0)
+        self.assertFalse(User.objects.filter(google_id='google-sub-123').exists())
+        self.assertEqual(get_cognito().client.users, {})
+        self.assertEqual([name for name, _ in get_cognito().client.calls], ['admin_delete_user'])
+
+    def test_a_cognito_outage_while_replacing_the_pending_account_answers_503_and_keeps_it(self):
+        """EMC-55"""
+        pending = self._pending_email_account('ana@gmail.com')
+        get_cognito().client.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+        self.mock_verify.return_value = self._identity()
+
+        response = self._post()
+
+        assert_auth_unavailable(response)
+        self.assertNotIn('jwt', response.cookies)
+        pending.refresh_from_db()
+        self.assertIsNone(pending.google_id)
+        self.assertFalse(pending.is_active)
+        self.assertIn('ana@gmail.com', get_cognito().client.users)
+        self.assertEqual(User.objects.count(), 1)
+
     def test_linked_google_account_is_authenticated(self):
         user = _create_plain_user(email='ana@gmail.com', google_id='google-sub-123')
         self.mock_verify.return_value = self._identity()
@@ -2496,6 +2567,65 @@ class GoogleRegisterTest(TestCase):
         self.client.cookies['jwt'] = cookie.value
         auth_response = self.client.get(self.user_auth_url)
         self.assertEqual(auth_response.json(), {'authenticated': True})
+
+    def _pending_email_account(self, email, phone):
+        response = self.client.post(reverse('register'), data=_register_payload(email=email, phone=phone))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        get_cognito().client.calls.clear()
+        return User.objects.get(email=email)
+
+    def test_google_signup_replaces_a_pending_account_that_holds_the_token_email(self):
+        """EMC-53"""
+        self._pending_email_account('Ana@gmail.com', '92990000000')
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get()
+        self.assertEqual(user.email, 'ana@gmail.com')
+        self.assertEqual(user.google_id, 'google-sub-123')
+        self.assertTrue(user.is_active)
+        self.assertIsNone(user.cognito_sub)
+        self.assertEqual(get_cognito().client.users, {})
+        self.assertEqual(Customer.objects.count(), 1)
+        self._assert_session_cookie_for(response, user)
+
+    def test_google_signup_replaces_a_pending_account_that_holds_the_phone(self):
+        """EMC-53"""
+        self._pending_email_account('outra@example.com', '92991234567')
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['ana@gmail.com'])
+        self.assertTrue(User.objects.get().is_active)
+        self.assertEqual(get_cognito().client.users, {})
+
+    def test_google_signup_with_an_active_phone_holder_answers_409_and_keeps_the_pending_account(self):
+        """EMC-53: nothing is replaced before the conflict is known."""
+        self._pending_email_account('ana@gmail.com', '92990000000')
+        active = _create_plain_user(email='ativa@example.com', phone='5592991234567')
+        get_cognito().client.calls.clear()
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        assert_phone_taken(response)
+        self.assertEqual(get_cognito().client.calls, [])
+        self.assertEqual(User.objects.count(), 2)
+        self.assertTrue(User.objects.filter(pk=active.pk).exists())
+
+    def test_a_cognito_outage_while_replacing_on_google_signup_answers_503_and_creates_nothing(self):
+        """EMC-55"""
+        pending = self._pending_email_account('ana@gmail.com', '92990000000')
+        get_cognito().client.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        response = self.client.post(self.register_url, data=self.customer_payload)
+
+        assert_auth_unavailable(response)
+        self.assertNotIn('jwt', response.cookies)
+        self.assertEqual(list(User.objects.values_list('pk', 'google_id')), [(pending.pk, None)])
+        self.assertIn('ana@gmail.com', get_cognito().client.users)
+        self.assertEqual(Customer.objects.count(), 1)
 
     def test_google_customer_signup_creates_user_customer_and_session(self):
         pref1 = Preferences.objects.create(name='Coloração')
@@ -3066,6 +3196,19 @@ class PopulateHairdressersCommandTest(TestCase):
             self.assertTrue(fake.users[user.email.lower()]['confirmed'])
         self.assertEqual(self._login_status(hairdressers.first().email), 200)
 
+    def test_seeded_hairdressers_are_created_active_by_the_seed_confirmation(self):
+        """EMC-06: the seed keeps SignUp + AdminConfirmSignUp, so no e-mail code is involved."""
+        fake = get_cognito().client
+
+        self._run()
+
+        hairdressers = User.objects.filter(role='hairdresser')
+        self.assertEqual(hairdressers.filter(is_active=True).count(), 40)
+        names = [name for name, _ in fake.calls]
+        self.assertEqual(names.count('admin_confirm_sign_up'), 40)
+        self.assertNotIn('confirm_sign_up', names)
+        self.assertEqual(self._login_status(hairdressers.first().email), 200)
+
     def test_recreates_users_missing_from_cognito_and_fills_a_missing_sub_without_new_rows(self):
         fake = get_cognito().client
         self._run()
@@ -3109,6 +3252,126 @@ class PopulateHairdressersCommandTest(TestCase):
 
         self.assertEqual([name for name, _ in fake.calls if name == 'sign_up'], [])
         self.assertEqual(dict(User.objects.filter(role='hairdresser').values_list('email', 'cognito_sub')), subs)
+
+class PurgeUnconfirmedUsersCommandTest(TestCase):
+    """EMC-34 to EMC-37: pending accounts older than seven days are deleted in Cognito and then in Postgres."""
+
+    NOW = timezone.now()
+    LOGGER = 'users.management.commands.purge_unconfirmed_users'
+
+    def setUp(self):
+        self.fake = get_cognito().client
+        patcher = patch.object(purge_unconfirmed_users.timezone, 'now', return_value=self.NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _account(self, email, age, is_active=False, in_cognito=True, google=False):
+        user = _create_plain_user(
+            email=email, phone=f'55920000{User.objects.count():05d}', is_active=is_active,
+            google_id='google-' + email if google else None,
+        )
+        if in_cognito and not google:
+            sub = self.fake.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username=email, Password='Senha123'
+            )['UserSub']
+            User.objects.filter(pk=user.pk).update(cognito_sub=sub)
+        User.objects.filter(pk=user.pk).update(date_joined=self.NOW - age)
+        return user
+
+    def _run(self):
+        out = StringIO()
+        with self.assertLogs(self.LOGGER, 'INFO') as logs:
+            call_command('purge_unconfirmed_users', stdout=out)
+        return logs, out.getvalue()
+
+    def test_only_the_pending_account_older_than_seven_days_is_deleted(self):
+        """EMC-34, EMC-35"""
+        old = self._account('oito-dias@example.com', datetime.timedelta(days=8))
+        week = self._account('sete-dias@example.com', datetime.timedelta(days=7))
+        fresh = self._account('uma-hora@example.com', datetime.timedelta(hours=1))
+        active = self._account('ativa@example.com', datetime.timedelta(days=30), is_active=True)
+        google = self._account('google@example.com', datetime.timedelta(days=30), google=True)
+
+        self._run()
+
+        self.assertEqual(
+            sorted(User.objects.values_list('email', flat=True)),
+            sorted(['sete-dias@example.com', 'uma-hora@example.com', 'ativa@example.com', 'google@example.com']),
+        )
+        self.assertEqual(
+            sorted(self.fake.users),
+            sorted(['sete-dias@example.com', 'uma-hora@example.com', 'ativa@example.com']),
+        )
+        self.assertFalse(User.objects.filter(pk=old.pk).exists())
+        for survivor in (week, fresh, active, google):
+            self.assertTrue(User.objects.filter(pk=survivor.pk).exists())
+
+    def test_the_cognito_user_is_deleted_by_the_command_with_the_account_e_mail(self):
+        """EMC-34"""
+        self._account('oito-dias@example.com', datetime.timedelta(days=8))
+        self.fake.calls.clear()
+
+        self._run()
+
+        deletions = [kwargs['Username'] for name, kwargs in self.fake.calls if name == 'admin_delete_user']
+        self.assertEqual(deletions, ['oito-dias@example.com'])
+
+    def test_a_cognito_outage_keeps_that_account_warns_with_its_id_and_goes_on(self):
+        """EMC-36"""
+        first = self._account('a@example.com', datetime.timedelta(days=9))
+        second = self._account('b@example.com', datetime.timedelta(days=9))
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs(self.LOGGER, 'WARNING') as logs:
+            call_command('purge_unconfirmed_users', stdout=StringIO())
+
+        remaining = list(User.objects.order_by('pk').values_list('pk', flat=True))
+        kept = remaining[0]
+        self.assertEqual(len(remaining), 1)
+        self.assertIn(kept, (first.pk, second.pk))
+        self.assertIn(User.objects.get(pk=kept).email, self.fake.users)
+        warnings = [r for r in logs.records if r.levelname == 'WARNING']
+        self.assertEqual(len(warnings), 1)
+        self.assertIn(str(kept), warnings[0].getMessage())
+        self.assertEqual(len(self.fake.users), 1)
+
+    def test_the_summary_is_logged_at_info_and_printed_and_a_second_run_deletes_nothing(self):
+        """EMC-37"""
+        self._account('a@example.com', datetime.timedelta(days=9))
+        self._account('b@example.com', datetime.timedelta(days=9))
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs(self.LOGGER, 'INFO') as logs:
+            out = StringIO()
+            call_command('purge_unconfirmed_users', stdout=out)
+        info = [r for r in logs.records if r.levelname == 'INFO']
+        self.assertEqual([r.getMessage() for r in info], ['purge_unconfirmed_users deleted=1 kept=1'])
+        self.assertIn('deleted=1 kept=1', out.getvalue())
+
+        logs, out = self._run()  # the kept account is retried and goes now
+        self.assertEqual([r.getMessage() for r in logs.records], ['purge_unconfirmed_users deleted=1 kept=0'])
+        logs, out = self._run()
+        self.assertEqual([r.getMessage() for r in logs.records], ['purge_unconfirmed_users deleted=0 kept=0'])
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_an_account_already_missing_from_cognito_is_still_deleted(self):
+        """EMC-34: UserNotFoundException is not a failure."""
+        self._account('a@example.com', datetime.timedelta(days=9), in_cognito=False)
+        User.objects.update(cognito_sub='sub-gone')
+
+        self._run()
+
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_the_entrypoint_runs_the_purge_after_the_migrations(self):
+        """EMC-38"""
+        with open(os.path.join(settings.BASE_DIR, 'entrypoint.sh')) as script:
+            lines = [line.strip() for line in script]
+
+        migrate = lines.index('python3 backend/manage.py migrate')
+        purge = lines.index('python3 backend/manage.py purge_unconfirmed_users')
+        self.assertLess(migrate, purge)
+
 
 class UserProfilePicturePathTest(SimpleTestCase):
     def test_path_is_scoped_by_user_id(self):
@@ -3218,6 +3481,120 @@ class FakeCognitoIdpTest(SimpleTestCase):
         with self.assertRaises(EndpointConnectionError):
             self._login()
         self.assertIn('AccessToken', self._login())
+
+    def _sign_up_pending(self, email='a@x.com'):
+        self.cognito.sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, Password='Senha123'
+        )
+
+    def _confirm(self, code, email='a@x.com'):
+        return self.cognito.confirm_sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username=email, ConfirmationCode=code
+        )
+
+    def _resend(self, email='a@x.com'):
+        return self.cognito.resend_confirmation_code(
+            ClientId=cognito_fake.CLIENT_ID, Username=email
+        )
+
+    def _status(self, email='a@x.com'):
+        return self.cognito.admin_get_user(
+            UserPoolId=cognito_fake.POOL_ID, Username=email
+        )['UserStatus']
+
+    def _error_code(self, call, *args):
+        with self.assertRaises(ClientError) as ctx:
+            call(*args)
+        return ctx.exception.response['Error']['Code']
+
+    def test_sign_up_stores_a_six_digit_code_and_the_right_code_confirms_the_user(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertRegex(code, r'^\d{6}$')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+        self._confirm(code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_confirming_with_a_different_code_is_a_mismatch_and_leaves_the_user_unconfirmed(self):
+        self._sign_up_pending()
+        wrong = '000000' if self.cognito.confirmation_code('a@x.com') != '000000' else '111111'
+
+        self.assertEqual(self._error_code(self._confirm, wrong), 'CodeMismatchException')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+
+    def test_confirming_an_expired_code_is_rejected_as_expired(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self.cognito.expire_code('a@x.com')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'ExpiredCodeException')
+        self.assertEqual(self._status(), 'UNCONFIRMED')
+
+    def test_confirming_an_already_confirmed_user_is_not_authorized(self):
+        self._sign_up_confirmed()
+        code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'NotAuthorizedException')
+
+    def test_an_unknown_user_looks_like_a_wrong_code_and_a_delivered_resend(self):
+        self.assertEqual(self._error_code(self._confirm, '123456', 'nobody@x.com'), 'CodeMismatchException')
+        details = self._resend('nobody@x.com')['CodeDeliveryDetails']
+        self.assertEqual(details['DeliveryMedium'], 'EMAIL')
+        self.assertEqual(self.cognito.users, {})
+
+    def test_resend_issues_a_new_code_and_the_old_one_stops_working(self):
+        self._sign_up_pending()
+        old_code = self.cognito.confirmation_code('a@x.com')
+
+        self._resend()
+        new_code = self.cognito.confirmation_code('a@x.com')
+
+        self.assertRegex(new_code, r'^\d{6}$')
+        self.assertNotEqual(new_code, old_code)
+        self.assertEqual(self._error_code(self._confirm, old_code), 'CodeMismatchException')
+        self._confirm(new_code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_resend_gives_an_expired_code_a_fresh_validity(self):
+        self._sign_up_pending()
+        self.cognito.expire_code('a@x.com')
+
+        self._resend()
+        self._confirm(self.cognito.confirmation_code('a@x.com'))
+
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_resend_for_a_confirmed_user_is_an_invalid_parameter(self):
+        self._sign_up_confirmed()
+
+        self.assertEqual(self._error_code(self._resend), 'InvalidParameterException')
+
+    def test_confirm_and_resend_are_case_insensitive_on_the_email(self):
+        self._sign_up_pending(email='A@x.com')
+
+        self._resend('a@X.com')
+        self._confirm(self.cognito.confirmation_code('A@x.com'), 'a@X.com')
+
+        self.assertEqual(self._status('A@x.com'), 'CONFIRMED')
+
+    def test_fail_next_on_confirm_sign_up_raises_exactly_once(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self.cognito.fail_next('confirm_sign_up', 'TooManyFailedAttemptsException')
+
+        self.assertEqual(self._error_code(self._confirm, code), 'TooManyFailedAttemptsException')
+        self._confirm(code)
+        self.assertEqual(self._status(), 'CONFIRMED')
+
+    def test_calls_record_the_operation_but_never_the_confirmation_code(self):
+        self._sign_up_pending()
+        code = self.cognito.confirmation_code('a@x.com')
+        self._confirm(code)
+
+        names = [name for name, _ in self.cognito.calls]
+        self.assertIn('confirm_sign_up', names)
+        self.assertNotIn(code, json.dumps(self.cognito.calls))
 
 
 class CognitoServiceTest(SimpleTestCase):
@@ -3385,6 +3762,200 @@ class CognitoServiceTest(SimpleTestCase):
             stream=StringIO(), resultclass=runner.get_resultclass()
         ).run(suite)
         self.assertTrue(result.wasSuccessful(), result.failures)
+
+    def test_confirmation_error_codes_become_domain_errors(self):
+        cases = [
+            ('CodeMismatchException', InvalidConfirmationCode),
+            ('ExpiredCodeException', ExpiredConfirmationCode),
+            ('TooManyFailedAttemptsException', TooManyRequests),
+            ('LimitExceededException', TooManyRequests),
+            ('InternalErrorException', CognitoUnavailable),
+            (EndpointConnectionError(endpoint_url='http://x'), CognitoUnavailable),
+        ]
+        for error, expected in cases:
+            with self.subTest(error=error):
+                self.fake.fail_next('confirm_sign_up', error)
+                with self.assertRaises(expected) as ctx:
+                    self.service.confirm_sign_up('a@x.com', '123456')
+                self.assertIs(type(ctx.exception), expected)
+
+    def test_login_of_an_unconfirmed_user_is_user_not_confirmed(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        with self.assertRaises(UserNotConfirmed) as ctx:
+            self.service.authenticate('a@x.com', 'Senha123')
+        self.assertIs(type(ctx.exception), UserNotConfirmed)
+
+    def test_not_authorized_on_confirm_means_already_confirmed_but_on_login_stays_invalid_credentials(self):
+        self._sign_up()
+
+        with self.assertRaises(AlreadyConfirmed) as ctx:
+            self.service.confirm_sign_up('a@x.com', self.fake.confirmation_code('a@x.com'))
+        self.assertIs(type(ctx.exception), AlreadyConfirmed)
+        with self.assertRaises(InvalidCredentials) as ctx:
+            self.service.authenticate('a@x.com', 'Errada123')
+        self.assertIs(type(ctx.exception), InvalidCredentials)
+
+    def test_confirm_of_a_user_the_pool_does_not_know_is_an_invalid_code(self):
+        self.fake.fail_next('confirm_sign_up', 'UserNotFoundException')
+
+        with self.assertRaises(InvalidConfirmationCode):
+            self.service.confirm_sign_up('nobody@x.com', '123456')
+
+    def test_the_right_code_confirms_the_user_in_the_pool(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        self.service.confirm_sign_up('a@x.com', self.fake.confirmation_code('a@x.com'))
+
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'CONFIRMED')
+
+    def test_sign_up_leaves_the_user_unconfirmed_and_sign_up_confirmed_confirms_it(self):
+        pending_sub = self.service.sign_up('a@x.com', 'Senha123')
+        confirmed_sub = self.service.sign_up_confirmed('b@x.com', 'Senha123')
+
+        names = [name for name, _ in self.fake.calls]
+        self.assertEqual(names.count('admin_confirm_sign_up'), 1)
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'UNCONFIRMED')
+        self.assertEqual(self.service.admin_get_status('b@x.com'), 'CONFIRMED')
+        self.assertEqual(pending_sub, self.fake.users['a@x.com']['sub'])
+        self.assertEqual(confirmed_sub, self.fake.users['b@x.com']['sub'])
+
+    def test_admin_get_status_reports_the_status_or_none_for_an_unknown_user(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+
+        self.assertEqual(self.service.admin_get_status('a@x.com'), 'UNCONFIRMED')
+        self.assertIsNone(self.service.admin_get_status('nobody@x.com'))
+
+    def test_admin_get_status_reports_an_outage_as_unavailable(self):
+        self.fake.fail_next('admin_get_user', 'InternalErrorException')
+
+        with self.assertRaises(CognitoUnavailable):
+            self.service.admin_get_status('a@x.com')
+
+    def test_resend_for_a_confirmed_user_is_rejected_and_any_other_failure_is_unavailable(self):
+        self._sign_up()
+        with self.assertRaises(ResendRejected) as ctx:
+            self.service.resend_confirmation_code('a@x.com')
+        self.assertIs(type(ctx.exception), ResendRejected)
+
+        self.fake.fail_next('resend_confirmation_code', 'InternalErrorException')
+        with self.assertRaises(CognitoUnavailable) as ctx:
+            self.service.resend_confirmation_code('a@x.com')
+        self.assertIs(type(ctx.exception), CognitoUnavailable)
+
+    def test_resend_limits_become_too_many_requests(self):
+        for code in ('LimitExceededException', 'TooManyRequestsException'):
+            with self.subTest(code=code):
+                self.fake.fail_next('resend_confirmation_code', code)
+                with self.assertRaises(TooManyRequests):
+                    self.service.resend_confirmation_code('a@x.com')
+
+    def test_confirm_and_resend_send_the_email_in_lower_case(self):
+        self.service.sign_up('A@X.com', 'Senha123')
+
+        self.service.resend_confirmation_code('A@X.com')
+        self.service.confirm_sign_up('A@X.com', self.fake.confirmation_code('a@x.com'))
+
+        sent = {name: kwargs['Username'] for name, kwargs in self.fake.calls if name in (
+            'sign_up', 'resend_confirmation_code', 'confirm_sign_up'
+        )}
+        self.assertEqual(sent, {
+            'sign_up': 'a@x.com',
+            'resend_confirmation_code': 'a@x.com',
+            'confirm_sign_up': 'a@x.com',
+        })
+
+    def test_a_failed_confirmation_is_logged_without_the_code_the_password_or_the_email(self):
+        self.service.sign_up('a@x.com', 'Senha123')
+        with self.assertLogs('users.cognito', 'WARNING') as logs:
+            with self.assertRaises(InvalidConfirmationCode):
+                self.service.confirm_sign_up('a@x.com', '987654')
+            self.fake.fail_next('resend_confirmation_code', EndpointConnectionError(endpoint_url='http://x'))
+            with self.assertRaises(CognitoUnavailable):
+                self.service.resend_confirmation_code('a@x.com')
+
+        self.assertIn('confirm_sign_up', logs.output[0])
+        self.assertIn('CodeMismatchException', logs.output[0])
+        self.assertIn('resend_confirmation_code', logs.output[1])
+        self.assertIn('EndpointConnectionError', logs.output[1])
+        for line in logs.output:
+            self.assertEqual(logs.records[logs.output.index(line)].levelname, 'WARNING')
+            for secret in ('987654', 'Senha123', 'a@x.com'):
+                self.assertNotIn(secret, line)
+
+
+class EmailThrottleTest(SimpleTestCase):
+    """EMC-29, EMC-31, EMC-32: the counters are per target e-mail, and the e-mail is never stored in clear."""
+
+    def _key(self, throttle_class, body, format='json'):
+        factory = APIRequestFactory()
+        request = APIView().initialize_request(factory.post('/api/x', body, format=format))
+        return throttle_class().get_cache_key(request, None)
+
+    def test_the_key_ignores_the_case_and_the_spaces_around_the_email(self):
+        self.assertEqual(
+            self._key(ConfirmEmailThrottle, {'email': ' A@X.com '}),
+            self._key(ConfirmEmailThrottle, {'email': 'a@x.com'}),
+        )
+
+    def test_different_emails_get_different_keys(self):
+        self.assertNotEqual(
+            self._key(ConfirmEmailThrottle, {'email': 'a@x.com'}),
+            self._key(ConfirmEmailThrottle, {'email': 'b@x.com'}),
+        )
+
+    def test_the_key_does_not_contain_the_email(self):
+        key = self._key(ResendCodeEmailThrottle, {'email': 'Ana.Souza@x.com'})
+
+        self.assertTrue(key.startswith('throttle_resend_code_email_'))
+        for fragment in ('ana', 'souza', '@x.com'):
+            self.assertNotIn(fragment, key.lower())
+
+    def test_two_routes_never_share_the_counter_of_the_same_email(self):
+        keys = {
+            self._key(throttle, {'email': 'a@x.com'})
+            for throttle in (ConfirmEmailThrottle, ResendCodeEmailThrottle, RegisterEmailThrottle)
+        }
+
+        self.assertEqual(len(keys), 3)
+
+    def test_a_form_body_is_keyed_like_a_json_body(self):
+        self.assertEqual(
+            self._key(RegisterEmailThrottle, {'email': 'A@x.com'}, format='multipart'),
+            self._key(RegisterEmailThrottle, {'email': 'a@x.com'}),
+        )
+
+    def test_a_body_without_a_usable_email_is_not_counted(self):
+        for body in ({}, {'email': ''}, {'email': '   '}, {'email': 123}, {'email': ['a@x.com']}, [1, 2]):
+            with self.subTest(body=body):
+                self.assertIsNone(self._key(ConfirmEmailThrottle, body))
+
+    def test_a_google_sign_up_is_not_counted_by_email(self):
+        self.assertIsNone(self._key(RegisterEmailThrottle, {'email': 'a@x.com', 'google_signup_token': 'tok'}))
+
+    def test_the_rates_are_the_ones_of_the_spec(self):
+        self.assertEqual(
+            {cls.__name__: cls.rate for cls in (
+                ConfirmIpThrottle, ConfirmEmailThrottle, ResendCodeIpThrottle,
+                ResendCodeEmailThrottle, RegisterEmailThrottle,
+            )},
+            {
+                'ConfirmIpThrottle': '10/min',
+                'ConfirmEmailThrottle': '10/hour',
+                'ResendCodeIpThrottle': '10/hour',
+                'ResendCodeEmailThrottle': '3/hour',
+                'RegisterEmailThrottle': '3/hour',
+            },
+        )
+
+    def test_every_throttle_has_its_own_scope(self):
+        scopes = [cls.scope for cls in (
+            ConfirmIpThrottle, ConfirmEmailThrottle, ResendCodeIpThrottle,
+            ResendCodeEmailThrottle, RegisterEmailThrottle,
+        )]
+
+        self.assertEqual(len(set(scopes)), 5)
+        self.assertTrue(issubclass(ConfirmEmailThrottle, EmailRateThrottle))
 
 
 class AuthenticationTest(TestCase):
@@ -3749,19 +4320,44 @@ class CognitoRegisterTest(TestCase):
         self.assertFalse(User.objects.filter(email='extra@example.com').exists())
         self.assertEqual(self.fake.calls, [])
 
-    def test_customer_and_hairdresser_are_created_with_the_cognito_sub_and_no_password(self):
+    def test_customer_and_hairdresser_are_created_pending_with_the_cognito_sub_and_no_password(self):
+        """EMC-03"""
         for payload, model in ((_register_payload(), Customer), (_hairdresser_payload(), Hairdresser)):
             with self.subTest(role=payload['role']):
                 response = self.client.post(self.register_url, data=payload)
 
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertEqual(response.json(), {'message': f"{payload['role']} user registered successfully"})
+                self.assertEqual(
+                    response.json(),
+                    {'message': f"{payload['role']} user registered successfully", 'confirmation_required': True},
+                )
                 self.assertEqual(len(response.cookies), 0)
                 user = User.objects.get(email=payload['email'])
                 self.assertEqual(user.cognito_sub, self.fake.users[payload['email']]['sub'])
                 self.assertIsNone(user.password)
+                self.assertFalse(user.is_active)
                 self.assertTrue(model.objects.filter(user=user).exists())
-                self.assertTrue(self.fake.users[payload['email']]['confirmed'])
+                self.assertFalse(self.fake.users[payload['email']]['confirmed'])
+
+    def test_sign_up_calls_only_sign_up_and_never_confirms_the_account_for_the_user(self):
+        """EMC-03"""
+        self.client.post(self.register_url, data=_register_payload())
+
+        names = [name for name, _ in self.fake.calls]
+        self.assertIn('sign_up', names)
+        self.assertNotIn('admin_confirm_sign_up', names)
+
+    def test_an_active_account_with_the_same_email_in_another_case_answers_409_without_calling_cognito(self):
+        """EMC-05"""
+        self.client.post(self.register_url, data=_register_payload(email='a@x.com'))
+        activate_account('a@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@X.com', phone='92998887777'))
+
+        assert_email_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(User.objects.count(), 1)
 
     def test_password_reaches_cognito_exactly_as_typed(self):
         response = self.client.post(self.register_url, data=_register_payload(password='Senha 123'))
@@ -3788,6 +4384,7 @@ class CognitoRegisterTest(TestCase):
         ]
         for index, (payload, assert_body) in enumerate(cases):
             with self.subTest(case=index):
+                cache.clear()  # the cases share one e-mail; the per-e-mail counter must not carry over
                 response = self.client.post(self.register_url, data=payload)
                 assert_body(response)
         self.assertEqual(self._called('sign_up'), [])
@@ -3812,6 +4409,7 @@ class CognitoRegisterTest(TestCase):
         for preferences in ('{"a": 1}', '5', '["a"]', '[true]'):
             with self.subTest(preferences=preferences):
                 self.fake.calls.clear()
+                cache.clear()  # the cases share one e-mail; the per-e-mail counter must not carry over
 
                 response = self.client.post(self.register_url, data=_register_payload(preferences=preferences))
 
@@ -3843,6 +4441,7 @@ class CognitoRegisterTest(TestCase):
 
     def test_email_that_only_exists_in_cognito_answers_409_and_creates_nothing(self):
         self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Senha123')
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='nova@example.com')
 
         response = self.client.post(self.register_url, data=_register_payload())
 
@@ -3880,14 +4479,216 @@ class CognitoRegisterTest(TestCase):
         retry = self.client.post(self.register_url, data=_register_payload())
         self.assertEqual(retry.status_code, status.HTTP_201_CREATED)
 
-    def test_failed_confirmation_answers_503_and_leaves_no_cognito_user_or_rows(self):
-        self.fake.fail_next('admin_confirm_sign_up', 'InternalErrorException')
+    def test_failed_sign_up_answers_503_and_leaves_no_cognito_user_or_rows(self):
+        self.fake.fail_next('sign_up', 'InternalErrorException')
 
         response = self.client.post(self.register_url, data=_register_payload())
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         assert_auth_unavailable(response)
-        self._assert_cognito_user_was_deleted()
+        self.assertEqual(self.fake.users, {})
+        self._assert_no_rows()
+
+    def _pending_account(self, **overrides):
+        payload = _register_payload(**overrides)
+        self.assertEqual(self.client.post(self.register_url, data=payload).status_code, status.HTTP_201_CREATED)
+        return User.objects.get(email=payload['email'])
+
+    def _operations(self):
+        return [name for name, _ in self.fake.calls]
+
+    def test_a_pending_account_is_replaced_by_a_sign_up_with_the_same_email_in_another_case(self):
+        """EMC-07"""
+        old = self._pending_account(email='a@x.com')
+        old_sub = old.cognito_sub
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.filter(email__iexact='a@x.com').count(), 1)
+        replaced = User.objects.get(email__iexact='a@x.com')
+        self.assertEqual(replaced.email, 'A@x.com')
+        self.assertNotEqual(replaced.cognito_sub, old_sub)
+        self.assertFalse(replaced.is_active)
+        self.assertEqual(list(self.fake.users), ['a@x.com'])
+        self.assertEqual(self.fake.users['a@x.com']['sub'], replaced.cognito_sub)
+        self.assertEqual(self._operations().index('admin_delete_user') < self._operations().index('sign_up'), True)
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_a_pending_account_that_holds_the_phone_is_replaced_even_with_another_email(self):
+        """EMC-08"""
+        self._pending_account(email='a@x.com', phone='92991234567')
+
+        response = self.client.post(
+            self.register_url, data=_register_payload(email='b@x.com', phone='(92) 99123-4567')
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['b@x.com'])
+        self.assertEqual(list(self.fake.users), ['b@x.com'])
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_an_active_account_that_holds_the_phone_answers_409_without_calling_cognito(self):
+        """EMC-09"""
+        self._pending_account(email='a@x.com', phone='92991234567')
+        activate_account('a@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='b@x.com', phone='92991234567'))
+
+        assert_phone_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['a@x.com'])
+
+    def test_an_active_phone_holder_keeps_the_pending_account_with_the_email_untouched(self):
+        """EMC-09: nothing is deleted before the conflict is known."""
+        self._pending_account(email='a@x.com', phone='92991111111')
+        self._pending_account(email='b@x.com', phone='92992222222')
+        activate_account('b@x.com')
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='a@x.com', phone='92992222222'))
+
+        assert_phone_taken(response)
+        self.assertEqual(self.fake.calls, [])
+        self.assertTrue(User.objects.filter(email='a@x.com').exists())
+        self.assertIn('a@x.com', self.fake.users)
+
+    def test_an_unconfirmed_orphan_in_cognito_is_deleted_and_the_sign_up_is_repeated_once(self):
+        """EMC-10"""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        orphan_sub = self.fake.users['nova@example.com']['sub']
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            [op for op in self._operations() if op in ('sign_up', 'admin_delete_user')],
+            ['sign_up', 'admin_delete_user', 'sign_up'],
+        )
+        user = User.objects.get(email='nova@example.com')
+        self.assertNotEqual(user.cognito_sub, orphan_sub)
+        self.assertEqual(user.cognito_sub, self.fake.users['nova@example.com']['sub'])
+        self.assertEqual(self.fake.users['nova@example.com']['password'], 'Senha123')
+
+    def test_a_second_sign_up_that_fails_the_same_way_answers_409(self):
+        """EMC-10"""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        self.fake.fail_next('sign_up', 'UsernameExistsException')
+        self.fake.fail_next('sign_up', 'UsernameExistsException')
+
+        response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_email_taken(response)
+        self.assertEqual(self._operations().count('sign_up'), 3)
+        self._assert_no_rows()
+
+    def test_a_cognito_outage_while_deleting_the_old_account_answers_503_and_keeps_it(self):
+        """EMC-11"""
+        old = self._pending_account(email='a@x.com')
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+        self.fake.calls.clear()
+
+        response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        assert_auth_unavailable(response)
+        self.assertEqual(self._operations(), ['admin_delete_user'])
+        self.assertEqual(list(User.objects.values_list('pk', flat=True)), [old.pk])
+        self.assertEqual(self.fake.users['a@x.com']['sub'], old.cognito_sub)
+        self.assertEqual(Customer.objects.count(), 1)
+
+    def test_a_failed_insert_after_the_replacement_deletes_the_new_user_and_the_old_one_stays_deleted(self):
+        """EMC-12"""
+        self._pending_account(email='a@x.com')
+        with patch.object(Customer.objects, 'create', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('users.views', level='ERROR'):
+                response = self.client.post(self.register_url, data=_register_payload(email='A@x.com'))
+
+        assert_problem(response, 'internal-error', detail='The account could not be created.')
+        self.assertEqual(self.fake.users, {})
+        self._assert_no_rows()
+
+    def test_the_fourth_sign_up_for_one_email_in_an_hour_is_throttled_whatever_the_ip(self):
+        """EMC-32: each sign-up replaces the pending one, so only the e-mail counter can stop it."""
+        statuses = []
+        for ip in ('10.0.0.1', '10.0.0.2', '10.0.0.1'):
+            statuses.append(self.client.post(
+                self.register_url, data=_register_payload(email='alvo@example.com'), REMOTE_ADDR=ip,
+            ).status_code)
+        self.fake.calls.clear()
+
+        response = self.client.post(
+            self.register_url, data=_register_payload(email='ALVO@example.com'), REMOTE_ADDR='10.0.0.2',
+        )
+
+        self.assertEqual(statuses, [status.HTTP_201_CREATED] * 3)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+        self.assertEqual(User.objects.get().email, 'alvo@example.com')
+
+    def test_sign_ups_for_other_emails_are_not_counted_against_a_throttled_one(self):
+        """EMC-32"""
+        for _ in range(3):
+            self.client.post(self.register_url, data=_register_payload(email='alvo@example.com'))
+
+        response = self.client.post(self.register_url, data=_register_payload(email='outro@example.com'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_a_pool_user_whose_email_a_user_here_already_has_is_not_an_orphan(self):
+        """EMC-10: the precondition is that no User has the e-mail. A sign-up running at the same time must not delete it."""
+        self.fake.sign_up(ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com', Password='Outra123')
+        _create_plain_user(email='nova@example.com', phone='5592990009999')
+        self.fake.calls.clear()
+
+        with self.assertRaises(UserAlreadyExists):
+            RegisterView._sign_up('nova@example.com', 'Senha123')
+
+        self.assertNotIn('admin_delete_user', self._operations())
+        self.assertIn('nova@example.com', self.fake.users)
+
+    def test_a_sign_up_that_loses_the_race_for_the_email_answers_409_and_keeps_the_winners_pool_user(self):
+        """Edge case: two sign-ups with the same e-mail at the same time; the unique constraint answers 409."""
+        def winner_commits_first(email, password):
+            _create_plain_user(email=email, phone='5592990009999')
+            return 'loser-sub'
+
+        with patch.object(RegisterView, '_sign_up', side_effect=winner_commits_first):
+            response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_email_taken(response)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertNotIn('admin_delete_user', self._operations())
+
+    def test_a_sign_up_that_loses_the_race_for_the_phone_answers_409_and_deletes_its_own_pool_user(self):
+        """Edge case: the phone is taken between the checks and the insert."""
+        def winner_commits_first(email, password):
+            _create_plain_user(email='outro@example.com', phone='5592991234567')
+            return self.fake.sign_up(
+                ClientId=cognito_fake.CLIENT_ID, Username=email, Password=password
+            )['UserSub']
+
+        with patch.object(RegisterView, '_sign_up', side_effect=winner_commits_first):
+            response = self.client.post(self.register_url, data=_register_payload())
+
+        assert_phone_taken(response)
+        self.assertEqual(list(User.objects.values_list('email', flat=True)), ['outro@example.com'])
+        self.assertEqual(self.fake.users, {})
+
+    def test_an_inactive_account_without_a_cognito_sub_is_never_replaced(self):
+        """EMC-07, EMC-08: only an inactive account that has a cognito_sub is pending."""
+        _create_plain_user(email='nova@example.com', phone='5592991234567', is_active=False)
+
+        by_email = self.client.post(self.register_url, data=_register_payload(phone='92990000000'))
+        by_phone = self.client.post(self.register_url, data=_register_payload(email='b@x.com'))
+
+        assert_email_taken(by_email)
+        assert_phone_taken(by_phone)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertNotIn('admin_delete_user', self._operations())
 
     def test_google_signup_makes_no_cognito_call(self):
         payload = _register_payload(google_signup_token=create_signup_token('ana@gmail.com', 'google-sub-1'))
@@ -3898,6 +4699,7 @@ class CognitoRegisterTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.fake.calls, [])
         self.assertIsNone(User.objects.get().cognito_sub)
+        self.assertTrue(User.objects.get().is_active)
 
     def test_connection_error_answers_503_and_creates_nothing(self):
         self.fake.fail_next('sign_up', EndpointConnectionError(endpoint_url='http://x'))
@@ -3920,6 +4722,433 @@ class CognitoRegisterTest(TestCase):
                 self._assert_no_rows()
 
 
+class PendingHairdresserListingTest(TestCase):
+    """EMC-39: a hairdresser whose e-mail is not confirmed is on no listing."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.preference = Preferences.objects.create(name='Coloração')
+        self.active = self._hairdresser('ativa@example.com', '5592990000001', is_active=True)
+        self.pending = self._hairdresser('pendente@example.com', '5592990000002', is_active=False)
+
+    def _hairdresser(self, email, phone, is_active, name='Marina'):
+        user = _create_plain_user(
+            email=email, phone=phone, first_name=name, last_name='Cabelos', role='hairdresser',
+            is_active=is_active, cognito_sub=f'sub-{email}',
+        )
+        Hairdresser.objects.create(user=user, cnpj='12345678000190', resume='Cortes')
+        self.preference.users.add(user)
+        return user
+
+    def _ids(self, hairdressers):
+        return sorted(item['id'] for item in hairdressers)
+
+    def _hairdresser_id(self, user):
+        return Hairdresser.objects.get(user=user).id
+
+    def test_the_global_search_by_name_returns_only_the_active_hairdresser(self):
+        response = self.client.get(reverse('global_search'), {'q': 'Marina'})
+
+        found = [item for item in response.json()['data'] if item['result_type'] == 'hairdresser']
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._ids(found), [self._hairdresser_id(self.active)])
+
+    def test_the_public_home_lists_only_the_active_hairdresser_by_preference(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(
+            self._ids(response.json()['hairdressers_by_preferences']['coloracao']), [self._hairdresser_id(self.active)]
+        )
+
+    def test_the_customer_home_for_you_lists_only_the_active_hairdresser(self):
+        customer = _create_plain_user(
+            email='cliente@example.com', phone='5592990000003', role='customer', cognito_sub='sub-cliente',
+        )
+        self.preference.users.add(customer)
+        self.client.cookies['jwt'] = get_cognito().client.make_access_token('sub-cliente')
+
+        response = self.client.get(reverse('customer_home'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._ids(response.json()['for_you']), [self._hairdresser_id(self.active)])
+        self.assertEqual(
+            self._ids(response.json()['hairdressers_by_preferences']['coloracao']), [self._hairdresser_id(self.active)]
+        )
+
+    def test_pending_hairdressers_do_not_take_a_place_among_the_ten_of_a_preference(self):
+        for i in range(10):
+            self._hairdresser(f'extra{i}@example.com', f'559299100000{i}', is_active=True, name=f'Extra{i}')
+
+        response = self.client.get(reverse('home'))
+
+        listed = self._ids(response.json()['hairdressers_by_preferences']['coloracao'])
+        self.assertEqual(len(listed), 10)
+        self.assertNotIn(self._hairdresser_id(self.pending), listed)
+
+
+class EmailConfirmationViewTest(TestCase):
+    """POST /api/auth/email-confirmations: the e-mailed code turns a pending account into an active one."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('email_confirmations')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload(email='Nova@example.com'))
+        self.code = self.fake.confirmation_code('nova@example.com')
+        self.fake.calls.clear()
+
+    def _confirm(self, email='nova@example.com', code=None, **extra):
+        return self.client.post(
+            self.url, data=json.dumps({'email': email, 'code': code or self.code}),
+            content_type='application/json', **extra,
+        )
+
+    def _wrong_code(self):
+        return '000000' if self.code != '000000' else '111111'
+
+    def _active(self):
+        return User.objects.get(email='Nova@example.com').is_active
+
+    def _confirm_calls(self):
+        return [kwargs for name, kwargs in self.fake.calls if name == 'confirm_sign_up']
+
+    def test_the_right_code_activates_the_account_and_answers_200_without_cookies(self):
+        """EMC-13"""
+        response = self._confirm()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Email confirmed'})
+        self.assertEqual(len(response.cookies), 0)
+        self.assertTrue(self._active())
+        self.assertEqual(self.fake.users['nova@example.com']['confirmed'], True)
+
+    def test_after_the_confirmation_the_login_answers_200(self):
+        """EMC-13"""
+        self._confirm()
+
+        login = self.client.post(
+            reverse('login'), data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.assertIn('jwt', login.cookies)
+
+    def test_a_wrong_code_answers_400_and_keeps_the_account_pending(self):
+        """EMC-14"""
+        response = self._confirm(code=self._wrong_code())
+
+        assert_problem(response, 'invalid-confirmation-code', detail='The confirmation code is invalid.')
+        self.assertFalse(self._active())
+        self.assertFalse(self.fake.users['nova@example.com']['confirmed'])
+
+    def test_an_expired_code_answers_400_and_keeps_the_account_pending(self):
+        """EMC-15"""
+        self.fake.expire_code('nova@example.com')
+
+        response = self._confirm()
+
+        assert_problem(response, 'confirmation-code-expired')
+        self.assertFalse(self._active())
+
+    def test_an_unknown_email_answers_exactly_like_a_wrong_code_without_calling_cognito(self):
+        """EMC-16"""
+        wrong = json.loads(self._confirm(code=self._wrong_code()).content)
+        self.fake.calls.clear()
+
+        response = self._confirm(email='ninguem@example.com')
+
+        body = assert_problem(response, 'invalid-confirmation-code')
+        for member in ('type', 'title', 'status', 'detail'):
+            self.assertEqual(body[member], wrong[member])
+        self.assertEqual(self.fake.calls, [])
+
+    def test_a_google_account_has_nothing_to_confirm_and_answers_like_an_unknown_email(self):
+        """EMC-16"""
+        _create_plain_user(email='google@example.com', google_id='google-sub-1', phone='5592990001111')
+
+        response = self._confirm(email='google@example.com')
+
+        assert_problem(response, 'invalid-confirmation-code')
+        self.assertEqual(self.fake.calls, [])
+
+    def test_missing_or_malformed_fields_answer_400_validation_error_without_calling_cognito(self):
+        """EMC-17"""
+        cases = [
+            ({}, ['email', 'code'], 'This field is required.'),
+            ({'code': '123456'}, ['email'], 'This field is required.'),
+            ({'email': 'nova@example.com'}, ['code'], 'This field is required.'),
+            ({'email': 'nova@example.com', 'code': '12345'}, ['code'], 'The code must have 6 digits.'),
+            ({'email': 'nova@example.com', 'code': '1234567'}, ['code'], 'The code must have 6 digits.'),
+            ({'email': 'nova@example.com', 'code': 'abcdef'}, ['code'], 'The code must have 6 digits.'),
+            ({'email': 'nova@example.com', 'code': '12 456'}, ['code'], 'The code must have 6 digits.'),
+            ({'email': 'nova@example.com', 'code': 123456}, ['code'], 'This field must be a string.'),
+        ]
+        for body, fields, message in cases:
+            with self.subTest(body=body):
+                cache.clear()
+                response = self.client.post(self.url, data=json.dumps(body), content_type='application/json')
+
+                assert_problem(
+                    response, 'validation-error',
+                    errors=[{'pointer': f'#/{field}', 'detail': message} for field in fields],
+                )
+        self.assertEqual(self.fake.calls, [])
+        self.assertFalse(self._active())
+
+    def test_a_body_that_is_not_a_json_object_answers_400_malformed_request(self):
+        for raw in ('{nope', '[1]'):
+            with self.subTest(raw=raw):
+                cache.clear()
+                response = self.client.post(self.url, data=raw, content_type='application/json')
+
+                assert_problem(response, 'malformed-request')
+        self.assertEqual(self.fake.calls, [])
+
+    def test_an_already_active_account_answers_200_without_calling_cognito(self):
+        """EMC-18"""
+        self._confirm()
+        self.fake.calls.clear()
+
+        response = self._confirm(code=self._wrong_code())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Email confirmed'})
+        self.assertEqual(self.fake.calls, [])
+
+    def test_too_many_failed_attempts_in_the_pool_answer_429_and_keep_the_account_pending(self):
+        """EMC-19"""
+        for code in ('TooManyFailedAttemptsException', 'LimitExceededException', 'TooManyRequestsException'):
+            with self.subTest(code=code):
+                cache.clear()
+                self.fake.fail_next('confirm_sign_up', code)
+
+                response = self._confirm()
+
+                assert_throttled(response)
+                self.assertFalse(self._active())
+
+    def test_an_account_already_confirmed_in_the_pool_is_activated_here(self):
+        """EMC-20"""
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='nova@example.com')
+
+        response = self._confirm()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'Email confirmed'})
+        self.assertTrue(self._active())
+
+    def test_the_email_in_another_case_finds_the_account_and_reaches_the_pool_in_lower_case(self):
+        """Edge case: A@X.com is the same account as a@x.com."""
+        response = self._confirm(email='  NOVA@EXAMPLE.com ')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self._active())
+        self.assertEqual([call['Username'] for call in self._confirm_calls()], ['nova@example.com'])
+
+    def test_the_eleventh_call_from_one_ip_in_a_minute_answers_429_without_calling_cognito(self):
+        """EMC-28"""
+        statuses = [
+            self._confirm(email=f'ninguem{i}@example.com', code='123456').status_code for i in range(10)
+        ]
+        self.fake.calls.clear()
+
+        response = self._confirm(email='outro@example.com', code='123456')
+
+        self.assertEqual(statuses, [status.HTTP_400_BAD_REQUEST] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_eleventh_attempt_for_one_email_in_an_hour_answers_429_from_any_ip(self):
+        """EMC-29"""
+        statuses = [
+            self._confirm(code=self._wrong_code(), REMOTE_ADDR=f'10.0.0.{i % 2 + 1}').status_code
+            for i in range(10)
+        ]
+        self.fake.calls.clear()
+
+        response = self._confirm(code=self.code, REMOTE_ADDR='10.0.0.3')
+
+        self.assertEqual(statuses, [status.HTTP_400_BAD_REQUEST] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+        self.assertFalse(self._active())
+
+    def test_a_pool_outage_answers_503_leaves_the_account_pending_and_logs_no_code(self):
+        """EMC-48, EMC-49"""
+        self.fake.fail_next('confirm_sign_up', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.assertLogs(level='WARNING') as every_logger:
+            response = self._confirm()
+        logs = SimpleNamespace(output=[line for line in every_logger.output if 'cognito' in line])
+
+        assert_auth_unavailable(response)
+        self.assertFalse(self._active())
+        for line in every_logger.output:  # whatever logger the route writes to
+            self.assertNotIn(self.code, line)
+            self.assertNotIn('nova@example.com', line)
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn('confirm_sign_up', logs.output[0])
+        self.assertIn('EndpointConnectionError', logs.output[0])
+        self.assertNotIn(self.code, logs.output[0])
+        self.assertNotIn('nova@example.com', logs.output[0])
+
+    def test_an_unmapped_pool_error_answers_503_and_leaves_the_account_pending(self):
+        """EMC-48"""
+        self.fake.fail_next('confirm_sign_up', 'InternalErrorException')
+
+        response = self._confirm()
+
+        assert_auth_unavailable(response)
+        self.assertFalse(self._active())
+
+
+class ConfirmationCodeViewTest(TestCase):
+    """POST /api/auth/confirmation-codes: a new e-mailed code for a pending account, with one answer for every e-mail."""
+
+    ACCEPTED = {'message': 'If the account is pending confirmation, a new code was sent'}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('confirmation_codes')
+        self.fake = get_cognito().client
+        self.client.post(reverse('register'), data=_register_payload(email='Nova@example.com'))
+        self.first_code = self.fake.confirmation_code('nova@example.com')
+        self.fake.calls.clear()
+
+    def _resend(self, email='nova@example.com', **extra):
+        return self.client.post(
+            self.url, data=json.dumps({'email': email}), content_type='application/json', **extra,
+        )
+
+    def _resend_calls(self):
+        return [kwargs for name, kwargs in self.fake.calls if name == 'resend_confirmation_code']
+
+    def _active(self):
+        return User.objects.get(email='Nova@example.com').is_active
+
+    def test_a_pending_account_gets_a_new_code_and_the_old_one_stops_working(self):
+        """EMC-21"""
+        response = self._resend()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), self.ACCEPTED)
+        self.assertEqual([call['Username'] for call in self._resend_calls()], ['nova@example.com'])
+        new_code = self.fake.confirmation_code('nova@example.com')
+        self.assertNotEqual(new_code, self.first_code)
+        confirm_url = reverse('email_confirmations')
+        stale = self.client.post(
+            confirm_url, data=json.dumps({'email': 'nova@example.com', 'code': self.first_code}),
+            content_type='application/json',
+        )
+        assert_problem(stale, 'invalid-confirmation-code')
+        fresh = self.client.post(
+            confirm_url, data=json.dumps({'email': 'nova@example.com', 'code': new_code}),
+            content_type='application/json',
+        )
+        self.assertEqual(fresh.status_code, status.HTTP_200_OK)
+
+    def test_an_expired_code_is_replaced_by_a_resend(self):
+        """Edge case: the code lasts 24 h, and a resend issues a new one."""
+        self.fake.expire_code('nova@example.com')
+
+        self._resend()
+
+        self.assertEqual(self.fake.confirm_sign_up(
+            ClientId=cognito_fake.CLIENT_ID, Username='nova@example.com',
+            ConfirmationCode=self.fake.confirmation_code('nova@example.com'),
+        ), {})
+
+    def test_an_unknown_active_or_google_email_gets_the_same_answer_without_calling_cognito(self):
+        """EMC-22"""
+        activate_account('nova@example.com')
+        _create_plain_user(email='google@example.com', google_id='google-sub-1', phone='5592990001111')
+        for email in ('ninguem@example.com', 'nova@example.com', 'google@example.com'):
+            with self.subTest(email=email):
+                self.fake.calls.clear()
+
+                response = self._resend(email)
+
+                self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+                self.assertEqual(response.json(), self.ACCEPTED)
+                self.assertEqual(self.fake.calls, [])
+
+    def test_a_missing_or_empty_email_answers_400_validation_error_without_calling_cognito(self):
+        """EMC-23"""
+        for body in ({}, {'email': ''}):
+            with self.subTest(body=body):
+                response = self.client.post(self.url, data=json.dumps(body), content_type='application/json')
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/email', 'detail': 'This field is required.'},
+                ])
+        self.assertEqual(self.fake.calls, [])
+
+    def test_pool_limits_answer_429(self):
+        """EMC-24"""
+        for code in ('LimitExceededException', 'TooManyRequestsException'):
+            with self.subTest(code=code):
+                cache.clear()
+                self.fake.fail_next('resend_confirmation_code', code)
+
+                assert_throttled(self._resend())
+
+    def test_the_eleventh_call_from_one_ip_in_an_hour_answers_429_without_calling_cognito(self):
+        """EMC-30"""
+        statuses = [self._resend(email=f'ninguem{i}@example.com').status_code for i in range(10)]
+        self.fake.calls.clear()
+
+        response = self._resend(email='outro@example.com')
+
+        self.assertEqual(statuses, [status.HTTP_202_ACCEPTED] * 10)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_fourth_request_for_one_email_in_an_hour_answers_429_from_any_ip(self):
+        """EMC-31"""
+        statuses = [
+            self._resend(email=email, REMOTE_ADDR=ip).status_code
+            for email, ip in (('nova@example.com', '10.0.0.1'), ('NOVA@example.com', '10.0.0.2'), (' nova@example.com', '10.0.0.1'))
+        ]
+
+        response = self._resend(REMOTE_ADDR='10.0.0.2')
+
+        self.assertEqual(statuses, [status.HTTP_202_ACCEPTED] * 3)
+        assert_problem(response, 'too-many-requests')
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(len(self._resend_calls()), 3)
+
+    def test_a_pool_outage_answers_503(self):
+        """EMC-48"""
+        self.fake.fail_next('resend_confirmation_code', EndpointConnectionError(endpoint_url='http://x'))
+
+        assert_auth_unavailable(self._resend())
+        self.assertFalse(self._active())
+
+    def test_an_account_already_confirmed_in_the_pool_is_activated_and_answers_202(self):
+        """EMC-54"""
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='nova@example.com')
+
+        response = self._resend()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), self.ACCEPTED)
+        self.assertTrue(self._active())
+        self.assertIn('admin_get_user', [name for name, _ in self.fake.calls])
+
+    def test_a_rejected_resend_for_an_unconfirmed_account_answers_503_and_keeps_it_pending(self):
+        """EMC-54"""
+        self.fake.fail_next('resend_confirmation_code', 'InvalidParameterException')
+
+        response = self._resend()
+
+        assert_auth_unavailable(response)
+        self.assertFalse(self._active())
+
+
 class CognitoLoginTest(TestCase):
 
     def setUp(self):
@@ -3927,6 +5156,7 @@ class CognitoLoginTest(TestCase):
         self.login_url = reverse('login')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.fake.calls.clear()
         self.client.cookies.clear()
 
@@ -4027,6 +5257,67 @@ class CognitoLoginTest(TestCase):
         assert_invalid_credentials(response)
         self._assert_no_cookies(response)
 
+    def _pending_account(self, email='pendente@example.com'):
+        self.client.post(reverse('register'), data=_register_payload(email=email, phone='92998887766'))
+        self.client.cookies.clear()
+        self.fake.calls.clear()
+
+    def test_login_of_a_pending_account_with_the_right_password_answers_403_without_cookies(self):
+        """EMC-25: the pool refuses it with UserNotConfirmedException."""
+        self._pending_account()
+
+        response = self._login('pendente@example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
+        self.assertEqual(len(response.cookies), 0)
+
+    def test_login_of_a_pending_account_finds_it_whatever_the_case_of_the_email(self):
+        """EMC-25: the pool ignores the case, and so must the pending check."""
+        self._pending_account()
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='pendente@example.com')
+
+        response = self._login('PENDENTE@Example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
+
+    def test_login_of_an_account_confirmed_in_the_pool_but_inactive_here_answers_403_without_cookies(self):
+        """EMC-25: the emulator signs an UNCONFIRMED user in; the database is the second barrier."""
+        self._pending_account()
+        self.fake.admin_confirm_sign_up(UserPoolId=cognito_fake.POOL_ID, Username='pendente@example.com')
+
+        response = self._login('pendente@example.com')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert_problem(response, 'email-not-confirmed')
+        self._assert_no_cookies(response)
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': False})
+
+    def test_login_of_a_pending_account_with_the_wrong_password_answers_401_as_for_any_account(self):
+        """EMC-26"""
+        self._pending_account()
+
+        response = self._login('pendente@example.com', 'Errada123')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_invalid_credentials(response)
+        self._assert_no_cookies(response)
+
+    def test_a_valid_access_token_of_an_inactive_user_is_an_invalid_session(self):
+        """EMC-27"""
+        self._pending_account()
+        sub = User.objects.get(email='pendente@example.com').cognito_sub
+        self.client.cookies['jwt'] = self.fake.make_access_token(sub)
+
+        response = self.client.get(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert_problem(response, 'invalid-session')
+        self.assertEqual(self.client.get(reverse('session')).json(), {'authenticated': False})
+
     def test_missing_or_empty_email_and_password_answer_400_without_calling_cognito(self):
         bodies = [{}, {'email': 'nova@example.com'}, {'password': 'Senha123'},
                   {'email': '', 'password': 'Senha123'}, {'email': 'nova@example.com', 'password': ''}]
@@ -4071,6 +5362,7 @@ class CognitoRefreshTest(TestCase):
         self.refresh_url = reverse('refresh')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.login_response = self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4135,6 +5427,7 @@ class CognitoLogoutTest(TestCase):
         self.logout_url = reverse('logout')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         login = self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4186,6 +5479,7 @@ class CognitoChangePasswordTest(TestCase):
         self.change_url = reverse('password_change')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self._login('Senha123')  # leaves the session cookies on the client
         self.fake.calls.clear()
 
@@ -4278,6 +5572,7 @@ class CognitoDeleteAccountTest(TestCase):
         self.own_url = reverse('current_user')
         self.fake = get_cognito().client
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4320,6 +5615,7 @@ class CognitoDeleteAccountTest(TestCase):
     def _hairdresser_with_bookings(self):
         """A hairdresser account (logged in) with a service, availability, a manual block and a past and a future booking."""
         self.client.post(reverse('register'), data=_hairdresser_payload(profile_picture=make_upload('foto.png', fmt='PNG')))
+        activate_account('cabelo@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
@@ -4423,6 +5719,7 @@ class UpdateProfileEmailTest(TestCase):
         self.client = APIClient()
         self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
@@ -4475,6 +5772,7 @@ class RatingIsNotUserSettableTest(TestCase):
 
     def test_patch_ignores_the_rating_and_updates_the_other_fields(self):
         self.client.post(reverse('register'), data=_hairdresser_payload())
+        activate_account('cabelo@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
@@ -4500,6 +5798,7 @@ class UpdateProfilePhoneTest(TestCase):
         self.client = APIClient()
         self.own_url = reverse('current_user')
         self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
         self.client.post(
             reverse('login'),
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),

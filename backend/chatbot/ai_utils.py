@@ -79,7 +79,7 @@ class AiUtils():
             
             if not preferences_list:
                 return UserFullInfoSerializer(
-                    User.objects.filter(role='hairdresser')[:limit], 
+                    User.objects.filter(role='hairdresser', is_active=True)[:limit], 
                     many=True
                 ).data
         
@@ -91,12 +91,13 @@ class AiUtils():
             if not matching_preferences.exists():
                 print("No matching preferences found, returning top-rated hairdressers")
                 return UserFullInfoSerializer(
-                    User.objects.filter(role='hairdresser').order_by('-rating')[:limit], 
+                    User.objects.filter(role='hairdresser', is_active=True).order_by('-rating')[:limit], 
                     many=True
                 ).data
             
             matching_hairdressers = User.objects.filter(
                 role='hairdresser',
+                is_active=True,
                 preferences__in=matching_preferences
             ).annotate(
                 preference_match_count=Count('preferences', filter=Q(preferences__in=matching_preferences))
@@ -106,7 +107,7 @@ class AiUtils():
             
         except Exception as e: 
             return UserFullInfoSerializer(
-                User.objects.filter(role='hairdresser')[:limit], 
+                User.objects.filter(role='hairdresser', is_active=True)[:limit], 
                 many=True
             ).data
 

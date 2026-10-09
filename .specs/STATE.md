@@ -37,7 +37,12 @@
 ### AD-005
 - **Decision**: Em dev, o Cognito roda no MiniStack (`ministackorg/ministack`, serviço `ministack` do compose, porta 4567 no host, `PERSIST_STATE=1`). S3, SES e o resto da nuvem local continuam no LocalStack. O backend alcança o MiniStack por `AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER=http://ministack:4566`, definido no compose. Os IDs do pool e do client vêm de `COGNITO_USER_POOL_ID` e `COGNITO_APP_CLIENT_ID`; vazios em dev, o backend busca `hairmatch-dev` e `hairmatch-backend` pelo nome.
 - **Reason**: O container do LocalStack ativa uma licença `freemium`, e o `cognito-idp` só existe nos planos Base/Ultimate/Student. O MiniStack é MIT, não pede token, emite tokens RS256 com o `iss` igual ao da AWS e serve o JWKS por pool.
-- **Trade-off**: São dois emuladores no compose. O MiniStack não aceita ID fixo de pool, então o estado depende do volume `ministack_state`, e o seed repara os usuários se o volume for apagado. O código de confirmação local é fixo (`123456`).
+- **Trade-off**: São dois emuladores no compose. O MiniStack não aceita ID fixo de pool, então o estado depende do volume `ministack_state`, e o seed repara os usuários se o volume for apagado. O código de confirmação local é fixo (`123456`). Fatos conferidos no código do MiniStack 1.5.18 em 2026-10-04:
+  - o e-mail de verificação vai para o SES embutido do próprio MiniStack (`GET http://localhost:4567/_ministack/ses/messages`), e não para o SES do LocalStack;
+  - o `ConfirmSignUp` aceita qualquer código;
+  - o `InitiateAuth` não recusa usuário `UNCONFIRMED`.
+
+  Por isso o bloqueio de conta pendente também fica no Postgres (AD-008).
 - **Scope**: `docker/docker-compose.yml`, `docker/ministack/init/` e o README. Vale até o projeto ter um plano do LocalStack que inclua o Cognito. Nesse dia, basta trocar o endpoint e o script de init.
 - **Date**: 2026-09-29
 - **Status**: active
@@ -58,18 +63,45 @@
 - **Date**: 2026-09-30
 - **Status**: active
 
+### AD-008
+- **Decision**: Toda conta de e-mail/senha criada por `POST /api/users` nasce pendente: `UNCONFIRMED` no Cognito (só `SignUp`, sem `AdminConfirmSignUp`) e `User.is_active=False` no Postgres. Ela só passa a ativa por `ConfirmSignUp` com o código de 6 dígitos que o Cognito envia (`POST /api/auth/email-confirmations`). O reenvio é `POST /api/auth/confirmation-codes`.
+
+  Enquanto está pendente, a conta:
+  - não loga (403 `email-not-confirmed`);
+  - não vira sessão (o autenticador filtra `is_active=True`);
+  - não aparece em listagem;
+  - é substituída por um novo cadastro com o mesmo e-mail ou telefone;
+  - é expurgada por `purge_unconfirmed_users` depois de 7 dias.
+
+  Rota anônima que dispara e-mail ou valida código leva throttle por IP e por e-mail alvo (SHA-256 do e-mail normalizado), com as contagens em `DatabaseCache` (`hairmatch_cache`, tabela criada por migração). O login e o cadastro Google nunca vinculam o `google_id` a uma conta pendente: substituem a conta. O e-mail sai sempre pelo Cognito: o backend não chama o SES, e em produção o pool usa `EmailConfiguration` `DEVELOPER` com uma identidade SES verificada. As únicas contas criadas já ativas são as do seed (`sign_up_confirmed`) e as do Google.
+- **Reason**: A issue #141 exige que o cadastro só valha depois da confirmação do e-mail. O usuário pediu Cognito + SES e defesa contra cadastro em massa de bots. O espelho em `is_active` reaproveita o filtro do autenticador sem migração e cobre o MiniStack, que não recusa `UNCONFIRMED` (AD-005). A substituição e o expurgo impedem que uma conta não confirmada ocupe o e-mail ou o telefone de outra pessoa. O cache em banco divide as contagens entre processos e sobrevive a deploy.
+- **Trade-off**:
+  - Diverge do texto da issue (código digitado em vez de link), por decisão do usuário.
+  - Uma conta pendente legítima é apagada se outra pessoa se cadastrar com o mesmo e-mail ou telefone.
+  - Cada requisição throttled grava no Postgres.
+  - Em dev, qualquer código confirma (limite do MiniStack), então os erros de código só são testados no fake.
+  - CAPTCHA e proteção paga ficam de fora.
+- **Scope**: `backend/users` (cadastro, login, confirmação, reenvio, listagens, expurgo, throttles), `backend/hairmatch/settings.py` (`CACHES`), `backend/entrypoint.sh`, `docker/ministack/init/` e o fluxo de auth do `frontend-mobile`. Supera a assumption de auto-confirmação da feature `cognito-auth` (COG-05). COG-38 a COG-40 (seed) continuam valendo. Toda rota anônima nova que envie e-mail ou valide segredo segue o mesmo par de throttles.
+- **Date**: 2026-10-04
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `api-restful-routes` (issue #163). O `api-problem-details` (issue #161) está em `develop`.
-- **Phase / Task**: Execute concluído (T1 a T13) e verificado nos gates automatizados. `validation.md` com PASS. Faltam o UAT manual e a troca do webhook na Evolution API.
+- **Feature**: `email-confirmation` (issue #141).
+- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
 - **Completed**:
-  - Backend: os `urls.py` de 8 apps montados em `api/`, 49 rotas da Route Table, `hairmatch/test_routes.py` comparando o URLconf com a tabela. 598 testes (590 antes). Sensor: 25 de 25 mutantes mortos.
-  - App: `services/auth-routes.ts` (refresh por método e pathname exatos), todos os serviços nas rotas novas, `npx tsc --noEmit` com exit 0 (o erro de `/review/{id}` em `useReserveDetails.ts` foi corrigido).
-  - README (rotas e webhook) e AD-007.
+  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
+  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
+  - MiniStack reconciliado pelo init, README e AD-008.
+  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
 - **In-progress** (file:line): none
 - **Next step**:
-  - UAT no web e no Android: login, cadastro (e-mail e Google), home, busca, perfil do profissional, agendamento, reservas, avaliação, serviços, disponibilidade, agenda e logout. Depois marcar RT-70 a RT-75 como Verified.
-  - Produção: reconfigurar o webhook da Evolution API para `/api/chatbot/webhook` (README), só com autorização explícita.
+  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
+  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
+- **Pendências de features anteriores**:
+  - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
+  - `cognito-auth` (#139): sem `validation.md`.
+  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/` (pendentes antes desta feature, fora do PR de propósito).
-- **Branch**: 163-padronizacao-das-urls-de-apis-para-rfcs-adequadas
+- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
+- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema

@@ -6,6 +6,7 @@ from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
 import logging
+import re
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
@@ -23,7 +24,7 @@ from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
 from django.core.files.storage import default_storage
-from django.db import connection, transaction
+from django.db import IntegrityError, connection, transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
     CUSTOMER_REQUIRED_DETAIL,
@@ -32,13 +33,25 @@ from .authentication import (
     authenticated_user,
 )
 from .cognito import (
+    AlreadyConfirmed,
     CognitoError,
     CognitoUnavailable,
+    ExpiredConfirmationCode,
+    InvalidConfirmationCode,
     InvalidCredentials,
     InvalidPassword,
+    ResendRejected,
     TooManyRequests,
     UserAlreadyExists,
+    UserNotConfirmed,
     get_cognito,
+)
+from .throttles import (
+    ConfirmEmailThrottle,
+    ConfirmIpThrottle,
+    RegisterEmailThrottle,
+    ResendCodeEmailThrottle,
+    ResendCodeIpThrottle,
 )
 from .google_auth import verify_google_id_token, GoogleTokenError
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
@@ -66,6 +79,9 @@ PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
 EMAIL_TAKEN_DETAIL = 'This email is already registered.'
 INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
 ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
+EMAIL_NOT_CONFIRMED_DETAIL = 'Confirm your email with the code we sent to sign in.'
+CONFIRMATION_CODE_PATTERN = re.compile(r'[0-9]{6}')
+CONFIRMATION_CODE_RESENT_MESSAGE = 'If the account is pending confirmation, a new code was sent'
 
 
 def normalize_phone(phone):
@@ -144,6 +160,35 @@ def _delete_stored_files(names):
             logger.exception('Could not delete %s from the media storage', name)
 
 
+# An e-mail account that never confirmed its address: it holds its e-mail and phone for no one.
+_PENDING_ACCOUNT = Q(is_active=False, cognito_sub__isnull=False)
+
+
+def _pending_accounts(email=None, phone=None):
+    """The pending accounts that hold this e-mail (any case) or this stored phone."""
+    holders = Q(pk__in=[])
+    if email:
+        holders |= Q(email__iexact=email)
+    if phone:
+        holders |= Q(phone=phone)
+    return User.objects.filter(_PENDING_ACCOUNT, holders)
+
+
+def _replace_pending_accounts(email, phone=None):
+    """Replaces every pending account holding this e-mail or phone. Raises CognitoError, leaving the rest untouched."""
+    for pending in _pending_accounts(email, phone):
+        _replace_pending_account(pending)
+
+
+def _replace_pending_account(user):
+    """
+    Deletes a pending account in Cognito and then in Postgres, so a Cognito outage leaves both untouched.
+    Raises CognitoError when Cognito cannot delete the user.
+    """
+    get_cognito().admin_delete_user(user.email)
+    user.delete()
+
+
 def _discard_cognito_user(email):
     """Undoes a sign-up whose Postgres rows could not be created."""
     try:
@@ -171,7 +216,8 @@ class LoginThrottle(AnonRateThrottle):
 # 1 - The following views are related to user authentication procedures
 class RegisterView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-    throttle_classes = [RegisterThrottle]
+    # Per IP against sweeps, per e-mail against spam to one inbox: each sign-up sends a verification e-mail.
+    throttle_classes = [RegisterThrottle, RegisterEmailThrottle]
 
     def post(self, request):
         data = request_data(request)
@@ -186,13 +232,15 @@ class RegisterView(APIView):
         email = data['email']
         role = data['role']
         phone = data['phone']
-        if User.objects.filter(email=email).exists():
+        stored_phone = normalize_phone(phone)
+        if User.objects.filter(email__iexact=email).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
-        if User.objects.filter(phone=normalize_phone(phone)).exists():
+        if User.objects.filter(phone=stored_phone).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         try:
-            cognito_sub = get_cognito().sign_up_confirmed(email, data['password'])
+            _replace_pending_accounts(email, stored_phone)
+            cognito_sub = self._sign_up(email, data['password'])
         except InvalidPassword:
             return problem_response(request, 'password-policy', PASSWORD_POLICY_DETAIL)
         except UserAlreadyExists:
@@ -217,6 +265,8 @@ class RegisterView(APIView):
                     password=None,
                     cognito_sub=cognito_sub,
                     role=role,
+                    # Pending until the e-mailed code is confirmed (POST /api/auth/email-confirmations).
+                    is_active=False,
                 )
 
                 if 'profile_picture' in request.FILES:
@@ -228,14 +278,38 @@ class RegisterView(APIView):
             failure = problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
         except Problem as problem:
             failure = problem_response(request, problem.slug, problem.detail, problem.errors)
+        except IntegrityError:
+            # A sign-up that ran at the same time took the e-mail or the phone after the checks above.
+            if User.objects.filter(email__iexact=email).exists():
+                # The pool user with this e-mail is the other request's: it is not discarded.
+                return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
+            failure = problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
         except Exception:
             logger.exception('E-mail sign-up failed')
             failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
-            return JsonResponse({'message': f"{role} user registered successfully"}, status=201)
+            return JsonResponse(
+                {'message': f"{role} user registered successfully", 'confirmation_required': True}, status=201
+            )
 
         _discard_cognito_user(email)
         return failure
+
+    @staticmethod
+    def _sign_up(email, password):
+        """
+        SignUp, retried once when the pool still holds an UNCONFIRMED user nobody here owns (a sign-up
+        whose rows were lost). Any other user in the pool keeps the e-mail taken.
+        """
+        cognito = get_cognito()
+        try:
+            return cognito.sign_up(email, password)
+        except UserAlreadyExists:
+            # A user here owns that pool user (a request that is signing up at the same time): not an orphan.
+            if User.objects.filter(email__iexact=email).exists() or cognito.admin_get_status(email) != 'UNCONFIRMED':
+                raise
+            cognito.admin_delete_user(email)
+            return cognito.sign_up(email, password)
 
     def _register_with_google(self, request, data):
         try:
@@ -258,12 +332,19 @@ class RegisterView(APIView):
         # The e-mail comes from the signup token; form email/password fields are ignored.
         email = claims['email']
         google_id = claims['sub']
-        if User.objects.filter(email__iexact=email).exists():
+        stored_phone = normalize_phone(phone)
+        if User.objects.filter(email__iexact=email).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'email-taken', EMAIL_TAKEN_DETAIL)
         if User.objects.filter(google_id=google_id).exists():
             return problem_response(request, 'google-account-taken', 'This Google account is already registered.')
-        if User.objects.filter(phone=normalize_phone(phone)).exists():
+        if User.objects.filter(phone=stored_phone).exclude(_PENDING_ACCOUNT).exists():
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
+
+        # Google proved the e-mail, so a pending account that holds it or the phone is replaced, never inherited.
+        try:
+            _replace_pending_accounts(email, stored_phone)
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
 
         try:
             with transaction.atomic():
@@ -360,9 +441,15 @@ class LoginView(APIView):
             )
 
         invalid_credentials = problem_response(request, 'invalid-credentials', 'Invalid email or password.')
+        email_not_confirmed = problem_response(request, 'email-not-confirmed', EMAIL_NOT_CONFIRMED_DETAIL)
         try:
             tokens = get_cognito().authenticate(email, password)
+            # A pool that lets an UNCONFIRMED user sign in (the local emulator) must not open a session for it.
+            if _pending_accounts(email).exists():
+                return email_not_confirmed
             session = authenticate_token(tokens.access_token)
+        except UserNotConfirmed:
+            return email_not_confirmed
         except InvalidCredentials:
             return invalid_credentials
         except CognitoError as err:
@@ -375,6 +462,77 @@ class LoginView(APIView):
             'jwt': tokens.access_token
         }
         return response
+
+
+class EmailConfirmationView(APIView):
+    throttle_classes = [ConfirmIpThrottle, ConfirmEmailThrottle]
+
+    def post(self, request):
+        data = request_data(request)
+        errors = _string_field_errors(data, ['email', 'code'])
+        code = data.get('code')
+        if isinstance(code, str) and code and not CONFIRMATION_CODE_PATTERN.fullmatch(code):
+            errors.append(body_error('code', 'The code must have 6 digits.'))
+        if errors:
+            raise validation_problem(errors)
+
+        confirmed = JsonResponse({'message': 'Email confirmed'}, status=200)
+        # An unknown e-mail answers like a wrong code, so this route does not tell which accounts exist.
+        invalid_code = problem_response(request, 'invalid-confirmation-code', 'The confirmation code is invalid.')
+        user = User.objects.filter(email__iexact=data['email'].strip(), cognito_sub__isnull=False).first()
+        if user is None:
+            return invalid_code
+        if user.is_active:
+            return confirmed
+
+        try:
+            get_cognito().confirm_sign_up(user.email, code)
+        except AlreadyConfirmed:
+            pass  # confirmed in the pool earlier; only the database is behind
+        except InvalidConfirmationCode:
+            return invalid_code
+        except ExpiredConfirmationCode:
+            return problem_response(
+                request, 'confirmation-code-expired', 'The confirmation code has expired. Request a new one.'
+            )
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        return confirmed
+
+
+class ConfirmationCodeView(APIView):
+    throttle_classes = [ResendCodeIpThrottle, ResendCodeEmailThrottle]
+
+    def post(self, request):
+        data = request_data(request)
+        errors = _string_field_errors(data, ['email'])
+        if errors:
+            raise validation_problem(errors)
+
+        # Always 202, so this route does not tell which accounts exist or are pending.
+        accepted = JsonResponse({'message': CONFIRMATION_CODE_RESENT_MESSAGE}, status=202)
+        user = User.objects.filter(
+            _PENDING_ACCOUNT, email__iexact=data['email'].strip()
+        ).first()
+        if user is None:
+            return accepted
+
+        cognito = get_cognito()
+        try:
+            try:
+                cognito.resend_confirmation_code(user.email)
+            except ResendRejected:
+                # The pool refuses a user that is already confirmed. The status tells that from a real fault.
+                if cognito.admin_get_status(user.email) != 'CONFIRMED':
+                    raise CognitoUnavailable('ResendRejected')
+                user.is_active = True
+                user.save(update_fields=['is_active'])
+        except CognitoError as err:
+            return _cognito_error_response(request, err)
+        return accepted
 
 
 class SessionView(APIView):
@@ -420,6 +578,11 @@ class GoogleAuthView(APIView):
 
         user = User.objects.filter(google_id=identity['sub']).first()
         if user is None:
+            # A pending account is never linked: the person who typed that e-mail may not own it.
+            try:
+                _replace_pending_accounts(identity['email'])
+            except CognitoError as err:
+                return _cognito_error_response(request, err)
             user = User.objects.filter(email__iexact=identity['email']).first()
             if user is not None:
                 if user.google_id:
@@ -586,7 +749,8 @@ class GlobalSearchView(APIView):
         if not query:
             return JsonResponse({'data': []}, status=200)
 
-        hairdresser_queryset = Hairdresser.objects.all()
+        # A hairdresser whose e-mail is not confirmed is not on the platform yet.
+        hairdresser_queryset = Hairdresser.objects.filter(user__is_active=True)
         hairdresser_filter = HairdresserFilter({'search': query}, queryset=hairdresser_queryset)
         hairdresser_results = hairdresser_filter.qs
 
@@ -607,8 +771,10 @@ def _home_response(for_you_data):
     for i in range(len(specific_preferences)):
         try:
             preference = Preferences.objects.get(name=specific_preferences[i])
+            # The filter comes before the slice, or pending hairdressers would shrink the list.
             hairdressers_users = User.objects.filter(
                 role='hairdresser',
+                is_active=True,
                 preferences=preference
             ).distinct()[:10]
 
@@ -648,6 +814,7 @@ class CustomerHomeView(APIView):
         # Get hairdressers matching customer preferences
         hairdressers_users = User.objects.filter(
             role='hairdresser',
+            is_active=True,
             preferences__in=customer_preferences
         ).distinct()
 

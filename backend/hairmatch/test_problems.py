@@ -34,8 +34,14 @@ def handle(exc, path='/api/anything', method='GET'):
 class CatalogTest(TestCase):
     """PD-01 to PD-05: the shape every problem shares."""
 
-    def test_catalog_has_the_36_slugs_of_the_spec(self):
-        self.assertEqual(len(CATALOG), 36)
+    def test_catalog_has_the_39_slugs_of_the_spec(self):
+        self.assertEqual(len(CATALOG), 39)
+
+    def test_email_confirmation_slugs_have_the_status_and_title_of_the_spec(self):
+        """EMC-47"""
+        self.assertEqual(CATALOG['email-not-confirmed'], (403, 'Email not confirmed'))
+        self.assertEqual(CATALOG['invalid-confirmation-code'], (400, 'Invalid confirmation code'))
+        self.assertEqual(CATALOG['confirmation-code-expired'], (400, 'Confirmation code expired'))
 
     def test_every_slug_builds_a_well_formed_problem(self):
         request = RequestFactory().get('/api/x?secret=1')

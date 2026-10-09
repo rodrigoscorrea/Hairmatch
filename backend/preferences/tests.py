@@ -4,6 +4,7 @@ from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from users.models import User
+from users.testing import activate_account
 from preferences.models import Preferences
 import jwt
 import json
@@ -46,6 +47,7 @@ class PreferencesTestCase(TestCase):
             self.register_url,
             data=self.user_payload
         )
+        activate_account(self.user_payload['email'])
         
         # Get user object for testing
         self.user = User.objects.get(email=self.user_payload['email'])
@@ -144,6 +146,7 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
             self.register_url,
             data=self.user2_payload,
         )
+        activate_account(self.user2_payload['email'])
         
         # Get user2 object
         self.user2 = User.objects.get(email=self.user2_payload['email'])
@@ -177,6 +180,19 @@ class ListUsersPerPreferenceTest(PreferencesTestCase):
         self.assertEqual(response.data['data'], [
             {'id': self.hairdresser_user.id, 'first_name': 'Hair', 'last_name': 'Dresser'}
         ])
+
+    def test_list_users_skips_a_hairdresser_pending_email_confirmation(self):
+        """EMC-39: a hairdresser whose e-mail is not confirmed is on no listing."""
+        pending = User.objects.create(
+            email="pending@example.com", first_name="Pen", last_name="Ding", phone="+5592984504444",
+            neighborhood="Centro", city="Manaus", state="AM", address="Salon Street", postal_code="69050750",
+            role="hairdresser", is_active=False,
+        )
+        self.preference.users.add(pending)
+
+        response = self.client.get(self.list_users_url1)
+
+        self.assertEqual([item['id'] for item in response.data['data']], [self.hairdresser_user.id])
 
     def test_list_users_for_nonexistent_preference(self):
         """Test listing users for a preference that doesn't exist"""

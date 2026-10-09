@@ -40,11 +40,11 @@ Photos are stored in the S3 bucket `S3_BUCKET_NAME` (public read, CORS open to `
 E-mail/password accounts authenticate in AWS Cognito. Locally, Cognito runs on [MiniStack](https://github.com/ministackorg/ministack) (`ministackorg/ministack`, MIT, no token needed) in the `ministack` service of the compose file. It is not on LocalStack because the `freemium` license that the free auth token activates does not include `cognito-idp`. S3 and SES stay on LocalStack.
 
 - The MiniStack listens on `http://localhost:4567` (4566 is LocalStack's). The app never talks to Cognito: the backend does, through `AWS_ENDPOINT_URL_COGNITO_IDENTITY_PROVIDER=http://ministack:4566`, which the compose file sets. `AWS_ENDPOINT_URL` keeps pointing S3 at LocalStack.
-- `docker/ministack/init/01-cognito.sh` creates the `hairmatch-dev` user pool and the `hairmatch-backend` app client on boot, only when they are missing. The `ministack` service is healthy once the pool exists, and `django` waits for it.
+- `docker/ministack/init/01-cognito.sh` creates the `hairmatch-dev` user pool and the `hairmatch-backend` app client on boot, only when they are missing, and then brings both to the settings in the script (password policy, the verification e-mail, `PreventUserExistenceErrors`). An old `ministack_state` volume gets them on the next boot, and running the script again changes nothing. The `ministack` service is healthy once the pool exists, and `django` waits for it.
 - State is persisted in the `ministack_state` volume, so the pool, the users and the signing key survive restarts.
 - `COGNITO_USER_POOL_ID` and `COGNITO_APP_CLIENT_ID` stay empty in dev. The backend then looks the pool and the client up by name.
 - List the users with `aws --endpoint-url http://localhost:4567 cognito-idp list-users --user-pool-id <pool id>`, and find the pool id with `aws --endpoint-url http://localhost:4567 cognito-idp list-user-pools --max-results 10`.
-- Accounts are confirmed by the backend right after the sign-up, so there is no confirmation code screen. If you confirm an account by hand, the local code is always `123456`.
+- An e-mail/password sign-up creates a pending account that must be confirmed with the code Cognito e-mails (see below). The seeded hairdressers are the exception: the seed confirms them itself.
 - `populate_hairdressers` creates the seeded hairdressers in Cognito through the same code as a real signup. Their password is `Senha123`, and on every boot it recreates the ones missing from Cognito.
 - **Reset**: `docker compose -f docker/docker-compose.yml --env-file docker/.env down -v` clears Postgres and the MiniStack together. To reset only Cognito, run `docker volume rm hairmatch_ministack_state`; the seed repairs the seeded hairdressers on the next boot, and accounts you created by hand have to be signed up again.
 - **Switching from the old login**: accounts created before the Cognito login stored a bcrypt hash and have no Cognito user, so they cannot log in. Reset the database with `down -v` as above.
@@ -56,7 +56,38 @@ The real pool must match the local one, and its IDs go in `COGNITO_USER_POOL_ID`
 - sign in with the e-mail (`UsernameAttributes=["email"]`) and `CaseSensitive=false`;
 - password policy: at least 8 characters with an upper case letter, a lower case letter and a number, no symbol required;
 - an app client without a secret, with `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, an access token valid for 60 minutes and a refresh token valid for 30 days;
+- `PreventUserExistenceErrors=ENABLED` on the app client, so an unknown e-mail looks like a wrong code or password;
+- the verification e-mail and the sender, as described in [E-mail confirmation](#e-mail-confirmation);
 - credentials for the backend that allow `AdminConfirmSignUp`, `AdminDeleteUser` and `AdminGetUser` on the pool.
+
+## E-mail confirmation
+
+An e-mail/password sign-up (customer or hairdresser) creates a pending account: `UNCONFIRMED` in Cognito and `is_active=False` in Postgres. Cognito e-mails a 6 digit code, and the app asks for it right after the sign-up. The account can log in, show up in a search or have a session only after `POST /api/auth/email-confirmations` accepts the code. Google accounts skip this, because Google already verified the e-mail.
+
+- `POST /api/auth/email-confirmations` takes `{"email", "code"}`. `POST /api/auth/confirmation-codes` takes `{"email"}`, sends a new code and always answers 202, so it does not tell which e-mails have an account. A login of a pending account answers 403 `email-not-confirmed`, and the app opens the confirmation screen.
+- A new sign-up with the e-mail or the phone of a pending account replaces it, in Cognito and in Postgres, so nobody can hold another person's e-mail or phone with an account they never confirmed. A Google sign-in does the same and never links to a pending account.
+- Sign-up, confirmation and resend are throttled per IP and per target e-mail (3 sign-ups and 3 resends per e-mail per hour, 10 confirmation attempts per e-mail per hour, 10 confirmations per IP per minute). The counters live in the `hairmatch_cache` table (`DatabaseCache`), which the `users` migration `0011` creates, so every process shares them and a restart keeps them. There is no CAPTCHA.
+- `python backend/manage.py purge_unconfirmed_users` deletes the pending accounts older than 7 days (in Cognito first, then in Postgres) and prints `purge_unconfirmed_users deleted=N kept=M`. The backend container runs it on every boot, after the migrations.
+
+### Reading the code in dev
+
+MiniStack delivers the e-mail to its own SES instead of an inbox. Sign up in the app, then read the message:
+
+```
+curl -s http://localhost:4567/_ministack/ses/messages
+```
+
+The subject is `Hairmatch: confirme seu e-mail`, and the code is always `123456`. Two limits of the emulator: it accepts any code on `ConfirmSignUp`, and it lets an `UNCONFIRMED` user sign in. The backend does not depend on it for the second one (a login of an inactive account answers 403 anyway), and the wrong or expired code cases are covered by the test fake. The seeded hairdressers have no inbox, so the seed confirms them and they log in with `Senha123`.
+
+### Before the launch
+
+The pool in production sends the code through the project's own SES identity. This is an operational step, not code:
+
+- set the pool `EmailConfiguration` to `EmailSendingAccount=DEVELOPER`, with the `SourceArn` of a verified SES identity and a `From` address of Hairmatch. With the default `COGNITO_DEFAULT`, the e-mail does not go through the project's SES and has a low daily quota;
+- move the SES account out of the sandbox. In the sandbox, SES delivers only to verified addresses, so real users would not receive the code;
+- set the `VerificationMessageTemplate` to `DefaultEmailOption=CONFIRM_WITH_CODE`, with the subject `Hairmatch: confirme seu e-mail` and the message `Seu código de confirmação do Hairmatch é {####}. Ele vale por 24 horas.` (plain text);
+- schedule `python backend/manage.py purge_unconfirmed_users` (for example as a Render Cron Job). Until then it only runs when the container boots;
+- check, against the real Cognito, the error that `ResendConfirmationCode` returns for a user who is already confirmed. The backend expects `InvalidParameterException` and then reads the user status with `AdminGetUser`, so a different code would make that rare case answer 503.
 
 ## API routes
 

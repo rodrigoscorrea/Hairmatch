@@ -8,7 +8,7 @@ import { REFRESH_PATH } from '../services/auth-routes';
 import { UserInfo } from '../models/User.types';
 import { homeRouteFor } from '../utils/routes';
 import { Preference } from '../models/Preferences.types';
-import { ApiConnectionError, problemMessage } from '../utils/api-problem';
+import { ApiConnectionError, ApiProblem, problemMessage, toApiProblem } from '../utils/api-problem';
 import * as WebBrowser from 'expo-web-browser';
 
 // Closes the Google login popup on web. Must run at startup: in the production build, the
@@ -72,14 +72,19 @@ export default function RootLayout() {
   const authContext = React.useMemo(() => {
   return {
   loadSession,
-  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  signIn: async (email: string, password: string): Promise<{ success: boolean; error?: string; slug?: ApiProblem['slug'] }> => {
     try {
       await axiosInstance.post(`${API_BACKEND_URL}/api/auth/login`, {
         email,
         password
       }, { withCredentials: true });
     } catch (error: any) {
-      return { success: false, error: problemMessage(error, 'Um erro aconteceu, tente novamente') };
+      // The slug lets the login screen tell an account that still has to confirm its e-mail from a wrong password.
+      return {
+        success: false,
+        error: problemMessage(error, 'Um erro aconteceu, tente novamente'),
+        slug: toApiProblem(error)?.slug,
+      };
     }
 
     return loadSession();

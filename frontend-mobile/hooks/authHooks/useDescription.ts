@@ -9,7 +9,7 @@ import { problemMessage } from '@/utils/api-problem';
 
 export const useDescriptionForm = () => {
   const router = useRouter();
-  const { registrationData, setRegistrationData } = useRegistration();
+  const { registrationData, setRegistrationData, setPendingConfirmation } = useRegistration();
   const { signUp, loadSession } = useAuth();
   const isGoogleMode = !!registrationData.google_signup_token;
 
@@ -102,11 +102,10 @@ export const useDescriptionForm = () => {
           return;
         }
     
-        Alert.alert(
-          "Cadastro concluído!",
-          "Sua conta foi criada com sucesso. Agora você será direcionado para a tela de login."
-        );
-        router.replace('/(auth)/login');
+        // The account is pending: the user types the code Cognito e-mailed. The password stays in memory only,
+        // to sign in once the code is accepted.
+        setPendingConfirmation({ email: registrationData.email!, password: registrationData.password });
+        router.replace('/(auth)/confirm-email');
 
     } catch (error: any) {
         console.error("Full sign-up error:", error);

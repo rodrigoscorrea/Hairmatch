@@ -5,6 +5,9 @@ echo "Waiting for database to be ready..."
 echo "Applying database migrations..."
 python3 backend/manage.py migrate
 
+echo "Purging accounts left unconfirmed for over seven days..."
+python3 backend/manage.py purge_unconfirmed_users
+
 echo "Populating initial preferences data if needed..."
 python3 backend/manage.py populate_preferences
 

@@ -10,6 +10,7 @@ from unittest.mock import patch
 from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
+from users.testing import activate_account
 from .models import Review
 from reserve.models import Reserve
 from service.models import Service
@@ -96,16 +97,19 @@ class ReviewsTestCase(TestCase):
             self.register_url,
             data=self.customer_payload,
         )
+        activate_account(self.customer_payload['email'])
 
         self.client.post(
             self.register_url,
             data=self.customer2_payload,
         )
+        activate_account(self.customer2_payload['email'])
         
         self.client.post(
             self.register_url,
             data=self.hairdresser_payload,
         )
+        activate_account(self.hairdresser_payload['email'])
         
         # Get user objects for testing
         self.hairdresser_user = User.objects.get(email=self.hairdresser_payload['email'])
@@ -772,6 +776,7 @@ class ReviewOwnershipTest(ReviewsTestCase):
             self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999',
         )
         self.client.post(self.register_url, data=self.other_hairdresser_payload)
+        activate_account(self.other_hairdresser_payload['email'])
         self.other_hairdresser = Hairdresser.objects.get(user__email='other.hairdresser@example.com')
         self.review = Review.objects.create(
             rating=4, comment='Good', customer=self.customer, hairdresser=self.hairdresser

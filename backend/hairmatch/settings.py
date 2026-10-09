@@ -214,3 +214,14 @@ REST_FRAMEWORK = {
     # an X-Forwarded-For sent by the client and the throttles could be dodged by changing that header.
     'NUM_PROXIES': int(os.getenv('BACKEND_NUM_PROXIES', '0')),
 }
+
+# The throttle counters and the CEP cache are shared by every process and survive a restart. The table is
+# created by users migration 0011, so any environment that runs `migrate` has it.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'hairmatch_cache',
+        # The default of 300 entries would evict the throttle counters under load, and the CEP cache shares the table.
+        'OPTIONS': {'MAX_ENTRIES': 100000},
+    }
+}

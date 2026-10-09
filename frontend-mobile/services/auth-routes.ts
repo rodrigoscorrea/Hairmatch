@@ -8,6 +8,8 @@ const REFRESH_EXCLUDED: { method: string; path: string }[] = [
   { method: 'post', path: REFRESH_PATH },
   { method: 'post', path: '/api/auth/logout' },
   { method: 'post', path: '/api/auth/google' },
+  { method: 'post', path: '/api/auth/email-confirmations' },
+  { method: 'post', path: '/api/auth/confirmation-codes' },
   { method: 'post', path: '/api/users' },
 ];
 

@@ -446,3 +446,48 @@ class WebPImageFieldFileTest(SimpleTestCase):
 
     def test_field_deconstructs_to_its_own_import_path(self):
         self.assertEqual(WebPImageField().deconstruct()[1], 'hairmatch.images.WebPImageField')
+
+
+class DatabaseCacheTest(TestCase):
+    """EMC-33: the counters live in a cache shared by every process, not in one process's memory."""
+
+    def test_default_cache_is_the_database_cache(self):
+        from django.core.cache import caches
+        from django.core.cache.backends.db import DatabaseCache
+
+        self.assertIsInstance(caches['default'], DatabaseCache)
+        self.assertEqual(caches['default']._table, 'hairmatch_cache')
+
+    def test_a_value_is_stored_in_the_database_and_read_back(self):
+        from django.core.cache import cache
+        from django.db import connection
+
+        cache.set('emc-33', {'count': 3}, 60)
+
+        self.assertEqual(cache.get('emc-33'), {'count': 3})
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT COUNT(*) FROM hairmatch_cache')
+            self.assertEqual(cursor.fetchone()[0], 1)
+
+    def test_the_cache_keeps_far_more_than_the_django_default_of_300_entries(self):
+        """Culling would evict throttle counters, so a bot could slip past a limit under load."""
+        from django.core.cache import caches
+
+        self.assertGreaterEqual(caches['default']._max_entries, 100000)
+
+    def test_the_migration_creates_the_cache_table_and_can_run_again(self):
+        """EMC-33: the test runner creates the table by itself, so the migration is run on its own here."""
+        import importlib
+        from types import SimpleNamespace
+        from django.db import connection
+
+        migration = importlib.import_module('users.migrations.0011_create_cache_table')
+        editor = SimpleNamespace(connection=connection)
+        with connection.cursor() as cursor:
+            cursor.execute('DROP TABLE hairmatch_cache')
+        self.assertNotIn('hairmatch_cache', connection.introspection.table_names())
+
+        migration.create_cache_table(None, editor)
+        migration.create_cache_table(None, editor)
+
+        self.assertIn('hairmatch_cache', connection.introspection.table_names())

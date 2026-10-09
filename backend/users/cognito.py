@@ -42,6 +42,26 @@ class CognitoUnavailable(CognitoError):
     pass
 
 
+class InvalidConfirmationCode(CognitoError):
+    pass
+
+
+class ExpiredConfirmationCode(CognitoError):
+    pass
+
+
+class UserNotConfirmed(CognitoError):
+    pass
+
+
+class AlreadyConfirmed(CognitoError):
+    pass
+
+
+class ResendRejected(CognitoError):
+    pass
+
+
 # Anything not listed here (including unknown ClientError codes) is CognitoUnavailable.
 _ERRORS_BY_CODE = {
     'InvalidPasswordException': InvalidPassword,
@@ -50,6 +70,10 @@ _ERRORS_BY_CODE = {
     'UserNotFoundException': InvalidCredentials,
     'TooManyRequestsException': TooManyRequests,
     'LimitExceededException': TooManyRequests,
+    'TooManyFailedAttemptsException': TooManyRequests,
+    'CodeMismatchException': InvalidConfirmationCode,
+    'ExpiredCodeException': ExpiredConfirmationCode,
+    'UserNotConfirmedException': UserNotConfirmed,
 }
 
 
@@ -106,17 +130,20 @@ class CognitoService:
     def issuer(self):
         return f'https://cognito-idp.{self.client.meta.region_name}.amazonaws.com/{self.pool_id}'
 
-    def sign_up_confirmed(self, email, password):
+    def sign_up(self, email, password):
         email = _username(email)
-        sub = self._call(
+        return self._call(
             'sign_up',
             ClientId=self.client_id,
             Username=email,
             Password=password,
             UserAttributes=[{'Name': 'email', 'Value': email}],
         )['UserSub']
+
+    def sign_up_confirmed(self, email, password):
+        sub = self.sign_up(email, password)
         try:
-            self._call('admin_confirm_sign_up', UserPoolId=self.pool_id, Username=email)
+            self._call('admin_confirm_sign_up', UserPoolId=self.pool_id, Username=_username(email))
         except CognitoError:
             try:
                 self.admin_delete_user(email)
@@ -124,6 +151,28 @@ class CognitoService:
                 pass
             raise
         return sub
+
+    def confirm_sign_up(self, email, code):
+        try:
+            self._call(
+                'confirm_sign_up',
+                ClientId=self.client_id,
+                Username=_username(email),
+                ConfirmationCode=code,
+            )
+        except InvalidCredentials as exc:
+            # The global table reads these codes as a login failure; here they mean something else.
+            if exc.code == 'UserNotFoundException':
+                raise InvalidConfirmationCode(exc.code) from exc
+            raise AlreadyConfirmed(exc.code) from exc
+
+    def resend_confirmation_code(self, email):
+        try:
+            self._call('resend_confirmation_code', ClientId=self.client_id, Username=_username(email))
+        except CognitoUnavailable as exc:
+            if exc.code == 'InvalidParameterException':
+                raise ResendRejected(exc.code) from exc
+            raise
 
     def authenticate(self, email, password):
         result = self._call(
@@ -173,6 +222,15 @@ class CognitoService:
             for attribute in response['UserAttributes']
             if attribute['Name'] == 'sub'
         )
+
+    def admin_get_status(self, email):
+        try:
+            response = self._call('admin_get_user', UserPoolId=self.pool_id, Username=_username(email))
+        except InvalidCredentials as exc:
+            if exc.code != 'UserNotFoundException':
+                raise CognitoUnavailable(exc.code) from exc
+            return None
+        return response['UserStatus']
 
     def fetch_jwks(self):
         # The in-memory test client publishes its own keys instead of serving them over HTTP.

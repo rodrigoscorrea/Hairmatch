@@ -2,6 +2,8 @@ from django.urls import path
 from .views import (
     RegisterView,
     LoginView,
+    EmailConfirmationView,
+    ConfirmationCodeView,
     SessionView,
     RefreshView,
     GoogleAuthView,
@@ -22,6 +24,8 @@ urlpatterns = [
     path('users/me/password', ChangePasswordView.as_view(), name='password_change'),
     path('auth/session', SessionView.as_view(), name='session'),
     path('auth/login', LoginView.as_view(), name='login'),
+    path('auth/email-confirmations', EmailConfirmationView.as_view(), name='email_confirmations'),
+    path('auth/confirmation-codes', ConfirmationCodeView.as_view(), name='confirmation_codes'),
     path('auth/refresh', RefreshView.as_view(), name='refresh'),
     path('auth/google', GoogleAuthView.as_view(), name='google_auth'),
     path('auth/logout', LogoutView.as_view(), name='logout'),

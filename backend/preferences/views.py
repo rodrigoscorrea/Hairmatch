@@ -66,6 +66,6 @@ class ListUsersPerPreference(APIView):
         preference = Preferences.objects.filter(id=preference_id).first()
         if not preference:
             return problem_response(request, 'not-found', 'Preference not found.')
-        users = preference.users.filter(role='hairdresser')
+        users = preference.users.filter(role='hairdresser', is_active=True)
         serializer = UserNameSerializer(users, many=True)
         return Response({'data':serializer.data},  status=200)
