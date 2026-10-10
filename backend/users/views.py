@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import User, Customer, Hairdresser
+from .models import User, Customer, Hairdresser, GalleryPhoto
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
@@ -10,7 +10,7 @@ import re
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
+from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer, GalleryPhotoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
 from .serializers import SearchResultSerializer # Import our new serializer
@@ -881,6 +881,16 @@ class ProfilePictureView(APIView):
                 User.objects.filter(pk=user.pk).update(profile_picture=None)
                 transaction.on_commit(lambda: _delete_stored_files([old_name]))
         return HttpResponse(status=204)
+
+class GalleryPhotoCollection(APIView):
+    """The photos of a hairdresser's gallery: anyone reads them (newest first)."""
+
+    def get(self, request, hairdresser_id):
+        if not Hairdresser.objects.filter(pk=hairdresser_id).exists():
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
+        photos = GalleryPhoto.objects.filter(hairdresser_id=hairdresser_id)
+        return JsonResponse({'data': GalleryPhotoSerializer(photos, many=True).data}, status=200)
+
 
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request

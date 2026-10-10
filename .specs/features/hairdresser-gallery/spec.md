@@ -210,10 +210,10 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| GAL-01 | P1: Ver a galeria, AC1 | Tasks | Pending |
-| GAL-02 | P1: Ver a galeria, AC2 | Tasks | Pending |
-| GAL-03 | P1: Ver a galeria, AC3 | Tasks | Pending |
-| GAL-04 | P1: Ver a galeria, AC4 | Tasks | Pending |
+| GAL-01 | P1: Ver a galeria, AC1 | Tasks | Implementing |
+| GAL-02 | P1: Ver a galeria, AC2 | Tasks | Implementing |
+| GAL-03 | P1: Ver a galeria, AC3 | Tasks | Implementing |
+| GAL-04 | P1: Ver a galeria, AC4 | Tasks | Implementing |
 | GAL-05 | P1: Ver a galeria, AC5 | Tasks | Implementing |
 | GAL-06 | P1: Ver a galeria, AC6 | Tasks | Pending |
 | GAL-07 | P1: Ver a galeria, AC7 | Tasks | Pending |
@@ -250,7 +250,7 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-38 | P1: Remover fotos, AC8 | Tasks | Pending |
 | GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Pending |
 | GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Pending |
-| GAL-41 | P2: Contrato, AC1 | Tasks | Pending |
+| GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
 | GAL-42 | P2: Contrato, AC2 | Tasks | Implementing |
 | GAL-43 | P2: Contrato, AC3 | Tasks | Pending |
 | GAL-44 | P2: Seed, AC1 | Tasks | Pending |

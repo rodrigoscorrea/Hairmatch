@@ -184,16 +184,16 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoListTest` com:
+- [x] Classe nova `GalleryPhotoListTest` com:
   - 3 fotos criadas em instantes diferentes: 200 com os 3 `id` em ordem decrescente de `created_at`, cada item só com `id`, `image` e `created_at`;
   - as fotos de outro cabeleireiro não aparecem;
   - sem fotos: `{"data": []}`;
   - o pk de um `Hairdresser` que não existe: 404 `not-found`;
   - sem cookie: 200;
   - `image` termina em `.webp` e não contém o nome original enviado.
-- [ ] `RouteTableTests` passa com RT-94.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-94.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full

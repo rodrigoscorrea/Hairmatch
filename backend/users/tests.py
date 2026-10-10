@@ -6582,3 +6582,89 @@ class GalleryPhotoModelTest(TestCase):
         self.hairdresser.delete()
 
         self.assertEqual(list(GalleryPhoto.objects.values_list('pk', flat=True)), [other.pk])
+
+
+class GalleryPhotoListTest(TestCase):
+    """GET /api/hairdressers/{id}/gallery-photos (RT-94, GAL-01 to GAL-05)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.hairdresser = _create_gallery_hairdresser()
+        self.url = reverse('gallery_photos', args=[self.hairdresser.pk])
+
+    def test_lists_the_photos_newest_first_with_only_id_image_and_created_at(self):
+        """GAL-01"""
+        now = timezone.now()
+        photos = [_add_gallery_photo(self.hairdresser, f'{index}.png') for index in range(3)]
+        for photo, age in zip(photos, (datetime.timedelta(days=2), datetime.timedelta(days=1), datetime.timedelta())):
+            GalleryPhoto.objects.filter(pk=photo.pk).update(created_at=now - age)
+        # Created last but the oldest: only the created_at decides the order.
+        oldest = _add_gallery_photo(self.hairdresser, 'velha.png')
+        GalleryPhoto.objects.filter(pk=oldest.pk).update(created_at=now - datetime.timedelta(days=9))
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()['data']
+        self.assertEqual([item['id'] for item in data], [photos[2].pk, photos[1].pk, photos[0].pk, oldest.pk])
+        self.assertEqual(set(data[0]), {'id', 'image', 'created_at'})
+        self.assertEqual(data[0]['image'], default_storage.url(photos[2].image.name))
+
+    def test_photos_created_at_the_same_instant_are_ordered_by_id_descending(self):
+        """GAL-01"""
+        first = _add_gallery_photo(self.hairdresser)
+        second = _add_gallery_photo(self.hairdresser)
+        GalleryPhoto.objects.update(created_at=timezone.now())
+
+        data = self.client.get(self.url).json()['data']
+
+        self.assertEqual([item['id'] for item in data], [second.pk, first.pk])
+
+    def test_the_photos_of_another_hairdresser_are_not_listed(self):
+        """GAL-01"""
+        mine = _add_gallery_photo(self.hairdresser)
+        _add_gallery_photo(_create_gallery_hairdresser('outra@example.com', '92990000002'))
+
+        data = self.client.get(self.url).json()['data']
+
+        self.assertEqual([item['id'] for item in data], [mine.pk])
+
+    def test_a_hairdresser_without_photos_gets_an_empty_list(self):
+        """GAL-02"""
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': []})
+
+    def test_an_unknown_hairdresser_answers_404_not_found(self):
+        """GAL-03"""
+        response = self.client.get(reverse('gallery_photos', args=[self.hairdresser.pk + 1000]))
+
+        assert_problem(response, 'not-found', detail='Hairdresser not found.')
+
+    def test_a_customer_id_is_not_a_hairdresser(self):
+        """GAL-03"""
+        customer = _create_plain_user(email='cliente@example.com', phone='92990000009')
+        Customer.objects.create(user=customer, cpf='12345678900')
+
+        response = self.client.get(reverse('gallery_photos', args=[customer.pk]))
+
+        assert_problem(response, 'not-found')
+
+    def test_no_session_cookie_is_needed(self):
+        """GAL-04"""
+        _add_gallery_photo(self.hairdresser)
+        self.assertFalse(self.client.cookies)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual((response.status_code, len(response.json()['data'])), (status.HTTP_200_OK, 1))
+
+    def test_the_image_is_the_public_webp_url_and_hides_the_uploaded_name(self):
+        """GAL-05"""
+        _add_gallery_photo(self.hairdresser, 'foto da praia.png')
+
+        image = self.client.get(self.url).json()['data'][0]['image']
+
+        self.assertRegex(image, rf'hairdresser/gallery/{self.hairdresser.pk}/[0-9a-f]{{32}}\.webp$')
+        self.assertNotIn('praia', image)
