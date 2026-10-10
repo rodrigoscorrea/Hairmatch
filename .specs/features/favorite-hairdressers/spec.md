@@ -185,7 +185,7 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-09 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-10 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-11 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-12 | P1: Favoritar pelo perfil | Tasks | Pending |
+| FAV-12 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-13 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-14 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-15 | P1: Favoritar pelo perfil | Tasks | Pending |
@@ -199,7 +199,7 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-23 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-24 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-25 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-26 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-26 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-27 | P1: Lista de favoritos | Tasks | Pending |
 | FAV-28 | P1: Lista de favoritos | Tasks | Pending |
 | FAV-29 | P1: Lista de favoritos | Tasks | Pending |

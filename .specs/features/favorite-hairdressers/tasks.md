@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 a T4 concluídas (Phase 1, backend, completa).
+**Status**: Execute: T1 a T5 concluídas (backend completo; app em andamento).
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -248,8 +248,8 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] As três funções seguem os contratos do design: `GET` devolve `response.data.data`, `PUT` e `DELETE` devolvem `void`.
-- [ ] Gate check passes: App.
+- [x] As três funções seguem os contratos do design: `GET` devolve `response.data.data`, `PUT` e `DELETE` devolvem `void`.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: app
