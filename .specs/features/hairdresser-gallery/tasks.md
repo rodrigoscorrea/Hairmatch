@@ -253,10 +253,10 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoRaceTest(TransactionTestCase)`: com 28 fotos, 4 threads fazem `POST` ao mesmo tempo (`threading.Barrier`). Exatamente 2 respondem 201 e 2 respondem 409 `gallery-full`, e a galeria termina com 30 linhas.
-- [ ] O teste falha com o `select_for_update` removido (conferido uma vez à mão e registrado no commit).
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: total sem remoção.
+- [x] Classe nova `GalleryPhotoRaceTest(TransactionTestCase)`: com 28 fotos, 4 threads fazem `POST` ao mesmo tempo (`threading.Barrier`). Exatamente 2 respondem 201 e 2 respondem 409 `gallery-full`, e a galeria termina com 30 linhas.
+- [x] O teste falha com o `select_for_update` removido (conferido uma vez à mão e registrado no commit).
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: quick

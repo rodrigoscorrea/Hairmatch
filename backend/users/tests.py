@@ -1,6 +1,6 @@
 from hairmatch.problem_testing import assert_problem
 from hairmatch.problems import Problem
-from django.test import TestCase, Client, SimpleTestCase, override_settings
+from django.test import TestCase, TransactionTestCase, Client, SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -46,11 +46,13 @@ from google.auth.exceptions import GoogleAuthError
 import requests as http_requests
 from django.core.cache import cache
 from django.db import IntegrityError, connection
+from django.test.utils import CaptureQueriesContext
 from .views import RegisterView
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 import importlib
 import os
 import tempfile
+import threading
 from django.apps import apps as django_apps
 from io import BytesIO, StringIO
 from PIL import Image
@@ -6875,3 +6877,65 @@ class GalleryPhotoCreateTest(GalleryApiTestCase):
 
         assert_problem(response, 'method-not-allowed')
         self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS', 'POST'])
+
+    def test_the_hairdresser_row_is_locked_before_the_photo_is_inserted(self):
+        """GAL-15"""
+        with CaptureQueriesContext(connection) as queries:
+            response = self._post(make_upload('foto.png', fmt='PNG'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        statements = [query['sql'] for query in queries.captured_queries]
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_hairdresser"' in sql)
+        count = next(i for i, sql in enumerate(statements) if 'COUNT' in sql and 'users_galleryphoto' in sql)
+        insert = next(i for i, sql in enumerate(statements) if sql.startswith('INSERT INTO "users_galleryphoto"'))
+        self.assertLess(lock, count)
+        self.assertLess(count, insert)
+
+
+class GalleryPhotoRaceTest(TransactionTestCase):
+    """GAL-15: uploads of the same hairdresser that arrive together never take the gallery past 30 photos."""
+
+    def test_concurrent_uploads_with_2_places_left_store_exactly_2(self):
+        client = APIClient()
+        client.post(reverse('register'), data=_hairdresser_payload())
+        activate_account('cabelo@example.com')
+        client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'cabelo@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        hairdresser = Hairdresser.objects.get(user__email='cabelo@example.com')
+        GalleryPhoto.objects.bulk_create(
+            [GalleryPhoto(hairdresser=hairdresser, image=f'seed/{index}.webp') for index in range(28)]
+        )
+        url = reverse('gallery_photos', args=[hairdresser.pk])
+        uploads = [make_upload(f'{index}.png', size=(1500, 1500), fmt='PNG') for index in range(4)]
+        barrier = threading.Barrier(len(uploads))
+        results = []
+        failures = []
+
+        def upload(file):
+            thread_client = APIClient()
+            thread_client.cookies = client.cookies
+            try:
+                barrier.wait(timeout=10)
+                response = thread_client.post(url, {'image': file}, format='multipart')
+                results.append((response.status_code, response.json().get('type', '')))
+            except Exception as exc:  # reported below: an exception in a thread does not fail the test
+                failures.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=upload, args=(file,)) for file in uploads]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=60)
+
+        self.assertEqual(failures, [])
+        self.assertEqual(
+            sorted(results),
+            sorted([(201, '')] * 2 + [(409, 'https://hairmatch.app/problems/gallery-full')] * 2),
+        )
+        self.assertEqual(GalleryPhoto.objects.filter(hairdresser=hairdresser).count(), 30)
+        self.assertEqual(len(_gallery_files(hairdresser)), 2)

@@ -911,6 +911,8 @@ class GalleryPhotoCollection(APIView):
 
         try:
             with transaction.atomic():
+                # The lock serializes the uploads of this hairdresser, so the count below is not stale (AD-010, AD-013).
+                Hairdresser.objects.select_for_update().get(pk=hairdresser.pk)
                 if GalleryPhoto.objects.filter(hairdresser=hairdresser).count() >= GALLERY_MAX_PHOTOS:
                     raise Problem('gallery-full', GALLERY_FULL_DETAIL)
                 photo = GalleryPhoto(hairdresser=hairdresser)
