@@ -3233,17 +3233,20 @@ class PopulateHairdressersCommandTest(TestCase):
         self.assertEqual(photo.image.name, 'hairdresser/gallery/1/aaaa.webp')
 
     def test_a_missing_gallery_photo_gets_the_same_placeholder_every_time(self):
-        """GAL-45: the key decides the placeholder, so a restore is stable."""
-        key = 'hairdresser/gallery/1/bbbb.webp'
-        self._seeded_gallery_photo(key)
+        """GAL-45: the key decides the placeholder, so a restore is stable (12 keys, so a random pick would differ)."""
+        keys = [f'hairdresser/gallery/1/{index:04d}.webp' for index in range(12)]
+        first = self._seeded_gallery_photo(keys[0])
+        for key in keys[1:]:
+            GalleryPhoto.objects.create(hairdresser=first.hairdresser, image=key)
         self._run()
-        first = stored_image(key).size
-        default_storage.delete(key)
+        sizes = {key: stored_image(key).size for key in keys}
+        for key in keys:
+            default_storage.delete(key)
 
         self._run()
 
-        self.assertEqual(stored_image(key).size, first)
-        self.assertIn(first, [(64, 48), (48, 64)])
+        self.assertEqual({key: stored_image(key).size for key in keys}, sizes)
+        self.assertTrue(set(sizes.values()) <= {(64, 48), (48, 64)})
 
     def test_does_not_restore_a_gallery_photo_of_a_hairdresser_outside_the_seed(self):
         """GAL-45"""
@@ -3255,7 +3258,8 @@ class PopulateHairdressersCommandTest(TestCase):
 
     def test_does_not_rewrite_a_gallery_photo_that_is_in_the_bucket(self):
         """GAL-45"""
-        key = 'hairdresser/gallery/1/dddd.webp'
+        # A directory of its own: the in-memory storage is shared by the tests of the process.
+        key = 'hairdresser/gallery/77/dddd.webp'
         self._seeded_gallery_photo(key)
         default_storage.save(key, ContentFile(b'already there'))
 
@@ -3263,6 +3267,8 @@ class PopulateHairdressersCommandTest(TestCase):
 
         with default_storage.open(key) as stored:
             self.assertEqual(stored.read(), b'already there')
+        # A rewrite would land on an alternative name, because the key is taken: nothing else may be stored.
+        self.assertEqual(default_storage.listdir('hairdresser/gallery/77')[1], ['dddd.webp'])
 
     def _login_status(self, email, password='Senha123'):
         return APIClient().post(
