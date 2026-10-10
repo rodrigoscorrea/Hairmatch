@@ -316,15 +316,15 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-55 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-56 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-60 | P1: Cliente pelo app | Tasks | Pending |
-| REV-61 | P1: Cliente pelo app | Tasks | Pending |
-| REV-62 | P1: Cliente pelo app | Tasks | Pending |
-| REV-63 | P1: Cliente pelo app | Tasks | Pending |
+| REV-61 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-62 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-63 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-64 | P1: Cliente pelo app | Tasks | Pending |
-| REV-65 | P1: Cliente pelo app | Tasks | Pending |
+| REV-65 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-66 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-67 | P1: Cliente pelo app | Tasks | Implemented |
-| REV-68 | P1: Cliente pelo app | Tasks | Pending |
-| REV-69 | P1: Cliente pelo app | Tasks | Pending |
+| REV-68 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-69 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-70 | P1: Cliente pelo app | Tasks | Pending |
 | REV-75 | P1: Cabeleireiro pelo app | Tasks | Pending |
 | REV-76 | P1: Cabeleireiro pelo app | Tasks | Pending |

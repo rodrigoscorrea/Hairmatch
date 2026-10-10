@@ -608,13 +608,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Numa reserva com review, o hook preenche `rating`, `comment` e `existing` (REV-61).
-- [ ] `selectionLimit` é `5 − existing.length − queued.length`. A seleção que passa do limite é cortada, e o aviso "Você pode enviar até 5 fotos." aparece (REV-62, REV-63).
-- [ ] A remoção só mexe no estado local (REV-65).
-- [ ] Criar chama `createReview` uma vez (REV-66). Editar chama PUT, depois um DELETE por foto removida, depois um POST com as novas, pulando o que está vazio (REV-67).
-- [ ] Em erro, o hook mostra o `problemMessage`, recarrega a reserva, refaz `existing` e mantém `queued`, `rating` e `comment`. As fotos marcadas para remoção que ainda existem no servidor continuam escondidas e na lista de remoção, para o próximo salvar (REV-68).
-- [ ] O formulário só é limpo depois do sucesso, e um `useRef` barra o segundo toque (REV-69).
-- [ ] Gate App passa.
+- [x] Numa reserva com review, o hook preenche `rating`, `comment` e `existing` (REV-61).
+- [x] `selectionLimit` é `5 − existing.length − queued.length`. A seleção que passa do limite é cortada, e o aviso "Você pode enviar até 5 fotos." aparece (REV-62, REV-63).
+- [x] A remoção só mexe no estado local (REV-65).
+- [x] Criar chama `createReview` uma vez (REV-66). Editar chama PUT, depois um DELETE por foto removida, depois um POST com as novas, pulando o que está vazio (REV-67).
+- [x] Em erro, o hook mostra o `problemMessage`, recarrega a reserva, refaz `existing` e mantém `queued`, `rating` e `comment`. As fotos marcadas para remoção que ainda existem no servidor continuam escondidas e na lista de remoção, para o próximo salvar (REV-68).
+- [x] O formulário só é limpo depois do sucesso, e um `useRef` barra o segundo toque (REV-69).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
