@@ -463,16 +463,16 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: o autor envia `{rating: 4, comment: "  Pontual  "}`, recebe 200 com `{data: {id, reservation, rating: 4, comment: "Pontual", created_at}}`, e `User.rating` é recalculado (REV-40, REV-41, REV-50).
-- [ ] Teste: `comment` ausente, `null` e `"   "` gravam `null` (REV-41).
-- [ ] Teste: `rating` ausente, 4.5, `"5"`, `true`, 0 e 6 dão 400 `#/rating` (REV-42). Um comentário com 501 caracteres depois do trim, ou numérico, dá 400 `#/comment` (REV-43). Os dois juntos dão dois itens.
-- [ ] Teste: um corpo que é lista JSON dá 400 `malformed-request` (REV-44).
-- [ ] Teste: corpo inválido com id inexistente dá 400, não 404. Corpo inválido em nota de outro autor dá 400, não 403 (REV-45).
-- [ ] Teste: id inexistente dá 404 `not-found` (REV-46).
-- [ ] Teste: outro cabeleireiro, e uma nota com `hairdresser = None`, dão 403 `forbidden`, sem mudar a nota nem `User.rating` (REV-47).
-- [ ] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
-- [ ] `hairmatch.test_routes` passa com RT-92 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 118 + 9.
+- [x] Teste: o autor envia `{rating: 4, comment: "  Pontual  "}`, recebe 200 com `{data: {id, reservation, rating: 4, comment: "Pontual", created_at}}`, e `User.rating` é recalculado (REV-40, REV-41, REV-50).
+- [x] Teste: `comment` ausente, `null` e `"   "` gravam `null` (REV-41).
+- [x] Teste: `rating` ausente, 4.5, `"5"`, `true`, 0 e 6 dão 400 `#/rating` (REV-42). Um comentário com 501 caracteres depois do trim, ou numérico, dá 400 `#/comment` (REV-43). Os dois juntos dão dois itens.
+- [x] Teste: um corpo que é lista JSON dá 400 `malformed-request` (REV-44).
+- [x] Teste: corpo inválido com id inexistente dá 400, não 404. Corpo inválido em nota de outro autor dá 400, não 403 (REV-45).
+- [x] Teste: id inexistente dá 404 `not-found` (REV-46).
+- [x] Teste: outro cabeleireiro, e uma nota com `hairdresser = None`, dão 403 `forbidden`, sem mudar a nota nem `User.rating` (REV-47).
+- [x] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
+- [x] `hairmatch.test_routes` passa com RT-92 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 118 + 9.
 
 **Tests**: integration
 **Gate**: full

@@ -2154,3 +2154,160 @@ class EditCustomerRatingTest(ReviewsTestCase):
         lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql)
         delete = next(i for i, sql in enumerate(statements) if sql.startswith('DELETE FROM "review_customerrating"'))
         self.assertLess(lock, delete)
+
+
+class CustomerRatingEditingTestCase(ReviewsTestCase):
+    """A rating of 5 by `self.hairdresser` on the customer, and a second one of 3 that the tests edit around."""
+
+    def setUp(self):
+        super().setUp()
+        self.five = record_customer_rating(
+            self.hairdresser, Reserve.objects.create(customer=self.customer, service=self.service), 5, 'Ótima',
+        )
+        self.three = record_customer_rating(
+            self.hairdresser, self.reserve, 3, 'Ok',
+        )
+        self.url = reverse('customer_rating_detail', args=[self.three.id])
+        self.login_as_hairdresser()
+
+    def _average(self):
+        self.customer_user.refresh_from_db()
+        return self.customer_user.rating
+
+    def _login_as_other_hairdresser(self):
+        other = dict(self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999')
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.client.cookies.clear()
+        self.client.post(
+            self.login_url, data=json.dumps({'email': other['email'], 'password': other['password']}),
+            content_type='application/json',
+        )
+
+    def _assert_untouched(self):
+        self.three.refresh_from_db()
+        self.five.refresh_from_db()
+        self.assertEqual((self.three.rating, self.three.comment), (3, 'Ok'))
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+        self.assertEqual(self._average(), 4.0)
+
+
+class UpdateCustomerRatingTest(CustomerRatingEditingTestCase):
+    """PUT /api/customer-ratings/{id} (RT-92)"""
+
+    def _put(self, body, url=None):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return self.client.put(url or self.url, data=body, content_type='application/json')
+
+    def test_the_author_edits_the_rating_and_the_average_follows(self):
+        """REV-40, REV-41, REV-50, REV-53"""
+        response = self._put({'rating': 4, 'comment': '  Pontual  '})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()['data']
+        self.assertEqual(set(data), {'id', 'reservation', 'rating', 'comment', 'created_at'})
+        self.assertEqual(
+            (data['id'], data['reservation'], data['rating'], data['comment']),
+            (self.three.id, self.reserve.id, 4, 'Pontual'),
+        )
+        self.three.refresh_from_db()
+        self.assertEqual((self.three.rating, self.three.comment), (4, 'Pontual'))
+        self.assertIsNotNone(data['created_at'])
+        self.assertEqual(self._average(), 4.5)
+        self.five.refresh_from_db()
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+
+    def test_an_absent_null_or_blank_comment_is_stored_as_null(self):
+        """REV-41"""
+        for body in ({'rating': 4}, {'rating': 4, 'comment': None}, {'rating': 4, 'comment': '   '}):
+            with self.subTest(body=body):
+                CustomerRating.objects.filter(pk=self.three.pk).update(comment='Ok')
+
+                self.assertEqual(self._put(body).status_code, status.HTTP_200_OK)
+
+                self.three.refresh_from_db()
+                self.assertIsNone(self.three.comment)
+
+    def test_a_rating_that_is_not_an_integer_from_1_to_5_answers_400(self):
+        """REV-42"""
+        for value in (None, 4.5, '5', True, 0, 6):
+            with self.subTest(rating=value):
+                body = {} if value is None else {'rating': value}
+                response = self._put(body)
+                self.assertEqual([e['pointer'] for e in assert_problem(response, 'validation-error')['errors']],
+                                 ['#/rating'])
+        self._assert_untouched()
+
+    def test_a_comment_that_is_not_a_string_or_too_long_answers_400(self):
+        """REV-43"""
+        for value, detail in ((7, 'The comment must be a string.'),
+                              ('a' * 501, 'The comment must have at most 500 characters.'),
+                              (' ' + 'a' * 501, 'The comment must have at most 500 characters.')):
+            with self.subTest(comment=str(value)[:10]):
+                assert_problem(self._put({'rating': 4, 'comment': value}), 'validation-error', errors=[
+                    {'pointer': '#/comment', 'detail': detail},
+                ])
+        self._assert_untouched()
+
+    def test_both_invalid_fields_are_reported_together(self):
+        """REV-42, REV-43"""
+        assert_problem(self._put({'rating': 9, 'comment': 7}), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'The rating must be an integer from 1 to 5.'},
+            {'pointer': '#/comment', 'detail': 'The comment must be a string.'},
+        ])
+
+    def test_a_comment_of_500_characters_after_the_trim_is_accepted(self):
+        """REV-43"""
+        self.assertEqual(self._put({'rating': 4, 'comment': '  ' + 'a' * 500 + '  '}).status_code, 200)
+
+    def test_a_body_that_is_not_a_json_object_answers_400(self):
+        """REV-44"""
+        assert_problem(self._put([]), 'malformed-request', detail='The request body must be a JSON object.')
+        self._assert_untouched()
+
+    def test_an_invalid_body_answers_400_before_the_rating_is_looked_up(self):
+        """REV-45: a rating that does not exist, and the rating of another author, still answer 400."""
+        missing = reverse('customer_rating_detail', args=[999999])
+        assert_problem(self._put({'rating': 9}, url=missing), 'validation-error')
+
+        self._login_as_other_hairdresser()
+        assert_problem(self._put({'rating': 9}), 'validation-error')
+        self._assert_untouched()
+
+    def test_a_rating_that_does_not_exist_answers_404(self):
+        """REV-46"""
+        response = self._put({'rating': 4}, url=reverse('customer_rating_detail', args=[999999]))
+
+        assert_problem(response, 'not-found', detail='Rating not found.')
+
+    def test_another_hairdresser_answers_403_and_changes_nothing(self):
+        """REV-47"""
+        self._login_as_other_hairdresser()
+
+        assert_problem(self._put({'rating': 1, 'comment': 'hijack'}), 'forbidden')
+        self._assert_untouched()
+
+    def test_a_rating_whose_author_deleted_the_account_answers_403_to_everyone(self):
+        """REV-47"""
+        CustomerRating.objects.filter(pk=self.three.pk).update(hairdresser=None)
+
+        assert_problem(self._put({'rating': 1}), 'forbidden')
+        self.three.refresh_from_db()
+        self.assertEqual(self.three.rating, 3)
+        self.assertEqual(self._average(), 4.0)
+
+    def test_without_a_session_answers_401(self):
+        """REV-48"""
+        self.client.cookies.clear()
+
+        assert_problem(self._put({'rating': 1}), 'invalid-session')
+        self._assert_untouched()
+
+    def test_a_customer_session_answers_403_hairdresser_required(self):
+        """REV-48"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self._put({'rating': 1}), 'hairdresser-required')
+        self._assert_untouched()

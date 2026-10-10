@@ -299,15 +299,15 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-31 | P1: Lista de fotos nas respostas | Tasks | Implemented |
 | REV-32 | P1: Lista de fotos nas respostas | Tasks | Implemented |
 | REV-33 | P1: Lista de fotos nas respostas | Tasks | Implemented |
-| REV-40 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-41 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-42 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-43 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-44 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-45 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-46 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-47 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-48 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
+| REV-40 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-41 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-42 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-43 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-44 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-45 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-46 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-47 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-48 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
 | REV-49 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
 | REV-50 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
 | REV-51 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |

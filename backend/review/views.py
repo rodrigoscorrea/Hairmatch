@@ -20,7 +20,13 @@ from reserve.models import Reserve
 from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
 from users.models import Customer, Hairdresser
 
-from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
+from .customer_ratings import (
+    ALREADY_RATED_DETAIL,
+    delete_customer_rating,
+    record_customer_rating,
+    service_end,
+    update_customer_rating,
+)
 from .models import CustomerRating, Review, ReviewPicture
 from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors, picture_names
 from .serializers import (
@@ -252,14 +258,18 @@ class ReviewPictureDetail(APIView):
         return HttpResponse(status=204)
 
 
-def _customer_rating_errors(data):
-    """The `errors` items of a POST /api/customer-ratings body, one per invalid field."""
+def _customer_rating_errors(data, require_reservation=True):
+    """
+    The `errors` items of a customer rating body, one per invalid field. The POST names the reservation to rate;
+    the PUT edits a rating that already has one, so it skips that field.
+    """
     errors = []
     reservation = data.get('reservation')
-    if reservation is None or reservation == '':
-        errors.append(body_error('reservation', REQUIRED_DETAIL))
-    elif not _is_id(reservation):
-        errors.append(body_error('reservation', 'This field must be an integer.'))
+    if require_reservation:
+        if reservation is None or reservation == '':
+            errors.append(body_error('reservation', REQUIRED_DETAIL))
+        elif not _is_id(reservation):
+            errors.append(body_error('reservation', 'This field must be an integer.'))
 
     # A JSON integer only: the app sends whole stars, so 4.5, "5" and true are refused.
     rating = data.get('rating')
@@ -311,6 +321,32 @@ class CustomerRatingCollection(APIView):
 
         customer_rating = record_customer_rating(hairdresser, reservation, data['rating'], comment)
         return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=201)
+
+
+class CustomerRatingDetail(APIView):
+    """`/api/customer-ratings/{id}`: PUT edits and DELETE removes a rating the logged hairdresser wrote."""
+
+    def put(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        # The body is checked before the rating is looked up: invalid input is always a 400.
+        data = json_object(request)
+        errors = _customer_rating_errors(data, require_reservation=False)
+        if errors:
+            raise validation_problem(errors)
+
+        customer_rating = CustomerRating.objects.select_related('customer').filter(id=id).first()
+        if customer_rating is None:
+            return problem_response(request, 'not-found', 'Rating not found.')
+        # Only the author. A rating whose author deleted the account (hairdresser None) belongs to no one.
+        if customer_rating.hairdresser_id != hairdresser.id:
+            return forbidden(request)
+
+        comment = (data.get('comment') or '').strip() or None
+        update_customer_rating(customer_rating, data['rating'], comment)
+        return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=200)
 
 
 class CustomerRatingsByCustomer(APIView):

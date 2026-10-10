@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CreateReview,
     CustomerRatingCollection,
+    CustomerRatingDetail,
     CustomerRatingsByCustomer,
     ListReview,
     ReviewDetail,
@@ -16,5 +17,6 @@ urlpatterns = [
     path('reviews/<int:id>/pictures', ReviewPictureCollection.as_view(), name='review_pictures'),
     path('reviews/<int:id>/pictures/<int:picture_id>', ReviewPictureDetail.as_view(), name='review_picture_detail'),
     path('customer-ratings', CustomerRatingCollection.as_view(), name='customer_ratings'),
+    path('customer-ratings/<int:id>', CustomerRatingDetail.as_view(), name='customer_rating_detail'),
     path('customers/<int:customer_id>/ratings', CustomerRatingsByCustomer.as_view(), name='customer_ratings_by_customer'),
 ]
