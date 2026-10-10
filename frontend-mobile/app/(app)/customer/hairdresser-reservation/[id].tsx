@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Accordion } from '@/components/Accordion';
 import { formatAvailability } from '@/utils/availability-formater';
 import { useHairdresserProfile } from '@/hooks/customerHooks/useHairdresserReservation';
+import { useGalleryPhotos } from '@/hooks/useGalleryPhotos';
+import { GalleryStrip } from '@/components/gallery/GalleryStrip';
 
 export default function HairdresserProfileReservationScreen() {
   const {
@@ -24,6 +26,8 @@ export default function HairdresserProfileReservationScreen() {
     handleBookService,
     handleBack,
   } = useHairdresserProfile();
+
+  const { photos } = useGalleryPhotos(hairdresser?.id);
 
   const hairdresser_source = hairdresser?.user.profile_picture;
 
@@ -75,16 +79,8 @@ export default function HairdresserProfileReservationScreen() {
       {/* Bio */}
       <Text style={styles.bio}>{hairdresser.resume}</Text>
 
-      {/* Gallery */}
-      {/* <Text style={styles.sectionTitle}>Galeria</Text>
-      <FlatList
-        data={galleryImages}
-        keyExtractor={(_, index) => index.toString()}
-        horizontal
-        renderItem={({ item }) => <Image source={item} style={styles.galleryImage} />}
-        contentContainerStyle={styles.gallery}
-        showsHorizontalScrollIndicator={false}
-      /> */}
+      {/* Gallery: hidden while the hairdresser has no photos */}
+      <GalleryStrip photos={photos} />
 
       {/* Techniques - Preferences */}
       <Accordion title='Técnicas'>

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Hairdresser, Customer
+from .models import User, Hairdresser, Customer, GalleryPhoto
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -119,3 +119,10 @@ class UserFullInfoSerializer(serializers.ModelSerializer):
     def get_preferences(self, obj):
         preferences = obj.preferences.all()
         return [preference.name for preference in preferences] 
+
+
+class GalleryPhotoSerializer(serializers.ModelSerializer):
+    """A gallery photo: `image` is the storage URL, never the name of the uploaded file."""
+    class Meta:
+        model = GalleryPhoto
+        fields = ['id', 'image', 'created_at']

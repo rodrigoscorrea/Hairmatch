@@ -34,8 +34,8 @@ def handle(exc, path='/api/anything', method='GET'):
 class CatalogTest(TestCase):
     """PD-01 to PD-05: the shape every problem shares."""
 
-    def test_catalog_has_the_40_slugs_of_the_spec(self):
-        self.assertEqual(len(CATALOG), 40)
+    def test_catalog_has_the_41_slugs_of_the_spec(self):
+        self.assertEqual(len(CATALOG), 41)
 
     def test_service_not_finished_is_a_409_with_the_title_of_the_spec(self):
         """CRT-53"""
@@ -43,6 +43,14 @@ class CatalogTest(TestCase):
 
         body = assert_problem(response, 'service-not-finished', detail='Not yet.')
         self.assertEqual((response.status_code, body['title']), (409, 'Service not finished'))
+
+    def test_gallery_full_is_a_409_with_the_title_of_the_spec(self):
+        """GAL-42"""
+        response = problem_response(RequestFactory().post('/api/hairdressers/1/gallery-photos'), 'gallery-full', 'Full.')
+
+        body = assert_problem(response, 'gallery-full', detail='Full.')
+        self.assertEqual((response.status_code, body['title']), (409, 'Gallery is full'))
+        self.assertTrue(body['type'].endswith('/gallery-full'))
 
     def test_email_confirmation_slugs_have_the_status_and_title_of_the_spec(self):
         """EMC-47"""

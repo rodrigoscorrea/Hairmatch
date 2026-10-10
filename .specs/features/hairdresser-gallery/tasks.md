@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/hairdresser-gallery/spec.md`
 **Context**: `.specs/features/hairdresser-gallery/context.md`
 **Design**: `.specs/features/hairdresser-gallery/design.md`
-**Status**: Draft (aguardando aprovação para Execute)
+**Status**: Execute: T1 a T17 concluídas. T18: a parte automatizada (E2E de API com curl e Python, no lugar do UAT em navegador) foi feita; o UAT manual no web e no Android está PENDENTE com o usuário.
 **Branch**: a criar a partir de `develop` no início do Execute, com o nome `118-galeria-de-fotos-do-cabeleireiro`.
 
 **Pré-requisitos do Execute:**
@@ -133,9 +133,9 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste novo em `test_problems.py`: `problem_response(..., 'gallery-full', ...)` responde 409 com `type` terminado em `/gallery-full` e `title` "Gallery is full".
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput hairmatch'`
-- [ ] Test count: `hairmatch` 101 → 102, sem remoção.
+- [x] Teste novo em `test_problems.py`: `problem_response(..., 'gallery-full', ...)` responde 409 com `type` terminado em `/gallery-full` e `title` "Gallery is full".
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput hairmatch'`
+- [x] Test count: `hairmatch` 101 → 102, sem remoção.
 
 **Tests**: unit
 **Gate**: quick
@@ -156,14 +156,14 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoModelTest` com:
+- [x] Classe nova `GalleryPhotoModelTest` com:
   - `image.save('foto da praia.png', <PNG 2000×1500>)` grava a chave que casa com `^hairdresser/gallery/<hairdresser_id>/[0-9a-f]{32}\.webp$`, sem `praia`;
   - o objeto no storage abre como WebP com o maior lado 1080;
   - a ordem padrão é `created_at` desc e `id` desc no empate (duas fotos com o mesmo `created_at` congelado);
   - apagar o `Hairdresser` apaga as linhas.
-- [ ] `makemigrations --check` limpo.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `makemigrations --check` limpo.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -184,16 +184,16 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoListTest` com:
+- [x] Classe nova `GalleryPhotoListTest` com:
   - 3 fotos criadas em instantes diferentes: 200 com os 3 `id` em ordem decrescente de `created_at`, cada item só com `id`, `image` e `created_at`;
   - as fotos de outro cabeleireiro não aparecem;
   - sem fotos: `{"data": []}`;
   - o pk de um `Hairdresser` que não existe: 404 `not-found`;
   - sem cookie: 200;
   - `image` termina em `.webp` e não contém o nome original enviado.
-- [ ] `RouteTableTests` passa com RT-94.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-94.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -218,7 +218,7 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoCreateTest` com:
+- [x] Classe nova `GalleryPhotoCreateTest` com:
   - PNG válido: 201 `{"data": {id, image, created_at}}`, uma linha e o objeto `.webp` no storage;
   - sem o campo `image` e com corpo JSON: 400 `validation-error` com `errors[0].pointer == "#/image"`, sem linha e sem arquivo;
   - arquivo de 5 MB + 1 byte: 400 `#/image`, sem linha e sem arquivo;
@@ -228,11 +228,11 @@ T18
   - sem cookie: 401 `invalid-session`; cliente: 403 `hairdresser-required`; `{id}` de outro cabeleireiro: 403 `forbidden`, sem linha;
   - o `save` do storage levantando exceção (`mock.patch`): 500 `internal-error`, sem linha;
   - o `INSERT` falhando depois do upload: o arquivo subido é apagado;
-  - `PUT` na coleção: 405 com `Allow: GET, OPTIONS, POST`.
-- [ ] Os testes da `ProfilePictureView` continuam passando com `IMAGE_UPLOAD_MAX_SIZE`.
-- [ ] `RouteTableTests` passa com RT-95.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+  - `PUT` na coleção: 405 com `Allow: GET, HEAD, OPTIONS, POST` (o DRF acrescenta o `HEAD` a todo `GET`, como em todas as rotas do projeto).
+- [x] Os testes da `ProfilePictureView` continuam passando com `IMAGE_UPLOAD_MAX_SIZE`.
+- [x] `RouteTableTests` passa com RT-95.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -253,10 +253,10 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoRaceTest(TransactionTestCase)`: com 28 fotos, 4 threads fazem `POST` ao mesmo tempo (`threading.Barrier`). Exatamente 2 respondem 201 e 2 respondem 409 `gallery-full`, e a galeria termina com 30 linhas.
-- [ ] O teste falha com o `select_for_update` removido (conferido uma vez à mão e registrado no commit).
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: total sem remoção.
+- [x] Classe nova `GalleryPhotoRaceTest(TransactionTestCase)`: com 28 fotos, 4 threads fazem `POST` ao mesmo tempo (`threading.Barrier`). Exatamente 2 respondem 201 e 2 respondem 409 `gallery-full`, e a galeria termina com 30 linhas.
+- [x] O teste falha com o `select_for_update` removido (conferido uma vez à mão e registrado no commit).
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: quick
@@ -277,16 +277,16 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoDeleteTest` com:
+- [x] Classe nova `GalleryPhotoDeleteTest` com:
   - a foto própria: 204, a linha some, e o arquivo some só depois do commit;
   - uma foto de outro cabeleireiro sob o próprio `{id}`: 404, com a linha e o arquivo intactos;
   - um `photo_id` inexistente: 404; `photo_id` `abc`: 404;
   - sem cookie: 401; cliente: 403 `hairdresser-required`; `{id}` de outro: 403 `forbidden`, sem apagar;
   - o `delete` do storage levantando exceção: ainda 204, e o log (`assertLogs`) cita a chave;
   - `GET` no item: 405 com `Allow: DELETE, OPTIONS`.
-- [ ] `RouteTableTests` passa com RT-96.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-96.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -307,11 +307,11 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos na classe de exclusão de conta:
+- [x] Testes novos na classe de exclusão de conta:
   - um cabeleireiro com 2 fotos exclui a conta: as linhas somem, e os 2 arquivos somem depois do commit;
   - com o fake de Cognito falhando (`fail_next`): as linhas e os arquivos ficam.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -334,10 +334,10 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste novo na classe do seed: com `random` fixado, o comando cria fotos em `hairdresser/gallery/<id>/*.webp`, entre 0 e 6 por cabeleireiro, e todos os objetos existem no storage.
-- [ ] `frontend-mobile/assets/hairdressers/gallery/` não existe mais, e `grep -rn "hairdressers/gallery" frontend-mobile --include=*.ts*` (fora do `node_modules`) não acha nada.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: total sem remoção.
+- [x] Teste novo na classe do seed: com `random` fixado, o comando cria fotos em `hairdresser/gallery/<id>/*.webp`, entre 0 e 6 por cabeleireiro, e todos os objetos existem no storage.
+- [x] `frontend-mobile/assets/hairdressers/gallery/` não existe mais, e `grep -rn "hairdressers/gallery" frontend-mobile --include=*.ts*` (fora do `node_modules`) não acha nada.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: quick
@@ -358,12 +358,12 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos:
+- [x] Testes novos:
   - apagar do storage a chave de uma foto do seed e rodar o comando: a chave volta, e o objeto é WebP;
   - uma foto que não é do seed e que falta no storage não é restaurada;
   - uma chave presente não é regravada.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
@@ -386,7 +386,7 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -407,8 +407,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] As três funções usam `axiosInstance` e os paths de RT-94 a RT-96, e o `POST` manda `Content-Type: multipart/form-data`.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] As três funções usam `axiosInstance` e os paths de RT-94 a RT-96, e o `POST` manda `Content-Type: multipart/form-data`.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -429,8 +429,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Um erro do `GET` dá `photos = []`, sem `throw`.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Um erro do `GET` dá `photos = []`, sem `throw`.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -451,8 +451,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] O componente aceita `photos: GalleryPhoto[]`, devolve `null` com `[]` e abre e fecha a tela cheia pelo toque.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] O componente aceita `photos: GalleryPhoto[]`, devolve `null` com `[]` e abre e fecha a tela cheia pelo toque.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -475,8 +475,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] `grep -n "galleryImages" "frontend-mobile/app/(app)/customer/hairdresser-reservation/[id].tsx"` não acha nada.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] `grep -n "galleryImages" "frontend-mobile/app/(app)/customer/hairdresser-reservation/[id].tsx"` não acha nada.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -505,8 +505,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] O hook expõe a interface do design, e as mensagens pt-BR são as do spec, textualmente.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] O hook expõe a interface do design, e as mensagens pt-BR são as do spec, textualmente.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -535,8 +535,8 @@ Registrar `<Stack.Screen name="gallery" />` na pilha do perfil.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os textos da tela são os do spec, textualmente.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Os textos da tela são os do spec, textualmente.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -560,7 +560,7 @@ Registrar `<Stack.Screen name="gallery" />` na pilha do perfil.
 - Skill: NONE
 
 **Done when**:
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
@@ -602,6 +602,8 @@ Roteiro:
 - [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção.
 - [ ] Os critérios de app do spec ficam Verified.
 - [ ] Gate check passes: Full + App.
+
+**Status (Execute)**: PARCIAL. O UAT manual no web e no Android está PENDENTE e não foi feito (o usuário proibiu o Claude in Chrome, e o Android depende dele). No lugar do roteiro em navegador, o backend recebeu um E2E de API contra um servidor do worktree, o MiniStack (Cognito) e o LocalStack (bucket `wt-gallery-e2e`): 56 verificações no `e2e_gallery.py` (todas as rotas RT-94 a RT-96, erros, limite de 30, 6 envios em paralelo, posse e exclusão da conta com conferência das chaves no bucket), o seed (GAL-44 e GAL-45) e um smoke com curl. O resumo da evidência está no `validation.md`. Os itens do roteiro que dependem da tela (1 a 5, e o 7 no app) seguem sem prova e continuam no UAT manual.
 
 **Tests**: none (UAT manual)
 **Gate**: build

@@ -173,8 +173,32 @@
   1. Fazer o UAT manual da T25 (web e Android) e marcar REV-60 a REV-81 como Verified.
   2. Antes do deploy: conferir o limite de corpo do proxy de produção. Uma criação pode levar 5 fotos de até 5 MB, cerca de 25 MB numa requisição.
   3. Decidir a canonicidade entre o AD-011 e o AD-013 (as duas decisões tratam de coleções de imagens, em branches diferentes) e tirar do AD-013 a nota que reserva os números AD-011, AD-012 e RT-90 a RT-93.
-- **Blockers**:
-  - A T1 renomeou `_delete_stored_files` para `hairmatch.storage.delete_stored_files`. A branch da `hairdresser-gallery` (#118) ainda usa o nome antigo: quem entrar depois troca a referência.
-  - Os dois PRs editam `test_routes.py` e a Route Table do `api-restful-routes`: o segundo a entrar resolve o conflito.
+- **Blockers**: none (a #118 já adaptou a referência ao `delete_stored_files` e a Route Table na mesclagem)
 - **Uncommitted files**: `.specs/LESSONS.md` e `.specs/lessons.json` (estado local do skill, fora dos commits).
 - **Branch**: `105-editar-e-excluir-avaliacao`
+
+- **Feature**: `hairdresser-gallery` (issue #118, RF31 e RF32).
+- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está PENDENTE e é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 38 de 38 critérios de backend, 30 de 30 mutantes mortos, 882 testes). A primeira rodada deu FAIL por dois testes fracos do GAL-45 (M21 e M27), corrigidos só nos testes (`054a493`).
+- **Completed**:
+  - Backend (T1 a T9): slug `gallery-full`, modelo `GalleryPhoto` (migração `users/0014`), RT-94 a RT-96, limite de 30 com `select_for_update` na linha do `Hairdresser`, arquivos apagados no `on_commit` (remoção da foto e exclusão da conta), seed com 0 a 6 fotos e restauração no boot. Suíte: 882 testes OK (baseline de 835 executados), `makemigrations --check` limpo.
+  - App (T10 a T17): `gallery-full` no catálogo, serviço, `useGalleryPhotos`, `GalleryStrip`, faixa no perfil público e no do cabeleireiro, `useGalleryManager`, tela `hairdresser/profile/gallery` e o card "Minha galeria". `npx tsc --noEmit` com exit 0 (com os typed routes regenerados).
+  - Evidência no lugar do UAT em navegador: E2E de API contra servidor do worktree, MiniStack e LocalStack (56 verificações, seed e curl), resumido no `validation.md`.
+- **Desvios registrados**:
+  - GAL-43: o `Allow` da coleção traz `HEAD` (o DRF acrescenta a todo `GET`). O spec e o T4 foram ajustados.
+  - O `useGalleryPhotos` recarrega no foco dentro do hook (T12), e o perfil do cabeleireiro só usa o hook (T17).
+  - O teste do tamanho do catálogo passou de 40 para 41 slugs.
+  - A baseline executa 835 testes, e os 837 do spec são a contagem de `def test_`.
+  - O Execute rodou inline, sem sub-agentes de lote (pedido do usuário), e o gate do backend rodou em container descartável que monta o worktree.
+  - `eslint` não existe na `develop` e foi pulado.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. UAT do T18 (roteiro no `tasks.md`), no web e no Android: perfil público, adicionar várias fotos, limite, remover, permissão negada, exclusão da conta. Depois, marcar GAL-06 a GAL-08, GAL-20 a GAL-30, GAL-35 a GAL-38 e GAL-49 a GAL-51 como Verified.
+  2. Mesclar o PR (#179).
+- **Mesclagem com a `develop` (#105 já entrou)**:
+  - `users/views.py`: a coleta de arquivos da exclusão da conta usa `picture_names(ReviewPicture...)` e acrescenta as fotos da galeria; `_delete_stored_files` virou `hairmatch.storage.delete_stored_files` (T6 e T7 adaptados);
+  - `test_routes.py`: a Route Table traz RT-90 a RT-96;
+  - GAL-34: o log de falha ao apagar o arquivo agora sai no logger `hairmatch.storage` (o helper moveu), e o teste passou a escutar esse logger;
+  - gate após a mesclagem: 965 testes OK, `makemigrations --check` limpo e `npx tsc --noEmit` com exit 0.
+  - `IMAGE_UPLOAD_MAX_SIZE` já existia em `users/views.py`, então não houve ajuste de constante.
+- **Pendente da #105 que continua aberto**: decidir a canonicidade entre o AD-011 e o AD-013 e tirar do AD-013 a nota que reserva AD-011, AD-012 e RT-90 a RT-93.
+- **Branch**: `118-galeria-de-fotos-do-cabeleireiro`
