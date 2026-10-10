@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Draft. Aguarda a aprovação das tasks.
+**Status**: Execute: T1 concluída.
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -120,13 +120,13 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe `FavoriteHairdresserModelTest` em `backend/favorite/tests.py` com:
+- [x] Classe `FavoriteHairdresserModelTest` em `backend/favorite/tests.py` com:
   - criar o mesmo par duas vezes pelo ORM levanta `IntegrityError` (FAV-03);
   - três favoritos do mesmo cliente, com o `created_at` reescrito por `update()` fora da ordem de inserção, saem de `FavoriteHairdresser.objects.filter(customer=...)` do mais recente para o mais antigo. Dois com o mesmo `created_at` saem por `id` decrescente (FAV-19, lição L-018);
   - apagar o `Customer` apaga só os favoritos dele, e apagar o `Hairdresser` apaga os favoritos de todos os clientes para ele.
-- [ ] `makemigrations --check` limpo.
-- [ ] Gate check passes: Full.
-- [ ] Test count: 967 → 967 + N, sem remoção.
+- [x] `makemigrations --check` limpo.
+- [x] Gate check passes: Full.
+- [x] Test count: 965 → 971 (6 testes novos), sem remoção.
 
 **Tests**: integration
 **Gate**: full
