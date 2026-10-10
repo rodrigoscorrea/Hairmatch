@@ -321,8 +321,8 @@ A issue #104 pede quatro coisas:
 | CRT-37 | P1: Agenda, AC2 | Tasks | Implementing |
 | CRT-38 | P1: Agenda, AC3 | Tasks | Implementing |
 | CRT-39 | P1: Avaliar pelo app, AC1 | Tasks | Pending |
-| CRT-40 | P1: Avaliar pelo app, AC2 | Tasks | Pending |
-| CRT-41 | P1: Avaliar pelo app, AC3 | Tasks | Pending |
+| CRT-40 | P1: Avaliar pelo app, AC2 | Tasks | Implementing |
+| CRT-41 | P1: Avaliar pelo app, AC3 | Tasks | Implementing |
 | CRT-42 | P1: Avaliar pelo app, AC4 | Tasks | Pending |
 | CRT-43 | P1: Avaliar pelo app, AC5 | Tasks | Implementing |
 | CRT-44 | P1: Avaliar pelo app, AC6 | Tasks | Pending |
@@ -330,7 +330,7 @@ A issue #104 pede quatro coisas:
 | CRT-46 | P1: Avaliar pelo app, AC8 | Tasks | Pending |
 | CRT-47 | P1: Avaliar pelo app, AC9 | Tasks | Pending |
 | CRT-48 | P1: Avaliar pelo app, AC10 | Tasks | Implementing |
-| CRT-49 | P1: Avaliar pelo app, AC11 | Tasks | Pending |
+| CRT-49 | P1: Avaliar pelo app, AC11 | Tasks | Implementing |
 | CRT-50 | P1: Perfil, AC1 | Tasks | Implementing |
 | CRT-51 | P1: Perfil, AC2 | Tasks | Implementing |
 | CRT-52 | P1: Perfil, AC3 | Tasks | Pending |

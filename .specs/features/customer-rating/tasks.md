@@ -452,9 +452,9 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Os campos novos chegam ao `AgendaEvent`, sem `any` novo.
-- [ ] A agenda recarrega ao voltar para a aba, conferido no UAT.
-- [ ] O gate App passa sem erro novo.
+- [x] Os campos novos chegam ao `AgendaEvent`, sem `any` novo: o `ev: any` do mapeamento virou `ev: AgendaItemResponse`.
+- [x] A agenda busca de novo em todo foco (`useFocusEffect(useCallback(..., [hairdresserId]))`). A conferência ao voltar para a aba fica para o UAT do T18.
+- [x] O gate App passa sem erro novo (`tsc` exit 0, `eslint` sem problema no hook).
 
 **Tests**: none
 **Gate**: app
