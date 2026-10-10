@@ -580,9 +580,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] As quatro funções têm a assinatura do design, e as de multipart mandam `Content-Type: multipart/form-data`.
-- [ ] As chamadas existentes a `createReview` são ajustadas, ou ficam com o erro de tipo que a T17 resolve. A baseline do `tsc` registra qual.
-- [ ] Gate App passa, sem erro novo além dos que a T17 remove.
+- [x] As quatro funções têm a assinatura do design, e as de multipart mandam `Content-Type: multipart/form-data`.
+- [x] As chamadas existentes a `createReview` são ajustadas, ou ficam com o erro de tipo que a T17 resolve. A baseline do `tsc` registra qual.
+- [x] Gate App passa, sem erro novo além dos que a T17 remove.
 
 **Tests**: none
 **Gate**: app

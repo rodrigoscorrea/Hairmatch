@@ -321,8 +321,8 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-63 | P1: Cliente pelo app | Tasks | Pending |
 | REV-64 | P1: Cliente pelo app | Tasks | Pending |
 | REV-65 | P1: Cliente pelo app | Tasks | Pending |
-| REV-66 | P1: Cliente pelo app | Tasks | Pending |
-| REV-67 | P1: Cliente pelo app | Tasks | Pending |
+| REV-66 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-67 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-68 | P1: Cliente pelo app | Tasks | Pending |
 | REV-69 | P1: Cliente pelo app | Tasks | Pending |
 | REV-70 | P1: Cliente pelo app | Tasks | Pending |
