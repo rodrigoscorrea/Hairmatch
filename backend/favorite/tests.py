@@ -1,7 +1,9 @@
 import datetime
 import json
 import threading
+from io import StringIO
 
+from django.core.management import call_command
 from django.db import IntegrityError, connection, transaction
 from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
@@ -107,13 +109,11 @@ class FavoriteAccounts:
     """Accounts created the way a user does: POST /api/users, the e-mail confirmation and a login that keeps the cookies."""
     PASSWORD = 'Password123'
 
-    def sign_up(self, role, index):
-        """Returns (profile, logged-in APIClient) of a new active customer or hairdresser."""
-        email = f'{role}{index}@example.com'
+    def payload(self, role, index):
         payload = {
-            'email': email, 'first_name': f'Fav{index}', 'last_name': role.capitalize(), 'password': self.PASSWORD,
-            'phone': f'+559298450{index:04d}', 'complement': 'Apt 1', 'neighborhood': 'Centro', 'city': 'Manaus',
-            'state': 'AM', 'address': 'Rua A', 'number': '12', 'postal_code': '69050750', 'role': role,
+            'email': f'{role}{index}@example.com', 'first_name': f'Fav{index}', 'last_name': role.capitalize(),
+            'password': self.PASSWORD, 'phone': f'+559298450{index:04d}', 'complement': 'Apt 1', 'neighborhood': 'Centro',
+            'city': 'Manaus', 'state': 'AM', 'address': 'Rua A', 'number': '12', 'postal_code': '69050750', 'role': role,
             'preferences': json.dumps([]),
         }
         if role == 'customer':
@@ -123,16 +123,26 @@ class FavoriteAccounts:
                 'cnpj': '12345678901234', 'experience_years': 5, 'resume': 'Resume', 'experience_time': '5 anos',
                 'experiences': 'Cortes', 'products': 'Produtos',
             })
-        client = APIClient()
-        response = client.post(reverse('register'), data=payload)
+        return payload
+
+    def sign_up_pending(self, role, index):
+        """POST /api/users without the e-mail confirmation: the account stays pending (AD-008). Returns the profile."""
+        payload = self.payload(role, index)
+        response = APIClient().post(reverse('register'), data=payload)
         assert response.status_code == 201, response.content
+        user = User.objects.get(email=payload['email'])
+        return Customer.objects.get(user=user) if role == 'customer' else Hairdresser.objects.get(user=user)
+
+    def sign_up(self, role, index):
+        """Returns (profile, logged-in APIClient) of a new active customer or hairdresser."""
+        profile = self.sign_up_pending(role, index)
+        email = self.payload(role, index)['email']
         activate_account(email)
+        client = APIClient()
         login = client.post(
             reverse('login'), data=json.dumps({'email': email, 'password': self.PASSWORD}), content_type='application/json',
         )
         assert login.status_code == 200, login.content
-        user = User.objects.get(email=email)
-        profile = Customer.objects.get(user=user) if role == 'customer' else Hairdresser.objects.get(user=user)
         return profile, client
 
     def detail_url(self, hairdresser_id):
@@ -411,3 +421,65 @@ class FavoriteHairdresserListTest(FavoriteAccounts, TestCase):
         """FAV-42: the Allow header is not pinned, because DRF adds HEAD to every GET."""
         assert_problem(self.client_a.put(self.URL), 'method-not-allowed')
         self.assertEqual(FavoriteHairdresser.objects.count(), 0)
+
+
+class FavoriteLifecycleTest(FavoriteAccounts, TestCase):
+    """The favorites go with the account of either side, through the real deletion paths (FAV-36 to FAV-38, FAV-43)."""
+
+    def setUp(self):
+        self.customer_a, self.client_a = self.sign_up('customer', 1)
+        self.customer_b, self.client_b = self.sign_up('customer', 2)
+        self.hairdresser_1, self.client_h1 = self.sign_up('hairdresser', 3)
+        self.hairdresser_2, _ = self.sign_up('hairdresser', 4)
+
+    def favorite(self, client, hairdresser):
+        self.assertEqual(client.put(self.detail_url(hairdresser.id)).status_code, 204)
+
+    def pairs(self):
+        return sorted(FavoriteHairdresser.objects.values_list('customer_id', 'hairdresser_id'))
+
+    def test_deleting_a_customer_account_deletes_their_favorites_only(self):
+        """FAV-36"""
+        self.favorite(self.client_a, self.hairdresser_1)
+        self.favorite(self.client_a, self.hairdresser_2)
+        self.favorite(self.client_b, self.hairdresser_1)
+
+        response = self.client_a.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.pairs(), [(self.customer_b.id, self.hairdresser_1.id)])
+
+    def test_deleting_a_hairdresser_account_deletes_the_favorites_of_every_customer_for_them(self):
+        """FAV-37"""
+        self.favorite(self.client_a, self.hairdresser_1)
+        self.favorite(self.client_b, self.hairdresser_1)
+        self.favorite(self.client_a, self.hairdresser_2)
+
+        response = self.client_h1.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.pairs(), [(self.customer_a.id, self.hairdresser_2.id)])
+
+    def test_purging_an_expired_pending_account_deletes_its_favorites(self):
+        """FAV-38"""
+        pending = self.sign_up_pending('customer', 5)
+        User.objects.filter(pk=pending.user_id).update(date_joined=timezone.now() - datetime.timedelta(days=8))
+        FavoriteHairdresser.objects.create(customer=pending, hairdresser=self.hairdresser_1)
+        self.favorite(self.client_b, self.hairdresser_1)
+
+        call_command('purge_unconfirmed_users', stdout=StringIO())
+
+        self.assertFalse(User.objects.filter(pk=pending.user_id).exists())
+        self.assertEqual(self.pairs(), [(self.customer_b.id, self.hairdresser_1.id)])
+
+    def test_a_sign_up_that_replaces_a_pending_account_deletes_its_favorites(self):
+        """FAV-43"""
+        pending = self.sign_up_pending('customer', 5)
+        FavoriteHairdresser.objects.create(customer=pending, hairdresser=self.hairdresser_1)
+        self.favorite(self.client_b, self.hairdresser_1)
+
+        response = APIClient().post(reverse('register'), data=self.payload('customer', 5))
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(Customer.objects.filter(pk=pending.pk).exists())
+        self.assertEqual(self.pairs(), [(self.customer_b.id, self.hairdresser_1.id)])

@@ -209,14 +209,14 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-33 | P1: Desfavoritar pela lista | Tasks | Pending |
 | FAV-34 | P1: Desfavoritar pela lista | Tasks | Pending |
 | FAV-35 | P1: Desfavoritar pela lista | Tasks | Pending |
-| FAV-36 | P1: Ciclo de vida | Tasks | Pending |
-| FAV-37 | P1: Ciclo de vida | Tasks | Pending |
-| FAV-38 | P1: Ciclo de vida | Tasks | Pending |
+| FAV-36 | P1: Ciclo de vida | Tasks | Implemented |
+| FAV-37 | P1: Ciclo de vida | Tasks | Implemented |
+| FAV-38 | P1: Ciclo de vida | Tasks | Implemented |
 | FAV-39 | Edge Cases | Tasks | Implemented |
 | FAV-40 | Edge Cases | Tasks | Implemented |
 | FAV-41 | Edge Cases | Tasks | Pending |
 | FAV-42 | Edge Cases | Tasks | Implemented |
-| FAV-43 | P1: Ciclo de vida | Tasks | Pending |
+| FAV-43 | P1: Ciclo de vida | Tasks | Implemented |
 
 **ID format:** `FAV-NN`.
 

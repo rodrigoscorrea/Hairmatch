@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 a T3 concluídas.
+**Status**: Execute: T1 a T4 concluídas (Phase 1, backend, completa).
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -219,13 +219,13 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe `FavoriteLifecycleTest`:
+- [x] Classe `FavoriteLifecycleTest`:
   - FAV-36: o cliente A, com dois favoritos, exclui a conta por `DELETE /api/users/me` (resposta 204). As linhas dele somem, e o favorito do cliente B continua;
   - FAV-37: um cabeleireiro favoritado por A e por B exclui a conta. As duas linhas somem, e o favorito de A para outro cabeleireiro continua;
   - FAV-38: um favorito gravado pelo ORM para um cliente pendente com mais de 7 dias some quando `call_command('purge_unconfirmed_users')` roda, sem erro;
   - FAV-43: um favorito gravado pelo ORM para um cliente pendente (cadastrado por `POST /api/users`, sem `activate_account`) some quando um novo `POST /api/users` com o mesmo e-mail substitui a conta, e o novo cadastro responde 201.
-- [ ] Gate check passes: Full.
-- [ ] Test count: total sem remoção.
+- [x] Gate check passes: Full.
+- [x] Test count: 993 → 997 (4 testes novos), sem remoção.
 
 **Tests**: integration
 **Gate**: full
