@@ -231,10 +231,10 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `test_catalog_has_the_40_slugs_of_the_spec` passa, e `problem_response(request, 'service-not-finished', …)` devolve status 409 e o título "Service not finished".
-- [ ] A linha está no catálogo do spec `api-problem-details`, na mesma ordem do `CATALOG`.
-- [ ] O gate Quick (hairmatch) passa.
-- [ ] Contagem: `hairmatch` ≥ 100 + 1.
+- [x] Teste: `test_catalog_has_the_40_slugs_of_the_spec` passa, e `problem_response(request, 'service-not-finished', …)` devolve status 409 e o título "Service not finished".
+- [x] A linha está no catálogo do spec `api-problem-details`, na mesma ordem do `CATALOG`.
+- [x] O gate Quick (hairmatch) passa.
+- [x] Contagem: `hairmatch` ≥ 100 + 1 (101 executados no gate Quick).
 
 **Tests**: unit
 **Gate**: quick

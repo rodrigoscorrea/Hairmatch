@@ -55,6 +55,7 @@ CATALOG = {
     'review-exists': (409, 'Reservation already reviewed'),
     'slot-unavailable': (409, 'Time slot unavailable'),
     'customer-schedule-conflict': (409, 'Customer schedule conflict'),
+    'service-not-finished': (409, 'Service not finished'),
     'unsupported-media-type': (415, 'Unsupported media type'),
     'too-many-requests': (429, 'Too many requests'),
     'internal-error': (500, 'Internal server error'),

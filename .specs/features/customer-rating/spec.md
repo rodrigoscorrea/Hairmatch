@@ -334,7 +334,7 @@ A issue #104 pede quatro coisas:
 | CRT-50 | P1: Perfil, AC1 | Tasks | Pending |
 | CRT-51 | P1: Perfil, AC2 | Tasks | Pending |
 | CRT-52 | P1: Perfil, AC3 | Tasks | Pending |
-| CRT-53 | P1: Contrato, AC1 | Tasks | Pending |
+| CRT-53 | P1: Contrato, AC1 | Tasks | Implementing |
 | CRT-54 | P1: Contrato, AC2 | Tasks | Pending |
 | CRT-55 | P1: Contrato, AC3 | Tasks | Pending |
 | CRT-56 | P2: Nota na agenda, AC1 | Tasks | Pending |
