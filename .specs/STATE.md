@@ -88,17 +88,17 @@
 ## Handoff
 
 - **Feature**: `account-settings` (issue #120).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-09. `spec.md` (ACC-01 a ACC-60), `context.md`, `design.md` e `tasks.md` (T1 a T21) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Execute não começou e aguarda a aprovação das tasks.
+- **Phase / Task**: Execute de T1 a T20 concluído. T21 (UAT no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 28 de 28 critérios de backend, 32 de 33 mutantes mortos e 1 equivalente, 756 testes).
 - **Completed**:
-  - Divisão da #120 depois do Cognito, por decisão do usuário: senha (alterar e "esqueci minha senha") e troca de e-mail foram para a #175, que está no board (Backlog, P1). A #120 foi reescrita com o escopo novo.
-  - Route Table do `api-restful-routes`: RT-88 e RT-89 (`PUT`/`DELETE /api/users/me/profile-picture`) e `profile-picture` entre os singulares do RT-54.
+  - Backend (T1 a T6): `PATCH /api/users/me` valida e normaliza o corpo (ponteiros `#/<campo>`), libera o telefone de conta pendente e responde 409 na corrida de telefone, e grava `User` e perfil numa transação. RT-88 `PUT` e RT-89 `DELETE /api/users/me/profile-picture`. Teste da exclusão de conta Google.
+  - App (T7 a T20): serviço da conta, `clearSession`, guardas de nulo no perfil, `validateAccountUpdate` (só os campos alterados), telas de dados da conta, endereço (CEP com autofill), foto (trocar e remover), exclusão da conta, preferências e resumo do cabeleireiro. `npx tsc --noEmit` com exit 0 e nenhum erro de eslint nos arquivos tocados.
+  - Rodada 1 do Verificador: FAIL por falta de `null` no teste de campo obrigatório (ACC-01, mutante M02). Corrigido, junto com o comentário do guard do PUT e a redação de ACC-20, ACC-24 e dos ponteiros.
 - **In-progress** (file:line): none
-- **Next step**: aprovar as tasks, criar a branch `120-editar-dados-da-conta-e-excluir-conta` a partir de `develop`, confirmar a baseline de 724 testes e começar pelo T1. São 21 tarefas em 3 lotes, então o Execute oferece sub-agentes.
+- **Next step**: UAT do T21 (roteiro no `tasks.md`, com os itens extras do `validation.md`: CEP de cidade inteira e troca de foto com edição não salva). Depois, marcar os critérios de app como Verified.
 - **Pendências de features anteriores**:
-  - `email-confirmation` (#141): UAT do T23 (cadastro, código em `/_ministack/ses/messages`, confirmação, login de conta pendente, reenvio, cabeleireiro pendente fora da busca, Google e seed). Depois, marcar EMC-40 a EMC-46 e EMC-51 como Verified. Em produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode`.
+  - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
-  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/` já estavam pendentes e ficam fora desta feature. As specs novas (`.specs/features/account-settings/`) e as edições de `.specs/features/api-restful-routes/spec.md` e deste arquivo também não estão commitadas.
-- **Branch**: `develop`
+- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits.
+- **Branch**: `120-editar-dados-da-conta-e-excluir-conta`
