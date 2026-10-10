@@ -560,7 +560,7 @@ Registrar `<Stack.Screen name="gallery" />` na pilha do perfil.
 - Skill: NONE
 
 **Done when**:
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app

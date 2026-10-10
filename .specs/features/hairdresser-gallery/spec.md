@@ -229,7 +229,7 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-17 | P1: Adicionar fotos, AC9 | Tasks | Implementing |
 | GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Implementing |
 | GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Implementing |
-| GAL-20 | P1: Adicionar fotos, AC12 | Tasks | Pending |
+| GAL-20 | P1: Adicionar fotos, AC12 | Tasks | Implementing |
 | GAL-21 | P1: Adicionar fotos, AC13 | Tasks | Implementing |
 | GAL-22 | P1: Adicionar fotos, AC14 | Tasks | Implementing |
 | GAL-23 | P1: Adicionar fotos, AC15 | Tasks | Implementing |
@@ -239,7 +239,7 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-27 | P1: Adicionar fotos, AC19 | Tasks | Implementing |
 | GAL-28 | P1: Adicionar fotos, AC20 | Tasks | Implementing |
 | GAL-29 | P1: Adicionar fotos, AC21 | Tasks | Implementing |
-| GAL-30 | P1: Adicionar fotos, AC22 | Tasks | Pending |
+| GAL-30 | P1: Adicionar fotos, AC22 | Tasks | Implementing |
 | GAL-31 | P1: Remover fotos, AC1 | Tasks | Implementing |
 | GAL-32 | P1: Remover fotos, AC2 | Tasks | Implementing |
 | GAL-33 | P1: Remover fotos, AC3 | Tasks | Implementing |
