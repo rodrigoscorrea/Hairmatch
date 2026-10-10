@@ -394,6 +394,22 @@ class CreateAgendaTest(AgendaTestCase):
 
                 self.assert_refused(response, '#/title', 'This field must be a string.')
 
+    def test_a_null_title_is_read_as_an_absent_one(self):
+        """EXT-05: null is not "present and not a string"; it falls back to EXT-04 or to an empty title"""
+        with self.subTest('without a service'):
+            response = self._post(self.block(10, 11, title=None))
+
+            self.assert_refused(response, '#/title', 'This field is required.')
+
+        with self.subTest('with a service'):
+            response = self._post(self.block(14, service=self.service.id, title=None))
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(Agenda.objects.count(), 2)
+            created = Agenda.objects.get(start_time=manaus_in_utc(self.day, 14))
+            self.assertEqual(created.service, self.service)
+            self.assertEqual(created.title, '')
+
     def test_a_title_over_100_characters_is_refused(self):
         """EXT-06"""
         response = self._post(self.block(10, 11, title='a' * 101))
