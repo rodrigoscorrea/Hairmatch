@@ -643,10 +643,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] O título muda conforme o modo (REV-60, REV-61).
-- [ ] Cada miniatura tem "x", e o botão de adicionar some com 5 fotos (REV-64, REV-65).
-- [ ] O `StarRating` local da tela é trocado pelo componente compartilhado.
-- [ ] Gate App passa.
+- [x] O título muda conforme o modo (REV-60, REV-61).
+- [x] Cada miniatura tem "x", e o botão de adicionar some com 5 fotos (REV-64, REV-65).
+- [x] O `StarRating` local da tela é trocado pelo componente compartilhado.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app

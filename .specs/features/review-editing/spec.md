@@ -315,11 +315,11 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-53 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
 | REV-55 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-56 | P1: Agenda e Route Table | Tasks | Implemented |
-| REV-60 | P1: Cliente pelo app | Tasks | Pending |
+| REV-60 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-61 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-62 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-63 | P1: Cliente pelo app | Tasks | Implemented |
-| REV-64 | P1: Cliente pelo app | Tasks | Pending |
+| REV-64 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-65 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-66 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-67 | P1: Cliente pelo app | Tasks | Implemented |
