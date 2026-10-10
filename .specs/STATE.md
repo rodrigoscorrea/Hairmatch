@@ -103,21 +103,24 @@
 
 ## Handoff
 
-- **Feature**: `email-confirmation` (issue #141).
-- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
+- **Feature**: `customer-rating` (issue #104, RF23).
+- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente (`validation.md`) ainda não rodou.
 - **Completed**:
-  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
-  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
-  - MiniStack reconciliado pelo init, README e AD-008.
-  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
+  - Backend (T1 a T7): `User.rating` em `FloatField`, com `null` para cliente sem avaliação; modelo `CustomerRating`; `record_customer_rating` com lock e savepoint (AD-010); slug `service-not-finished`; RT-86 `POST /api/customer-ratings`; RT-87 `GET /api/customers/{id}/ratings`; agenda com `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating`. Suíte: 777 testes OK, `makemigrations --check` limpo.
+  - App (T8 a T16): types, service e `formatCustomerRating`; slug no `api-problem.ts`; `StarRating` compartilhado; `useAgenda` com `useFocusEffect` e `canRate`; modal da agenda com o cliente, a nota, "Sua avaliação: N★" e "Avaliar cliente"; tela `hairdresser/rate-customer/[reservationId]`; média no perfil do cliente; tela "Avaliações recebidas". `npx tsc --noEmit` com exit 0, e nenhum erro novo de `eslint` nos arquivos tocados.
+- **Desvios registrados**:
+  - Design: a tela de avaliação vai para a agenda com `router.push` em vez de `router.back()` (`useRateCustomer.ts`, `SPEC_DEVIATION`). O voltar das abas pode cair em outra aba, e um refresh do web não tem histórico.
+  - O CRT-56 dá o exemplo "4.3 (3 avaliações)", mas o design e o T18 usam "4.0 (1)". O modal mostra "Nota do cliente: 4.3 (3)" com a função compartilhada.
+  - `docs/requisitos-status.md` não está versionado e não existe no worktree. A marcação de RF23 como ✅ e as observações de RF29/RF30 ficam para o usuário fazer no checkout principal, ou para autorizar o versionamento do arquivo.
 - **In-progress** (file:line): none
 - **Next step**:
-  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
-  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
+  - UAT do T18 (roteiro no `tasks.md`), no web e no Android. Depois, marcar CRT-39 a CRT-52 e CRT-56 a CRT-60 como Verified.
+  - Rodar o Verificador da feature e gravar `validation.md`.
+  - Atualizar RF23 em `docs/requisitos-status.md` (ver desvios).
 - **Pendências de features anteriores**:
+  - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
-  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
-- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema
+- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits. No checkout principal continuam pendentes, fora deste PR, `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
+- **Branch**: 104-dar-nota-para-o-cliente

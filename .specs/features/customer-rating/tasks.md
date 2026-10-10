@@ -630,8 +630,10 @@ Ocultar a rota nas tabs com `href: null` em `app/(app)/hairdresser/_layout.tsx` 
 - Skill: NONE
 
 **Done when**:
-- [ ] RF23 aparece como ✅ no resumo e na tabela de Avaliações.
-- [ ] `docs/requisitos-status.md` só entra no commit se o usuário autorizar, porque hoje o arquivo não é versionado. Senão, a mudança fica local e o motivo é anotado na Handoff.
+- [ ] RF23 aparece como ✅ no resumo e na tabela de Avaliações. **Pendente do usuário:** o arquivo não é versionado e só existe no checkout principal, não no worktree desta branch. Nenhuma edição foi feita.
+- [x] `docs/requisitos-status.md` só entra no commit se o usuário autorizar, porque hoje o arquivo não é versionado. Sem essa autorização, ele ficou fora do commit, e o motivo e a pendência estão na Handoff do `.specs/STATE.md`.
+- [x] Handoff do `.specs/STATE.md` atualizada só na seção dela, com o T18 pendente com o usuário e a branch `104-dar-nota-para-o-cliente`.
+- [x] Gate do backend no fechamento: 777 testes OK, `makemigrations --check` sem mudança.
 
 **Tests**: none
 **Gate**: none (documentação)
