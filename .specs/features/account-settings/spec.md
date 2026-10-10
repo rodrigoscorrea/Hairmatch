@@ -244,8 +244,8 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-21 | P1: Dados da conta, AC6 | Tasks | Implementing |
 | ACC-22 | P1: Dados da conta, AC7 | Tasks | Implementing |
 | ACC-23 | P1: Endereço, AC1 | Tasks | Pending |
-| ACC-24 | P1: Endereço, AC2 | Tasks | Pending |
-| ACC-25 | P1: Endereço, AC3 | Tasks | Pending |
+| ACC-24 | P1: Endereço, AC2 | Tasks | Implementing |
+| ACC-25 | P1: Endereço, AC3 | Tasks | Implementing |
 | ACC-26 | P1: Endereço, AC4 | Tasks | Implementing |
 | ACC-27 | P1: Endereço, AC5 | Tasks | Implementing |
 | ACC-28 | P1: Excluir conta, AC1 | Tasks | Pending |

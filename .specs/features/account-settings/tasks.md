@@ -490,8 +490,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] O hook não importa o `RegistrationContext`.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] O hook não importa o `RegistrationContext`. `grep Registration` no hook não acha nada; o merge do autofill foi copiado de `useAddress.ts`, e o erro da consulta vem do `useCepLookup` (`cep_not_found` ou `cep_lookup_failed`).
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
