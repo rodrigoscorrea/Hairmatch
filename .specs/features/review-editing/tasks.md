@@ -753,9 +753,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os dois botões aparecem só quando há nota. "Avaliar cliente" continua aparecendo só pelo `canRate` (REV-75).
-- [ ] "Excluir avaliação" abre a confirmação antes do DELETE (REV-80).
-- [ ] Gate App passa.
+- [x] Os dois botões aparecem só quando há nota. "Avaliar cliente" continua aparecendo só pelo `canRate` (REV-75).
+- [x] "Excluir avaliação" abre a confirmação antes do DELETE (REV-80).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app

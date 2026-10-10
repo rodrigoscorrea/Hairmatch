@@ -14,6 +14,8 @@ import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps, CalendarMode } from '@/models/Agenda.types';
 import { formatCustomerRating } from '@/utils/rating';
 import { router } from 'expo-router';
+import ConfirmationModal from '@/components/modals/confirmationModal/ConfirmationModal';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
 import 'dayjs/locale/pt-br';
 
 // The Agenda list view can be a separate component for cleanliness
@@ -101,6 +103,13 @@ export default function AgendaManagerScreen() {
     closeModal,
     confirmCancelEvent,
     canRate,
+    goToEditRating,
+    deleteConfirmVisible,
+    requestDeleteRating,
+    cancelDeleteRating,
+    confirmDeleteRating,
+    errorModal,
+    closeError,
   } = useAgenda();
 
   const goToRateCustomer = (event: AgendaEvent) => {
@@ -181,6 +190,22 @@ export default function AgendaManagerScreen() {
                 <Text style={styles.modalAcceptButtonText}>Avaliar cliente</Text>
               </TouchableOpacity>
             )}
+            {selectedEvent?.customerRating && (
+              <>
+                <TouchableOpacity
+                  style={[styles.modalAcceptButton, { flex: 0, width: '100%', marginBottom: 10 }]}
+                  onPress={() => goToEditRating(selectedEvent)}
+                >
+                  <Text style={styles.modalAcceptButtonText}>Editar avaliação</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBackButton, { flex: 0, width: '100%', marginBottom: 10, marginRight: 0 }]}
+                  onPress={requestDeleteRating}
+                >
+                  <Text style={styles.modalBackButtonText}>Excluir avaliação</Text>
+                </TouchableOpacity>
+              </>
+            )}
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity style={styles.modalBackButton} onPress={closeModal}>
                     <Text style={styles.modalBackButtonText}>Voltar</Text>
@@ -192,6 +217,16 @@ export default function AgendaManagerScreen() {
             </View>
         </View>
       </Modal>
+
+      <ConfirmationModal
+        visible={deleteConfirmVisible}
+        title="Excluir avaliação?"
+        description="O cliente deixa de ter essa nota na média, e você poderá avaliar o atendimento de novo."
+        confirmText="Excluir"
+        onConfirm={confirmDeleteRating}
+        onCancel={cancelDeleteRating}
+      />
+      <ErrorModal visible={errorModal.visible} message={errorModal.message} onClose={closeError} />
     </SafeAreaView>
   );
 }
