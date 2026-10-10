@@ -306,16 +306,16 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: com 2 avaliações de cabeleireiros diferentes, o cliente recebe `count: 2` e 2 itens, os mais recentes primeiro (CRT-28).
-- [ ] Teste: cada cabeleireiro recebe `count: 2`, `average` igual ao da média geral e só o item que escreveu (CRT-29).
-- [ ] Teste: outro cliente recebe 403 `forbidden` (CRT-30), um id inexistente recebe 404 `not-found` (CRT-31), e sem sessão a resposta é 401 `invalid-session` (CRT-32).
-- [ ] Teste: os campos de cada item. Depois de apagar a reserva, `service_name` é `null`. Depois de apagar a conta do autor, `hairdresser_name` é `null` (CRT-33).
-- [ ] Teste: um cliente sem avaliações recebe `{average: null, count: 0, ratings: []}` (CRT-34).
-- [ ] Teste: `average` é igual a `User.rating` gravado (CRT-35).
-- [ ] Teste: `POST /api/customers/{id}/ratings` devolve 405 com `Allow: GET, HEAD, OPTIONS` (CRT-55).
-- [ ] `test_routes.py` passa com a RT-87 (CRT-54).
-- [ ] O gate Full passa.
-- [ ] Contagem: `review` ≥ 66 + 9.
+- [x] Teste: com 2 avaliações de cabeleireiros diferentes, o cliente recebe `count: 2` e 2 itens, os mais recentes primeiro (CRT-28).
+- [x] Teste: cada cabeleireiro recebe `count: 2`, `average` igual ao da média geral e só o item que escreveu (CRT-29).
+- [x] Teste: outro cliente recebe 403 `forbidden` (CRT-30), um id inexistente recebe 404 `not-found` (CRT-31), e sem sessão a resposta é 401 `invalid-session` (CRT-32).
+- [x] Teste: os campos de cada item. Depois de apagar a reserva, `service_name` é `null`. Depois de apagar a conta do autor, `hairdresser_name` é `null` (CRT-33).
+- [x] Teste: um cliente sem avaliações recebe `{average: null, count: 0, ratings: []}` (CRT-34).
+- [x] Teste: `average` é igual a `User.rating` gravado (CRT-35).
+- [x] Teste: `POST /api/customers/{id}/ratings` devolve 405 com `Allow: GET, HEAD, OPTIONS` (CRT-55).
+- [x] `test_routes.py` passa com a RT-87 (CRT-54).
+- [x] O gate Full passa.
+- [x] Contagem: `review` ≥ 66 + 9 (79). Suíte: 772 OK.
 
 **Tests**: integration
 **Gate**: full

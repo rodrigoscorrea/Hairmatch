@@ -1250,3 +1250,142 @@ class CreateCustomerRatingTest(ReviewsTestCase):
 
                 assert_problem(response, 'method-not-allowed')
                 self.assertEqual(sorted(response['Allow'].split(', ')), ['OPTIONS', 'POST'])
+
+
+class ListCustomerRatingsTest(ReviewsTestCase):
+    """GET /api/customers/{id}/ratings (RT-87): average and count for hairdressers, comments for their writers."""
+
+    def setUp(self):
+        super().setUp()
+        other = dict(
+            self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999',
+            first_name='Outra', last_name='Cabeleireira',
+        )
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.other_hairdresser = Hairdresser.objects.get(user__email=other['email'])
+        other_service = Service.objects.create(
+            name='Escova', price=40.00, hairdresser=self.other_hairdresser, duration=45,
+        )
+        self.other_reserve = Reserve.objects.create(customer=self.customer, service=other_service)
+        self.first = record_customer_rating(self.hairdresser, self.reserve, 5, 'Pontual')
+        self.second = record_customer_rating(self.other_hairdresser, self.other_reserve, 4, None)
+        self.url = reverse('customer_ratings_by_customer', args=[self.customer.id])
+
+    def _login(self, email, password='Password123'):
+        self.client.cookies.clear()
+        self.client.post(
+            self.login_url, data=json.dumps({'email': email, 'password': password}), content_type='application/json',
+        )
+
+    def _ids(self, response):
+        return [item['id'] for item in response.json()['data']['ratings']]
+
+    def test_the_customer_sees_every_rating_most_recent_first(self):
+        """CRT-28: by created_at, so the older id comes first once it is the newer rating."""
+        CustomerRating.objects.filter(id=self.first.id).update(
+            created_at=timezone.now() + datetime.timedelta(hours=1)
+        )
+        self.login_as_customer()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['data']['count'], 2)
+        self.assertEqual(self._ids(response), [self.first.id, self.second.id])
+
+    def test_each_hairdresser_sees_the_count_the_average_and_only_their_own_ratings(self):
+        """CRT-29"""
+        for email, own in (
+            (self.hairdresser_payload['email'], self.first),
+            ('other.hairdresser@example.com', self.second),
+        ):
+            with self.subTest(hairdresser=email):
+                self._login(email)
+
+                response = self.client.get(self.url)
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                data = response.json()['data']
+                self.assertEqual((data['average'], data['count']), (4.5, 2))
+                self.assertEqual(self._ids(response), [own.id])
+
+    def test_another_customer_answers_403(self):
+        """CRT-30"""
+        self._login(self.customer2_payload['email'])
+
+        assert_problem(self.client.get(self.url), 'forbidden')
+
+    def test_a_customer_that_does_not_exist_answers_404(self):
+        """CRT-31"""
+        self.login_as_hairdresser()
+
+        response = self.client.get(reverse('customer_ratings_by_customer', args=[999999]))
+
+        assert_problem(response, 'not-found', detail='Customer not found.')
+
+    def test_no_session_answers_401(self):
+        """CRT-32"""
+        assert_problem(self.client.get(self.url), 'invalid-session')
+
+    def test_each_item_has_the_rating_the_comment_the_service_and_the_hairdresser(self):
+        """CRT-33"""
+        self.login_as_customer()
+
+        items = {item['id']: item for item in self.client.get(self.url).json()['data']['ratings']}
+
+        first = items[self.first.id]
+        self.assertEqual(set(first), {'id', 'rating', 'comment', 'created_at', 'service_name', 'hairdresser_name'})
+        self.assertEqual(
+            (first['rating'], first['comment'], first['service_name'], first['hairdresser_name']),
+            (5, 'Pontual', 'Test Service', 'Test Hairdresser'),
+        )
+        self.assertIsNotNone(first['created_at'])
+        second = items[self.second.id]
+        self.assertEqual(
+            (second['rating'], second['comment'], second['service_name'], second['hairdresser_name']),
+            (4, None, 'Escova', 'Outra Cabeleireira'),
+        )
+
+    def test_the_names_are_null_once_the_reservation_or_the_author_is_gone(self):
+        """CRT-33"""
+        self.login_as_customer()
+        self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+        self._login('other.hairdresser@example.com')
+        self.assertEqual(self.client.delete(reverse('current_user')).status_code, status.HTTP_204_NO_CONTENT)
+        self.login_as_customer()
+
+        items = {item['id']: item for item in self.client.get(self.url).json()['data']['ratings']}
+
+        self.assertEqual(
+            (items[self.first.id]['service_name'], items[self.first.id]['hairdresser_name']),
+            (None, 'Test Hairdresser'),
+        )
+        self.assertIsNone(items[self.second.id]['hairdresser_name'])
+
+    def test_a_customer_without_ratings_gets_null_zero_and_an_empty_list(self):
+        """CRT-34"""
+        self._login(self.customer2_payload['email'])
+
+        response = self.client.get(reverse('customer_ratings_by_customer', args=[self.customer2.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': {'average': None, 'count': 0, 'ratings': []}})
+
+    def test_the_average_is_the_stored_user_rating(self):
+        """CRT-35: a stored value that differs from the rows shows it is read, not recomputed."""
+        User.objects.filter(pk=self.customer_user.pk).update(rating=4.33)
+        self.login_as_hairdresser()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.json()['data']['average'], 4.33)
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        """CRT-55"""
+        self.login_as_customer()
+
+        response = self.client.post(self.url, data=json.dumps({}), content_type='application/json')
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS'])

@@ -16,12 +16,12 @@ from hairmatch.problems import (
     validation_problem,
 )
 from reserve.models import Reserve
-from users.authentication import authenticated_customer, authenticated_hairdresser, forbidden
-from users.models import Hairdresser
+from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
+from users.models import Customer, Hairdresser
 
 from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
 from .models import CustomerRating, Review
-from .serializers import CustomerRatingCreatedSerializer, ReviewSerializer
+from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
 
 RATING_DETAIL = 'This field must be a number.'
 RATING_RANGE_DETAIL = 'The rating must be between 1 and 5.'
@@ -230,3 +230,35 @@ class CustomerRatingCollection(APIView):
 
         customer_rating = record_customer_rating(hairdresser, reservation, data['rating'], comment)
         return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=201)
+
+
+class CustomerRatingsByCustomer(APIView):
+    """
+    `/api/customers/{id}/ratings`: the customer's average and count, which any hairdresser may see, and the
+    ratings with their comments: all of them for the customer, only their own for a hairdresser.
+    """
+
+    def get(self, request, customer_id):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        try:
+            customer = Customer.objects.select_related('user').get(id=customer_id)
+        except Customer.DoesNotExist:
+            return problem_response(request, 'not-found', 'Customer not found.')
+
+        ratings = CustomerRating.objects.filter(customer=customer)
+        count = ratings.count()
+        if customer.user_id != session.user.id:
+            hairdresser = Hairdresser.objects.filter(user=session.user).first()
+            if hairdresser is None:
+                return forbidden(request)
+            ratings = ratings.filter(hairdresser=hairdresser)
+
+        ratings = ratings.select_related('reservation__service', 'hairdresser__user').order_by('-created_at', '-id')
+        return JsonResponse({'data': {
+            'average': customer.user.rating,
+            'count': count,
+            'ratings': CustomerRatingSerializer(ratings, many=True).data,
+        }}, status=200)

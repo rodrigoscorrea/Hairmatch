@@ -151,6 +151,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-84 | `POST /api/auth/email-confirmations` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
 | RT-85 | `POST /api/auth/confirmation-codes` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
 | RT-86 | `POST /api/customer-ratings` | (nova, feature `customer-rating`, #104) | profissional | - |
+| RT-87 | `GET /api/customers/{id}/ratings` | (nova, feature `customer-rating`, #104) | sessão (cliente dono ou profissional) | - |
 
 ---
 
