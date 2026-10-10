@@ -210,19 +210,19 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | EXT-01 | P1: Bloqueio pela API, AC1 | Tasks | Implementing |
-| EXT-02 | P1: Bloqueio pela API, AC2 | Tasks | Pending |
-| EXT-03 | P1: Bloqueio pela API, AC3 | Tasks | Pending |
-| EXT-04 | P1: Bloqueio pela API, AC4 | Tasks | Pending |
-| EXT-05 | P1: Bloqueio pela API, AC5 | Tasks | Pending |
-| EXT-06 | P1: Bloqueio pela API, AC6 | Tasks | Pending |
-| EXT-07 | P1: Bloqueio pela API, AC7 | Tasks | Pending |
-| EXT-08 | P1: Bloqueio pela API, AC8 | Tasks | Pending |
-| EXT-09 | P1: Bloqueio pela API, AC9 | Tasks | Pending |
-| EXT-10 | P1: Bloqueio pela API, AC10 | Tasks | Pending |
-| EXT-11 | P1: Bloqueio pela API, AC11 | Tasks | Pending |
-| EXT-12 | P1: Bloqueio pela API, AC12 | Tasks | Pending |
-| EXT-13 | P1: Bloqueio pela API, AC13 | Tasks | Pending |
-| EXT-14 | P1: Bloqueio pela API, AC14 | Tasks | Pending |
+| EXT-02 | P1: Bloqueio pela API, AC2 | Tasks | Implementing |
+| EXT-03 | P1: Bloqueio pela API, AC3 | Tasks | Implementing |
+| EXT-04 | P1: Bloqueio pela API, AC4 | Tasks | Implementing |
+| EXT-05 | P1: Bloqueio pela API, AC5 | Tasks | Implementing |
+| EXT-06 | P1: Bloqueio pela API, AC6 | Tasks | Implementing |
+| EXT-07 | P1: Bloqueio pela API, AC7 | Tasks | Implementing |
+| EXT-08 | P1: Bloqueio pela API, AC8 | Tasks | Implementing |
+| EXT-09 | P1: Bloqueio pela API, AC9 | Tasks | Implementing |
+| EXT-10 | P1: Bloqueio pela API, AC10 | Tasks | Implementing |
+| EXT-11 | P1: Bloqueio pela API, AC11 | Tasks | Implementing |
+| EXT-12 | P1: Bloqueio pela API, AC12 | Tasks | Implementing |
+| EXT-13 | P1: Bloqueio pela API, AC13 | Tasks | Implementing |
+| EXT-14 | P1: Bloqueio pela API, AC14 | Tasks | Implementing |
 | EXT-15 | P1: Horário deixa de ser oferecido, AC1 | Tasks | Pending |
 | EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Tasks | Pending |
 | EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Tasks | Pending |

@@ -144,23 +144,23 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] Testes novos em `CreateAgendaTest`, com as datas relativas a `timezone.now()`:
-  - [ ] Sem serviço, com `title` `"  Cliente do WhatsApp  "`, início amanhã às 10:00 e término às 11:00 (ingênuos): 201 e o corpo exato `{"message": "Agenda register created successfully"}`. A linha criada tem `service_id is None`, `title == "Cliente do WhatsApp"`, `start_time`/`end_time` iguais a 14:00 e 15:00 UTC e `hairdresser` igual ao da sessão (EXT-01).
-  - [ ] Com serviço e sem `end_time`: `end_time == start + duration`. Sem `title`, grava `""`. Com `" Maria "`, grava `"Maria"` (EXT-02).
-  - [ ] Com serviço e um `end_time` diferente de início + duração: grava o `end_time` enviado (EXT-03).
-  - [ ] Sem serviço, com `title` ausente, `""` e `"   "` (subTest): 400 com exatamente `[{'pointer': '#/title', 'detail': 'This field is required.'}]`, e o número de linhas não muda (EXT-04).
-  - [ ] Com serviço e `title` ausente: 201. Isso prova que o título só é obrigatório sem serviço (EXT-04, um caso de cada condição, L-002).
-  - [ ] `title` igual a `123` e a `["x"]`: 400 `#/title` "This field must be a string." (EXT-05).
-  - [ ] `title` com 101 caracteres: 400 `#/title` "Ensure this field has no more than 100 characters.". Com 100 caracteres, e também com 100 mais espaços nas pontas: 201 (EXT-06).
-  - [ ] Sem serviço e sem `end_time`, com título: 400 com exatamente `[#/end_time "This field is required."]`. Com serviço e sem `end_time`: 201 (EXT-07).
-  - [ ] `end_time == start_time` e `end_time` 1 min antes: 400 `#/end_time` "The end time must be after the start time.", sem linha nova (EXT-08).
-  - [ ] `start_time` 1 min no passado: 400 `#/start_time` "The start time must not be in the past.", sem linha nova. `start_time` 1 min no futuro: 201 (EXT-09).
-  - [ ] Um bloqueio sem serviço que cruza um bloco existente: 409 `agenda-overlap`. Um bloqueio que começa exatamente no `end_time` do bloco existente: 201 (EXT-10).
-  - [ ] Um bloqueio sem serviço num dia sem `Availability` e outro dentro do almoço de uma `Availability` criada no teste: 201 (EXT-13).
-  - [ ] `test_create_agenda_reports_every_missing_field` reescrito: `{}` dá exatamente `[#/start_time required, #/end_time required, #/title required]`, nessa ordem (EXT-14).
-- [ ] Os testes atuais de 403/404/401/`hairdresser-required` continuam passando sem alteração (EXT-11, EXT-12)
-- [ ] Gate check passes: Quick
-- [ ] Test count: ≥ 68 + os testes novos em `agenda`+`reserve`, sem remoções
+- [x] Testes novos em `CreateAgendaTest`, com as datas relativas a `timezone.now()`:
+  - [x] Sem serviço, com `title` `"  Cliente do WhatsApp  "`, início amanhã às 10:00 e término às 11:00 (ingênuos): 201 e o corpo exato `{"message": "Agenda register created successfully"}`. A linha criada tem `service_id is None`, `title == "Cliente do WhatsApp"`, `start_time`/`end_time` iguais a 14:00 e 15:00 UTC e `hairdresser` igual ao da sessão (EXT-01).
+  - [x] Com serviço e sem `end_time`: `end_time == start + duration`. Sem `title`, grava `""`. Com `" Maria "`, grava `"Maria"` (EXT-02).
+  - [x] Com serviço e um `end_time` diferente de início + duração: grava o `end_time` enviado (EXT-03).
+  - [x] Sem serviço, com `title` ausente, `""` e `"   "` (subTest): 400 com exatamente `[{'pointer': '#/title', 'detail': 'This field is required.'}]`, e o número de linhas não muda (EXT-04).
+  - [x] Com serviço e `title` ausente: 201. Isso prova que o título só é obrigatório sem serviço (EXT-04, um caso de cada condição, L-002).
+  - [x] `title` igual a `123` e a `["x"]`: 400 `#/title` "This field must be a string." (EXT-05).
+  - [x] `title` com 101 caracteres: 400 `#/title` "Ensure this field has no more than 100 characters.". Com 100 caracteres, e também com 100 mais espaços nas pontas: 201 (EXT-06).
+  - [x] Sem serviço e sem `end_time`, com título: 400 com exatamente `[#/end_time "This field is required."]`. Com serviço e sem `end_time`: 201 (EXT-07).
+  - [x] `end_time == start_time` e `end_time` 1 min antes: 400 `#/end_time` "The end time must be after the start time.", sem linha nova (EXT-08).
+  - [x] `start_time` 1 min no passado: 400 `#/start_time` "The start time must not be in the past.", sem linha nova. `start_time` 1 min no futuro: 201 (EXT-09).
+  - [x] Um bloqueio sem serviço que cruza um bloco existente: 409 `agenda-overlap`. Um bloqueio que começa exatamente no `end_time` do bloco existente: 201 (EXT-10).
+  - [x] Um bloqueio sem serviço num dia sem `Availability` e outro dentro do almoço de uma `Availability` criada no teste: 201 (EXT-13).
+  - [x] `test_create_agenda_reports_every_missing_field` reescrito: `{}` dá exatamente `[#/start_time required, #/end_time required, #/title required]`, nessa ordem (EXT-14).
+- [x] Os testes atuais de 403/404/401/`hairdresser-required` continuam passando sem alteração (EXT-11, EXT-12)
+- [x] Gate check passes: Quick
+- [x] Test count: ≥ 68 + os testes novos em `agenda`+`reserve`, sem remoções
 
 **Tests**: integration
 **Gate**: quick
