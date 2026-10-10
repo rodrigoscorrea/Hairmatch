@@ -67,7 +67,13 @@ export const useRateCustomer = () => {
   // On every focus, because the screen stays mounted and the same rating can be edited twice.
   useFocusEffect(
     useCallback(() => {
-      if (!ratingId || !customerId) return;
+      if (!ratingId) return;
+      if (!customerId) {
+        // A rating to edit with no customer to read it from: there is nothing to edit.
+        setLoadFailed(true);
+        setErrorModal({ visible: true, message: 'Não foi possível carregar a avaliação.' });
+        return;
+      }
 
       let active = true;
       getCustomerRatings(Number(customerId))
