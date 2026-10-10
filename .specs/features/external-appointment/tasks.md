@@ -216,16 +216,16 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] Um bloqueio sem serviço das 10:00 às 11:00 em `next_monday()`, criado por `POST /api/agenda` como cabeleireiro (201). Depois, `GET available-slots` com um serviço de 60 min, como anônimo:
+- [x] Um bloqueio sem serviço das 10:00 às 11:00 em `next_monday()`, criado por `POST /api/agenda` como cabeleireiro (201). Depois, `GET available-slots` com um serviço de 60 min, como anônimo:
   - `09:30`, `10:00` e `10:30` **não** aparecem;
   - `09:00` e `11:00` aparecem (EXT-15).
 
   Se o serviço da fixture não tiver 60 min, o teste cria um serviço de 60 min.
-- [ ] O mesmo cenário com um bloqueio **com serviço** e término editado: os horários que cruzam o término editado também somem (EXT-15)
-- [ ] `reserve_views().get_available_slots(hairdresser.id, service.id, 'YYYY-MM-DD')` omite os mesmos horários (EXT-16)
-- [ ] Um cliente faz POST de reserva às 10:30 do mesmo dia: 409 `slot-unavailable`, e `Reserve.objects.count()` e `Agenda.objects.count()` não mudam (EXT-17)
-- [ ] Gate check passes: Full. São ≥ 722 + os novos no projeto, e `makemigrations --check` limpo.
-- [ ] Test count: sem remoções
+- [x] O mesmo cenário com um bloqueio **com serviço** e término editado: os horários que cruzam o término editado também somem (EXT-15)
+- [x] `reserve_views().get_available_slots(hairdresser.id, service.id, 'YYYY-MM-DD')` omite os mesmos horários (EXT-16)
+- [x] Um cliente faz POST de reserva às 10:30 do mesmo dia: 409 `slot-unavailable`, e `Reserve.objects.count()` e `Agenda.objects.count()` não mudam (EXT-17)
+- [x] Gate check passes: Full. São ≥ 722 + os novos no projeto, e `makemigrations --check` limpo.
+- [x] Test count: sem remoções
 
 **Tests**: integration
 **Gate**: full

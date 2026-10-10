@@ -718,3 +718,79 @@ class CreateNewReserveTest(ReserveTestCase):
         self.assertEqual(result['reserve'].start_time, start)
         agenda = Agenda.objects.get(hairdresser=self.other_hairdresser)
         self.assertEqual(agenda.end_time, start + timedelta(minutes=self.other_service.duration))
+
+
+class ExternalBlockTest(ReserveTestCase):
+    """
+    EXT-15 to EXT-17: a block the hairdresser adds by POST /api/agenda leaves the slot offer and refuses bookings.
+    Monday's availability runs from 09:00 to 17:00 with a break from 12:00 to 13:00.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.day = next_monday()
+
+    def add_block(self, start, end, **fields):
+        self.login(self.hairdresser_user)
+        response = self.client.post(reverse('agenda_collection'), data=json.dumps({
+            'start_time': f'{self.day.isoformat()}T{start}:00',
+            'end_time': f'{self.day.isoformat()}T{end}:00',
+            **fields,
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.content)
+        self.logout()
+
+    def offered_slots(self):
+        response = self.client.get(
+            self.get_slots_url(self.hairdresser.id), {'date': self.day.isoformat(), 'service': self.service.id}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response.json()['available_slots']
+
+    def assert_offer(self, slots, offered, left_out):
+        for slot in offered:
+            self.assertIn(slot, slots)
+        for slot in left_out:
+            self.assertNotIn(slot, slots)
+
+    def test_a_block_without_a_service_leaves_the_slot_offer(self):
+        """EXT-15: a 60-minute service crossing 10:00-11:00 is not offered"""
+        self.assertEqual(self.service.duration, 60)
+        self.add_block('10:00', '11:00', title='Cliente do WhatsApp')
+
+        self.assert_offer(self.offered_slots(), offered=('09:00', '11:00'), left_out=('09:30', '10:00', '10:30'))
+
+    def test_a_block_with_a_service_and_an_edited_end_leaves_the_offer_until_that_end(self):
+        """EXT-15: 14:00 plus the 60-minute service would end at 15:00, but the block ends at 15:30"""
+        self.add_block('14:00', '15:30', service=self.service.id)
+
+        self.assert_offer(
+            self.offered_slots(), offered=('13:00', '15:30'), left_out=('13:30', '14:00', '14:30', '15:00')
+        )
+
+    def test_the_chatbot_slots_leave_out_the_block_too(self):
+        """EXT-16"""
+        self.add_block('10:00', '11:00', title='Cliente do WhatsApp')
+
+        result = reserve_views().get_available_slots(self.hairdresser.id, self.service.id, self.day.isoformat())
+
+        self.assert_offer(result['available_slots'], offered=('09:00', '11:00'), left_out=('09:30', '10:00', '10:30'))
+        self.assertEqual(result['available_slots'], self.offered_slots())
+
+    def test_a_booking_inside_a_block_without_a_service_answers_409(self):
+        """EXT-17"""
+        self.add_block('10:00', '11:00', title='Cliente do WhatsApp')
+        reserves, agendas = Reserve.objects.count(), Agenda.objects.count()
+        self.login(self.customer_user)
+
+        response = self.client.post(self.create_url, data=json.dumps({
+            'hairdresser': self.hairdresser.id,
+            'service': self.service.id,
+            'start_time': f'{self.day.isoformat()}T10:30:00',
+        }), content_type='application/json')
+
+        assert_problem(
+            response, 'slot-unavailable', detail='The hairdresser is not available during this time slot.'
+        )
+        self.assertEqual(Reserve.objects.count(), reserves)
+        self.assertEqual(Agenda.objects.count(), agendas)
