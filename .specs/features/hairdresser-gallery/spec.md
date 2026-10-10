@@ -230,15 +230,15 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Implementing |
 | GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Implementing |
 | GAL-20 | P1: Adicionar fotos, AC12 | Tasks | Pending |
-| GAL-21 | P1: Adicionar fotos, AC13 | Tasks | Pending |
+| GAL-21 | P1: Adicionar fotos, AC13 | Tasks | Implementing |
 | GAL-22 | P1: Adicionar fotos, AC14 | Tasks | Pending |
-| GAL-23 | P1: Adicionar fotos, AC15 | Tasks | Pending |
-| GAL-24 | P1: Adicionar fotos, AC16 | Tasks | Pending |
+| GAL-23 | P1: Adicionar fotos, AC15 | Tasks | Implementing |
+| GAL-24 | P1: Adicionar fotos, AC16 | Tasks | Implementing |
 | GAL-25 | P1: Adicionar fotos, AC17 | Tasks | Implementing |
-| GAL-26 | P1: Adicionar fotos, AC18 | Tasks | Pending |
-| GAL-27 | P1: Adicionar fotos, AC19 | Tasks | Pending |
-| GAL-28 | P1: Adicionar fotos, AC20 | Tasks | Pending |
-| GAL-29 | P1: Adicionar fotos, AC21 | Tasks | Pending |
+| GAL-26 | P1: Adicionar fotos, AC18 | Tasks | Implementing |
+| GAL-27 | P1: Adicionar fotos, AC19 | Tasks | Implementing |
+| GAL-28 | P1: Adicionar fotos, AC20 | Tasks | Implementing |
+| GAL-29 | P1: Adicionar fotos, AC21 | Tasks | Implementing |
 | GAL-30 | P1: Adicionar fotos, AC22 | Tasks | Pending |
 | GAL-31 | P1: Remover fotos, AC1 | Tasks | Implementing |
 | GAL-32 | P1: Remover fotos, AC2 | Tasks | Implementing |
@@ -246,8 +246,8 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-34 | P1: Remover fotos, AC4 | Tasks | Implementing |
 | GAL-35 | P1: Remover fotos, AC5 | Tasks | Pending |
 | GAL-36 | P1: Remover fotos, AC6 | Tasks | Implementing |
-| GAL-37 | P1: Remover fotos, AC7 | Tasks | Pending |
-| GAL-38 | P1: Remover fotos, AC8 | Tasks | Pending |
+| GAL-37 | P1: Remover fotos, AC7 | Tasks | Implementing |
+| GAL-38 | P1: Remover fotos, AC8 | Tasks | Implementing |
 | GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Implementing |
 | GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Implementing |
 | GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
@@ -258,9 +258,9 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-46 | P2: Seed, AC3 | Tasks | Implementing |
 | GAL-47 | Edge Cases | Tasks | Implementing |
 | GAL-48 | Edge Cases | Tasks | Implementing |
-| GAL-49 | Edge Cases | Tasks | Pending |
-| GAL-50 | Edge Cases | Tasks | Pending |
-| GAL-51 | Edge Cases | Tasks | Pending |
+| GAL-49 | Edge Cases | Tasks | Implementing |
+| GAL-50 | Edge Cases | Tasks | Implementing |
+| GAL-51 | Edge Cases | Tasks | Implementing |
 
 **ID format:** `GAL-NN`
 

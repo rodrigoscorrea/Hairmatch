@@ -505,8 +505,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] O hook expõe a interface do design, e as mensagens pt-BR são as do spec, textualmente.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] O hook expõe a interface do design, e as mensagens pt-BR são as do spec, textualmente.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
