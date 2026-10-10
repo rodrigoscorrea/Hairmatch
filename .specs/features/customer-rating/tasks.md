@@ -197,14 +197,14 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: notas 5, 4 e 4 deixam `User.rating == 4.33`, e uma nota só (3) deixa `3.0` (CRT-18).
-- [ ] Teste: um cliente sem avaliação continua com `None` depois que outro cliente é avaliado (CRT-20).
-- [ ] Teste: chamar a função de novo para uma reserva já avaliada levanta `Problem` com o slug `review-exists`. O total de linhas e `User.rating` não mudam, e a transação de fora continua usável (CRT-06).
-- [ ] Teste: com `CaptureQueriesContext`, um `SELECT … FOR UPDATE` em `users_user` vem antes do `INSERT` em `review_customerrating` (CRT-19).
-- [ ] Teste (`TransactionTestCase`): duas threads com `threading.Barrier` avaliam reservas diferentes do mesmo cliente (5 e 1), e no fim `User.rating == 3.0` (CRT-19).
-- [ ] Teste: `service_end` devolve `start_time + duration` e devolve `None` com `start_time` nulo (CRT-02).
-- [ ] O gate Quick (review) passa.
-- [ ] Contagem: `review` ≥ 40 + 6.
+- [x] Teste: notas 5, 4 e 4 deixam `User.rating == 4.33`, e uma nota só (3) deixa `3.0` (CRT-18).
+- [x] Teste: um cliente sem avaliação continua com `None` depois que outro cliente é avaliado (CRT-20).
+- [x] Teste: chamar a função de novo para uma reserva já avaliada levanta `Problem` com o slug `review-exists`. O total de linhas e `User.rating` não mudam, e a transação de fora continua usável (CRT-06).
+- [x] Teste: com `CaptureQueriesContext`, um `SELECT … FOR UPDATE` em `users_user` vem antes do `INSERT` em `review_customerrating` (CRT-19).
+- [x] Teste (`TransactionTestCase`): duas threads com `threading.Barrier` avaliam reservas diferentes do mesmo cliente (5 e 1), e no fim `User.rating == 3.0` (CRT-19).
+- [x] Teste: `service_end` devolve `start_time + duration` e devolve `None` com `start_time` nulo (CRT-02).
+- [x] O gate Quick (review) passa.
+- [x] Contagem: `review` ≥ 40 + 6 (49). Suíte: 741 OK. Sem o `select_for_update`, o teste de corrida falha (5.0 ou 1.0 em vez de 3.0).
 
 **Tests**: integration
 **Gate**: quick

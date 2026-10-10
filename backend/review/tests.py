@@ -1,7 +1,10 @@
 from hairmatch.problem_testing import assert_problem
 from io import BytesIO
 from django.core.files.storage import default_storage
-from django.test import TestCase
+import threading
+from django.db import connection
+from django.test import TestCase, TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -12,6 +15,8 @@ from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
 from users.testing import activate_account
 from django.db import IntegrityError, transaction
+from hairmatch.problems import Problem
+from .customer_ratings import record_customer_rating, service_end
 from .models import CustomerRating, Review
 from reserve.models import Reserve
 from service.models import Service
@@ -890,3 +895,121 @@ class CustomerRatingModelTest(ReviewsTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(CustomerRating.objects.filter(customer_id=self.customer.id).exists())
         self.assertTrue(CustomerRating.objects.filter(id=other.id).exists())
+
+
+class RecordCustomerRatingTest(ReviewsTestCase):
+    """record_customer_rating: the rating and the customer's new average are written together."""
+
+    def _reserve(self, customer=None):
+        return Reserve.objects.create(customer=customer or self.customer, service=self.service)
+
+    def _record(self, reservation, rating, comment=None):
+        return record_customer_rating(self.hairdresser, reservation, rating, comment)
+
+    def test_the_average_is_stored_with_2_decimals(self):
+        """CRT-18: 5, 4 and 4 average 4.33."""
+        for value in (5, 4, 4):
+            self._record(self._reserve(), value)
+
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.33)
+
+    def test_a_single_rating_is_the_average(self):
+        """CRT-01 and CRT-18"""
+        created = self._record(self.reserve, 3, 'Pontual')
+
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 3.0)
+        created.refresh_from_db()
+        self.assertEqual(
+            (created.reservation_id, created.customer_id, created.hairdresser_id, created.rating, created.comment),
+            (self.reserve.id, self.customer.id, self.hairdresser.id, 3, 'Pontual'),
+        )
+
+    def test_a_customer_without_ratings_keeps_none(self):
+        """CRT-20"""
+        self._record(self.reserve, 5)
+
+        self.customer2_user.refresh_from_db()
+        self.assertIsNone(self.customer2_user.rating)
+
+    def test_rating_a_rated_reservation_raises_review_exists_and_changes_nothing(self):
+        """CRT-06: the unique reservation turns into review-exists, and the caller's transaction stays usable."""
+        self._record(self.reserve, 5)
+
+        with transaction.atomic():
+            with self.assertRaises(Problem) as raised:
+                self._record(self.reserve, 1)
+            # A query in the same transaction would raise TransactionManagementError if it were broken.
+            self.assertEqual(CustomerRating.objects.count(), 1)
+
+        self.assertEqual(raised.exception.slug, 'review-exists')
+        self.assertEqual(CustomerRating.objects.get().rating, 5)
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_the_customer_row_is_locked_before_the_insert(self):
+        """CRT-19"""
+        with CaptureQueriesContext(connection) as queries:
+            self._record(self.reserve, 4)
+
+        statements = [query['sql'] for query in queries.captured_queries]
+        lock = next(
+            i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql
+        )
+        insert = next(i for i, sql in enumerate(statements) if sql.startswith('INSERT INTO "review_customerrating"'))
+        self.assertLess(lock, insert)
+
+    def test_service_end_is_the_start_plus_the_duration(self):
+        """CRT-02: the service lasts 30 minutes."""
+        start = datetime.datetime(2026, 10, 9, 13, 0, tzinfo=datetime.timezone.utc)
+        reservation = Reserve.objects.create(customer=self.customer, service=self.service, start_time=start)
+
+        self.assertEqual(service_end(reservation), datetime.datetime(2026, 10, 9, 13, 30, tzinfo=datetime.timezone.utc))
+
+    def test_service_end_is_none_without_a_start_time(self):
+        """CRT-04"""
+        reservation = Reserve.objects.create(customer=self.customer, service=self.service, start_time=None)
+
+        self.assertIsNone(service_end(reservation))
+
+
+class CustomerRatingRaceTest(TransactionTestCase):
+    """CRT-19: two hairdressers rate the same customer at the same time, and the average counts both."""
+
+    def _user(self, email, phone, role):
+        return User.objects.create(
+            first_name='Race', last_name=role, email=email, phone=phone, neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', role=role,
+        )
+
+    def test_concurrent_ratings_of_the_same_customer_both_count(self):
+        customer = Customer.objects.create(user=self._user('c@example.com', '5592900000010', 'customer'), cpf='1')
+        work = []
+        for index, value in ((1, 5), (2, 1)):
+            hairdresser = Hairdresser.objects.create(
+                user=self._user(f'h{index}@example.com', f'559290000002{index}', 'hairdresser'), cnpj='1',
+            )
+            service = Service.objects.create(name='Corte', price=50, hairdresser=hairdresser, duration=30)
+            work.append((hairdresser, Reserve.objects.create(customer=customer, service=service), value))
+        barrier = threading.Barrier(len(work))
+        failures = []
+
+        def rate(hairdresser, reservation, value):
+            try:
+                barrier.wait(timeout=10)
+                record_customer_rating(hairdresser, reservation, value, None)
+            except Exception as exc:  # reported below: an exception in a thread does not fail the test
+                failures.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=rate, args=args) for args in work]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        self.assertEqual(failures, [])
+        self.assertEqual(CustomerRating.objects.filter(customer=customer).count(), 2)
+        self.assertEqual(User.objects.get(pk=customer.user_id).rating, 3.0)

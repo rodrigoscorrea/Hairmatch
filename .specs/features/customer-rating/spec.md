@@ -283,7 +283,7 @@ A issue #104 pede quatro coisas:
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | CRT-01 | P1: Avaliar pela API, AC1 | Tasks | Pending |
-| CRT-02 | P1: Avaliar pela API, AC2 | Tasks | Pending |
+| CRT-02 | P1: Avaliar pela API, AC2 | Tasks | Implementing |
 | CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Pending |
 | CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Pending |
 | CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Pending |
@@ -299,8 +299,8 @@ A issue #104 pede quatro coisas:
 | CRT-15 | P1: Entrada validada, AC5 | Tasks | Pending |
 | CRT-16 | P1: Entrada validada, AC6 | Tasks | Pending |
 | CRT-17 | P1: Entrada validada, AC7 | Tasks | Pending |
-| CRT-18 | P1: Média, AC1 | Tasks | Pending |
-| CRT-19 | P1: Média, AC2 | Tasks | Pending |
+| CRT-18 | P1: Média, AC1 | Tasks | Implementing |
+| CRT-19 | P1: Média, AC2 | Tasks | Implementing |
 | CRT-20 | P1: Média, AC3 | Tasks | Implementing |
 | CRT-21 | P1: Média, AC4 | Tasks | Implementing |
 | CRT-22 | P1: Média, AC5 | Tasks | Implementing |
