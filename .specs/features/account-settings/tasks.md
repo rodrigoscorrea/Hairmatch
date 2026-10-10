@@ -642,8 +642,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] O hook não aceita texto acima de 1000 caracteres.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] O hook não aceita texto acima de 1000 caracteres. Conferido por leitura: o `handleChange` corta o texto em `RESUME_MAX_LENGTH` (1000, de `ACCOUNT_MAX_LENGTH.resume`) (`useResumeForm.ts:28`). O salvamento sem mudança não chama a API (`:34`), e o `PATCH` leva só `{resume}` (`:48`).
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
