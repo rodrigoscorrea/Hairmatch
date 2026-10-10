@@ -87,21 +87,18 @@
 
 ## Handoff
 
-- **Feature**: `email-confirmation` (issue #141).
-- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
+- **Feature**: `account-settings` (issue #120).
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-09. `spec.md` (ACC-01 a ACC-60), `context.md`, `design.md` e `tasks.md` (T1 a T21) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Execute não começou e aguarda a aprovação das tasks.
 - **Completed**:
-  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
-  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
-  - MiniStack reconciliado pelo init, README e AD-008.
-  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
+  - Divisão da #120 depois do Cognito, por decisão do usuário: senha (alterar e "esqueci minha senha") e troca de e-mail foram para a #175, que está no board (Backlog, P1). A #120 foi reescrita com o escopo novo.
+  - Route Table do `api-restful-routes`: RT-88 e RT-89 (`PUT`/`DELETE /api/users/me/profile-picture`) e `profile-picture` entre os singulares do RT-54.
 - **In-progress** (file:line): none
-- **Next step**:
-  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
-  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
+- **Next step**: aprovar as tasks, criar a branch `120-editar-dados-da-conta-e-excluir-conta` a partir de `develop`, confirmar a baseline de 724 testes e começar pelo T1. São 21 tarefas em 3 lotes, então o Execute oferece sub-agentes.
 - **Pendências de features anteriores**:
+  - `email-confirmation` (#141): UAT do T23 (cadastro, código em `/_ministack/ses/messages`, confirmação, login de conta pendente, reenvio, cabeleireiro pendente fora da busca, Google e seed). Depois, marcar EMC-40 a EMC-46 e EMC-51 como Verified. Em produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode`.
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
   - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
-- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema
+- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/` já estavam pendentes e ficam fora desta feature. As specs novas (`.specs/features/account-settings/`) e as edições de `.specs/features/api-restful-routes/spec.md` e deste arquivo também não estão commitadas.
+- **Branch**: `develop`
