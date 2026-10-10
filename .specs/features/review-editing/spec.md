@@ -313,7 +313,7 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-51 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
 | REV-52 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
 | REV-53 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
-| REV-55 | P1: Agenda e Route Table | Tasks | Pending |
+| REV-55 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-56 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-60 | P1: Cliente pelo app | Tasks | Pending |
 | REV-61 | P1: Cliente pelo app | Tasks | Pending |

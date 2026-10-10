@@ -524,9 +524,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: um item com nota traz `customer_rating == {id, rating, comment}` com o id da nota, e um item sem nota traz `null` (REV-55).
-- [ ] O teste de queries constantes da agenda (CRT-38) continua passando.
-- [ ] Gate Quick (`agenda`) passa. Contagem: `agenda` ≥ 46 + 1.
+- [x] Teste: um item com nota traz `customer_rating == {id, rating, comment}` com o id da nota, e um item sem nota traz `null` (REV-55).
+- [x] O teste de queries constantes da agenda (CRT-38) continua passando.
+- [x] Gate Quick (`agenda`) passa. Contagem: `agenda` ≥ 46 + 1.
 
 **Tests**: integration
 **Gate**: quick

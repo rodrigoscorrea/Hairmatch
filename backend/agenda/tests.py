@@ -722,7 +722,7 @@ class AgendaCustomerRatingTest(AgendaTestCase):
         return response.json()['data']
 
     def test_a_booked_item_has_the_reservation_the_customer_rating_and_this_rating(self):
-        """CRT-36"""
+        """CRT-36, REV-55: the rating carries its id, which the app needs to edit and delete it."""
         rated = self._booked()
         unrated = self._booked(rated=False)
         urls = (self.list_url, reverse('hairdresser_agenda', args=[self.hairdresser.id]))
@@ -735,7 +735,10 @@ class AgendaCustomerRatingTest(AgendaTestCase):
                     'user': {'first_name': 'Cliente', 'last_name': '1', 'rating': 4.0},
                     'ratings_count': 1,
                 })
-                self.assertEqual(items[rated.id]['customer_rating'], {'rating': 4, 'comment': 'Pontual'})
+                self.assertEqual(
+                    items[rated.id]['customer_rating'],
+                    {'id': rated.customer_rating.id, 'rating': 4, 'comment': 'Pontual'},
+                )
                 self.assertEqual(items[unrated.id]['customer'], {
                     'id': unrated.customer_id,
                     'user': {'first_name': 'Cliente', 'last_name': '2', 'rating': None},
