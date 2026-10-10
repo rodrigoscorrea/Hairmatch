@@ -619,8 +619,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Os dois menus abrem a tela, e ela mostra as preferências atuais marcadas.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Os dois menus abrem a tela, e ela mostra as preferências atuais marcadas. Conferido por leitura: "Preferências" está em `customer/profile.tsx:81` e em `hairdresser/profile/settings.tsx:66` e faz `router.push` para a rota `configs/preferencesSetting` do papel, e as duas rotas só renderizam `<PreferencesSettingScreen role=... />`. Cada item do catálogo fica marcado quando está em `selected` (`PreferencesSettingScreen.tsx:46-47`), que o hook carrega do servidor. A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

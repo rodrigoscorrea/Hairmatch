@@ -8,7 +8,7 @@ import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
 import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
 import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
-import { usePathname } from 'expo-router'; // Adjust path if needed
+import { usePathname, useRouter } from 'expo-router'; // Adjust path if needed
 
 export default function ProfileScreen(){
     const pathname = usePathname();
@@ -25,6 +25,7 @@ export default function ProfileScreen(){
     const handleMenuPress = (item: string) => {
     };
 
+    const router = useRouter();
     const deletion = useDeleteAccount("customer");
 
     // userInfo is null for a moment after the logout or the account deletion.
@@ -73,6 +74,13 @@ export default function ProfileScreen(){
             title="Endereço"
             subtitle="Alterar seu endereço"
             onPress={() => handleAddressSettings()}
+          />
+
+          <MenuItem
+            iconName="sliders"
+            title="Preferências"
+            subtitle="Alterar suas preferências"
+            onPress={() => router.push('/(app)/customer/configs/preferencesSetting')}
           />
           
           <MenuItem

@@ -9,9 +9,11 @@ import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
 import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
+    const router = useRouter();
     const deletion = useDeleteAccount("hairdresser");
     // userInfo is null for a moment after the logout or the account deletion.
     if (!hairdresser) return null;
@@ -57,6 +59,13 @@ export default function HairdresserSettingsScreen(){
             title="Endereço"
             subtitle="Alterar seu endereço"
             onPress={handleAddressSettings}
+          />
+
+          <MenuItem
+            iconName="sliders"
+            title="Preferências"
+            subtitle="Alterar suas preferências"
+            onPress={() => router.push('/(app)/hairdresser/configs/preferencesSetting')}
           />
           
           <MenuItem
