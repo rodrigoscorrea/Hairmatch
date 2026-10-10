@@ -5699,6 +5699,41 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertTrue(Review.objects.exists())
         self.assertTrue(default_storage.exists(picture))
 
+    def test_a_hairdresser_account_is_deleted_with_its_gallery_rows_and_files(self):
+        """GAL-39"""
+        hairdresser = self._hairdresser_with_bookings()
+        names = [_add_gallery_photo(hairdresser, f'{index}.png').image.name for index in range(2)]
+        other = _add_gallery_photo(_create_gallery_hairdresser('outra@example.com', '92990000002'))
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(list(GalleryPhoto.objects.values_list('pk', flat=True)), [other.pk])
+        for name in names:
+            self.assertTrue(default_storage.exists(name))
+        for callback in callbacks:
+            callback()
+        for name in names:
+            with self.subTest(photo=name):
+                self.assertFalse(default_storage.exists(name))
+        self.assertTrue(default_storage.exists(other.image.name))
+
+    def test_a_cognito_outage_keeps_the_gallery_rows_and_files(self):
+        """GAL-40"""
+        hairdresser = self._hairdresser_with_bookings()
+        names = [_add_gallery_photo(hairdresser, f'{index}.png').image.name for index in range(2)]
+        self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(GalleryPhoto.objects.filter(hairdresser=hairdresser).count(), 2)
+        for name in names:
+            with self.subTest(photo=name):
+                self.assertTrue(default_storage.exists(name))
+
     def test_google_accounts_are_deleted_without_calling_cognito(self):
         google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
         self.fake.calls.clear()

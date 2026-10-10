@@ -250,6 +250,8 @@ def _delete_account_rows(user):
             Q(customer__user=user) | Q(hairdresser__user=user)
         ).values_list('picture', flat=True) if name
     ]
+    # The gallery rows go with the hairdresser (CASCADE); their files stay in storage otherwise.
+    pictures.extend(GalleryPhoto.objects.filter(hairdresser__user=user).values_list('image', flat=True))
     if user.profile_picture:
         pictures.append(user.profile_picture.name)
     user.delete()

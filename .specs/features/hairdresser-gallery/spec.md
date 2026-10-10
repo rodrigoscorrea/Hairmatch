@@ -248,8 +248,8 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-36 | P1: Remover fotos, AC6 | Tasks | Pending |
 | GAL-37 | P1: Remover fotos, AC7 | Tasks | Pending |
 | GAL-38 | P1: Remover fotos, AC8 | Tasks | Pending |
-| GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Pending |
-| GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Pending |
+| GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Implementing |
+| GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Implementing |
 | GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
 | GAL-42 | P2: Contrato, AC2 | Tasks | Implementing |
 | GAL-43 | P2: Contrato, AC3 | Tasks | Implementing |

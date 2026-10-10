@@ -307,11 +307,11 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos na classe de exclusão de conta:
+- [x] Testes novos na classe de exclusão de conta:
   - um cabeleireiro com 2 fotos exclui a conta: as linhas somem, e os 2 arquivos somem depois do commit;
   - com o fake de Cognito falhando (`fail_next`): as linhas e os arquivos ficam.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
