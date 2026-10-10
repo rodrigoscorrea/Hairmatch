@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 concluída.
+**Status**: Execute: T1 e T2 concluídas.
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -150,7 +150,7 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe `FavoriteHairdresserDetailTest` (`TestCase`, com setup de dois clientes e dois cabeleireiros por `POST /api/users` e `activate_account`). Cada teste leva o requisito na docstring:
+- [x] Classe `FavoriteHairdresserDetailTest` (`TestCase`, com setup de dois clientes e dois cabeleireiros por `POST /api/users` e `activate_account`). Cada teste leva o requisito na docstring:
   - FAV-01: o `PUT` responde 204 com corpo vazio, e existe uma linha `(cliente, cabeleireiro)`;
   - FAV-02: o segundo `PUT` responde 204, a contagem continua 1, e o `created_at` é igual ao da primeira linha;
   - FAV-04: o `PUT` com um `id` que não existe responde 404 `not-found`, e a contagem é 0;
@@ -162,10 +162,10 @@ T11
   - FAV-10: o `PUT` e o `DELETE` com sessão de cabeleireiro respondem 403 `customer-required`, e nenhuma linha muda;
   - FAV-11: o `DELETE` do cliente A mantém o favorito do cliente B para o mesmo cabeleireiro;
   - FAV-39: `PUT .../favorite-hairdressers/abc` responde 404 `not-found`.
-- [ ] Classe `FavoriteHairdresserRaceTest(TransactionTestCase)`: dois `PUT` do mesmo par atrás de um `threading.Barrier` respondem 204, e fica uma linha (FAV-03, lição L-016).
-- [ ] O `RouteTableTests` passa com RT-98 e RT-99.
-- [ ] Gate check passes: Full.
-- [ ] Test count: total sem remoção.
+- [x] Classe `FavoriteHairdresserRaceTest(TransactionTestCase)`: dois `PUT` do mesmo par atrás de um `threading.Barrier` respondem 204, e fica uma linha (FAV-03, lição L-016).
+- [x] O `RouteTableTests` passa com RT-98 e RT-99.
+- [x] Gate check passes: Full.
+- [x] Test count: 971 → 984 (13 testes novos), sem remoção.
 
 **Tests**: integration
 **Gate**: full

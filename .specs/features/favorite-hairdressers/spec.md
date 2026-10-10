@@ -174,17 +174,17 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FAV-01 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-02 | P1: Favoritar pelo perfil | Tasks | Pending |
+| FAV-01 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-02 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-03 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-04 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-05 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-06 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-07 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-08 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-09 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-10 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-11 | P1: Favoritar pelo perfil | Tasks | Pending |
+| FAV-04 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-05 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-06 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-07 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-08 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-09 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-10 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-11 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-12 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-13 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-14 | P1: Favoritar pelo perfil | Tasks | Pending |
@@ -212,7 +212,7 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-36 | P1: Ciclo de vida | Tasks | Pending |
 | FAV-37 | P1: Ciclo de vida | Tasks | Pending |
 | FAV-38 | P1: Ciclo de vida | Tasks | Pending |
-| FAV-39 | Edge Cases | Tasks | Pending |
+| FAV-39 | Edge Cases | Tasks | Implemented |
 | FAV-40 | Edge Cases | Tasks | Pending |
 | FAV-41 | Edge Cases | Tasks | Pending |
 | FAV-42 | Edge Cases | Tasks | Pending |

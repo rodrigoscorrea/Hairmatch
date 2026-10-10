@@ -9,7 +9,7 @@ import hairmatch.urls
 
 # The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49, plus RT-84 and RT-85 from email-confirmation
 # and RT-86 and RT-87 from customer-rating, RT-88 and RT-89 from account-settings, RT-90 to RT-93 from
-# review-editing, and RT-94 to RT-96 from hairdresser-gallery), one (method, route) pair per row.
+# review-editing, RT-94 to RT-96 from hairdresser-gallery, and RT-97 to RT-99 from favorite-hairdressers), one (method, route) pair per row.
 # `{id}` is an integer segment and `{cep}` is free text.
 ROUTE_TABLE = {
     ('POST', 'users'),                                            # RT-01
@@ -73,6 +73,8 @@ ROUTE_TABLE = {
     ('GET', 'hairdressers/{id}/gallery-photos'),                  # RT-94
     ('POST', 'hairdressers/{id}/gallery-photos'),                 # RT-95
     ('DELETE', 'hairdressers/{id}/gallery-photos/{id}'),         # RT-96
+    ('PUT', 'customers/me/favorite-hairdressers/{id}'),           # RT-98
+    ('DELETE', 'customers/me/favorite-hairdressers/{id}'),        # RT-99
 }
 
 # RT-54: the only singular or non-plural segments the table allows.
