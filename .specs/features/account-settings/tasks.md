@@ -513,8 +513,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] As duas rotas mostram a tela, e os campos travam e destravam como no cadastro.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] As duas rotas mostram a tela, e os campos travam e destravam como no cadastro. Conferido por leitura: as duas rotas só renderizam `<AddressSettingScreen role=... />`, o CEP vem primeiro, e os campos usam `editable={addressUnlocked}` e `inputDisabled` como em `register/address.tsx`. A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
