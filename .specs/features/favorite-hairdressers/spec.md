@@ -198,23 +198,23 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-22 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-23 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-24 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-25 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-25 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-26 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-27 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-28 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-28 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-29 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-30 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-30 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-31 | P1: Desfavoritar pela lista | Tasks | Pending |
-| FAV-32 | P1: Desfavoritar pela lista | Tasks | Pending |
-| FAV-33 | P1: Desfavoritar pela lista | Tasks | Pending |
+| FAV-32 | P1: Desfavoritar pela lista | Tasks | Implemented |
+| FAV-33 | P1: Desfavoritar pela lista | Tasks | Implemented |
 | FAV-34 | P1: Desfavoritar pela lista | Tasks | Pending |
-| FAV-35 | P1: Desfavoritar pela lista | Tasks | Pending |
+| FAV-35 | P1: Desfavoritar pela lista | Tasks | Implemented |
 | FAV-36 | P1: Ciclo de vida | Tasks | Implemented |
 | FAV-37 | P1: Ciclo de vida | Tasks | Implemented |
 | FAV-38 | P1: Ciclo de vida | Tasks | Implemented |
 | FAV-39 | Edge Cases | Tasks | Implemented |
 | FAV-40 | Edge Cases | Tasks | Implemented |
-| FAV-41 | Edge Cases | Tasks | Pending |
+| FAV-41 | Edge Cases | Tasks | Implemented |
 | FAV-42 | Edge Cases | Tasks | Implemented |
 | FAV-43 | P1: Ciclo de vida | Tasks | Implemented |
 

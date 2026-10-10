@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 a T7 concluídas (backend completo; app em andamento).
+**Status**: Execute: T1 a T8 concluídas (backend completo; app em andamento).
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -321,8 +321,8 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] O hook devolve `{ favorites, isLoaded, removing, handleRemove, handleOpen, handleGoBack, errorModal, closeError }`.
-- [ ] Gate check passes: App.
+- [x] O hook devolve `{ favorites, isLoaded, removing, handleRemove, handleOpen, handleGoBack, errorModal, closeError }`.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: app
