@@ -699,9 +699,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] As duas funções chamam `PUT` e `DELETE /api/customer-ratings/{id}`.
-- [ ] `AgendaEvent.customerRating` tem `id`.
-- [ ] Gate App passa.
+- [x] As duas funções chamam `PUT` e `DELETE /api/customer-ratings/{id}`.
+- [x] `AgendaEvent.customerRating` tem `id`.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app

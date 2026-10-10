@@ -3,6 +3,7 @@ import {
     CreatedCustomerRating,
     CustomerRatingRequest,
     CustomerRatingsSummary,
+    CustomerRatingUpdate,
 } from '../models/CustomerRating.types';
 import axiosInstance from './axios-instance';
 
@@ -24,4 +25,15 @@ export const getCustomerRatings = async (customerId: number): Promise<{ data: Cu
         console.error("Error in get customer ratings:", error);
         throw error;
     }
+}
+
+// The callers read the failure with problemMessage, so the two calls below do not catch their error.
+
+export const updateCustomerRating = async (id: number, data: CustomerRatingUpdate): Promise<{ data: CreatedCustomerRating }> => {
+    const response = await axiosInstance.put(`${API_BACKEND_URL}/api/customer-ratings/${id}`, data);
+    return response.data;
+}
+
+export const deleteCustomerRating = async (id: number): Promise<void> => {
+    await axiosInstance.delete(`${API_BACKEND_URL}/api/customer-ratings/${id}`);
 }
