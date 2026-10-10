@@ -354,8 +354,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] `useAuth().clearSession` existe e não faz requisição.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] `useAuth().clearSession` existe e não faz requisição.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

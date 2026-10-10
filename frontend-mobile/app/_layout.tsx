@@ -137,6 +137,12 @@ export default function RootLayout() {
       setIsLoading(false);
     }
   },
+  // Ends the session in the app only, for when the backend already ended it (the account was deleted).
+  // isLoading stays as is: while it is true the layout renders nothing and would drop the navigation.
+  clearSession: () => {
+    setUserToken(null);
+    setUserInfo(null);
+  },
   userInfo,
   userToken,
   isLoading
