@@ -544,9 +544,10 @@ Ocultar a rota nas tabs com `href: null` em `app/(app)/hairdresser/_layout.tsx` 
 - Skill: NONE
 
 **Done when**:
-- [ ] A rota não aparece na barra de abas.
-- [ ] O POST só sai depois de confirmar.
-- [ ] O gate App passa sem erro novo.
+- [x] A rota não aparece na barra de abas: `href: null` no `_layout.tsx`, e a `BottomTabBar` só desenha as abas de `hairdresserTabs`.
+- [x] O POST só sai depois de confirmar: "Enviar avaliação" chama `openConfirm`, e só o `onConfirm` do `ConfirmationModal` chama `submit`.
+- [x] O botão fica desabilitado sem estrela e durante o envio, com "Enviando...". O comentário tem `maxLength={500}` e o contador `n/500`.
+- [x] O gate App passa sem erro novo (`tsc` exit 0, `eslint` sem problema nos três arquivos).
 
 **Tests**: none
 **Gate**: app
