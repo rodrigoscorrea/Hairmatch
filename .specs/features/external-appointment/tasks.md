@@ -302,9 +302,9 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] `utils/routes.ts` (`HAIRDRESSER_HOME`) e `constants/tabsConfig.ts` continuam apontando para `/(app)/hairdresser/agenda`, sem edição
-- [ ] Os tipos de rota foram regenerados (pré-requisito)
-- [ ] Gate check passes: App
+- [x] `utils/routes.ts` (`HAIRDRESSER_HOME`) e `constants/tabsConfig.ts` continuam apontando para `/(app)/hairdresser/agenda`, sem edição
+- [x] Os tipos de rota foram regenerados (pré-requisito)
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App

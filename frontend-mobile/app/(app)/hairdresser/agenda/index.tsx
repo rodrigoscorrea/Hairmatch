@@ -1,12 +1,12 @@
-// app/(app)/hairdresser/agenda.tsx
+// app/(app)/hairdresser/agenda/index.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, Modal, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-big-calendar';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-import { formatDate } from '../../../utils/date-formater';
-import { formatTime } from '../../../utils/time-formater';
+import { formatDate } from '../../../../utils/date-formater';
+import { formatTime } from '../../../../utils/time-formater';
 import { styles, calendarTheme } from '@/styles/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
