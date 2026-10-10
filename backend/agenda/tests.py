@@ -5,6 +5,7 @@ from rest_framework import status
 import calendar
 import json
 from datetime import datetime, time, timedelta, timezone as dt_timezone
+from unittest import mock
 from django.utils import timezone
 
 from users.models import User, Customer, Hairdresser
@@ -450,6 +451,17 @@ class CreateAgendaTest(AgendaTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Agenda.objects.count(), 2)
+
+    def test_a_start_time_equal_to_now_is_accepted(self):
+        """EXT-09: only a start before now is in the past (Assumptions: a start equal to now is accepted)"""
+        frozen_now = manaus_in_utc(self.day, 10)
+
+        with mock.patch('agenda.views.timezone.now', return_value=frozen_now):
+            response = self._post(self.block(10, 11, title='Cliente do WhatsApp'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Agenda.objects.count(), 2)
+        self.assertEqual(Agenda.objects.exclude(id=self.agenda.id).get().start_time, frozen_now)
 
     def test_a_block_without_a_service_that_crosses_another_block_answers_409(self):
         """EXT-10: the fixture block has a service"""

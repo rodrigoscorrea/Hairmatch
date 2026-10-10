@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/external-appointment/spec.md`
 **Design**: `.specs/features/external-appointment/design.md`
-**Status**: Approved (2026-10-09). Execute ainda não começou: por decisão do usuário, esta etapa produz só os specs.
+**Status**: Approved (2026-10-09). Execute em andamento: T1 a T12 concluídas, com as correções da validação. A T13 (UAT manual) está pendente com o usuário.
 **Branch**: `113-adicionar-servico-por-fora-na-agenda`, criada a partir de `develop` (`fbf1d08`)
 
 **Pré-requisitos do Execute:**
