@@ -429,8 +429,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Um erro do `GET` dá `photos = []`, sem `throw`.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Um erro do `GET` dá `photos = []`, sem `throw`.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
