@@ -1,5 +1,6 @@
 import os
 import random
+import zlib
 from datetime import time
 
 from django.core.files import File
@@ -52,6 +53,29 @@ class Command(BaseCommand):
         if restored:
             self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded pictures to the media bucket."))
 
+    def restore_missing_gallery_photos(self):
+        """
+        Re-uploads the gallery photos of seeded hairdressers that are missing from the media bucket, on the
+        same key. The seeded photo is not known after the upload (the key is a random uuid), so the placeholder
+        is picked from the key and a key always gets the same one.
+        """
+        if not os.path.isdir(GALLERY_DIR):
+            return
+        files = sorted(os.listdir(GALLERY_DIR))
+        if not files:
+            return
+        restored = 0
+        photos = GalleryPhoto.objects.filter(hairdresser__user__email__regex=SEED_EMAIL_REGEX)
+        for key in photos.values_list("image", flat=True):
+            if default_storage.exists(key):
+                continue
+            file_name = files[zlib.crc32(key.encode()) % len(files)]
+            with open(os.path.join(GALLERY_DIR, file_name), "rb") as f:
+                default_storage.save(key, to_webp(File(f)))
+            restored += 1
+        if restored:
+            self.stdout.write(self.style.SUCCESS(f"Restored {restored} seeded gallery photos to the media bucket."))
+
     def restore_missing_cognito_users(self):
         """
         Recreates the Cognito user of every seeded hairdresser that lost it, and keeps
@@ -84,6 +108,7 @@ class Command(BaseCommand):
             return
 
         self.restore_missing_pictures()
+        self.restore_missing_gallery_photos()
         self.restore_missing_cognito_users()
 
         if User.objects.filter(role="hairdresser").exists():

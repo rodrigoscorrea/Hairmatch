@@ -358,12 +358,12 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos:
+- [x] Testes novos:
   - apagar do storage a chave de uma foto do seed e rodar o comando: a chave volta, e o objeto é WebP;
   - uma foto que não é do seed e que falta no storage não é restaurada;
   - uma chave presente não é regravada.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full

@@ -3213,6 +3213,57 @@ class PopulateHairdressersCommandTest(TestCase):
                 self.assertEqual(stored.format, 'WEBP')
                 self.assertIn(stored.size, [(64, 48), (48, 64)])
 
+    def _seeded_gallery_photo(self, key, email='hairdresser1_ana@seed.test'):
+        user = User.objects.create(
+            email=email, first_name='Seed', last_name='Hairdresser', phone='1', neighborhood='n',
+            city='c', state='AM', address='a', postal_code='1', role='hairdresser',
+        )
+        hairdresser = Hairdresser.objects.create(user=user, cnpj='12345678000190')
+        return GalleryPhoto.objects.create(hairdresser=hairdresser, image=key)
+
+    def test_restores_a_missing_seeded_gallery_photo_on_the_same_key_as_webp(self):
+        """GAL-45"""
+        photo = self._seeded_gallery_photo('hairdresser/gallery/1/aaaa.webp')
+        self.assertFalse(default_storage.exists(photo.image.name))
+
+        self._run()
+
+        self.assertEqual(stored_image('hairdresser/gallery/1/aaaa.webp').format, 'WEBP')
+        photo.refresh_from_db()
+        self.assertEqual(photo.image.name, 'hairdresser/gallery/1/aaaa.webp')
+
+    def test_a_missing_gallery_photo_gets_the_same_placeholder_every_time(self):
+        """GAL-45: the key decides the placeholder, so a restore is stable."""
+        key = 'hairdresser/gallery/1/bbbb.webp'
+        self._seeded_gallery_photo(key)
+        self._run()
+        first = stored_image(key).size
+        default_storage.delete(key)
+
+        self._run()
+
+        self.assertEqual(stored_image(key).size, first)
+        self.assertIn(first, [(64, 48), (48, 64)])
+
+    def test_does_not_restore_a_gallery_photo_of_a_hairdresser_outside_the_seed(self):
+        """GAL-45"""
+        photo = self._seeded_gallery_photo('hairdresser/gallery/9/cccc.webp', email='real@example.com')
+
+        self._run()
+
+        self.assertFalse(default_storage.exists(photo.image.name))
+
+    def test_does_not_rewrite_a_gallery_photo_that_is_in_the_bucket(self):
+        """GAL-45"""
+        key = 'hairdresser/gallery/1/dddd.webp'
+        self._seeded_gallery_photo(key)
+        default_storage.save(key, ContentFile(b'already there'))
+
+        self._run()
+
+        with default_storage.open(key) as stored:
+            self.assertEqual(stored.read(), b'already there')
+
     def _login_status(self, email, password='Senha123'):
         return APIClient().post(
             reverse('login'), data=json.dumps({'email': email, 'password': password}),
