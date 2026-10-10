@@ -375,10 +375,10 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] A baseline de `npx tsc --noEmit` está gravada antes da mudança.
-- [ ] As funções seguem o padrão `try/await axiosInstance…/return response.data/catch → console.error + throw`.
-- [ ] `formatCustomerRating(null, 0)` devolve "Sem avaliações", e `formatCustomerRating(4.33, 3)` devolve "4.3 (3)", conferido no UAT.
-- [ ] O gate App passa sem erro novo.
+- [x] A baseline de `npx tsc --noEmit` está gravada antes da mudança: exit 0, sem nenhuma linha de saída.
+- [x] As funções seguem o padrão `try/await axiosInstance…/return response.data/catch → console.error + throw`.
+- [x] `formatCustomerRating(null, 0)` devolve "Sem avaliações", e `formatCustomerRating(4.33, 3)` devolve "4.3 (3)". Conferido no Node com o arquivo transpilado (`4.0 (1)`, `4.5 (2)` e `13/3` → `4.3 (3)` também). A tela fica para o UAT do T18.
+- [x] O gate App passa sem erro novo (`tsc` exit 0, `eslint` sem erro nos arquivos tocados).
 
 **Tests**: none
 **Gate**: app

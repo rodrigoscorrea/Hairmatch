@@ -331,14 +331,14 @@ A issue #104 pede quatro coisas:
 | CRT-47 | P1: Avaliar pelo app, AC9 | Tasks | Pending |
 | CRT-48 | P1: Avaliar pelo app, AC10 | Tasks | Pending |
 | CRT-49 | P1: Avaliar pelo app, AC11 | Tasks | Pending |
-| CRT-50 | P1: Perfil, AC1 | Tasks | Pending |
-| CRT-51 | P1: Perfil, AC2 | Tasks | Pending |
+| CRT-50 | P1: Perfil, AC1 | Tasks | Implementing |
+| CRT-51 | P1: Perfil, AC2 | Tasks | Implementing |
 | CRT-52 | P1: Perfil, AC3 | Tasks | Pending |
 | CRT-53 | P1: Contrato, AC1 | Tasks | Implementing |
 | CRT-54 | P1: Contrato, AC2 | Tasks | Implementing |
 | CRT-55 | P1: Contrato, AC3 | Tasks | Implementing |
-| CRT-56 | P2: Nota na agenda, AC1 | Tasks | Pending |
-| CRT-57 | P2: Nota na agenda, AC2 | Tasks | Pending |
+| CRT-56 | P2: Nota na agenda, AC1 | Tasks | Implementing |
+| CRT-57 | P2: Nota na agenda, AC2 | Tasks | Implementing |
 | CRT-58 | P2: Avaliações recebidas, AC1 | Tasks | Pending |
 | CRT-59 | P2: Avaliações recebidas, AC2 | Tasks | Pending |
 | CRT-60 | P2: Avaliações recebidas, AC3 | Tasks | Pending |
