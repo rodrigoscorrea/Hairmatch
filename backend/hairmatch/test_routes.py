@@ -8,7 +8,7 @@ from django.urls.resolvers import URLPattern, URLResolver
 import hairmatch.urls
 
 # The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49, plus RT-84 and RT-85 from email-confirmation
-# and RT-88 from account-settings), one (method, route) pair per row.
+# and RT-88 and RT-89 from account-settings), one (method, route) pair per row.
 # `{id}` is an integer segment and `{cep}` is free text.
 ROUTE_TABLE = {
     ('POST', 'users'),                                            # RT-01
@@ -62,6 +62,7 @@ ROUTE_TABLE = {
     ('POST', 'auth/email-confirmations'),                         # RT-84
     ('POST', 'auth/confirmation-codes'),                          # RT-85
     ('PUT', 'users/me/profile-picture'),                          # RT-88
+    ('DELETE', 'users/me/profile-picture'),                       # RT-89
 }
 
 # RT-54: the only singular or non-plural segments the table allows.

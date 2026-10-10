@@ -260,7 +260,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-37 | P2: Foto, AC3 | Tasks | Implementing |
 | ACC-38 | P2: Foto, AC4 | Tasks | Implementing |
 | ACC-39 | P2: Foto, AC5 | Tasks | Implementing |
-| ACC-40 | P2: Foto, AC6 | Tasks | Pending |
+| ACC-40 | P2: Foto, AC6 | Tasks | Implementing |
 | ACC-41 | P2: Foto, AC7 | Tasks | Implementing |
 | ACC-42 | P2: Foto, AC8 | Tasks | Implementing |
 | ACC-43 | P2: Foto, AC9 | Tasks | Pending |

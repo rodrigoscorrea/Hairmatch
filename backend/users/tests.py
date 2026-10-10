@@ -6151,7 +6151,7 @@ class ProfileUpdateValidationTest(TestCase):
 
 
 class ProfilePictureViewTest(TestCase):
-    """PUT /api/users/me/profile-picture replaces the picture of the session's user (ACC-35 to ACC-41)."""
+    """PUT and DELETE /api/users/me/profile-picture replace and remove the picture of the session's user (ACC-35 to ACC-42)."""
 
     MAX_SIZE = 5 * 1024 * 1024
 
@@ -6241,6 +6241,48 @@ class ProfilePictureViewTest(TestCase):
 
         assert_problem(response, 'invalid-session')
         self._assert_old_picture_kept()
+
+    def test_delete_clears_the_picture_and_deletes_the_file_once_committed(self):
+        """ACC-40"""
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertIsNone(User.objects.values_list('profile_picture', flat=True).get(pk=self.user.pk))
+        self.assertTrue(default_storage.exists(self.old_name))
+        for callback in callbacks:
+            callback()
+        self.assertFalse(default_storage.exists(self.old_name))
+
+    def test_delete_without_a_picture_answers_204_without_touching_the_storage(self):
+        """ACC-40: it is idempotent."""
+        User.objects.filter(pk=self.user.pk).update(profile_picture=None)
+
+        with patch.object(default_storage, 'delete') as storage_delete:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIsNone(User.objects.values_list('profile_picture', flat=True).get(pk=self.user.pk))
+        storage_delete.assert_not_called()
+
+    def test_delete_without_a_session_answers_401_and_keeps_the_picture(self):
+        """ACC-41"""
+        self.client.cookies.clear()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        assert_problem(response, 'invalid-session')
+        self._assert_old_picture_kept()
+
+    def test_get_answers_405_with_the_methods_of_the_path(self):
+        """ACC-42: the path has PUT and DELETE only."""
+        response = self.client.get(self.url)
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['DELETE', 'OPTIONS', 'PUT'])
 
 
 class SessionFormatTest(TestCase):

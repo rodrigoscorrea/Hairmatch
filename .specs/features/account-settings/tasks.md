@@ -300,14 +300,14 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos em `ProfilePictureViewTest`:
+- [x] Testes novos em `ProfilePictureViewTest`:
   - com foto: 204, o campo fica nulo e o arquivo some depois do commit;
   - sem foto: 204 e o storage não é chamado;
   - sem cookie: 401 `invalid-session`;
   - 405 com `Allow: DELETE, OPTIONS, PUT` para `GET`.
-- [ ] `RouteTableTests` passa com RT-89.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-89.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção: 756 executados (752 + 4).
 
 **Tests**: integration
 **Gate**: full

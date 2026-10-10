@@ -864,6 +864,20 @@ class ProfilePictureView(APIView):
 
         return JsonResponse({'profile_picture': UserSerializer(user).data['profile_picture']}, status=200)
 
+    def delete(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        user = session.user
+        old_name = user.profile_picture.name
+        if old_name:
+            with transaction.atomic():
+                # NULL, as an account that never had a picture: the field would save None as ''.
+                User.objects.filter(pk=user.pk).update(profile_picture=None)
+                transaction.on_commit(lambda: _delete_stored_files([old_name]))
+        return HttpResponse(status=204)
+
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request
 # Those views should only be used by admin personal or internal functions
