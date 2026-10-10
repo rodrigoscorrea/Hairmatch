@@ -431,9 +431,9 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Um salvamento sem alteração não chama `updateMe`.
-- [ ] O corpo enviado só tem os campos alterados.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Um salvamento sem alteração não chama `updateMe`. O `handleSave` sai com "Nenhuma alteração para salvar." antes do `updateMe` quando o diff é vazio.
+- [x] O corpo enviado só tem os campos alterados. O diff compara nome e sobrenome sem espaços nas pontas, e telefone e documento pelos dígitos; o telefone apagado vai como `''` e cai na validação.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

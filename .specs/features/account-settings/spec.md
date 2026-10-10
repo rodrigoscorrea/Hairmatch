@@ -238,11 +238,11 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-15 | P1: Validar PATCH, AC15 | Tasks | Implementing |
 | ACC-16 | P1: Dados da conta, AC1 | Tasks | Pending |
 | ACC-17 | P1: Dados da conta, AC2 | Tasks | Implementing |
-| ACC-18 | P1: Dados da conta, AC3 | Tasks | Pending |
-| ACC-19 | P1: Dados da conta, AC4 | Tasks | Pending |
+| ACC-18 | P1: Dados da conta, AC3 | Tasks | Implementing |
+| ACC-19 | P1: Dados da conta, AC4 | Tasks | Implementing |
 | ACC-20 | P1: Dados da conta, AC5 | Tasks | Implementing |
-| ACC-21 | P1: Dados da conta, AC6 | Tasks | Pending |
-| ACC-22 | P1: Dados da conta, AC7 | Tasks | Pending |
+| ACC-21 | P1: Dados da conta, AC6 | Tasks | Implementing |
+| ACC-22 | P1: Dados da conta, AC7 | Tasks | Implementing |
 | ACC-23 | P1: Endereço, AC1 | Tasks | Pending |
 | ACC-24 | P1: Endereço, AC2 | Tasks | Pending |
 | ACC-25 | P1: Endereço, AC3 | Tasks | Pending |
