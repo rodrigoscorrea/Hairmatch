@@ -32,6 +32,13 @@ export const computeEndTime = (start: string, durationMin: number): string | nul
   return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 };
 
+/** The HH:mm of a complete start: typed as HH:mm or as the four digits of the numeric keyboard. Null while incomplete. */
+const completeTime = (value: string): string | null => {
+  if (TIME_PATTERN.test(value)) return value;
+  if (/^\d{4}$/.test(value)) return formatTimeInput(value);
+  return null;
+};
+
 /** The first message that blocks saving, in the order EXT-26 to EXT-29, or null when the form is valid. */
 export const validateExternalAppointment = (form: ExternalAppointmentForm, now: Date): string | null => {
   if (!TIME_PATTERN.test(form.startTime) || !TIME_PATTERN.test(form.endTime)) {
@@ -81,11 +88,13 @@ export const useExternalAppointmentForm = () => {
       .catch((error) => console.error('Failed to fetch services:', error));
   }, [hairdresserId]);
 
+  // EXT-25: a change of the service or of a complete start fills the end with start + duration.
   const fillEndTime = (start: string, selectedServiceId: number | null) => {
     const service = services.find((s) => s.id === selectedServiceId);
-    if (!service) return;
-    const end = computeEndTime(start, service.duration);
-    if (end) setEndTime(end);
+    const completeStart = completeTime(start);
+    if (!service || !completeStart) return;
+    // Past 23:59 there is no end on the same day (a block is one day only), so the field is cleared for the user.
+    setEndTime(computeEndTime(completeStart, service.duration) ?? '');
   };
 
   const handleSelectService = (selectedServiceId: number | null) => {
@@ -93,9 +102,11 @@ export const useExternalAppointmentForm = () => {
     fillEndTime(startTime, selectedServiceId);
   };
 
+  // The end follows as soon as the start is complete, so saving without leaving the field keeps it.
   const handleStartTimeChange = (value: string) => {
     startEditedRef.current = true;
     setStartTime(value);
+    fillEndTime(value, serviceId);
   };
 
   // formatTimeInput turns '' into '00:00', so an empty field stays empty.
@@ -115,15 +126,18 @@ export const useExternalAppointmentForm = () => {
   const handleSave = async () => {
     if (savingRef.current) return;
 
-    const message = validateExternalAppointment({ date, startTime, endTime, serviceId, title }, new Date());
+    // A field still focused holds its raw digits ("1000"); read them as HH:mm like the blur would.
+    const start = completeTime(startTime) ?? startTime;
+    const end = completeTime(endTime) ?? endTime;
+    const message = validateExternalAppointment({ date, startTime: start, endTime: end, serviceId, title }, new Date());
     if (message) {
       setErrorModal({ visible: true, message });
       return;
     }
 
     const body: CreateAgendaRequest = {
-      start_time: `${date}T${startTime}:00`,
-      end_time: `${date}T${endTime}:00`,
+      start_time: `${date}T${start}:00`,
+      end_time: `${date}T${end}:00`,
       title: title.trim(),
     };
     if (serviceId !== null) body.service = serviceId;
