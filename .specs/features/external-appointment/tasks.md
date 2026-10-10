@@ -251,9 +251,9 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] `AgendaEntryResponse.service` e `.customer` aceitam `null`
-- [ ] Em `CreateAgendaRequest`, `title` e `service` são opcionais
-- [ ] Gate check passes: App, com os arquivos tocados
+- [x] `AgendaEntryResponse.service` e `.customer` aceitam `null`
+- [x] Em `CreateAgendaRequest`, `title` e `service` são opcionais
+- [x] Gate check passes: App, com os arquivos tocados
 
 **Tests**: none
 **Gate**: App

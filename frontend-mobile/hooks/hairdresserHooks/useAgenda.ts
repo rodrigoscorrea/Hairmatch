@@ -33,6 +33,7 @@ export const useAgenda = () => {
             title: `${ev.service.name}`,
             start: new Date(ev.start_time),
             end: new Date(ev.end_time),
+            isExternal: ev.customer === null,
           }
         });
         setEvents(convertedEvents);

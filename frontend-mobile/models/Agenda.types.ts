@@ -1,8 +1,27 @@
+/** An item of `GET /api/hairdressers/{id}/agenda`. An external block has `service` and `customer` set to null. */
+export interface AgendaEntryResponse {
+    id: number;
+    start_time: string;
+    end_time: string;
+    title: string;
+    service: { id: number; name: string } | null;
+    customer: { id: number; user: { first_name: string; last_name: string } } | null;
+}
+
+/** The body of `POST /api/agenda`. Without `service`, `title` and `end_time` are required. */
+export interface CreateAgendaRequest {
+    start_time: string; // YYYY-MM-DDTHH:mm:00, read as Manaus time
+    end_time: string;
+    title?: string;
+    service?: number;
+}
+
 export interface AgendaEvent {
-    id: any; 
+    id: number;
     title: string;
     start: Date;
     end: Date;
+    isExternal: boolean;
 }
   
 export type CalendarMode = 'month' | 'week' | 'day' | 'agenda';
