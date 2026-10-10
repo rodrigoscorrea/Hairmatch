@@ -119,7 +119,11 @@ class CreateReview(APIView):
 
 class ListReview(APIView):
     def get(self, request, hairdresser_id):
-        reviews = Review.objects.all().filter(hairdresser_id=hairdresser_id)
+        reviews = (
+            Review.objects.filter(hairdresser_id=hairdresser_id)
+            .select_related('customer__user')
+            .prefetch_related('pictures')
+        )
         serializer = ReviewSerializer(reviews, many=True)
         return JsonResponse({'data': serializer.data}, status=200)
 

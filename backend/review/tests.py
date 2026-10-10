@@ -1556,3 +1556,50 @@ class ReviewPicturesDomainTest(ReviewsTestCase):
 
         self.assertEqual(picture_names(self.review.pictures.all()), [p.picture.name for p in mine])
         self.assertEqual(MAX_REVIEW_PICTURES, 5)
+
+
+class ListReviewPicturesTest(ReviewsTestCase):
+    """REV-30, REV-31, REV-32 for GET /api/hairdressers/{id}/reviews."""
+
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse('list_review', args=[self.hairdresser.id])
+
+    def _review_with_pictures(self, count):
+        review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        for _ in range(count):
+            ReviewPicture.objects.create(review=review, picture=make_upload(fmt='PNG'))
+        return review
+
+    def test_a_review_lists_its_pictures_by_ascending_id_with_the_storage_url(self):
+        review = self._review_with_pictures(2)
+        pictures = list(review.pictures.all())
+
+        data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['pictures'], [
+            {'id': pictures[0].id, 'url': default_storage.url(pictures[0].picture.name)},
+            {'id': pictures[1].id, 'url': default_storage.url(pictures[1].picture.name)},
+        ])
+        self.assertLess(data[0]['pictures'][0]['id'], data[0]['pictures'][1]['id'])
+
+    def test_a_review_without_pictures_lists_an_empty_array(self):
+        self._review_with_pictures(0)
+
+        data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual(data[0]['pictures'], [])
+
+    def test_the_number_of_queries_does_not_grow_with_the_reviews_or_the_pictures(self):
+        self._review_with_pictures(2)
+        with CaptureQueriesContext(connection) as one:
+            self.client.get(self.list_url)
+
+        self._review_with_pictures(3)
+        self._review_with_pictures(1)
+        with CaptureQueriesContext(connection) as three:
+            data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual([len(review['pictures']) for review in data], [2, 3, 1])
+        self.assertEqual(len(three), len(one))

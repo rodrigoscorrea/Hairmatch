@@ -227,10 +227,10 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `GET /api/hairdressers/{id}/reviews` com uma review de 2 fotos traz `pictures` com 2 itens `{id, url}` por id crescente, e `url == default_storage.url(nome)` (REV-30, REV-31).
-- [ ] Teste: uma review sem fotos traz `pictures: []`.
-- [ ] Teste: `assertNumQueries` mede o mesmo número com 1 e com 3 reviews com fotos (REV-32).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 90 + 3.
+- [x] Teste: `GET /api/hairdressers/{id}/reviews` com uma review de 2 fotos traz `pictures` com 2 itens `{id, url}` por id crescente, e `url == default_storage.url(nome)` (REV-30, REV-31).
+- [x] Teste: uma review sem fotos traz `pictures: []`.
+- [x] Teste: `assertNumQueries` mede o mesmo número com 1 e com 3 reviews com fotos (REV-32).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 90 + 3.
 
 **Tests**: integration
 **Gate**: quick
