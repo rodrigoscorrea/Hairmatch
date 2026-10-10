@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import User, Customer, Hairdresser
 from hairmatch.images import InvalidImage
+from hairmatch.storage import delete_stored_files
 from preferences.models import Preferences
 import json
 import logging
@@ -23,7 +24,6 @@ from review.models import Review
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
-from django.core.files.storage import default_storage
 from django.db import IntegrityError, connection, transaction
 from .auth_tokens import set_session_cookie, set_cognito_cookies, set_access_cookie, clear_auth_cookies, create_signup_token, decode_signup_token, InvalidSignupToken
 from .authentication import (
@@ -220,7 +220,7 @@ def _delete_account(request, user):
             connection.check_constraints()
             if cognito_sub:
                 get_cognito().admin_delete_user(email)
-            transaction.on_commit(lambda: _delete_stored_files(pictures))
+            transaction.on_commit(lambda: delete_stored_files(pictures))
     except CognitoError as err:
         return _cognito_error_response(request, err)
     return clear_auth_cookies(HttpResponse(status=204))
@@ -250,14 +250,6 @@ def _delete_account_rows(user):
         pictures.append(user.profile_picture.name)
     user.delete()
     return pictures
-
-
-def _delete_stored_files(names):
-    for name in names:
-        try:
-            default_storage.delete(name)
-        except Exception:
-            logger.exception('Could not delete %s from the media storage', name)
 
 
 # An e-mail account that never confirmed its address: it holds its e-mail and phone for no one.
@@ -861,7 +853,7 @@ class ProfilePictureView(APIView):
                 # The storage renames on collision, but if the old object is already gone from the bucket while
                 # the row still names it, the new upload takes that same key: deleting it would delete the new file.
                 if old_name and old_name != user.profile_picture.name:
-                    transaction.on_commit(lambda: _delete_stored_files([old_name]))
+                    transaction.on_commit(lambda: delete_stored_files([old_name]))
         except InvalidImage:
             # The conversion fails before the upload, so the old picture and its file are untouched.
             return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
@@ -879,7 +871,7 @@ class ProfilePictureView(APIView):
             with transaction.atomic():
                 # NULL, as an account that never had a picture: the field would save None as ''.
                 User.objects.filter(pk=user.pk).update(profile_picture=None)
-                transaction.on_commit(lambda: _delete_stored_files([old_name]))
+                transaction.on_commit(lambda: delete_stored_files([old_name]))
         return HttpResponse(status=204)
 
 # 3 - The following views are related to the User Info

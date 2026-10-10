@@ -145,11 +145,11 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Antes de mudar qualquer coisa, a suíte passa com 835 testes (baseline).
-- [ ] Teste: com dois nomes gravados no `InMemoryStorage`, os dois somem. Um nome vazio é ignorado sem erro.
-- [ ] Teste: com `default_storage.delete` levantando no primeiro nome, o segundo ainda é apagado, e `assertLogs` captura o `ERROR` com traceback (REV-27).
-- [ ] Os testes de exclusão de conta e de foto de perfil de `users` passam sem mudança.
-- [ ] Gate Quick (`hairmatch` e `users`) passa. Contagem: `hairmatch` ≥ 101 + 2.
+- [x] Antes de mudar qualquer coisa, a suíte passa com 835 testes (baseline).
+- [x] Teste: com dois nomes gravados no `InMemoryStorage`, os dois somem. Um nome vazio é ignorado sem erro.
+- [x] Teste: com `default_storage.delete` levantando no primeiro nome, o segundo ainda é apagado, e `assertLogs` captura o `ERROR` com traceback (REV-27).
+- [x] Os testes de exclusão de conta e de foto de perfil de `users` passam sem mudança.
+- [x] Gate Quick (`hairmatch` e `users`) passa. Contagem: `hairmatch` ≥ 101 + 2.
 
 **Tests**: integration
 **Gate**: quick
