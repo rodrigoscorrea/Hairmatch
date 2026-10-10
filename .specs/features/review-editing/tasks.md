@@ -551,9 +551,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] AD-011 e AD-012 com Decision, Reason, Trade-off, Scope, Date e Status.
-- [ ] O AD-003 e o AD-010 apontam para os ADs novos.
-- [ ] Gate Full passa (nenhum código muda).
+- [x] AD-011 e AD-012 com Decision, Reason, Trade-off, Scope, Date e Status.
+- [x] O AD-003 e o AD-010 apontam para os ADs novos.
+- [x] Gate Full passa (nenhum código muda).
 
 **Tests**: none
 **Gate**: full

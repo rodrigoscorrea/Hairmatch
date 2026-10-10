@@ -22,7 +22,7 @@
 - **Decision**: Toda imagem enviada por usuário é convertida para WebP no backend, de forma síncrona e em memória, **antes** do único upload ao S3. A conversão fica em um campo de modelo próprio (`hairmatch.images.WebPImageField`, que usa `WebPImageFieldFile.save`). Esse campo limita o maior lado a 1080 px, aplica a orientação EXIF, remove os metadados e codifica com qualidade 80. Nenhuma Lambda, fila ou reprocessamento no bucket é usado para converter mídia.
 - **Reason**: A API recebe a foto em multipart (`request.FILES`), e nenhum cliente sobe direto no S3 nem usa URL pré-assinada. Então o backend tem os bytes antes do PUT. Converter ali custa 1 PUT por foto, contra 2 PUT + 1 GET no fluxo "sobe → baixa → converte → sobe" e na Lambda (que ainda cobra compute). Também mantém banco e bucket consistentes na mesma requisição, sem chave `.jpg` à espera de um `.webp` assíncrono. Ter um campo como ponto único cobre views, seed e qualquer caminho futuro que salve pelo modelo, e funciona com o `InMemoryStorage` dos testes. Nos placeholders do seed, o limite de 1080 px reduz 134 MB para 2 MB (−98,5%), contra −50% sem o limite.
 - **Trade-off**: A requisição de upload paga a CPU da conversão. Um arquivo que não é imagem agora falha com 400, onde antes subia sem erro. As views precisam tratar `InvalidImage` (subclasse de `ValueError`) antes dos handlers genéricos. Os objetos antigos (`.jpg`/`.png`) continuam como estão.
-- **Scope**: Todo `ImageField` que recebe upload de usuário (`User.profile_picture` e `Review.picture` hoje) e o seed `populate_hairdressers`. Um novo campo de imagem com upload deve usar `WebPImageField`.
+- **Scope**: Todo `ImageField` que recebe upload de usuário (`User.profile_picture` e `ReviewPicture.picture` hoje; a `Review.picture` saiu no AD-011) e o seed `populate_hairdressers`. Um novo campo de imagem com upload deve usar `WebPImageField`.
 - **Date**: 2026-09-29
 - **Status**: active
 
@@ -109,6 +109,34 @@
   - Cliente e cabeleireiro dividem um campo com semânticas diferentes até a nota do cabeleireiro também ser derivada.
 - **Scope**: `backend/users` (modelo e cadastro), `backend/review` e toda tela do `frontend-mobile` que mostra a nota de cliente. Toda avaliação nova que afete `User.rating` passa por uma função de domínio com o mesmo padrão.
 - **Date**: 2026-10-09
+- **Status**: active, estendido pelo AD-012
+
+### AD-011
+- **Decision**: As fotos de uma avaliação são linhas de `ReviewPicture` (FK `CASCADE` para `Review`, um `WebPImageField` por linha), como o AD-013 prescreve para coleções de imagens.
+  - A chave no bucket é `reviews/<review_id>/<uuid4 hex>.webp`.
+  - Uma avaliação tem de 0 a 5 fotos, de até 5 MB cada. Tamanho e quantidade são checados antes de abrir qualquer imagem (`review/pictures.py`), e o limite é contado com a linha da `Review` travada (`select_for_update`).
+  - A criação usa o campo multipart `pictures`, repetido, e as fotos entram depois pelo sub-recurso `POST /api/reviews/{id}/pictures` (RT-90) e saem por `DELETE /api/reviews/{id}/pictures/{picture_id}` (RT-91). O `PUT /api/reviews/{id}` continua em JSON e não mexe nas fotos.
+  - O upload acontece durante o `create`, dentro da transação. Uma requisição que falha apaga na hora os objetos que já enviou, e o apagamento de foto, de avaliação e de conta roda em `on_commit` por `hairmatch.storage.delete_stored_files`.
+- **Reason**: O pedido foi de várias fotos em `reviews/<id_da_review>/`. A tabela mantém o AD-003 (conversão, upload e URL no campo) e permite adicionar e remover uma foto sem reescrever um array nem perder escrita concorrente. O sub-recurso mantém o que o commit 527a69a decidiu: só `request.FILES` vira arquivo, nunca uma chave vinda de JSON. O `on_commit` nunca dispara quando a transação é desfeita, por isso a limpeza da requisição que falha é imediata.
+- **Trade-off**:
+  - Uma listagem de avaliações custa uma query a mais (`prefetch_related('pictures')`).
+  - A edição pelo app são três chamadas (PUT, DELETEs, POST) e não é atômica; a tela refaz o estado a partir do servidor quando um passo falha.
+  - Uma falha ao apagar o objeto do S3 só vai para o log, e o objeto fica órfão.
+  - O limite cheio aqui é 400 `validation-error` em `#/pictures`, e na galeria é 409 `gallery-full`, porque uma requisição leva até 5 arquivos.
+  - Não há migração de dados: não havia fotos de avaliação em nenhum ambiente.
+- **Scope**: `backend/review` (modelo, `pictures.py`, views, serializers), `backend/reserve` (prefetch), `backend/users` (`_delete_account_rows`), `hairmatch/storage.py` e a tela de avaliação do `frontend-mobile`. Toda foto nova de avaliação passa por `add_review_pictures`.
+- **Date**: 2026-10-10
+- **Status**: active
+
+### AD-012
+- **Decision**: A média do AD-010 (`User.rating` do cliente) também é recalculada quando a nota é editada ou excluída: `update_customer_rating` e `delete_customer_rating`, em `backend/review/customer_ratings.py`, travam a linha `User` do cliente (`select_for_update`) e chamam o mesmo `_store_average` do `record_customer_rating`. Sem notas restantes, a média vira `null`. Só o cabeleireiro autor edita ou exclui (`PUT` e `DELETE /api/customer-ratings/{id}`, RT-92 e RT-93), e uma nota cujo autor apagou a conta não é editável por ninguém. Excluir libera a reserva para uma nova nota.
+- **Reason**: A #105 pede editar e excluir a nota do cabeleireiro, o que desfaz a imutabilidade da #104. Qualquer escrita em `CustomerRating` que não recalcule a média deixaria `User.rating` divergente. Reusar o lock do AD-010 serializa as escritas do mesmo cliente, e reusar `_store_average` mantém um só cálculo.
+- **Trade-off**:
+  - Edições e exclusões do mesmo cliente passam a esperar umas pelas outras.
+  - O app deixa de avisar que a nota "não pode ser alterada".
+  - A média continua podendo divergir das linhas se alguém escrever fora dessas funções (seed, admin).
+- **Scope**: `backend/review` (`customer_ratings.py`, `CustomerRatingDetail`), `backend/agenda` (o `customer_rating` traz o `id`) e a agenda e a tela de nota do cliente no `frontend-mobile`. Toda escrita futura em `CustomerRating` passa por essas funções.
+- **Date**: 2026-10-10
 - **Status**: active
 
 ### AD-013
