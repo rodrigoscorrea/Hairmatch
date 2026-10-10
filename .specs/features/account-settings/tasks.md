@@ -235,9 +235,9 @@ T21
 - Skill: NONE
 
 **Done when**:
-- [ ] O teste passa contra o código atual e falha se o `if cognito_sub:` de `_delete_account` for removido. A falha é conferida uma vez, à mão, e depois revertida.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`. É o gate Full, no fim da fase.
-- [ ] Test count: total ≥ 724 + os novos das T1 a T4.
+- [x] O teste passa contra o código atual e falha se o `if cognito_sub:` de `_delete_account` for removido. A falha é conferida uma vez, à mão, e depois revertida.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`. É o gate Full, no fim da fase.
+- [x] Test count: total ≥ 724 + os novos das T1 a T4: 746 executados (a baseline executada era 722; o `git grep` contava 724). O teste `test_google_accounts_are_deleted_without_calling_cognito` já cobria a linha e o Cognito; o novo acrescenta os cookies limpos.
 
 **Tests**: integration
 **Gate**: full

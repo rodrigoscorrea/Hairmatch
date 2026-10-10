@@ -5711,6 +5711,22 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertFalse(User.objects.filter(email='goo2@example.com').exists())
         self.assertEqual(self.fake.calls, [])
 
+    def test_deleting_a_google_account_clears_the_session_cookies_without_calling_cognito(self):
+        """ACC-34: the account has no cognito_sub, so there is no pool user to delete."""
+        google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
+        Customer.objects.create(user=google_user, cpf='12345678900')
+        self.client.cookies['jwt'] = issue_session_token(google_user)
+        self.fake.calls.clear()
+
+        response = self.client.delete(self.own_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=google_user.pk).exists())
+        self.assertFalse(Customer.objects.filter(user_id=google_user.pk).exists())
+        for key in ('jwt', 'refresh_token'):
+            self.assertEqual(response.cookies[key]['max-age'], 0)
+        self.assertEqual(self.fake.calls, [])
+
 
 class UpdateProfileEmailTest(TestCase):
     """PATCH /api/users/me does not change the e-mail (it is the Cognito username)."""
