@@ -7,7 +7,7 @@ from rest_framework import status
 import json
 import jwt
 import datetime
-from .models import User, Customer, Hairdresser, user_profile_picture_path
+from .models import User, Customer, Hairdresser, GalleryPhoto, user_profile_picture_path
 from .testing import activate_account
 from .throttles import (
     ConfirmEmailThrottle,
@@ -6518,3 +6518,67 @@ class GeminiChatViewTest(TestCase):
 
         assert_problem(post('10.9.1.1, 203.0.113.7'), 'too-many-requests')
         self.assertEqual(post('203.0.113.8').status_code, 200)
+
+
+def _create_gallery_hairdresser(email='galeria@example.com', phone='92990000001'):
+    """A hairdresser row without a session; the API tests of the gallery log in through `_login_hairdresser`."""
+    user = _create_plain_user(email=email, phone=phone, role='hairdresser')
+    return Hairdresser.objects.create(user=user, cnpj='12345678000190')
+
+
+def _add_gallery_photo(hairdresser, name='foto.png', size=(40, 30)):
+    photo = GalleryPhoto(hairdresser=hairdresser)
+    photo.image.save(name, make_upload(name, size=size, fmt='PNG'))
+    return photo
+
+
+class GalleryPhotoModelTest(TestCase):
+    """GalleryPhoto: the key, the WebP conversion, the default order and the cascade (GAL-05, GAL-10)."""
+
+    def setUp(self):
+        self.hairdresser = _create_gallery_hairdresser()
+
+    def test_the_key_is_one_random_webp_per_hairdresser_and_hides_the_uploaded_name(self):
+        """GAL-05, GAL-10"""
+        photo = GalleryPhoto(hairdresser=self.hairdresser)
+
+        photo.image.save('foto da praia.png', make_upload('foto da praia.png', size=(2000, 1500), fmt='PNG'))
+
+        self.assertRegex(photo.image.name, rf'^hairdresser/gallery/{self.hairdresser.pk}/[0-9a-f]{{32}}\.webp$')
+        self.assertNotIn('praia', photo.image.name)
+
+    def test_the_stored_object_is_a_webp_of_at_most_1080_px(self):
+        """GAL-10"""
+        photo = _add_gallery_photo(self.hairdresser, 'grande.png', size=(2000, 1500))
+
+        stored = stored_image(photo.image.name)
+
+        self.assertEqual(stored.format, 'WEBP')
+        self.assertEqual(max(stored.size), 1080)
+
+    def test_two_photos_never_share_a_key(self):
+        first = _add_gallery_photo(self.hairdresser, 'mesmo.png')
+        second = _add_gallery_photo(self.hairdresser, 'mesmo.png')
+
+        self.assertNotEqual(first.image.name, second.image.name)
+
+    def test_the_default_order_is_created_at_then_id_both_descending(self):
+        """GAL-01"""
+        older = _add_gallery_photo(self.hairdresser)
+        same_a = _add_gallery_photo(self.hairdresser)
+        same_b = _add_gallery_photo(self.hairdresser)
+        moment = timezone.now()
+        GalleryPhoto.objects.filter(pk__in=[same_a.pk, same_b.pk]).update(created_at=moment)
+        GalleryPhoto.objects.filter(pk=older.pk).update(created_at=moment - datetime.timedelta(days=1))
+
+        ordered = list(GalleryPhoto.objects.values_list('pk', flat=True))
+
+        self.assertEqual(ordered, [same_b.pk, same_a.pk, older.pk])
+
+    def test_deleting_the_hairdresser_deletes_the_rows(self):
+        _add_gallery_photo(self.hairdresser)
+        other = _add_gallery_photo(_create_gallery_hairdresser('outra@example.com', '92990000002'))
+
+        self.hairdresser.delete()
+
+        self.assertEqual(list(GalleryPhoto.objects.values_list('pk', flat=True)), [other.pk])

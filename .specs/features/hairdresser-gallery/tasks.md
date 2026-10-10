@@ -156,14 +156,14 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoModelTest` com:
+- [x] Classe nova `GalleryPhotoModelTest` com:
   - `image.save('foto da praia.png', <PNG 2000×1500>)` grava a chave que casa com `^hairdresser/gallery/<hairdresser_id>/[0-9a-f]{32}\.webp$`, sem `praia`;
   - o objeto no storage abre como WebP com o maior lado 1080;
   - a ordem padrão é `created_at` desc e `id` desc no empate (duas fotos com o mesmo `created_at` congelado);
   - apagar o `Hairdresser` apaga as linhas.
-- [ ] `makemigrations --check` limpo.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `makemigrations --check` limpo.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full

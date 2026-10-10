@@ -1,5 +1,7 @@
 # Create your models here.
 
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
@@ -7,9 +9,17 @@ from django.conf import settings
 from hairmatch.images import WebPImageField
 
 
+GALLERY_MAX_PHOTOS = 30
+
+
 def user_profile_picture_path(instance, filename):
     # Each user gets its own directory in the media bucket
     return f"profile_pics/{instance.pk}/{filename}"
+
+
+def gallery_photo_path(instance, filename):
+    # One directory per hairdresser; the name is random so the original filename never reaches the bucket.
+    return f"hairdresser/gallery/{instance.hairdresser_id}/{uuid.uuid4().hex}.webp"
 
 
 class User(AbstractUser):
@@ -60,3 +70,13 @@ class Hairdresser(models.Model):
     experience_time = models.CharField(max_length=255, blank=True, null=True)
     experiences = models.CharField(max_length=255, blank=True, null=True)
     products = models.CharField(max_length=255, blank=True, null=True)
+
+
+class GalleryPhoto(models.Model):
+    hairdresser = models.ForeignKey(Hairdresser, on_delete=models.CASCADE, related_name='gallery_photos')
+    image = WebPImageField(upload_to=gallery_photo_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['hairdresser', '-created_at'], name='gallery_hairdresser_created')]
