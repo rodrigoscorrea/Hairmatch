@@ -451,8 +451,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] O componente aceita `photos: GalleryPhoto[]`, devolve `null` com `[]` e abre e fecha a tela cheia pelo toque.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] O componente aceita `photos: GalleryPhoto[]`, devolve `null` com `[]` e abre e fecha a tela cheia pelo toque.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
