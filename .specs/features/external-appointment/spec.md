@@ -238,7 +238,7 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 | EXT-27 | P1: Tela de registro, AC5 | Tasks | Pending |
 | EXT-28 | P1: Tela de registro, AC6 | Tasks | Pending |
 | EXT-29 | P1: Tela de registro, AC7 | Tasks | Pending |
-| EXT-30 | P1: Tela de registro, AC8 | Tasks | Pending |
+| EXT-30 | P1: Tela de registro, AC8 | Tasks | Implementing |
 | EXT-31 | P1: Tela de registro, AC9 | Tasks | Pending |
 | EXT-32 | P1: Tela de registro, AC10 | Tasks | Pending |
 | EXT-33 | P2: Abrir pela célula, AC1 | Tasks | Pending |

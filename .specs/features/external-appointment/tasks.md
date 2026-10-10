@@ -277,8 +277,8 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] Nenhum `any` nas assinaturas exportadas
-- [ ] Gate check passes: App
+- [x] Nenhum `any` nas assinaturas exportadas
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App

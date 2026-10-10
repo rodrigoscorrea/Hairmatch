@@ -27,6 +27,7 @@ export const useAgenda = () => {
 
       try {
         const response = await listAgendaByHairdresser(hairdresserId);
+        if (!response) return;
         const convertedEvents: AgendaEvent[] = response.data.map((ev: any) => {
           return {
             id: ev.id,

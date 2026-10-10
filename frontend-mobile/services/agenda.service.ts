@@ -1,14 +1,16 @@
-import axios from 'axios'; 
 import { API_BACKEND_URL } from '@/app/_layout';
+import { AgendaEntryResponse, CreateAgendaRequest } from '@/models/Agenda.types';
 import axiosInstance from './axios-instance';
-export const listAgendaByHairdresser = async (hairdresserId: number | undefined) => {
+export const listAgendaByHairdresser = async (
+    hairdresserId: number | undefined,
+): Promise<{ data: AgendaEntryResponse[] } | undefined> => {
     if(!hairdresserId) {
         console.error("hairdresser id not provided");
         return
     }
     
     try {
-        const response = await axiosInstance.get(`${API_BACKEND_URL}/api/hairdressers/${hairdresserId}/agenda`);
+        const response = await axiosInstance.get<{ data: AgendaEntryResponse[] }>(`${API_BACKEND_URL}/api/hairdressers/${hairdresserId}/agenda`);
         return response.data;
     } catch (error) {
         console.error("Error in list agenda by hairdresser:", error);
@@ -16,7 +18,7 @@ export const listAgendaByHairdresser = async (hairdresserId: number | undefined)
     }
 }
 
-export const createAgendaApointment = async (data: any) => {
+export const createAgendaApointment = async (data: CreateAgendaRequest): Promise<void> => {
     if(!data){
         console.error("no data provided for agenda apointment creation");
         return;
