@@ -5958,7 +5958,7 @@ class ProfileUpdateValidationTest(TestCase):
         """ACC-01"""
         for field in self.REQUIRED_FIELDS:
             for value, detail in (('', 'This field is required.'), ('   ', 'This field is required.'),
-                                  (42, 'This field must be a string.')):
+                                  (None, 'This field is required.'), (42, 'This field must be a string.')):
                 with self.subTest(field=field, value=value):
                     self._assert_refused(
                         {'complement': 'Mudou', field: value}, [{'pointer': f'#/{field}', 'detail': detail}]
