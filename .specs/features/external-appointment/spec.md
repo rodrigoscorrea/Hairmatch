@@ -209,25 +209,25 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| EXT-01 | P1: Bloqueio pela API, AC1 | Tasks | Implementing |
-| EXT-02 | P1: Bloqueio pela API, AC2 | Tasks | Implementing |
-| EXT-03 | P1: Bloqueio pela API, AC3 | Tasks | Implementing |
-| EXT-04 | P1: Bloqueio pela API, AC4 | Tasks | Implementing |
-| EXT-05 | P1: Bloqueio pela API, AC5 | Tasks | Implementing |
-| EXT-06 | P1: Bloqueio pela API, AC6 | Tasks | Implementing |
-| EXT-07 | P1: Bloqueio pela API, AC7 | Tasks | Implementing |
-| EXT-08 | P1: Bloqueio pela API, AC8 | Tasks | Implementing |
-| EXT-09 | P1: Bloqueio pela API, AC9 | Tasks | Implementing |
-| EXT-10 | P1: Bloqueio pela API, AC10 | Tasks | Implementing |
-| EXT-11 | P1: Bloqueio pela API, AC11 | Tasks | Implementing |
-| EXT-12 | P1: Bloqueio pela API, AC12 | Tasks | Implementing |
-| EXT-13 | P1: Bloqueio pela API, AC13 | Tasks | Implementing |
-| EXT-14 | P1: Bloqueio pela API, AC14 | Tasks | Implementing |
-| EXT-15 | P1: Horário deixa de ser oferecido, AC1 | Tasks | Implementing |
-| EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Tasks | Implementing |
-| EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Tasks | Implementing |
-| EXT-18 | P1: Ver o bloqueio na agenda, AC1 | Tasks | Implementing |
-| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Tasks | Implementing |
+| EXT-01 | P1: Bloqueio pela API, AC1 | Tasks | Verified |
+| EXT-02 | P1: Bloqueio pela API, AC2 | Tasks | Verified |
+| EXT-03 | P1: Bloqueio pela API, AC3 | Tasks | Verified |
+| EXT-04 | P1: Bloqueio pela API, AC4 | Tasks | Verified |
+| EXT-05 | P1: Bloqueio pela API, AC5 | Tasks | Verified |
+| EXT-06 | P1: Bloqueio pela API, AC6 | Tasks | Verified |
+| EXT-07 | P1: Bloqueio pela API, AC7 | Tasks | Verified |
+| EXT-08 | P1: Bloqueio pela API, AC8 | Tasks | Verified |
+| EXT-09 | P1: Bloqueio pela API, AC9 | Tasks | Verified |
+| EXT-10 | P1: Bloqueio pela API, AC10 | Tasks | Verified |
+| EXT-11 | P1: Bloqueio pela API, AC11 | Tasks | Verified |
+| EXT-12 | P1: Bloqueio pela API, AC12 | Tasks | Verified |
+| EXT-13 | P1: Bloqueio pela API, AC13 | Tasks | Verified |
+| EXT-14 | P1: Bloqueio pela API, AC14 | Tasks | Verified |
+| EXT-15 | P1: Horário deixa de ser oferecido, AC1 | Tasks | Verified |
+| EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Tasks | Verified |
+| EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Tasks | Verified |
+| EXT-18 | P1: Ver o bloqueio na agenda, AC1 | Tasks | Verified |
+| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Tasks | Verified |
 | EXT-20 | P1: Ver o bloqueio na agenda, AC3 | Tasks | Implementing |
 | EXT-21 | P1: Ver o bloqueio na agenda, AC4 | Tasks | Implementing |
 | EXT-22 | P1: Ver o bloqueio na agenda, AC5 | Tasks | Implementing |
