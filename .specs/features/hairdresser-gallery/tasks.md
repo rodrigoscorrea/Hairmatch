@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/hairdresser-gallery/spec.md`
 **Context**: `.specs/features/hairdresser-gallery/context.md`
 **Design**: `.specs/features/hairdresser-gallery/design.md`
-**Status**: Draft (aguardando aprovação para Execute)
+**Status**: Execute: T1 a T17 concluídas. T18: a parte automatizada (E2E de API com curl e Python, no lugar do UAT em navegador) foi feita; o UAT manual no web e no Android está PENDENTE com o usuário.
 **Branch**: a criar a partir de `develop` no início do Execute, com o nome `118-galeria-de-fotos-do-cabeleireiro`.
 
 **Pré-requisitos do Execute:**
@@ -228,7 +228,7 @@ T18
   - sem cookie: 401 `invalid-session`; cliente: 403 `hairdresser-required`; `{id}` de outro cabeleireiro: 403 `forbidden`, sem linha;
   - o `save` do storage levantando exceção (`mock.patch`): 500 `internal-error`, sem linha;
   - o `INSERT` falhando depois do upload: o arquivo subido é apagado;
-  - `PUT` na coleção: 405 com `Allow: GET, OPTIONS, POST`.
+  - `PUT` na coleção: 405 com `Allow: GET, HEAD, OPTIONS, POST` (o DRF acrescenta o `HEAD` a todo `GET`, como em todas as rotas do projeto).
 - [x] Os testes da `ProfilePictureView` continuam passando com `IMAGE_UPLOAD_MAX_SIZE`.
 - [x] `RouteTableTests` passa com RT-95.
 - [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
@@ -602,6 +602,8 @@ Roteiro:
 - [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção.
 - [ ] Os critérios de app do spec ficam Verified.
 - [ ] Gate check passes: Full + App.
+
+**Status (Execute)**: PARCIAL. O UAT manual no web e no Android está PENDENTE e não foi feito (o usuário proibiu o Claude in Chrome, e o Android depende dele). No lugar do roteiro em navegador, o backend recebeu um E2E de API contra um servidor do worktree, o MiniStack (Cognito) e o LocalStack (bucket `wt-gallery-e2e`): 56 verificações no `e2e_gallery.py` (todas as rotas RT-94 a RT-96, erros, limite de 30, 6 envios em paralelo, posse e exclusão da conta com conferência das chaves no bucket), o seed (GAL-44 e GAL-45) e um smoke com curl. O resumo da evidência está no `validation.md`. Os itens do roteiro que dependem da tela (1 a 5, e o 7 no app) seguem sem prova e continuam no UAT manual.
 
 **Tests**: none (UAT manual)
 **Gate**: build

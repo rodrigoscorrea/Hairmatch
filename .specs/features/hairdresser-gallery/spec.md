@@ -158,7 +158,7 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 
 1. The Route Table do spec `api-restful-routes` e o `ROUTE_TABLE` de `backend/hairmatch/test_routes.py` SHALL conter RT-94 `GET /api/hairdressers/{id}/gallery-photos`, RT-95 `POST /api/hairdressers/{id}/gallery-photos` e RT-96 `DELETE /api/hairdressers/{id}/gallery-photos/{id}`. **(GAL-41)**
 2. The slug `gallery-full` (409, "Gallery is full") SHALL constar do catálogo do spec `api-problem-details`, do `CATALOG` de `backend/hairmatch/problems.py` e do catálogo de `frontend-mobile/utils/api-problem.ts`, com o texto "Sua galeria já tem 30 fotos. Remova uma para adicionar outra.". **(GAL-42)**
-3. **GAL-43** WHEN um método fora da Route Table é usado na coleção ou no item (por exemplo, `PUT /api/hairdressers/{id}/gallery-photos`) THEN o backend SHALL responder 405 `method-not-allowed` com `Allow` listando só os métodos da tabela (`GET, OPTIONS, POST` na coleção e `DELETE, OPTIONS` no item).
+3. **GAL-43** WHEN um método fora da Route Table é usado na coleção ou no item (por exemplo, `PUT /api/hairdressers/{id}/gallery-photos`) THEN o backend SHALL responder 405 `method-not-allowed` com `Allow` listando só os métodos da tabela (`GET, HEAD, OPTIONS, POST` na coleção, onde o `HEAD` acompanha todo `GET` como nas outras rotas, e `DELETE, OPTIONS` no item).
 
 **Independent Test**: `RouteTableTests` e `test_problems` passam. `PUT /api/hairdressers/1/gallery-photos` responde 405 com o `Allow` do spec.
 
