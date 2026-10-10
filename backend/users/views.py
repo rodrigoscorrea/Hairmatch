@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import User, Customer, Hairdresser
+from .models import User, Customer, Hairdresser, GalleryPhoto, GALLERY_MAX_PHOTOS
 from hairmatch.images import InvalidImage
 from preferences.models import Preferences
 import json
@@ -10,7 +10,7 @@ import re
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
-from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer
+from .serializers import UserSerializer, CustomerSerializer, HairdresserSerializer, HairdresserFullInfoSerializer, PublicHairdresserSerializer, GalleryPhotoSerializer
 from hairmatch.ai_clients.gemini_client import hairdresser_profile_ai_completion
 from .filters import HairdresserFilter
 from .serializers import SearchResultSerializer # Import our new serializer
@@ -30,7 +30,9 @@ from .authentication import (
     CUSTOMER_REQUIRED_DETAIL,
     authenticate_request,
     authenticate_token,
+    authenticated_hairdresser,
     authenticated_user,
+    forbidden,
 )
 from .cognito import (
     AlreadyConfirmed,
@@ -78,6 +80,8 @@ PASSWORD_POLICY_DETAIL = 'The password must have at least 8 characters, with an 
 PHONE_TAKEN_DETAIL = 'This phone number is already registered.'
 EMAIL_TAKEN_DETAIL = 'This email is already registered.'
 INVALID_PROFILE_PICTURE_DETAIL = 'The profile picture is not a valid image.'
+INVALID_GALLERY_PHOTO_DETAIL = 'The photo is not a valid image.'
+GALLERY_FULL_DETAIL = f'The gallery already has {GALLERY_MAX_PHOTOS} photos.'
 ACCOUNT_NOT_CREATED_DETAIL = 'The account could not be created.'
 EMAIL_NOT_CONFIRMED_DETAIL = 'Confirm your email with the code we sent to sign in.'
 CONFIRMATION_CODE_PATTERN = re.compile(r'[0-9]{6}')
@@ -246,6 +250,8 @@ def _delete_account_rows(user):
             Q(customer__user=user) | Q(hairdresser__user=user)
         ).values_list('picture', flat=True) if name
     ]
+    # The gallery rows go with the hairdresser (CASCADE); their files stay in storage otherwise.
+    pictures.extend(GalleryPhoto.objects.filter(hairdresser__user=user).values_list('image', flat=True))
     if user.profile_picture:
         pictures.append(user.profile_picture.name)
     user.delete()
@@ -834,7 +840,7 @@ class CurrentUserView(APIView):
         return JsonResponse({'message': 'User updated successfully'}, status=200)
 
 
-PROFILE_PICTURE_MAX_SIZE = 5 * 1024 * 1024
+IMAGE_UPLOAD_MAX_SIZE = 5 * 1024 * 1024
 
 
 class ProfilePictureView(APIView):
@@ -849,7 +855,7 @@ class ProfilePictureView(APIView):
         if picture is None:
             raise validation_problem([body_error('profile_picture', 'This field is required.')])
         # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
-        if picture.size > PROFILE_PICTURE_MAX_SIZE:
+        if picture.size > IMAGE_UPLOAD_MAX_SIZE:
             raise validation_problem([body_error('profile_picture', 'The profile picture must have at most 5 MB.')])
 
         user = session.user
@@ -881,6 +887,70 @@ class ProfilePictureView(APIView):
                 User.objects.filter(pk=user.pk).update(profile_picture=None)
                 transaction.on_commit(lambda: _delete_stored_files([old_name]))
         return HttpResponse(status=204)
+
+class GalleryPhotoCollection(APIView):
+    """The photos of a hairdresser's gallery: anyone reads them (newest first)."""
+
+    def get(self, request, hairdresser_id):
+        if not Hairdresser.objects.filter(pk=hairdresser_id).exists():
+            return problem_response(request, 'not-found', 'Hairdresser not found.')
+        photos = GalleryPhoto.objects.filter(hairdresser_id=hairdresser_id)
+        return JsonResponse({'data': GalleryPhotoSerializer(photos, many=True).data}, status=200)
+
+    def post(self, request, hairdresser_id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+        if hairdresser_id != hairdresser.id:
+            return forbidden(request)
+
+        image = request.FILES.get('image')
+        if image is None:
+            raise validation_problem([body_error('image', 'This field is required.')])
+        # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
+        if image.size > IMAGE_UPLOAD_MAX_SIZE:
+            raise validation_problem([body_error('image', 'The photo must have at most 5 MB.')])
+
+        try:
+            with transaction.atomic():
+                # The lock serializes the uploads of this hairdresser, so the count below is not stale (AD-010, AD-013).
+                Hairdresser.objects.select_for_update().get(pk=hairdresser.pk)
+                if GalleryPhoto.objects.filter(hairdresser=hairdresser).count() >= GALLERY_MAX_PHOTOS:
+                    raise Problem('gallery-full', GALLERY_FULL_DETAIL)
+                photo = GalleryPhoto(hairdresser=hairdresser)
+                # Converts and uploads here; a file that is no image fails before anything reaches the storage.
+                photo.image.save(image.name, image, save=False)
+                try:
+                    photo.save()
+                except Exception:
+                    _delete_stored_files([photo.image.name])
+                    raise
+        except InvalidImage:
+            return problem_response(request, 'invalid-image', INVALID_GALLERY_PHOTO_DETAIL)
+
+        return JsonResponse({'data': GalleryPhotoSerializer(photo).data}, status=201)
+
+
+class GalleryPhotoDetail(APIView):
+    """One photo of the session's own gallery, removed with its file."""
+
+    def delete(self, request, hairdresser_id, photo_id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+        if hairdresser_id != hairdresser.id:
+            return forbidden(request)
+
+        photo = GalleryPhoto.objects.filter(pk=photo_id, hairdresser=hairdresser).first()
+        if photo is None:
+            return problem_response(request, 'not-found', 'Photo not found.')
+
+        name = photo.image.name
+        with transaction.atomic():
+            photo.delete()
+            transaction.on_commit(lambda: _delete_stored_files([name]))
+        return HttpResponse(status=204)
+
 
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request

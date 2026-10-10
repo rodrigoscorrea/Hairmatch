@@ -111,6 +111,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | `slot-unavailable` | 409 | Time slot unavailable | Profissional indisponível no horário pedido | O profissional não está disponível neste horário. |
 | `customer-schedule-conflict` | 409 | Customer schedule conflict | Cliente já tem reserva no mesmo horário | Você já tem outra reserva agendada para o mesmo horário. |
 | `service-not-finished` | 409 | Service not finished | Avaliação do cliente antes do fim do atendimento (`start_time + duration`) | O atendimento ainda não terminou. |
+| `gallery-full` | 409 | Gallery is full | Foto nova numa galeria que já tem 30 fotos (feature `hairdresser-gallery`, #118) | Sua galeria já tem 30 fotos. Remova uma para adicionar outra. |
 | `unsupported-media-type` | 415 | Unsupported media type | Content-Type não aceito pela rota | Não foi possível processar a solicitação. Tente novamente. |
 | `too-many-requests` | 429 | Too many requests | Throttle do DRF ou limite do Cognito | Muitas tentativas. Aguarde e tente novamente. |
 | `internal-error` | 500 | Internal server error | Exceção não tratada ou falha inesperada | Ocorreu um erro no servidor. Tente novamente mais tarde. |

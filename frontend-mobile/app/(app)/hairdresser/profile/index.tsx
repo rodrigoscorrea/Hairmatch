@@ -6,9 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { styles } from '@/styles/hairdresser/profile/styles/HairdresserProfileStyles'; // Adjust path
 import { useHairdresserProfile } from '@/hooks/hairdresserHooks/useHairdresserProfile';
 import { Accordion } from '@/components/Accordion';
+import { useGalleryPhotos } from '@/hooks/useGalleryPhotos';
+import { GalleryStrip } from '@/components/gallery/GalleryStrip';
 
 export default function HairdresserProfileScreen() {
-  const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
+  const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability, goToGallery } = useHairdresserProfile();
+  // Reloads on every focus, so the strip shows what changed in the gallery screen on the way back.
+  const { photos } = useGalleryPhotos(hairdresser?.id);
   // userInfo is null for a moment after the logout or the account deletion.
   if (!hairdresser) return null;
   const hairdresser_image = hairdresser.user.profile_picture;
@@ -45,7 +49,10 @@ export default function HairdresserProfileScreen() {
         {/* Bio */}
         <Text style={styles.bio}>{hairdresser?.resume}</Text>
 
-        {/* Gallery, Techniques, etc. */}
+        {/* Gallery: hidden while there are no photos */}
+        <GalleryStrip photos={photos} />
+
+        {/* Techniques, etc. */}
         {loading ? <ActivityIndicator/> : (
             <Accordion title='Minhas Técnicas'>
                 <View style={styles.tagsContainer}>
@@ -61,6 +68,10 @@ export default function HairdresserProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.card} onPress={goToServices}>
             <Text style={styles.cardText}>Meus serviços</Text>
+            <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={16} color="#fff" /></View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.card} onPress={goToGallery}>
+            <Text style={styles.cardText}>Minha galeria</Text>
             <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={16} color="#fff" /></View>
         </TouchableOpacity>
       </ScrollView>
