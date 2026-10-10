@@ -665,8 +665,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] O menu do cabeleireiro abre a tela com o resumo atual.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] O menu do cabeleireiro abre a tela com o resumo atual. Conferido por leitura: "Resumo" está em `hairdresser/profile/settings.tsx:73` e faz `router.push('/(app)/hairdresser/configs/resumeSetting')`. O campo de várias linhas mostra o `resume` do hook, que começa de `userInfo.hairdresser.resume`, e a contagem "N/1000" fica abaixo dele (`resumeSetting.tsx:37` e `:42`). A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

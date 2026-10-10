@@ -67,6 +67,13 @@ export default function HairdresserSettingsScreen(){
             subtitle="Alterar suas preferências"
             onPress={() => router.push('/(app)/hairdresser/configs/preferencesSetting')}
           />
+
+          <MenuItem
+            iconName="file-text"
+            title="Resumo"
+            subtitle="Editar a descrição do seu perfil"
+            onPress={() => router.push('/(app)/hairdresser/configs/resumeSetting')}
+          />
           
           <MenuItem
             iconName="heart"

@@ -273,7 +273,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-50 | P2: Preferências, AC4 | Tasks | Implementing |
 | ACC-51 | P2: Preferências, AC5 | Tasks | Implementing |
 | ACC-52 | P2: Preferências, AC6 | Tasks | Implementing |
-| ACC-53 | P2: Resumo, AC1 | Tasks | Pending |
+| ACC-53 | P2: Resumo, AC1 | Tasks | Implementing |
 | ACC-54 | P2: Resumo, AC2 | Tasks | Implementing |
 | ACC-55 | P2: Resumo, AC3 | Tasks | Implementing |
 | ACC-56 | Edge Cases | Tasks | Implementing |
