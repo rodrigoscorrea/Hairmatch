@@ -535,8 +535,8 @@ Registrar `<Stack.Screen name="gallery" />` na pilha do perfil.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os textos da tela são os do spec, textualmente.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Os textos da tela são os do spec, textualmente.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
