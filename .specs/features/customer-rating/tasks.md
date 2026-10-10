@@ -602,8 +602,9 @@ Ocultar a rota nas tabs com `href: null` em `app/(app)/hairdresser/_layout.tsx` 
 - Skill: NONE
 
 **Done when**:
-- [ ] Os itens aparecem na ordem da API, os mais recentes primeiro.
-- [ ] O gate App passa sem erro novo.
+- [x] Os itens aparecem na ordem da API, os mais recentes primeiro: a lista usa `ratings` como chega, sem reordenar. A conferência na tela fica para o UAT do T18.
+- [x] Cada item mostra as estrelas só leitura, o comentário (se houver), o serviço (se a reserva ainda existe), a data `DD/MM/YYYY` e o nome do cabeleireiro ou "Cabeleireiro removido". O vazio só aparece depois de uma busca bem-sucedida, e a falha abre o `ErrorModal`.
+- [x] O gate App passa sem erro novo (`tsc` exit 0; `eslint` com 0 erro nos cinco arquivos e os mesmos 2 warnings de antes no perfil).
 
 **Tests**: none
 **Gate**: app

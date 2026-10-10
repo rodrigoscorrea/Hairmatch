@@ -51,6 +51,10 @@ export const useCustomerProfile = () => {
     router.push(`/(app)/customer/configs/addressSetting`);
   };
 
+  const handleReceivedRatings = () => {
+    router.push('/(app)/customer/ratings');
+  };
+
   const handleGoBack = () => {
     router.push('/(app)/customer/profile');
   };
@@ -64,6 +68,7 @@ export const useCustomerProfile = () => {
     cancelLogout,
     handleAccountSettings,
     handleGoBack,
-    handleAddressSettings
+    handleAddressSettings,
+    handleReceivedRatings
   };
 };

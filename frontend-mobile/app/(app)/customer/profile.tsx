@@ -18,7 +18,8 @@ export default function ProfileScreen(){
       confirmLogout, 
       cancelLogout, 
       handleAccountSettings,
-      handleAddressSettings
+      handleAddressSettings,
+      handleReceivedRatings
     } = useCustomerProfile();
 
     const handleMenuPress = (item: string) => {
@@ -73,7 +74,7 @@ export default function ProfileScreen(){
             iconName="star"
             title="Avaliações recebidas"
             subtitle="Veja o que os profissionais disseram sobre você"
-            onPress={() => handleMenuPress('Avaliações recebidas')}
+            onPress={() => handleReceivedRatings()}
           />
           
           <MenuItem

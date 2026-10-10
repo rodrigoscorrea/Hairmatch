@@ -340,8 +340,8 @@ A issue #104 pede quatro coisas:
 | CRT-56 | P2: Nota na agenda, AC1 | Tasks | Implementing |
 | CRT-57 | P2: Nota na agenda, AC2 | Tasks | Implementing |
 | CRT-58 | P2: Avaliações recebidas, AC1 | Tasks | Implementing |
-| CRT-59 | P2: Avaliações recebidas, AC2 | Tasks | Pending |
-| CRT-60 | P2: Avaliações recebidas, AC3 | Tasks | Pending |
+| CRT-59 | P2: Avaliações recebidas, AC2 | Tasks | Implementing |
+| CRT-60 | P2: Avaliações recebidas, AC3 | Tasks | Implementing |
 
 **Coverage:** 60 total, 60 mapped to tasks, 0 unmapped.
 
