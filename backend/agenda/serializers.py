@@ -23,17 +23,21 @@ class SimpleServiceSerializer(serializers.ModelSerializer):
 
 class AgendaSerializer(serializers.ModelSerializer):
     customer = serializers.SerializerMethodField()
-    service = SimpleServiceSerializer() # Keep the nested service data
+    service = SimpleServiceSerializer(allow_null=True) # Keep the nested service data; null for an external block
 
     class Meta:
         model = Agenda
-        fields = ['id', 'start_time', 'end_time', 'service', 'customer'] # Add customer to fields
+        fields = ['id', 'start_time', 'end_time', 'title', 'service', 'customer'] # Add customer to fields
 
     def get_customer(self, obj: Agenda):
         """
         Looks for a customer in the pre-fetched data passed through the context.
         This avoids hitting the database for every single agenda item.
         """
+        # An external block has no service, so no reserve is ever its own
+        if obj.service_id is None:
+            return None
+
         # Create a unique key for the current agenda item
         lookup_key = (obj.service_id, obj.start_time)
         

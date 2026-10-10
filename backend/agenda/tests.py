@@ -7,10 +7,11 @@ import json
 from datetime import datetime, time, timedelta, timezone as dt_timezone
 from django.utils import timezone
 
-from users.models import User, Hairdresser
+from users.models import User, Customer, Hairdresser
 from service.models import Service
 from agenda.models import Agenda
 from availability.models import Availability
+from reserve.models import Reserve
 from users.cognito import get_cognito
 from hairmatch.problem_testing import assert_problem
 
@@ -552,6 +553,72 @@ class ListAgendaTest(AgendaTestCase):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 assert_problem(response, 'invalid-session')
+
+    # External blocks (EXT-18, EXT-19)
+
+    ITEM_KEYS = {'id', 'start_time', 'end_time', 'title', 'service', 'customer'}
+
+    def create_external_block(self):
+        start = self.agenda_start_time + timedelta(hours=3)
+        return Agenda.objects.create(
+            start_time=start, end_time=start + timedelta(hours=1),
+            hairdresser=self.hairdresser, service=None, title='Cliente do WhatsApp',
+        )
+
+    def create_customer(self):
+        user = User.objects.create(
+            email='customer@example.com', first_name='Maria', last_name='Silva', phone='+5592984509999',
+            neighborhood='X', city='Manaus', state='AM', address='Street', postal_code='69050750',
+            role='customer', cognito_sub='sub-customer-1',
+        )
+        return Customer.objects.create(user=user, cpf='12345678901')
+
+    def listed_items(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return {item['id']: item for item in response.json()['data']}
+
+    def test_list_shows_an_external_block_with_its_title_and_no_service_or_customer(self):
+        """EXT-18, on both list routes"""
+        block = self.create_external_block()
+        self.login(self.hairdresser_user)
+
+        for url in (self.list_url, reverse('hairdresser_agenda', args=[self.hairdresser.id])):
+            with self.subTest(url=url):
+                items = self.listed_items(url)
+
+                self.assertEqual(set(items), {self.agenda.id, block.id})
+                for item in items.values():
+                    self.assertEqual(set(item), self.ITEM_KEYS)
+                self.assertIsNone(items[block.id]['service'])
+                self.assertIsNone(items[block.id]['customer'])
+                self.assertEqual(items[block.id]['title'], 'Cliente do WhatsApp')
+                self.assertEqual(items[self.agenda.id]['service'], {'id': self.service.id, 'name': 'Haircut'})
+                self.assertEqual(items[self.agenda.id]['title'], '')
+
+    def test_a_reserve_at_the_start_of_an_external_block_is_not_its_customer(self):
+        """EXT-19: a block without a service never pairs with a reserve"""
+        block = self.create_external_block()
+        Reserve.objects.create(start_time=block.start_time, customer=self.create_customer(), service=self.service)
+        self.login(self.hairdresser_user)
+
+        items = self.listed_items(self.list_url)
+
+        self.assertIsNone(items[block.id]['customer'])
+
+    def test_a_block_with_a_service_still_shows_the_customer_of_its_reserve(self):
+        """EXT-19 regression: the reserve of a block with a service keeps naming its customer"""
+        self.create_external_block()
+        customer = self.create_customer()
+        Reserve.objects.create(start_time=self.agenda_start_time, customer=customer, service=self.service)
+        self.login(self.hairdresser_user)
+
+        items = self.listed_items(self.list_url)
+
+        self.assertEqual(
+            items[self.agenda.id]['customer'],
+            {'id': customer.id, 'user': {'first_name': 'Maria', 'last_name': 'Silva'}},
+        )
 
 class RemoveAgendaTest(AgendaTestCase):
     def test_remove_agenda_success(self):

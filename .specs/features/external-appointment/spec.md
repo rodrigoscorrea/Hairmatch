@@ -227,7 +227,7 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 | EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Tasks | Pending |
 | EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Tasks | Pending |
 | EXT-18 | P1: Ver o bloqueio na agenda, AC1 | Tasks | Implementing |
-| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Tasks | Pending |
+| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Tasks | Implementing |
 | EXT-20 | P1: Ver o bloqueio na agenda, AC3 | Tasks | Pending |
 | EXT-21 | P1: Ver o bloqueio na agenda, AC4 | Tasks | Pending |
 | EXT-22 | P1: Ver o bloqueio na agenda, AC5 | Tasks | Pending |

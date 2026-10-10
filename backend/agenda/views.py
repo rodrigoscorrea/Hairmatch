@@ -119,18 +119,22 @@ class ListAgenda(APIView):
         agenda_items = Agenda.objects.filter(hairdresser=hairdresser).select_related('service')
         if not agenda_items.exists():
             return JsonResponse({'data': []}, status=200)
+        # An external block (no service) never pairs with a reserve
         reserve_identifiers = set()
         for item in agenda_items:
-            reserve_identifiers.add((item.service_id, item.start_time))
+            if item.service_id is not None:
+                reserve_identifiers.add((item.service_id, item.start_time))
 
-        q_objects = Q()
-        for service_id, start_time in reserve_identifiers:
-            q_objects |= Q(service_id=service_id, start_time=start_time)
-        matching_reserves = Reserve.objects.filter(q_objects).select_related('customer__user')
-        reserve_map = {
-            (reserve.service_id, reserve.start_time): reserve
-            for reserve in matching_reserves
-        }
+        reserve_map = {}
+        if reserve_identifiers:
+            q_objects = Q()
+            for service_id, start_time in reserve_identifiers:
+                q_objects |= Q(service_id=service_id, start_time=start_time)
+            matching_reserves = Reserve.objects.filter(q_objects).select_related('customer__user')
+            reserve_map = {
+                (reserve.service_id, reserve.start_time): reserve
+                for reserve in matching_reserves
+            }
         serializer_context = {'reserve_map': reserve_map}
         serializer = AgendaSerializer(agenda_items, many=True, context=serializer_context)
 

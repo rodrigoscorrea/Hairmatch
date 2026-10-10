@@ -184,15 +184,15 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] `GET /api/agenda` com um bloqueio sem serviço e um bloco com serviço:
+- [x] `GET /api/agenda` com um bloqueio sem serviço e um bloco com serviço:
   - os dois itens têm exatamente as chaves `{id, start_time, end_time, title, service, customer}`;
   - o bloqueio sem serviço vem com `service is None`, `customer is None` e `title == "Cliente do WhatsApp"`;
   - o bloco com serviço vem com `service == {"id", "name"}` e `title == ""` (EXT-18).
-- [ ] `GET /api/hairdressers/{id}/agenda` devolve as mesmas chaves (EXT-18)
-- [ ] Uma `Reserve`, de qualquer serviço, com o mesmo `start_time` de um bloqueio sem serviço: o item do bloqueio vem com `customer is None` (EXT-19)
-- [ ] Um bloco com serviço pareado a uma `Reserve` continua com o `customer` preenchido (regressão)
-- [ ] Gate check passes: Quick
-- [ ] Test count: ≥ o total da T2 + os novos, sem remoções
+- [x] `GET /api/hairdressers/{id}/agenda` devolve as mesmas chaves (EXT-18)
+- [x] Uma `Reserve`, de qualquer serviço, com o mesmo `start_time` de um bloqueio sem serviço: o item do bloqueio vem com `customer is None` (EXT-19)
+- [x] Um bloco com serviço pareado a uma `Reserve` continua com o `customer` preenchido (regressão)
+- [x] Gate check passes: Quick
+- [x] Test count: ≥ o total da T2 + os novos, sem remoções
 
 **Tests**: integration
 **Gate**: quick
