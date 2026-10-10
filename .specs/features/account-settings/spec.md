@@ -237,7 +237,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-14 | P1: Validar PATCH, AC14 | Tasks | Implementing |
 | ACC-15 | P1: Validar PATCH, AC15 | Tasks | Implementing |
 | ACC-16 | P1: Dados da conta, AC1 | Tasks | Pending |
-| ACC-17 | P1: Dados da conta, AC2 | Tasks | Pending |
+| ACC-17 | P1: Dados da conta, AC2 | Tasks | Implementing |
 | ACC-18 | P1: Dados da conta, AC3 | Tasks | Pending |
 | ACC-19 | P1: Dados da conta, AC4 | Tasks | Pending |
 | ACC-20 | P1: Dados da conta, AC5 | Tasks | Pending |
@@ -246,11 +246,11 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-23 | P1: Endereço, AC1 | Tasks | Pending |
 | ACC-24 | P1: Endereço, AC2 | Tasks | Pending |
 | ACC-25 | P1: Endereço, AC3 | Tasks | Pending |
-| ACC-26 | P1: Endereço, AC4 | Tasks | Pending |
+| ACC-26 | P1: Endereço, AC4 | Tasks | Implementing |
 | ACC-27 | P1: Endereço, AC5 | Tasks | Pending |
 | ACC-28 | P1: Excluir conta, AC1 | Tasks | Pending |
 | ACC-29 | P1: Excluir conta, AC2 | Tasks | Pending |
-| ACC-30 | P1: Excluir conta, AC3 | Tasks | Pending |
+| ACC-30 | P1: Excluir conta, AC3 | Tasks | Implementing |
 | ACC-31 | P1: Excluir conta, AC4 | Tasks | Pending |
 | ACC-32 | P1: Excluir conta, AC5 | Tasks | Pending |
 | ACC-33 | P1: Excluir conta, AC6 | Tasks | Pending |
@@ -264,12 +264,12 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-41 | P2: Foto, AC7 | Tasks | Implementing |
 | ACC-42 | P2: Foto, AC8 | Tasks | Implementing |
 | ACC-43 | P2: Foto, AC9 | Tasks | Pending |
-| ACC-44 | P2: Foto, AC10 | Tasks | Pending |
+| ACC-44 | P2: Foto, AC10 | Tasks | Implementing |
 | ACC-45 | P2: Foto, AC11 | Tasks | Pending |
-| ACC-46 | P2: Foto, AC12 | Tasks | Pending |
+| ACC-46 | P2: Foto, AC12 | Tasks | Implementing |
 | ACC-47 | P2: Preferências, AC1 | Tasks | Pending |
 | ACC-48 | P2: Preferências, AC2 | Tasks | Pending |
-| ACC-49 | P2: Preferências, AC3 | Tasks | Pending |
+| ACC-49 | P2: Preferências, AC3 | Tasks | Implementing |
 | ACC-50 | P2: Preferências, AC4 | Tasks | Pending |
 | ACC-51 | P2: Preferências, AC5 | Tasks | Pending |
 | ACC-52 | P2: Preferências, AC6 | Tasks | Pending |

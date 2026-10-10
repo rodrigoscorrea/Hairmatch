@@ -331,8 +331,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Cada função chama exatamente o método e o path do design e não engole o erro.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo em relação à baseline.
+- [x] Cada função chama exatamente o método e o path do design e não engole o erro.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo em relação à baseline. Baseline antes do T7: exit 0, sem erro; depois: exit 0.
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
