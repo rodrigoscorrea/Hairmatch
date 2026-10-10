@@ -475,8 +475,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] `grep -n "galleryImages" "frontend-mobile/app/(app)/customer/hairdresser-reservation/[id].tsx"` não acha nada.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] `grep -n "galleryImages" "frontend-mobile/app/(app)/customer/hairdresser-reservation/[id].tsx"` não acha nada.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
