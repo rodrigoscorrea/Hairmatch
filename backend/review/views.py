@@ -23,7 +23,12 @@ from users.models import Customer, Hairdresser
 from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
 from .models import CustomerRating, Review
 from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors, picture_names
-from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
+from .serializers import (
+    CustomerRatingCreatedSerializer,
+    CustomerRatingSerializer,
+    ReviewPictureSerializer,
+    ReviewSerializer,
+)
 
 RATING_DETAIL = 'This field must be a number.'
 RATING_RANGE_DETAIL = 'The rating must be between 1 and 5.'
@@ -186,6 +191,42 @@ class RemoveReview(APIView):
 
 class ReviewDetail(UpdateReview, RemoveReview):
     """`/api/reviews/{id}`: PUT updates and DELETE removes the review of the logged customer."""
+
+
+class ReviewPictureCollection(APIView):
+    """`/api/reviews/{id}/pictures`: POST adds pictures to a review of the logged customer, up to 5 in all."""
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, id):
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+
+        # What does not depend on the review is refused first, so invalid input never answers 404.
+        files = request.FILES.getlist('pictures')
+        errors = picture_errors(files, required=True)
+        if errors:
+            raise validation_problem(errors)
+
+        saved_names = []
+        try:
+            with transaction.atomic():
+                # Locked before the count, so two requests cannot both fit under the limit.
+                review = Review.objects.select_for_update().filter(id=id, customer_id=customer.id).first()
+                if review is None:
+                    return problem_response(request, 'not-found', 'Review not found.')
+                errors = picture_errors(files, existing=review.pictures.count())
+                if errors:
+                    raise validation_problem(errors)
+                add_review_pictures(review, files, saved_names)
+        except InvalidImage:
+            delete_stored_files(saved_names)
+            return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
+        except BaseException:
+            delete_stored_files(saved_names)
+            raise
+
+        return JsonResponse({'data': ReviewPictureSerializer(review.pictures.all(), many=True).data}, status=201)
 
 
 def _customer_rating_errors(data):

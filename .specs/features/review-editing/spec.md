@@ -280,16 +280,16 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-06 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-07 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-08 | P1: Várias fotos na avaliação | Tasks | Implemented |
-| REV-10 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-10 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-11 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-12 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-13 | P1: Adicionar e remover fotos | Tasks | Implemented |
-| REV-14 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-15 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-14 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-15 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-16 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-17 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-17 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-18 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-19 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-19 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-20 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-25 | P1: Nenhum arquivo órfão | Tasks | Implemented |
 | REV-26 | P1: Nenhum arquivo órfão | Tasks | Implemented |
@@ -314,7 +314,7 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-52 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
 | REV-53 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
 | REV-55 | P1: Agenda e Route Table | Tasks | Pending |
-| REV-56 | P1: Agenda e Route Table | Tasks | Pending |
+| REV-56 | P1: Agenda e Route Table | Tasks | Implemented |
 | REV-60 | P1: Cliente pelo app | Tasks | Pending |
 | REV-61 | P1: Cliente pelo app | Tasks | Pending |
 | REV-62 | P1: Cliente pelo app | Tasks | Pending |

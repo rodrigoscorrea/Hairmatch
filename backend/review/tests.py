@@ -1740,3 +1740,215 @@ class ListReviewPicturesTest(ReviewsTestCase):
 
         self.assertEqual([len(review['pictures']) for review in data], [2, 3, 1])
         self.assertEqual(len(three), len(one))
+
+
+class AddReviewPicturesTest(ReviewsTestCase):
+    """POST /api/reviews/{id}/pictures (RT-90)"""
+
+    TOO_MANY = [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}]
+
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        self.url = reverse('review_pictures', args=[self.review.id])
+
+    def _png(self, name='nova.png'):
+        return make_upload(name, fmt='PNG')
+
+    def _seed(self, count, review=None):
+        for _ in range(count):
+            ReviewPicture.objects.create(review=review or self.review, picture=self._png())
+
+    def _post(self, files, url=None):
+        return self.client.post(url or self.url, data={'pictures': files} if files is not None else {})
+
+    def _ids(self, review=None):
+        return list((review or self.review).pictures.values_list('id', flat=True))
+
+    def test_adding_two_pictures_to_a_review_with_one_returns_all_three_by_ascending_id(self):
+        """REV-10"""
+        self._seed(1)
+        self.login_as_customer()
+
+        response = self._post([self._png('a.png'), self._png('b.png')])
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        pictures = list(self.review.pictures.all())
+        self.assertEqual(len(pictures), 3)
+        self.assertEqual(response.json(), {'data': [
+            {'id': p.id, 'url': default_storage.url(p.picture.name)} for p in pictures
+        ]})
+        self.assertEqual(self._ids(), sorted(self._ids()))
+        for picture in pictures:
+            self.assertRegex(picture.picture.name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+
+    def test_a_missing_or_empty_pictures_field_answers_400(self):
+        """REV-11"""
+        self.login_as_customer()
+
+        for files in (None, []):
+            with self.subTest(files=files):
+                assert_problem(self._post(files), 'validation-error', errors=[
+                    {'pointer': '#/pictures', 'detail': 'This field is required.'},
+                ])
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_going_over_five_pictures_answers_400_and_keeps_the_existing_ones(self):
+        """REV-12"""
+        self._seed(4)
+        before_ids, before_keys = self._ids(), review_keys()
+        self.login_as_customer()
+
+        response = self._post([self._png(), self._png()])
+
+        assert_problem(response, 'validation-error', errors=self.TOO_MANY)
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
+    def test_a_full_review_refuses_more_until_one_is_removed(self):
+        """REV-12"""
+        self._seed(5)
+        self.login_as_customer()
+
+        assert_problem(self._post([self._png()]), 'validation-error', errors=self.TOO_MANY)
+
+        ReviewPicture.objects.filter(id=self._ids()[0]).delete()
+        self.assertEqual(self._post([self._png()]).status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.review.pictures.count(), 5)
+
+    def test_six_pictures_at_once_answer_400(self):
+        """REV-12"""
+        self.login_as_customer()
+
+        assert_problem(self._post([self._png() for _ in range(6)]), 'validation-error', errors=self.TOO_MANY)
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_a_picture_over_5_mb_answers_400_without_converting_anything(self):
+        """REV-13"""
+        self.login_as_customer()
+        before = review_keys()
+        big = SimpleUploadedFile('big.png', b'x' * (5 * 1024 * 1024 + 1), content_type='image/png')
+
+        with patch('hairmatch.images.to_webp') as to_webp:
+            response = self._post([self._png(), big])
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'},
+        ])
+        to_webp.assert_not_called()
+        self.assertEqual(self.review.pictures.count(), 0)
+        self.assertEqual(review_keys(), before)
+
+    def test_an_undecodable_file_answers_400_and_leaves_no_row_and_no_object(self):
+        """REV-14"""
+        self._seed(1)
+        before_ids, before_keys = self._ids(), review_keys()
+        self.login_as_customer()
+
+        response = self._post([self._png(), SimpleUploadedFile('x.jpg', b'not an image', content_type='image/jpeg')])
+
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
+    def test_the_review_row_is_locked_before_the_pictures_are_counted(self):
+        """REV-15"""
+        self.login_as_customer()
+
+        with CaptureQueriesContext(connection) as queries:
+            self._post([self._png()])
+
+        statements = [query['sql'] for query in queries.captured_queries]
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "review_review"' in sql)
+        count = next(i for i, sql in enumerate(statements) if 'COUNT(' in sql and 'FROM "review_reviewpicture"' in sql)
+        self.assertLess(lock, count)
+
+    def test_a_review_of_another_customer_or_one_that_does_not_exist_answers_404(self):
+        """REV-17"""
+        other = Review.objects.create(rating=3, customer=self.customer2, hairdresser=self.hairdresser)
+        self.login_as_customer()
+        before = review_keys()
+
+        for review_id in (other.id, 999999):
+            with self.subTest(review=review_id):
+                response = self._post([self._png()], url=reverse('review_pictures', args=[review_id]))
+                assert_problem(response, 'not-found', detail='Review not found.')
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        self.assertEqual(review_keys(), before)
+
+    def test_an_invalid_body_answers_400_even_for_a_review_that_does_not_exist(self):
+        """REV-11, REV-13: what does not depend on the review is checked before the lookup."""
+        self.login_as_customer()
+        url = reverse('review_pictures', args=[999999])
+
+        assert_problem(self._post(None, url=url), 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'This field is required.'},
+        ])
+
+    def test_without_a_session_answers_401(self):
+        """REV-19"""
+        assert_problem(self._post([self._png()]), 'invalid-session')
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_a_hairdresser_answers_403_customer_required(self):
+        """REV-19"""
+        self.login_as_hairdresser()
+
+        assert_problem(self._post([self._png()]), 'customer-required')
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        self.login_as_customer()
+
+        for method in ('get', 'put', 'delete'):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.url)
+                assert_problem(response, 'method-not-allowed')
+                self.assertEqual(sorted(response['Allow'].split(', ')), ['OPTIONS', 'POST'])
+
+
+class AddReviewPicturesRaceTest(TransactionTestCase):
+    """REV-15: two requests that together exceed the limit cannot both succeed."""
+
+    def test_two_requests_of_three_pictures_leave_the_review_with_three(self):
+        user = User.objects.create(
+            first_name='Race', last_name='Customer', email='race.c@example.com', phone='5592900000030',
+            neighborhood='Centro', city='Manaus', state='AM', address='Rua A', postal_code='69000000',
+            role='customer', cognito_sub='sub-race-customer',
+        )
+        customer = Customer.objects.create(user=user, cpf='1')
+        hairdresser = Hairdresser.objects.create(
+            user=User.objects.create(
+                first_name='Race', last_name='Hairdresser', email='race.h@example.com', phone='5592900000031',
+                neighborhood='Centro', city='Manaus', state='AM', address='Rua A', postal_code='69000000',
+                role='hairdresser', cognito_sub='sub-race-hairdresser',
+            ),
+            cnpj='1',
+        )
+        review = Review.objects.create(rating=5, customer=customer, hairdresser=hairdresser)
+        url = reverse('review_pictures', args=[review.id])
+        token = get_cognito().client.make_access_token(user.cognito_sub)
+        barrier = threading.Barrier(2)
+        statuses, failures = [], []
+
+        def add_three():
+            try:
+                client = APIClient()
+                client.cookies['jwt'] = token
+                files = [make_upload(f'{i}.png', fmt='PNG') for i in range(3)]
+                barrier.wait(timeout=10)
+                statuses.append(client.post(url, data={'pictures': files}).status_code)
+            except Exception as exc:  # reported below: an exception in a thread does not fail the test
+                failures.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=add_three) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=60)
+
+        self.assertEqual(failures, [])
+        self.assertEqual(sorted(statuses), [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
+        self.assertEqual(review.pictures.count(), 3)

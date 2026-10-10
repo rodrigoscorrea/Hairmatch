@@ -368,14 +368,14 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: numa review com 1 foto, enviar 2 dá 201 com `data` de 3 itens por id crescente (REV-10).
-- [ ] Teste: `pictures` ausente dá 400 `#/pictures` (REV-11). Com 4 fotos, enviar 2 dá 400 e mantém 4 (REV-12). Um arquivo acima de 5 MB dá 400 sem conversão (REV-13).
-- [ ] Teste: [válida, inválida] dá 400 `invalid-image`, sem linha nova e sem chave nova no storage (REV-14).
-- [ ] Teste (`TransactionTestCase`): duas threads com 3 fotos cada numa review sem fotos terminam com uma 201 e uma 400, e a review fica com 3 fotos (REV-15). Um teste com `CaptureQueriesContext` prova `FOR UPDATE` antes do `COUNT`.
-- [ ] Teste: uma review de outro cliente ou inexistente dá 404 `not-found`, sem alteração (REV-17).
-- [ ] Teste: sem sessão dá 401 `invalid-session`, e um cabeleireiro recebe 403 `customer-required` (REV-19).
-- [ ] `hairmatch.test_routes` passa com RT-90 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 101 + 7.
+- [x] Teste: numa review com 1 foto, enviar 2 dá 201 com `data` de 3 itens por id crescente (REV-10).
+- [x] Teste: `pictures` ausente dá 400 `#/pictures` (REV-11). Com 4 fotos, enviar 2 dá 400 e mantém 4 (REV-12). Um arquivo acima de 5 MB dá 400 sem conversão (REV-13).
+- [x] Teste: [válida, inválida] dá 400 `invalid-image`, sem linha nova e sem chave nova no storage (REV-14).
+- [x] Teste (`TransactionTestCase`): duas threads com 3 fotos cada numa review sem fotos terminam com uma 201 e uma 400, e a review fica com 3 fotos (REV-15). Um teste com `CaptureQueriesContext` prova `FOR UPDATE` antes do `COUNT`.
+- [x] Teste: uma review de outro cliente ou inexistente dá 404 `not-found`, sem alteração (REV-17).
+- [x] Teste: sem sessão dá 401 `invalid-session`, e um cabeleireiro recebe 403 `customer-required` (REV-19).
+- [x] `hairmatch.test_routes` passa com RT-90 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 101 + 7.
 
 **Tests**: integration
 **Gate**: full
