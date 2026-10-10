@@ -386,7 +386,7 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app

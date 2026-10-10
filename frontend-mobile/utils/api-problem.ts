@@ -39,6 +39,7 @@ export type ProblemSlug =
   | 'slot-unavailable'
   | 'customer-schedule-conflict'
   | 'service-not-finished'
+  | 'gallery-full'
   | 'unsupported-media-type'
   | 'too-many-requests'
   | 'internal-error'
@@ -101,6 +102,7 @@ export const PROBLEM_MESSAGES: Record<ProblemSlug, string> = {
   'slot-unavailable': 'O profissional não está disponível neste horário.',
   'customer-schedule-conflict': 'Você já tem outra reserva agendada para o mesmo horário.',
   'service-not-finished': 'O atendimento ainda não terminou.',
+  'gallery-full': 'Sua galeria já tem 30 fotos. Remova uma para adicionar outra.',
   'unsupported-media-type': GENERIC_MESSAGE,
   'too-many-requests': 'Muitas tentativas. Aguarde e tente novamente.',
   'internal-error': 'Ocorreu um erro no servidor. Tente novamente mais tarde.',
