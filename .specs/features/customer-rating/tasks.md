@@ -164,14 +164,14 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: gravar `rating=0` ou `rating=6` direto no ORM levanta `IntegrityError`.
-- [ ] Teste: uma segunda linha com a mesma reserva levanta `IntegrityError`, e duas linhas com `reservation=None` convivem (CRT-06).
-- [ ] Teste: `DELETE /api/reservations/{id}` de uma reserva avaliada mantém a avaliação com `reservation=None`, sem mudar `User.rating` (CRT-24).
-- [ ] Teste: `DELETE /api/users/me` do cabeleireiro autor mantém a avaliação com `hairdresser=None` e `User.rating` do cliente igual (CRT-25).
-- [ ] Teste: `DELETE /api/users/me` do cliente apaga as avaliações dele (CRT-26).
-- [ ] Nenhum import circular: `python manage.py check` passa.
-- [ ] O gate Full passa, com `makemigrations --check` limpo.
-- [ ] Contagem: `review` ≥ 35 + 5.
+- [x] Teste: gravar `rating=0` ou `rating=6` direto no ORM levanta `IntegrityError`.
+- [x] Teste: uma segunda linha com a mesma reserva levanta `IntegrityError`, e duas linhas com `reservation=None` convivem (CRT-06).
+- [x] Teste: `DELETE /api/reservations/{id}` de uma reserva avaliada mantém a avaliação com `reservation=None`, sem mudar `User.rating` (CRT-24).
+- [x] Teste: `DELETE /api/users/me` do cabeleireiro autor mantém a avaliação com `hairdresser=None` e `User.rating` do cliente igual (CRT-25).
+- [x] Teste: `DELETE /api/users/me` do cliente apaga as avaliações dele (CRT-26).
+- [x] Nenhum import circular: `python manage.py check` passa.
+- [x] O gate Full passa, com `makemigrations --check` limpo.
+- [x] Contagem: `review` ≥ 35 + 5 (41). Suíte: 733 OK.
 
 **Tests**: integration
 **Gate**: full

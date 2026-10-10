@@ -287,7 +287,7 @@ A issue #104 pede quatro coisas:
 | CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Pending |
 | CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Pending |
 | CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Pending |
-| CRT-06 | P1: Avaliar pela API, AC6 | Tasks | Pending |
+| CRT-06 | P1: Avaliar pela API, AC6 | Tasks | Implementing |
 | CRT-07 | P1: Avaliar pela API, AC7 | Tasks | Pending |
 | CRT-08 | P1: Avaliar pela API, AC8 | Tasks | Pending |
 | CRT-09 | P1: Avaliar pela API, AC9 | Tasks | Pending |
@@ -305,9 +305,9 @@ A issue #104 pede quatro coisas:
 | CRT-21 | P1: Média, AC4 | Tasks | Implementing |
 | CRT-22 | P1: Média, AC5 | Tasks | Implementing |
 | CRT-23 | P1: Média, AC6 | Tasks | Implementing |
-| CRT-24 | P1: Média, AC7 | Tasks | Pending |
-| CRT-25 | P1: Média, AC8 | Tasks | Pending |
-| CRT-26 | P1: Média, AC9 | Tasks | Pending |
+| CRT-24 | P1: Média, AC7 | Tasks | Implementing |
+| CRT-25 | P1: Média, AC8 | Tasks | Implementing |
+| CRT-26 | P1: Média, AC9 | Tasks | Implementing |
 | CRT-27 | P1: Média, AC10 | Tasks | Implementing |
 | CRT-28 | P1: Listar, AC1 | Tasks | Pending |
 | CRT-29 | P1: Listar, AC2 | Tasks | Pending |

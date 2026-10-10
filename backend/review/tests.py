@@ -11,7 +11,8 @@ from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
 from users.testing import activate_account
-from .models import Review
+from django.db import IntegrityError, transaction
+from .models import CustomerRating, Review
 from reserve.models import Reserve
 from service.models import Service
 import jwt
@@ -811,3 +812,81 @@ class ReviewOwnershipTest(ReviewsTestCase):
         assert_problem(remove, 'customer-required', detail='Only customers can perform this action.')
         self.review.refresh_from_db()
         self.assertEqual(self.review.rating, 4)
+
+
+class CustomerRatingModelTest(ReviewsTestCase):
+    """The table keeps one rating from 1 to 5 per reservation, and outlives the reservation and its author."""
+
+    def setUp(self):
+        super().setUp()
+        # A stored average, to show that deleting rows around a rating does not touch it.
+        self.customer_user.rating = 4.0
+        self.customer_user.save(update_fields=['rating'])
+        self.rating = CustomerRating.objects.create(
+            reservation=self.reserve, customer=self.customer, hairdresser=self.hairdresser, rating=4, comment='Pontual',
+        )
+
+    def _create(self, **fields):
+        values = {'customer': self.customer, 'hairdresser': self.hairdresser, 'rating': 3, **fields}
+        with transaction.atomic():
+            return CustomerRating.objects.create(**values)
+
+    def test_a_rating_outside_1_to_5_is_refused_by_the_database(self):
+        for value in (0, 6):
+            with self.subTest(rating=value):
+                with self.assertRaises(IntegrityError):
+                    self._create(reservation=self.reserve2, rating=value)
+        self.assertEqual(CustomerRating.objects.count(), 1)
+
+    def test_a_second_rating_of_the_same_reservation_is_refused_by_the_database(self):
+        """CRT-06"""
+        with self.assertRaises(IntegrityError):
+            self._create(reservation=self.reserve)
+        self.assertEqual(CustomerRating.objects.filter(reservation=self.reserve).count(), 1)
+
+    def test_ratings_without_a_reservation_coexist(self):
+        """CRT-24: the unique reservation does not stop many ratings whose reservation is gone."""
+        self._create(reservation=None)
+        self._create(reservation=None)
+
+        self.assertEqual(CustomerRating.objects.filter(reservation__isnull=True).count(), 2)
+
+    def test_cancelling_a_rated_reservation_keeps_the_rating_and_the_average(self):
+        """CRT-24"""
+        self.login_as_customer()
+
+        response = self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Reserve.objects.filter(id=self.reserve.id).exists())
+        self.rating.refresh_from_db()
+        self.assertIsNone(self.rating.reservation)
+        self.assertEqual((self.rating.rating, self.rating.customer_id), (4, self.customer.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_deleting_the_author_account_keeps_the_rating_and_the_average(self):
+        """CRT-25"""
+        self.login_as_hairdresser()
+
+        response = self.client.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Hairdresser.objects.filter(id=self.hairdresser.id).exists())
+        self.rating.refresh_from_db()
+        self.assertIsNone(self.rating.hairdresser)
+        self.assertEqual((self.rating.rating, self.rating.customer_id), (4, self.customer.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_deleting_the_customer_account_deletes_the_ratings_received(self):
+        """CRT-26"""
+        self._create(reservation=None)
+        other = CustomerRating.objects.create(customer=self.customer2, hairdresser=self.hairdresser, rating=5)
+        self.login_as_customer()
+
+        response = self.client.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(CustomerRating.objects.filter(customer_id=self.customer.id).exists())
+        self.assertTrue(CustomerRating.objects.filter(id=other.id).exists())
