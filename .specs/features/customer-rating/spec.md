@@ -320,10 +320,10 @@ A issue #104 pede quatro coisas:
 | CRT-36 | P1: Agenda, AC1 | Tasks | Implementing |
 | CRT-37 | P1: Agenda, AC2 | Tasks | Implementing |
 | CRT-38 | P1: Agenda, AC3 | Tasks | Implementing |
-| CRT-39 | P1: Avaliar pelo app, AC1 | Tasks | Pending |
+| CRT-39 | P1: Avaliar pelo app, AC1 | Tasks | Implementing |
 | CRT-40 | P1: Avaliar pelo app, AC2 | Tasks | Implementing |
 | CRT-41 | P1: Avaliar pelo app, AC3 | Tasks | Implementing |
-| CRT-42 | P1: Avaliar pelo app, AC4 | Tasks | Pending |
+| CRT-42 | P1: Avaliar pelo app, AC4 | Tasks | Implementing |
 | CRT-43 | P1: Avaliar pelo app, AC5 | Tasks | Implementing |
 | CRT-44 | P1: Avaliar pelo app, AC6 | Tasks | Pending |
 | CRT-45 | P1: Avaliar pelo app, AC7 | Tasks | Pending |

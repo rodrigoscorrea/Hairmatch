@@ -479,8 +479,10 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Um item sem reserva não mostra o bloco do cliente nem o botão.
-- [ ] O gate App passa sem erro novo.
+- [x] Um item sem reserva não mostra o bloco do cliente nem o botão: o bloco depende de `customer` e o botão de `canRate`, que exige `reservationId`.
+- [x] O modal fecha antes do `router.push`, para não ficar sobre a tela de avaliação nem voltar com um `selectedEvent` velho.
+- [x] O gate App passa sem erro novo (`tsc` exit 0). O `eslint` da tela segue com o único erro de antes (`react-hooks/static-components` do `Header`), e os warnings caíram de 3 para 2.
+- Nota: o CRT-56 dá o exemplo "4.3 (3 avaliações)", mas o design e o roteiro do T18 usam "4.0 (1)". O modal usa a função compartilhada `formatCustomerRating`, com o rótulo "Nota do cliente: 4.3 (3)".
 
 **Tests**: none
 **Gate**: app
