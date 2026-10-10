@@ -15,12 +15,14 @@ from hairmatch.problems import (
     request_data,
     validation_problem,
 )
+from hairmatch.storage import delete_stored_files
 from reserve.models import Reserve
 from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
 from users.models import Customer, Hairdresser
 
 from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
 from .models import CustomerRating, Review
+from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors
 from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
 
 RATING_DETAIL = 'This field must be a number.'
@@ -67,7 +69,7 @@ class CreateReview(APIView):
         # 2. Extract data from the FormData
         data = request_data(request)
         comment = data.get('comment', '')
-        picture = request.FILES.get('picture')
+        files = request.FILES.getlist('pictures')
 
         # 3. Validate the fields, all at once
         errors = missing_field_errors(data, ['reserve', 'rating', 'hairdresser'])
@@ -77,6 +79,7 @@ class CreateReview(APIView):
         rating_error = _rating_error(data['rating']) if data.get('rating') else None
         if rating_error:
             errors.append(rating_error)
+        errors += picture_errors(files)
         if errors:
             raise validation_problem(errors)
         rating = _parse_rating(data['rating'])
@@ -99,20 +102,26 @@ class CreateReview(APIView):
         if str(reserve.service.hairdresser_id) != str(hairdresser_id):
             raise validation_problem([body_error('hairdresser', 'The hairdresser does not match the reservation.')])
 
-        # 4. Create the Review object in the database
+        # 4. Create the Review and its pictures. The pictures reach the storage while the rows are written, so a
+        # request that fails afterwards deletes them at once: the rollback would never run an on_commit hook.
+        saved_names = []
         try:
             with transaction.atomic():
                 new_review = Review.objects.create(
                     rating=rating,
                     comment=comment,
-                    picture=picture,
                     customer=customer,
                     hairdresser_id=hairdresser_id
                 )
+                add_review_pictures(new_review, files, saved_names)
                 reserve.review = new_review
                 reserve.save()
         except InvalidImage:
-            return problem_response(request, 'invalid-image', 'The review picture is not a valid image.')
+            delete_stored_files(saved_names)
+            return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
+        except BaseException:
+            delete_stored_files(saved_names)
+            raise
 
         return JsonResponse({'message': "Review registered successfully"}, status=201)
 

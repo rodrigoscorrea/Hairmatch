@@ -272,14 +272,14 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| REV-01 | P1: Várias fotos na avaliação | Tasks | Pending |
+| REV-01 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-02 | P1: Várias fotos na avaliação | Tasks | Implemented |
-| REV-03 | P1: Várias fotos na avaliação | Tasks | Pending |
+| REV-03 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-04 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-05 | P1: Várias fotos na avaliação | Tasks | Implemented |
-| REV-06 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-07 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-08 | P1: Várias fotos na avaliação | Tasks | Pending |
+| REV-06 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-07 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-08 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-10 | P1: Adicionar e remover fotos | Tasks | Pending |
 | REV-11 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-12 | P1: Adicionar e remover fotos | Tasks | Implemented |

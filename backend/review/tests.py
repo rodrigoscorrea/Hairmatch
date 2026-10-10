@@ -33,6 +33,15 @@ from django.conf import settings
 from django.utils import timezone
 from users.cognito import get_cognito
 
+def review_keys():
+    """Every key stored under reviews/, to prove that a request left the storage as it found it."""
+    try:
+        folders, _ = default_storage.listdir('reviews')
+    except FileNotFoundError:
+        return set()
+    return {f'reviews/{folder}/{name}' for folder in folders for name in default_storage.listdir(f'reviews/{folder}')[1]}
+
+
 class ReviewsTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -207,57 +216,142 @@ class CreateReviewTest(ReviewsTestCase):
         self.reserve.refresh_from_db()
         self.assertEqual(self.reserve.review, created_review)
 
-    def test_create_review_with_picture_stores_a_webp(self):
-        """WEBP-03: the picture is saved as reviews/images/<stem>.webp with WebP content."""
-        self.login_as_customer()
-
-        response = self.client.post(self.create_url, data={
+    def _post_review_with_pictures(self, pictures, **extra):
+        data = {
             'rating': 5,
             'comment': 'With photo',
             'hairdresser': self.hairdresser.id,
             'reserve': self.reserve.id,
-            'picture': make_upload('review_photo.png', fmt='PNG'),
-        })
+            'pictures': pictures,
+        }
+        data.update(extra)
+        return self.client.post(self.create_url, data=data)
+
+    def _assert_nothing_created(self, response, keys_before):
+        self.assertEqual(Review.objects.count(), 0)
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        self.reserve.refresh_from_db()
+        self.assertIsNone(self.reserve.review)
+        self.assertEqual(review_keys(), keys_before)
+
+    def test_create_review_with_pictures_stores_one_webp_per_picture_in_order(self):
+        """REV-01, REV-02 (replaces WEBP-03)"""
+        self.login_as_customer()
+        uploads = [make_upload(f'Foto{i}.PNG', fmt='PNG', size=(20 + i, 10)) for i in range(3)]
+
+        response = self._post_review_with_pictures(uploads)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         review = Review.objects.get()
-        self.assertEqual(review.picture.name, 'reviews/images/review_photo.webp')
-        with default_storage.open(review.picture.name) as stored:
-            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+        pictures = list(review.pictures.all())
+        self.assertEqual(len(pictures), 3)
+        for index, picture in enumerate(pictures):
+            with self.subTest(picture=index):
+                self.assertRegex(picture.picture.name, rf'^reviews/{review.id}/[0-9a-f]{{32}}\.webp$')
+                with default_storage.open(picture.picture.name) as stored:
+                    image = Image.open(BytesIO(stored.read()))
+                self.assertEqual(image.format, 'WEBP')
+                self.assertEqual(image.size, (20 + index, 10))  # the order of the upload
 
-    def _post_review_with_picture(self, picture):
-        return self.client.post(self.create_url, data={
-            'rating': 5,
-            'comment': 'With photo',
-            'hairdresser': self.hairdresser.id,
-            'reserve': self.reserve.id,
-            'picture': picture,
+    def test_create_review_without_pictures_creates_a_review_without_pictures(self):
+        """REV-03"""
+        self.login_as_customer()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 5, 'comment': 'No photo', 'hairdresser': self.hairdresser.id, 'reserve': self.reserve.id,
         })
 
-    def _assert_rejected_with_no_review(self, response):
-        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
-        self.assertEqual(Review.objects.count(), 0)
-        self.reserve.refresh_from_db()
-        self.assertIsNone(self.reserve.review)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.get().pictures.count(), 0)
 
-    def test_create_review_with_a_file_that_is_not_an_image_returns_400(self):
-        """WEBP-12: nothing is created and the reservation stays unreviewed."""
+    def test_create_review_with_six_pictures_returns_400_and_creates_nothing(self):
+        """REV-04"""
         self.login_as_customer()
+        before = review_keys()
 
-        response = self._post_review_with_picture(
-            SimpleUploadedFile('notes.jpg', b'just some notes', content_type='image/jpeg')
-        )
+        response = self._post_review_with_pictures([make_upload(f'{i}.png', fmt='PNG') for i in range(6)])
 
-        self._assert_rejected_with_no_review(response)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'},
+        ])
+        self._assert_nothing_created(response, before)
+
+    def test_create_review_with_a_picture_over_5_mb_returns_400_without_converting_anything(self):
+        """REV-05"""
+        self.login_as_customer()
+        before = review_keys()
+        big = SimpleUploadedFile('big.png', b'x' * (5 * 1024 * 1024 + 1), content_type='image/png')
+
+        with patch('hairmatch.images.to_webp') as to_webp:
+            response = self._post_review_with_pictures([make_upload(fmt='PNG'), big])
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'},
+        ])
+        to_webp.assert_not_called()
+        self._assert_nothing_created(response, before)
+
+    def test_create_review_with_a_file_that_is_not_an_image_returns_400_and_cleans_the_earlier_pictures(self):
+        """REV-06 (replaces WEBP-12): the two valid pictures that were already stored are deleted again."""
+        self.login_as_customer()
+        before = review_keys()
+
+        response = self._post_review_with_pictures([
+            make_upload('a.png', fmt='PNG'),
+            make_upload('b.png', fmt='PNG'),
+            SimpleUploadedFile('notes.jpg', b'just some notes', content_type='image/jpeg'),
+        ])
+
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self._assert_nothing_created(response, before)
 
     def test_create_review_with_an_image_over_the_pixel_limit_returns_400(self):
-        """WEBP-13: a decompression bomb gets the same answer as an invalid image."""
+        """REV-06 (replaces WEBP-13): a decompression bomb gets the same answer as an invalid image."""
         self.login_as_customer()
+        before = review_keys()
 
         with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
-            response = self._post_review_with_picture(make_upload('big.jpg'))
+            response = self._post_review_with_pictures([make_upload('big.jpg')])
 
-        self._assert_rejected_with_no_review(response)
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self._assert_nothing_created(response, before)
+
+    def test_an_unexpected_failure_after_the_upload_leaves_no_object_in_the_storage(self):
+        """REV-06, REV-28"""
+        self.login_as_customer()
+        before = review_keys()
+
+        with patch.object(Reserve, 'save', side_effect=RuntimeError('db down')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post_review_with_pictures([make_upload(fmt='PNG'), make_upload(fmt='PNG')])
+
+        assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self._assert_nothing_created(response, before)
+
+    def test_invalid_fields_and_too_many_pictures_are_reported_together(self):
+        """REV-07"""
+        self.login_as_customer()
+
+        response = self._post_review_with_pictures([make_upload(fmt='PNG') for _ in range(6)], rating='top')
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field must be a number.'},
+            {'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'},
+        ])
+
+    def test_a_file_in_the_old_picture_field_is_ignored(self):
+        """REV-08"""
+        self.login_as_customer()
+        before = review_keys()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 5, 'comment': 'Old field', 'hairdresser': self.hairdresser.id, 'reserve': self.reserve.id,
+            'picture': make_upload(fmt='PNG'),
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.get().pictures.count(), 0)
+        self.assertEqual(review_keys(), before)
 
     def test_create_review_missing_reserve_id(self):
         """Test that providing no reserve ID results in a 400 Bad Request."""

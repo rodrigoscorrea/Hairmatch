@@ -282,15 +282,15 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: 3 PNGs em `pictures` dão 201 e 3 `ReviewPicture` na ordem de envio, com chaves em `reviews/<id>/` e conteúdo WebP (REV-01, REV-02). É a reescrita do WEBP-03.
-- [ ] Teste: sem `pictures`, dá 201 e a review sem fotos (REV-03).
-- [ ] Teste: 6 arquivos dão 400 `#/pictures`, sem review e com o storage sem chave nova (REV-04).
-- [ ] Teste: um arquivo acima de 5 MB dá 400 `#/pictures`, sem review, e um mock de `to_webp` prova que nada foi convertido (REV-05).
-- [ ] Teste: [PNG válido, PNG válido, arquivo que não é imagem] dá 400 `invalid-image` "The review picture is not a valid image.", sem review, com a reserva sem avaliação e sem nenhuma chave em `reviews/` (REV-06). É a reescrita do WEBP-12, e a do WEBP-13 (bomba de pixels) vem com `pictures`.
-- [ ] Teste: uma falha inesperada depois do upload (por exemplo `reserve.save` levantando) deixa o storage sem chave e propaga a exceção (REV-06, REV-28).
-- [ ] Teste: `rating` inválido mais 6 fotos dá um 400 com os dois ponteiros (REV-07).
-- [ ] Teste: um arquivo em `picture` dá 201 sem foto (REV-08).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 93 + 5 (os 3 reescritos continuam contando).
+- [x] Teste: 3 PNGs em `pictures` dão 201 e 3 `ReviewPicture` na ordem de envio, com chaves em `reviews/<id>/` e conteúdo WebP (REV-01, REV-02). É a reescrita do WEBP-03.
+- [x] Teste: sem `pictures`, dá 201 e a review sem fotos (REV-03).
+- [x] Teste: 6 arquivos dão 400 `#/pictures`, sem review e com o storage sem chave nova (REV-04).
+- [x] Teste: um arquivo acima de 5 MB dá 400 `#/pictures`, sem review, e um mock de `to_webp` prova que nada foi convertido (REV-05).
+- [x] Teste: [PNG válido, PNG válido, arquivo que não é imagem] dá 400 `invalid-image` "The review picture is not a valid image.", sem review, com a reserva sem avaliação e sem nenhuma chave em `reviews/` (REV-06). É a reescrita do WEBP-12, e a do WEBP-13 (bomba de pixels) vem com `pictures`.
+- [x] Teste: uma falha inesperada depois do upload (por exemplo `reserve.save` levantando) deixa o storage sem chave e propaga a exceção (REV-06, REV-28).
+- [x] Teste: `rating` inválido mais 6 fotos dá um 400 com os dois ponteiros (REV-07).
+- [x] Teste: um arquivo em `picture` dá 201 sem foto (REV-08).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 93 + 5 (os 3 reescritos continuam contando).
 
 **Tests**: integration
 **Gate**: quick
