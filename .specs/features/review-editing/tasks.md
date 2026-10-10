@@ -670,10 +670,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] "Editar avaliação" abre a tela de avaliação da reserva (REV-61).
-- [ ] Uma review com 3 fotos mostra 3 imagens roláveis. Sem fotos, mostra o placeholder (REV-70).
-- [ ] Nenhuma referência a `review.picture` sobra no app (`git grep -n "review?*\.picture\b" -- frontend-mobile`).
-- [ ] Gate App passa.
+- [x] "Editar avaliação" abre a tela de avaliação da reserva (REV-61).
+- [x] Uma review com 3 fotos mostra 3 imagens roláveis. Sem fotos, mostra o placeholder (REV-70).
+- [x] Nenhuma referência a `review.picture` sobra no app (`git grep -n "review?*\.picture\b" -- frontend-mobile`).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
