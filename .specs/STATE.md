@@ -85,6 +85,22 @@
 - **Date**: 2026-10-04
 - **Status**: active
 
+### AD-010
+> O número AD-009 está reservado para a feature `external-appointment` (#113), que o registra na T12 dela.
+- **Decision**: `User.rating` é um valor **derivado**: a média aritmética das avaliações que o usuário recebeu, arredondada para 2 casas, ou `null` enquanto ele não recebeu nenhuma.
+  - O campo é `FloatField(null=True, default=5)`.
+  - A média é recalculada só no ponto de escrita da avaliação, na mesma transação do insert, com a linha `User` do avaliado travada por `select_for_update`.
+  - Nenhum endpoint de edição de perfil grava `rating`.
+  - Para o cliente, as avaliações são `CustomerRating` (feature `customer-rating`, #104), e o cliente nasce com `null`. O cabeleireiro mantém o default 5 até a feature que recalcular a nota dele a partir das `Review`, que deve seguir o mesmo padrão.
+- **Reason**: O inteiro truncava a média, e um `Decimal` sai como string no `JsonResponse` e no DRF, o que quebra o `toFixed` do app. Sem o lock, duas avaliações simultâneas do mesmo usuário fazem a última escrita descartar uma nota. O 5 fixo dos clientes era fictício: nenhuma avaliação existia.
+- **Trade-off**:
+  - Avaliações do mesmo usuário são serializadas pelo lock.
+  - A média gravada pode divergir das linhas se alguém escrever avaliações fora de `record_customer_rating` (seed, admin).
+  - Cliente e cabeleireiro dividem um campo com semânticas diferentes até a nota do cabeleireiro também ser derivada.
+- **Scope**: `backend/users` (modelo e cadastro), `backend/review` e toda tela do `frontend-mobile` que mostra a nota de cliente. Toda avaliação nova que afete `User.rating` passa por uma função de domínio com o mesmo padrão.
+- **Date**: 2026-10-09
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `email-confirmation` (issue #141).
