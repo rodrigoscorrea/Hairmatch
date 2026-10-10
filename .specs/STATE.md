@@ -87,21 +87,18 @@
 
 ## Handoff
 
-- **Feature**: `email-confirmation` (issue #141).
-- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
+- **Feature**: `account-settings` (issue #120).
+- **Phase / Task**: Execute de T1 a T20 concluído. T21 (UAT no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 28 de 28 critérios de backend, 32 de 33 mutantes mortos e 1 equivalente, 756 testes).
 - **Completed**:
-  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
-  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
-  - MiniStack reconciliado pelo init, README e AD-008.
-  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
+  - Backend (T1 a T6): `PATCH /api/users/me` valida e normaliza o corpo (ponteiros `#/<campo>`), libera o telefone de conta pendente e responde 409 na corrida de telefone, e grava `User` e perfil numa transação. RT-88 `PUT` e RT-89 `DELETE /api/users/me/profile-picture`. Teste da exclusão de conta Google.
+  - App (T7 a T20): serviço da conta, `clearSession`, guardas de nulo no perfil, `validateAccountUpdate` (só os campos alterados), telas de dados da conta, endereço (CEP com autofill), foto (trocar e remover), exclusão da conta, preferências e resumo do cabeleireiro. `npx tsc --noEmit` com exit 0 e nenhum erro de eslint nos arquivos tocados.
+  - Rodada 1 do Verificador: FAIL por falta de `null` no teste de campo obrigatório (ACC-01, mutante M02). Corrigido, junto com o comentário do guard do PUT e a redação de ACC-20, ACC-24 e dos ponteiros.
 - **In-progress** (file:line): none
-- **Next step**:
-  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
-  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
+- **Next step**: UAT do T21 (roteiro no `tasks.md`, com os itens extras do `validation.md`: CEP de cidade inteira e troca de foto com edição não salva). Depois, marcar os critérios de app como Verified.
 - **Pendências de features anteriores**:
+  - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
-  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
-- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema
+- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits.
+- **Branch**: `120-editar-dados-da-conta-e-excluir-conta`
