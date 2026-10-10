@@ -133,9 +133,9 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste novo em `test_problems.py`: `problem_response(..., 'gallery-full', ...)` responde 409 com `type` terminado em `/gallery-full` e `title` "Gallery is full".
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput hairmatch'`
-- [ ] Test count: `hairmatch` 101 → 102, sem remoção.
+- [x] Teste novo em `test_problems.py`: `problem_response(..., 'gallery-full', ...)` responde 409 com `type` terminado em `/gallery-full` e `title` "Gallery is full".
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput hairmatch'`
+- [x] Test count: `hairmatch` 101 → 102, sem remoção.
 
 **Tests**: unit
 **Gate**: quick

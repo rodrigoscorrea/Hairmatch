@@ -56,6 +56,7 @@ CATALOG = {
     'slot-unavailable': (409, 'Time slot unavailable'),
     'customer-schedule-conflict': (409, 'Customer schedule conflict'),
     'service-not-finished': (409, 'Service not finished'),
+    'gallery-full': (409, 'Gallery is full'),
     'unsupported-media-type': (415, 'Unsupported media type'),
     'too-many-requests': (429, 'Too many requests'),
     'internal-error': (500, 'Internal server error'),
