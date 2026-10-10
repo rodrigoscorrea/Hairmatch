@@ -218,17 +218,17 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-06 | P1: Ver a galeria, AC6 | Tasks | Pending |
 | GAL-07 | P1: Ver a galeria, AC7 | Tasks | Pending |
 | GAL-08 | P1: Ver a galeria, AC8 | Tasks | Pending |
-| GAL-09 | P1: Adicionar fotos, AC1 | Tasks | Pending |
+| GAL-09 | P1: Adicionar fotos, AC1 | Tasks | Implementing |
 | GAL-10 | P1: Adicionar fotos, AC2 | Tasks | Implementing |
-| GAL-11 | P1: Adicionar fotos, AC3 | Tasks | Pending |
-| GAL-12 | P1: Adicionar fotos, AC4 | Tasks | Pending |
-| GAL-13 | P1: Adicionar fotos, AC5 | Tasks | Pending |
-| GAL-14 | P1: Adicionar fotos, AC6 | Tasks | Pending |
+| GAL-11 | P1: Adicionar fotos, AC3 | Tasks | Implementing |
+| GAL-12 | P1: Adicionar fotos, AC4 | Tasks | Implementing |
+| GAL-13 | P1: Adicionar fotos, AC5 | Tasks | Implementing |
+| GAL-14 | P1: Adicionar fotos, AC6 | Tasks | Implementing |
 | GAL-15 | P1: Adicionar fotos, AC7 | Tasks | Pending |
-| GAL-16 | P1: Adicionar fotos, AC8 | Tasks | Pending |
-| GAL-17 | P1: Adicionar fotos, AC9 | Tasks | Pending |
-| GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Pending |
-| GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Pending |
+| GAL-16 | P1: Adicionar fotos, AC8 | Tasks | Implementing |
+| GAL-17 | P1: Adicionar fotos, AC9 | Tasks | Implementing |
+| GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Implementing |
+| GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Implementing |
 | GAL-20 | P1: Adicionar fotos, AC12 | Tasks | Pending |
 | GAL-21 | P1: Adicionar fotos, AC13 | Tasks | Pending |
 | GAL-22 | P1: Adicionar fotos, AC14 | Tasks | Pending |
@@ -252,12 +252,12 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Pending |
 | GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
 | GAL-42 | P2: Contrato, AC2 | Tasks | Implementing |
-| GAL-43 | P2: Contrato, AC3 | Tasks | Pending |
+| GAL-43 | P2: Contrato, AC3 | Tasks | Implementing |
 | GAL-44 | P2: Seed, AC1 | Tasks | Pending |
 | GAL-45 | P2: Seed, AC2 | Tasks | Pending |
 | GAL-46 | P2: Seed, AC3 | Tasks | Pending |
 | GAL-47 | Edge Cases | Tasks | Pending |
-| GAL-48 | Edge Cases | Tasks | Pending |
+| GAL-48 | Edge Cases | Tasks | Implementing |
 | GAL-49 | Edge Cases | Tasks | Pending |
 | GAL-50 | Edge Cases | Tasks | Pending |
 | GAL-51 | Edge Cases | Tasks | Pending |

@@ -6668,3 +6668,210 @@ class GalleryPhotoListTest(TestCase):
 
         self.assertRegex(image, rf'hairdresser/gallery/{self.hairdresser.pk}/[0-9a-f]{{32}}\.webp$')
         self.assertNotIn('praia', image)
+
+
+def _gallery_files(hairdresser):
+    """The names stored under the gallery directory of a hairdresser."""
+    directory = f'hairdresser/gallery/{hairdresser.pk}'
+    try:
+        return sorted(default_storage.listdir(directory)[1])
+    except FileNotFoundError:
+        return []
+
+
+class GalleryApiTestCase(TestCase):
+    """Two hairdressers and a customer, all registered through the API; `self.client` is logged in as the first one."""
+
+    HAIRDRESSER_EMAIL = 'cabelo@example.com'
+    OTHER_EMAIL = 'outro@example.com'
+    CUSTOMER_EMAIL = 'nova@example.com'
+
+    def setUp(self):
+        self.client = APIClient()
+        payloads = (
+            _register_payload(),
+            _hairdresser_payload(),
+            {**_hairdresser_payload(), 'email': self.OTHER_EMAIL, 'phone': '92993456789'},
+        )
+        for payload in payloads:
+            self.client.post(reverse('register'), data=payload)
+            activate_account(payload['email'])
+        self.hairdresser = Hairdresser.objects.get(user__email=self.HAIRDRESSER_EMAIL)
+        self.other = Hairdresser.objects.get(user__email=self.OTHER_EMAIL)
+        self._login(self.HAIRDRESSER_EMAIL)
+
+    def _login(self, email):
+        self.client.cookies.clear()
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': email, 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+    def _url(self, hairdresser=None):
+        return reverse('gallery_photos', args=[(hairdresser or self.hairdresser).pk])
+
+    def _post(self, upload, hairdresser=None):
+        return self.client.post(self._url(hairdresser), {'image': upload}, format='multipart')
+
+    def _fill(self, hairdresser, count):
+        GalleryPhoto.objects.bulk_create([GalleryPhoto(hairdresser=hairdresser, image=f'seed/{index}.webp') for index in range(count)])
+
+    def _assert_nothing_stored(self, hairdresser=None, rows=0):
+        hairdresser = hairdresser or self.hairdresser
+        self.assertEqual(GalleryPhoto.objects.filter(hairdresser=hairdresser).count(), rows)
+        self.assertEqual(_gallery_files(hairdresser), [])
+
+
+class GalleryPhotoCreateTest(GalleryApiTestCase):
+    """POST /api/hairdressers/{id}/gallery-photos (RT-95, GAL-09 to GAL-19, GAL-43, GAL-48)."""
+
+    MAX_SIZE = 5 * 1024 * 1024
+
+    def test_a_valid_image_answers_201_with_the_photo_and_stores_one_webp(self):
+        """GAL-09, GAL-10"""
+        response = self._post(make_upload('praia.png', size=(2000, 1500), fmt='PNG'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        photo = GalleryPhoto.objects.get(hairdresser=self.hairdresser)
+        self.assertEqual(
+            response.json(),
+            {'data': {
+                'id': photo.pk,
+                'image': default_storage.url(photo.image.name),
+                'created_at': response.json()['data']['created_at'],
+            }},
+        )
+        self.assertRegex(photo.image.name, rf'^hairdresser/gallery/{self.hairdresser.pk}/[0-9a-f]{{32}}\.webp$')
+        self.assertEqual(_gallery_files(self.hairdresser), [photo.image.name.rsplit('/', 1)[1]])
+        stored = stored_image(photo.image.name)
+        self.assertEqual((stored.format, max(stored.size)), ('WEBP', 1080))
+
+    def test_the_new_photo_is_listed_by_the_get(self):
+        """GAL-09"""
+        created = self._post(make_upload('praia.png', fmt='PNG')).json()['data']
+
+        listed = self.client.get(self._url()).json()['data']
+
+        self.assertEqual(listed, [created])
+
+    def test_a_body_without_the_image_field_answers_400_validation_error(self):
+        """GAL-11"""
+        response = self.client.post(self._url(), {'other': 'x'}, format='multipart')
+
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/image', 'detail': 'This field is required.'}],
+        )
+        self._assert_nothing_stored()
+
+    def test_a_json_body_answers_400_validation_error_on_the_image(self):
+        """GAL-48"""
+        response = self.client.post(self._url(), data=json.dumps({'image': 'abc'}), content_type='application/json')
+
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/image', 'detail': 'This field is required.'}],
+        )
+        self._assert_nothing_stored()
+
+    def test_a_file_over_5_mb_answers_400_validation_error_before_it_is_opened(self):
+        """GAL-12: bytes that are no image prove the size is checked first; 5 MB exactly goes on to the conversion."""
+        response = self._post(SimpleUploadedFile('big.png', b'\0' * (self.MAX_SIZE + 1), content_type='image/png'))
+
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/image', 'detail': 'The photo must have at most 5 MB.'}],
+        )
+        self._assert_nothing_stored()
+
+        at_limit = self._post(SimpleUploadedFile('big.png', b'\0' * self.MAX_SIZE, content_type='image/png'))
+
+        assert_problem(at_limit, 'invalid-image')
+
+    def test_a_file_that_is_not_an_image_answers_400_invalid_image(self):
+        """GAL-13"""
+        response = self._post(SimpleUploadedFile('foto.jpg', b'not an image', content_type='image/jpeg'))
+
+        assert_problem(response, 'invalid-image', detail='The photo is not a valid image.')
+        self._assert_nothing_stored()
+
+    def test_the_31st_photo_answers_409_gallery_full_and_changes_nothing(self):
+        """GAL-14"""
+        self._fill(self.hairdresser, 30)
+
+        response = self._post(make_upload('extra.png', fmt='PNG'))
+
+        assert_problem(response, 'gallery-full')
+        self._assert_nothing_stored(rows=30)
+
+    def test_the_30th_photo_is_accepted_and_the_next_one_is_not(self):
+        """GAL-14"""
+        self._fill(self.hairdresser, 29)
+
+        accepted = self._post(make_upload('trinta.png', fmt='PNG'))
+        refused = self._post(make_upload('trinta-e-um.png', fmt='PNG'))
+
+        self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
+        assert_problem(refused, 'gallery-full')
+        self.assertEqual(GalleryPhoto.objects.filter(hairdresser=self.hairdresser).count(), 30)
+        self.assertEqual(len(_gallery_files(self.hairdresser)), 1)
+
+    def test_the_photos_of_another_hairdresser_do_not_count_toward_the_limit(self):
+        """GAL-14"""
+        self._fill(self.other, 30)
+
+        response = self._post(make_upload('minha.png', fmt='PNG'))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_without_a_session_answers_401_and_stores_nothing(self):
+        """GAL-16"""
+        self.client.cookies.clear()
+
+        response = self._post(make_upload('foto.png', fmt='PNG'))
+
+        assert_problem(response, 'invalid-session')
+        self._assert_nothing_stored()
+
+    def test_a_customer_session_answers_403_hairdresser_required(self):
+        """GAL-17"""
+        self._login(self.CUSTOMER_EMAIL)
+
+        response = self._post(make_upload('foto.png', fmt='PNG'))
+
+        assert_problem(response, 'hairdresser-required')
+        self._assert_nothing_stored()
+
+    def test_the_id_of_another_hairdresser_answers_403_forbidden_and_stores_nothing(self):
+        """GAL-18"""
+        response = self._post(make_upload('foto.png', fmt='PNG'), hairdresser=self.other)
+
+        assert_problem(response, 'forbidden')
+        self._assert_nothing_stored(self.other)
+        self._assert_nothing_stored(self.hairdresser)
+
+    def test_a_failed_upload_to_the_storage_answers_500_and_leaves_no_row(self):
+        """GAL-19"""
+        with patch.object(default_storage, 'save', side_effect=RuntimeError('bucket down')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post(make_upload('foto.png', fmt='PNG'))
+
+        assert_problem(response, 'internal-error')
+        self._assert_nothing_stored()
+
+    def test_a_failed_insert_after_the_upload_deletes_the_uploaded_file(self):
+        """GAL-19: the object the upload wrote does not stay in the bucket without a row."""
+        with patch.object(GalleryPhoto, 'save', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post(make_upload('foto.png', fmt='PNG'))
+
+        assert_problem(response, 'internal-error')
+        self._assert_nothing_stored()
+
+    def test_put_on_the_collection_answers_405_with_the_methods_of_the_path(self):
+        """GAL-43: HEAD rides along with GET, as in every other GET route (RT-50 leaves it out of the table)."""
+        response = self.client.put(self._url())
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS', 'POST'])

@@ -218,7 +218,7 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoCreateTest` com:
+- [x] Classe nova `GalleryPhotoCreateTest` com:
   - PNG válido: 201 `{"data": {id, image, created_at}}`, uma linha e o objeto `.webp` no storage;
   - sem o campo `image` e com corpo JSON: 400 `validation-error` com `errors[0].pointer == "#/image"`, sem linha e sem arquivo;
   - arquivo de 5 MB + 1 byte: 400 `#/image`, sem linha e sem arquivo;
@@ -229,10 +229,10 @@ T18
   - o `save` do storage levantando exceção (`mock.patch`): 500 `internal-error`, sem linha;
   - o `INSERT` falhando depois do upload: o arquivo subido é apagado;
   - `PUT` na coleção: 405 com `Allow: GET, OPTIONS, POST`.
-- [ ] Os testes da `ProfilePictureView` continuam passando com `IMAGE_UPLOAD_MAX_SIZE`.
-- [ ] `RouteTableTests` passa com RT-95.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] Os testes da `ProfilePictureView` continuam passando com `IMAGE_UPLOAD_MAX_SIZE`.
+- [x] `RouteTableTests` passa com RT-95.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full
