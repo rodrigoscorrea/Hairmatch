@@ -359,8 +359,8 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] Os tipos de rota foram regenerados, e `/(app)/hairdresser/agenda/create` existe em `.expo/types/router.d.ts`
-- [ ] Gate check passes: App
+- [x] Os tipos de rota foram regenerados, e `/(app)/hairdresser/agenda/create` existe em `.expo/types/router.d.ts`
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App
