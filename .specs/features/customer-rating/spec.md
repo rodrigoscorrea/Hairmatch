@@ -317,9 +317,9 @@ A issue #104 pede quatro coisas:
 | CRT-33 | P1: Listar, AC6 | Tasks | Implementing |
 | CRT-34 | P1: Listar, AC7 | Tasks | Implementing |
 | CRT-35 | P1: Listar, AC8 | Tasks | Implementing |
-| CRT-36 | P1: Agenda, AC1 | Tasks | Pending |
-| CRT-37 | P1: Agenda, AC2 | Tasks | Pending |
-| CRT-38 | P1: Agenda, AC3 | Tasks | Pending |
+| CRT-36 | P1: Agenda, AC1 | Tasks | Implementing |
+| CRT-37 | P1: Agenda, AC2 | Tasks | Implementing |
+| CRT-38 | P1: Agenda, AC3 | Tasks | Implementing |
 | CRT-39 | P1: Avaliar pelo app, AC1 | Tasks | Pending |
 | CRT-40 | P1: Avaliar pelo app, AC2 | Tasks | Pending |
 | CRT-41 | P1: Avaliar pelo app, AC3 | Tasks | Pending |

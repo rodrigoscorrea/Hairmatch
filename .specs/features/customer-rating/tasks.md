@@ -340,12 +340,12 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: um item com reserva avaliada traz `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating: {rating, comment}`. Um item com reserva não avaliada traz `customer_rating: null` (CRT-36).
-- [ ] Teste: um item sem reserva traz `reservation_id: null`, `customer: null` e `customer_rating: null` (CRT-37).
-- [ ] Teste: `assertNumQueries` mede o mesmo número com 1 e com 5 reservas avaliadas (CRT-38).
-- [ ] Os testes atuais de `agenda` continuam passando sem alteração de asserção, porque os campos antigos não mudam.
-- [ ] O gate Full passa (fim da fase de backend).
-- [ ] Contagem: `agenda` ≥ 23 + 3.
+- [x] Teste: um item com reserva avaliada traz `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating: {rating, comment}`. Um item com reserva não avaliada traz `customer_rating: null` (CRT-36).
+- [x] Teste: um item sem reserva traz `reservation_id: null`, `customer: null` e `customer_rating: null` (CRT-37).
+- [x] Teste: `assertNumQueries` mede o mesmo número com 1 e com 5 reservas avaliadas (CRT-38).
+- [x] Os testes atuais de `agenda` continuam passando sem alteração de asserção, porque os campos antigos não mudam.
+- [x] O gate Full passa (fim da fase de backend).
+- [x] Contagem: `agenda` ≥ 23 + 3 (26). Suíte: 775 OK. Sem o `select_related('customer_rating')`, o teste de queries falha (11 != 7).
 
 **Tests**: integration
 **Gate**: full
