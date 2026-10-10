@@ -1600,6 +1600,13 @@ class ReviewPictureModelTest(ReviewsTestCase):
         self.assertEqual([p.id for p in self.review.pictures.all()], ids)
         self.assertEqual(ids, sorted(ids))
 
+    def test_the_order_by_id_does_not_depend_on_where_the_rows_sit(self):
+        """REV-33: updating the first row moves it in the heap, and the pictures still come by ascending id."""
+        ids = [self._add().id for _ in range(3)]
+        ReviewPicture.objects.filter(pk=ids[0]).update(created_at=timezone.now())
+
+        self.assertEqual([p.id for p in self.review.pictures.all()], ids)
+
     def test_deleting_the_review_deletes_its_pictures(self):
         """REV-33"""
         self._add()
@@ -1851,6 +1858,23 @@ class AddReviewPicturesTest(ReviewsTestCase):
         self.assertEqual(self._ids(), before_ids)
         self.assertEqual(review_keys(), before_keys)
 
+    def test_an_unexpected_failure_after_the_upload_leaves_no_row_and_no_object(self):
+        """REV-14: the objects of a request that fails after storing some are deleted at once."""
+        self.login_as_customer()
+        before_ids, before_keys = self._ids(), review_keys()
+
+        def store_then_fail(review, files, saved_names):
+            add_review_pictures(review, files, saved_names)
+            raise RuntimeError('db down')
+
+        with patch('review.views.add_review_pictures', side_effect=store_then_fail):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post([self._png(), self._png()])
+
+        assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
     def test_the_review_row_is_locked_before_the_pictures_are_counted(self):
         """REV-15"""
         self.login_as_customer()
@@ -1985,6 +2009,19 @@ class RemoveReviewPictureTest(ReviewsTestCase):
 
     def _ids(self):
         return list(self.review.pictures.values_list('id', flat=True))
+
+    def test_a_storage_failure_when_deleting_is_logged_and_the_answer_stays_204(self):
+        """REV-27"""
+        self.login_as_customer()
+
+        with patch.object(default_storage, 'delete', side_effect=OSError('bucket unreachable')):
+            with self.assertLogs('hairmatch.storage', level='ERROR') as logs:
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(self._ids(), [self.second.id])
 
     def test_the_object_stays_in_the_storage_until_the_transaction_commits(self):
         """REV-28"""
@@ -2394,3 +2431,36 @@ class DeleteCustomerRatingTest(CustomerRatingEditingTestCase):
 
         assert_problem(response, 'method-not-allowed')
         self.assertEqual(sorted(response['Allow'].split(', ')), ['DELETE', 'OPTIONS', 'PUT'])
+
+
+class CustomerRatingAtomicityTest(TransactionTestCase):
+    """REV-50: the rating and the average are written in one transaction, so a failure in the average undoes the rating."""
+
+    def setUp(self):
+        user = lambda email, phone, role: User.objects.create(
+            first_name='Atomic', last_name=role, email=email, phone=phone, neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', role=role, rating=None,
+        )
+        self.customer = Customer.objects.create(user=user('at.c@example.com', '5592900000040', 'customer'), cpf='1')
+        self.hairdresser = Hairdresser.objects.create(user=user('at.h@example.com', '5592900000041', 'hairdresser'), cnpj='1')
+        service = Service.objects.create(name='Corte', price=50, hairdresser=self.hairdresser, duration=30)
+        reservation = Reserve.objects.create(customer=self.customer, service=service)
+        self.rating = record_customer_rating(self.hairdresser, reservation, 4, 'Ok')
+
+    def test_a_failure_while_storing_the_average_undoes_the_edit(self):
+        with patch('review.customer_ratings._store_average', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                update_customer_rating(self.rating, 1, 'Mudou')
+
+        self.rating.refresh_from_db()
+        self.assertEqual((self.rating.rating, self.rating.comment), (4, 'Ok'))
+        self.assertEqual(User.objects.get(pk=self.customer.user_id).rating, 4.0)
+
+    def test_a_failure_while_storing_the_average_undoes_the_delete(self):
+        rating_id = self.rating.pk  # the instance loses its pk when the delete runs
+        with patch('review.customer_ratings._store_average', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                delete_customer_rating(self.rating)
+
+        self.assertTrue(CustomerRating.objects.filter(pk=rating_id).exists())
+        self.assertEqual(User.objects.get(pk=self.customer.user_id).rating, 4.0)
