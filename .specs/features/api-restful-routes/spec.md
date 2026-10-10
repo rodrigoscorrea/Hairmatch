@@ -155,6 +155,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-88 | `PUT /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | multipart, campo `profile_picture`; 200 `{profile_picture}` |
 | RT-89 | `DELETE /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | 204, idempotente |
 | RT-90 | `POST /api/reviews/{id}/pictures` | (nova, feature `review-editing`, #105) | cliente dono | multipart, campo `pictures` repetido; 201 `{data: [{id, url}]}`; no máximo 5 fotos por avaliação |
+| RT-91 | `DELETE /api/reviews/{id}/pictures/{id}` | (nova, feature `review-editing`, #105) | cliente dono | 204; 404 se a avaliação ou a foto não for do cliente |
 | RT-94 | `GET /api/hairdressers/{id}/gallery-photos` | (nova, feature `hairdresser-gallery`, #118) | nenhuma | 200 `{data: [{id, image, created_at}]}` |
 | RT-95 | `POST /api/hairdressers/{id}/gallery-photos` | (nova, feature `hairdresser-gallery`, #118) | profissional dono | multipart, campo `image`; 201; 409 `gallery-full` com 30 fotos |
 | RT-96 | `DELETE /api/hairdressers/{id}/gallery-photos/{id}` | (nova, feature `hairdresser-gallery`, #118) | profissional dono | 204 |

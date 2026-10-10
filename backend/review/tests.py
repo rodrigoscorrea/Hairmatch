@@ -1952,3 +1952,103 @@ class AddReviewPicturesRaceTest(TransactionTestCase):
         self.assertEqual(failures, [])
         self.assertEqual(sorted(statuses), [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
         self.assertEqual(review.pictures.count(), 3)
+
+
+class RemoveReviewPictureTest(ReviewsTestCase):
+    """DELETE /api/reviews/{id}/pictures/{picture_id} (RT-91)"""
+
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        self.first, self.second = [
+            ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG')) for _ in range(2)
+        ]
+        self.url = reverse('review_picture_detail', args=[self.review.id, self.first.id])
+
+    def _assert_nothing_removed(self):
+        self.assertEqual(self.review.pictures.count(), 2)
+        self.assertTrue(default_storage.exists(self.first.picture.name))
+        self.assertTrue(default_storage.exists(self.second.picture.name))
+
+    def test_removing_one_of_two_pictures_deletes_only_that_row_and_object_once_committed(self):
+        """REV-16"""
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertEqual(self._ids(), [self.second.id])
+        self.assertFalse(default_storage.exists(self.first.picture.name))
+        self.assertTrue(default_storage.exists(self.second.picture.name))
+
+    def _ids(self):
+        return list(self.review.pictures.values_list('id', flat=True))
+
+    def test_the_object_stays_in_the_storage_until_the_transaction_commits(self):
+        """REV-28"""
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(callbacks), 1)
+        self.assertEqual(self._ids(), [self.second.id])
+        self.assertTrue(default_storage.exists(self.first.picture.name))
+
+    def test_the_review_of_another_customer_answers_404_and_removes_nothing(self):
+        """REV-17"""
+        self.login_as_customer()
+        other = Review.objects.create(rating=3, customer=self.customer2, hairdresser=self.hairdresser)
+        theirs = ReviewPicture.objects.create(review=other, picture=make_upload(fmt='PNG'))
+
+        for review_id, picture_id in ((other.id, theirs.id), (999999, self.first.id)):
+            with self.subTest(review=review_id):
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(reverse('review_picture_detail', args=[review_id, picture_id]))
+                assert_problem(response, 'not-found', detail='Review not found.')
+        self._assert_nothing_removed()
+        self.assertTrue(default_storage.exists(theirs.picture.name))
+
+    def test_a_picture_of_another_review_or_one_that_does_not_exist_answers_404(self):
+        """REV-18"""
+        self.login_as_customer()
+        sibling = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        elsewhere = ReviewPicture.objects.create(review=sibling, picture=make_upload(fmt='PNG'))
+
+        for picture_id in (elsewhere.id, 999999):
+            with self.subTest(picture=picture_id):
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(reverse('review_picture_detail', args=[self.review.id, picture_id]))
+                assert_problem(response, 'not-found', detail='Picture not found.')
+        self._assert_nothing_removed()
+        self.assertEqual(sibling.pictures.count(), 1)
+        self.assertTrue(default_storage.exists(elsewhere.picture.name))
+
+    def test_without_a_session_answers_401(self):
+        """REV-19"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        assert_problem(response, 'invalid-session')
+        self._assert_nothing_removed()
+
+    def test_a_hairdresser_answers_403_customer_required(self):
+        """REV-19"""
+        self.login_as_hairdresser()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        assert_problem(response, 'customer-required')
+        self._assert_nothing_removed()
+
+    def test_get_answers_405_with_delete_in_the_allow_header(self):
+        self.login_as_customer()
+
+        response = self.client.get(self.url)
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertIn('DELETE', response['Allow'].split(', '))

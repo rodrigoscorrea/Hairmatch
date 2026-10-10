@@ -21,7 +21,7 @@ from users.authentication import authenticated_customer, authenticated_hairdress
 from users.models import Customer, Hairdresser
 
 from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
-from .models import CustomerRating, Review
+from .models import CustomerRating, Review, ReviewPicture
 from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors, picture_names
 from .serializers import (
     CustomerRatingCreatedSerializer,
@@ -227,6 +227,29 @@ class ReviewPictureCollection(APIView):
             raise
 
         return JsonResponse({'data': ReviewPictureSerializer(review.pictures.all(), many=True).data}, status=201)
+
+
+class ReviewPictureDetail(APIView):
+    """`/api/reviews/{id}/pictures/{picture_id}`: DELETE removes one picture of a review of the logged customer."""
+
+    def delete(self, request, id, picture_id):
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+
+        review = Review.objects.filter(id=id, customer_id=customer.id).first()
+        if review is None:
+            return problem_response(request, 'not-found', 'Review not found.')
+        picture = ReviewPicture.objects.filter(id=picture_id, review=review).first()
+        if picture is None:
+            return problem_response(request, 'not-found', 'Picture not found.')
+
+        with transaction.atomic():
+            name = picture.picture.name
+            picture.delete()
+            # The object goes after the commit, never on a rollback.
+            transaction.on_commit(lambda: delete_stored_files([name]))
+        return HttpResponse(status=204)
 
 
 def _customer_rating_errors(data):

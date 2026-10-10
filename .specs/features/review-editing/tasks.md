@@ -399,14 +399,14 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: remover uma de 2 fotos dá 204, deixa 1 linha e, depois do commit, apaga só a chave dela (REV-16).
-- [ ] Teste: sem executar os callbacks, a chave continua no storage (REV-28).
-- [ ] Teste: uma review de outro cliente dá 404 e não remove nada (REV-17).
-- [ ] Teste: uma foto de outra review do mesmo cliente, ou um id inexistente, dá 404 e não remove nada (REV-18).
-- [ ] Teste: sem sessão dá 401, e um cabeleireiro recebe 403 `customer-required` (REV-19).
-- [ ] Teste: `GET` na rota dá 405, com `Allow` contendo `DELETE`.
-- [ ] `hairmatch.test_routes` passa com RT-91 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 108 + 6.
+- [x] Teste: remover uma de 2 fotos dá 204, deixa 1 linha e, depois do commit, apaga só a chave dela (REV-16).
+- [x] Teste: sem executar os callbacks, a chave continua no storage (REV-28).
+- [x] Teste: uma review de outro cliente dá 404 e não remove nada (REV-17).
+- [x] Teste: uma foto de outra review do mesmo cliente, ou um id inexistente, dá 404 e não remove nada (REV-18).
+- [x] Teste: sem sessão dá 401, e um cabeleireiro recebe 403 `customer-required` (REV-19).
+- [x] Teste: `GET` na rota dá 405, com `Allow` contendo `DELETE`.
+- [x] `hairmatch.test_routes` passa com RT-91 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 108 + 6.
 
 **Tests**: integration
 **Gate**: full

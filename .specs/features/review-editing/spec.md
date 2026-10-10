@@ -286,9 +286,9 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-13 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-14 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-15 | P1: Adicionar e remover fotos | Tasks | Implemented |
-| REV-16 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-16 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-17 | P1: Adicionar e remover fotos | Tasks | Implemented |
-| REV-18 | P1: Adicionar e remover fotos | Tasks | Pending |
+| REV-18 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-19 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-20 | P1: Adicionar e remover fotos | Tasks | Implemented |
 | REV-25 | P1: Nenhum arquivo órfão | Tasks | Implemented |
