@@ -67,7 +67,11 @@ class ReserveById(APIView):
             return error
 
         try:
-            reserve = Reserve.objects.select_related('customer', 'service__hairdresser').get(id=id)
+            reserve = (
+                Reserve.objects.select_related('customer', 'service__hairdresser__user', 'review')
+                .prefetch_related('review__pictures')
+                .get(id=id)
+            )
         except Reserve.DoesNotExist:
             return problem_response(request, 'not-found', 'Reservation not found.')
         if not _is_reserve_party(session.user, reserve):
@@ -154,7 +158,12 @@ class ListReserve(APIView):
         if customer_id is not None and customer_id != customer.id:
             return forbidden(request)
 
-        reserves = Reserve.objects.filter(customer=customer).order_by('start_time')
+        reserves = (
+            Reserve.objects.filter(customer=customer)
+            .select_related('service__hairdresser__user', 'review')
+            .prefetch_related('review__pictures')
+            .order_by('start_time')
+        )
         result = ReserveFullInfoSerializer(reserves, many=True).data
         return JsonResponse({'data': result}, status=200)
 

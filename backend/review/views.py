@@ -15,13 +15,26 @@ from hairmatch.problems import (
     request_data,
     validation_problem,
 )
+from hairmatch.storage import delete_stored_files
 from reserve.models import Reserve
 from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
 from users.models import Customer, Hairdresser
 
-from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
-from .models import CustomerRating, Review
-from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
+from .customer_ratings import (
+    ALREADY_RATED_DETAIL,
+    delete_customer_rating,
+    record_customer_rating,
+    service_end,
+    update_customer_rating,
+)
+from .models import CustomerRating, Review, ReviewPicture
+from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors, picture_names
+from .serializers import (
+    CustomerRatingCreatedSerializer,
+    CustomerRatingSerializer,
+    ReviewPictureSerializer,
+    ReviewSerializer,
+)
 
 RATING_DETAIL = 'This field must be a number.'
 RATING_RANGE_DETAIL = 'The rating must be between 1 and 5.'
@@ -67,7 +80,7 @@ class CreateReview(APIView):
         # 2. Extract data from the FormData
         data = request_data(request)
         comment = data.get('comment', '')
-        picture = request.FILES.get('picture')
+        files = request.FILES.getlist('pictures')
 
         # 3. Validate the fields, all at once
         errors = missing_field_errors(data, ['reserve', 'rating', 'hairdresser'])
@@ -77,6 +90,7 @@ class CreateReview(APIView):
         rating_error = _rating_error(data['rating']) if data.get('rating') else None
         if rating_error:
             errors.append(rating_error)
+        errors += picture_errors(files)
         if errors:
             raise validation_problem(errors)
         rating = _parse_rating(data['rating'])
@@ -99,27 +113,38 @@ class CreateReview(APIView):
         if str(reserve.service.hairdresser_id) != str(hairdresser_id):
             raise validation_problem([body_error('hairdresser', 'The hairdresser does not match the reservation.')])
 
-        # 4. Create the Review object in the database
+        # 4. Create the Review and its pictures. The pictures reach the storage while the rows are written, so a
+        # request that fails afterwards deletes them at once: the rollback would never run an on_commit hook.
+        saved_names = []
         try:
             with transaction.atomic():
                 new_review = Review.objects.create(
                     rating=rating,
                     comment=comment,
-                    picture=picture,
                     customer=customer,
                     hairdresser_id=hairdresser_id
                 )
+                add_review_pictures(new_review, files, saved_names)
                 reserve.review = new_review
                 reserve.save()
         except InvalidImage:
-            return problem_response(request, 'invalid-image', 'The review picture is not a valid image.')
+            delete_stored_files(saved_names)
+            return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
+        except BaseException:
+            delete_stored_files(saved_names)
+            raise
 
         return JsonResponse({'message': "Review registered successfully"}, status=201)
 
 
 class ListReview(APIView):
     def get(self, request, hairdresser_id):
-        reviews = Review.objects.all().filter(hairdresser_id=hairdresser_id)
+        reviews = (
+            Review.objects.filter(hairdresser_id=hairdresser_id)
+            .select_related('customer__user')
+            .prefetch_related('pictures')
+            .order_by('id')  # the joins above leave the order to the planner otherwise
+        )
         serializer = ReviewSerializer(reviews, many=True)
         return JsonResponse({'data': serializer.data}, status=200)
 
@@ -163,7 +188,10 @@ class RemoveReview(APIView):
                 reserve.review = None
                 reserve.save()
 
+            # The CASCADE removes the rows but not the objects: they go after the commit, never on a rollback.
+            names = picture_names(review.pictures.all())
             review.delete()
+            transaction.on_commit(lambda: delete_stored_files(names))
         return HttpResponse(status=204)
 
 
@@ -171,14 +199,77 @@ class ReviewDetail(UpdateReview, RemoveReview):
     """`/api/reviews/{id}`: PUT updates and DELETE removes the review of the logged customer."""
 
 
-def _customer_rating_errors(data):
-    """The `errors` items of a POST /api/customer-ratings body, one per invalid field."""
+class ReviewPictureCollection(APIView):
+    """`/api/reviews/{id}/pictures`: POST adds pictures to a review of the logged customer, up to 5 in all."""
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, id):
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+
+        # What does not depend on the review is refused first, so invalid input never answers 404.
+        files = request.FILES.getlist('pictures')
+        errors = picture_errors(files, required=True)
+        if errors:
+            raise validation_problem(errors)
+
+        saved_names = []
+        try:
+            with transaction.atomic():
+                # Locked before the count, so two requests cannot both fit under the limit.
+                review = Review.objects.select_for_update().filter(id=id, customer_id=customer.id).first()
+                if review is None:
+                    return problem_response(request, 'not-found', 'Review not found.')
+                errors = picture_errors(files, existing=review.pictures.count())
+                if errors:
+                    raise validation_problem(errors)
+                add_review_pictures(review, files, saved_names)
+        except InvalidImage:
+            delete_stored_files(saved_names)
+            return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
+        except BaseException:
+            delete_stored_files(saved_names)
+            raise
+
+        return JsonResponse({'data': ReviewPictureSerializer(review.pictures.all(), many=True).data}, status=201)
+
+
+class ReviewPictureDetail(APIView):
+    """`/api/reviews/{id}/pictures/{picture_id}`: DELETE removes one picture of a review of the logged customer."""
+
+    def delete(self, request, id, picture_id):
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+
+        review = Review.objects.filter(id=id, customer_id=customer.id).first()
+        if review is None:
+            return problem_response(request, 'not-found', 'Review not found.')
+        picture = ReviewPicture.objects.filter(id=picture_id, review=review).first()
+        if picture is None:
+            return problem_response(request, 'not-found', 'Picture not found.')
+
+        with transaction.atomic():
+            name = picture.picture.name
+            picture.delete()
+            # The object goes after the commit, never on a rollback.
+            transaction.on_commit(lambda: delete_stored_files([name]))
+        return HttpResponse(status=204)
+
+
+def _customer_rating_errors(data, require_reservation=True):
+    """
+    The `errors` items of a customer rating body, one per invalid field. The POST names the reservation to rate;
+    the PUT edits a rating that already has one, so it skips that field.
+    """
     errors = []
     reservation = data.get('reservation')
-    if reservation is None or reservation == '':
-        errors.append(body_error('reservation', REQUIRED_DETAIL))
-    elif not _is_id(reservation):
-        errors.append(body_error('reservation', 'This field must be an integer.'))
+    if require_reservation:
+        if reservation is None or reservation == '':
+            errors.append(body_error('reservation', REQUIRED_DETAIL))
+        elif not _is_id(reservation):
+            errors.append(body_error('reservation', 'This field must be an integer.'))
 
     # A JSON integer only: the app sends whole stars, so 4.5, "5" and true are refused.
     rating = data.get('rating')
@@ -230,6 +321,52 @@ class CustomerRatingCollection(APIView):
 
         customer_rating = record_customer_rating(hairdresser, reservation, data['rating'], comment)
         return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=201)
+
+
+class CustomerRatingDetail(APIView):
+    """`/api/customer-ratings/{id}`: PUT edits and DELETE removes a rating the logged hairdresser wrote."""
+
+    @staticmethod
+    def _authored_rating(request, id, hairdresser):
+        """The rating `id` and no error, or None and the 404 or 403 response."""
+        customer_rating = CustomerRating.objects.select_related('customer').filter(id=id).first()
+        if customer_rating is None:
+            return None, problem_response(request, 'not-found', 'Rating not found.')
+        # Only the author. A rating whose author deleted the account (hairdresser None) belongs to no one.
+        if customer_rating.hairdresser_id != hairdresser.id:
+            return None, forbidden(request)
+        return customer_rating, None
+
+    def put(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        # The body is checked before the rating is looked up: invalid input is always a 400.
+        data = json_object(request)
+        errors = _customer_rating_errors(data, require_reservation=False)
+        if errors:
+            raise validation_problem(errors)
+
+        customer_rating, error = self._authored_rating(request, id, hairdresser)
+        if error:
+            return error
+
+        comment = (data.get('comment') or '').strip() or None
+        update_customer_rating(customer_rating, data['rating'], comment)
+        return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=200)
+
+    def delete(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        customer_rating, error = self._authored_rating(request, id, hairdresser)
+        if error:
+            return error
+
+        delete_customer_rating(customer_rating)
+        return HttpResponse(status=204)
 
 
 class CustomerRatingsByCustomer(APIView):

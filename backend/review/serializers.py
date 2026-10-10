@@ -1,16 +1,30 @@
 from rest_framework import serializers
-from .models import CustomerRating, Review
+from .models import CustomerRating, Review, ReviewPicture
 from users.models import User
 from users.serializers import CustomerNameSerializer
 
 
+class ReviewPictureSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReviewPicture
+        fields = ['id', 'url']
+
+    def get_url(self, obj):
+        return obj.picture.url
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     customer = CustomerNameSerializer(read_only=True)
+    pictures = ReviewPictureSerializer(many=True, read_only=True)
     class Meta:
         model = Review
         fields = '__all__'
 
 class ReviewLiteSerializer(serializers.ModelSerializer):
+    pictures = ReviewPictureSerializer(many=True, read_only=True)
+
     class Meta:
         model = Review
         fields = '__all__'

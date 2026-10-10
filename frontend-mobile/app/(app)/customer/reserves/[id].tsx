@@ -20,6 +20,7 @@ export default function ReserveInfoScreen() {
     handleBack,
     confirmCancel,
     handleReviewScreen,
+    handleEditReview,
     menuVisible,
     setMenuVisible,
     handleDeleteReview,
@@ -48,7 +49,6 @@ export default function ReserveInfoScreen() {
   const { service, start_time } = reserve;
   const { hairdresser } = service;
   const hairdresser_image = reserve.service.hairdresser.user.profile_picture;
-  const reserve_image = reserve?.review?.picture;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -117,9 +117,13 @@ export default function ReserveInfoScreen() {
               {/* Review Body */}
               <Text style={styles.infoValue}>{reserve.review.comment}</Text>
 
-              {/* Review Image */}
-              {reserve.review.picture ? (
-                  <Image source={{ uri: reserve_image }} style={styles.reviewImage} />
+              {/* Review Pictures */}
+              {reserve.review.pictures.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPictures}>
+                      {reserve.review.pictures.map(picture => (
+                          <Image key={picture.id} source={{ uri: picture.url }} style={styles.reviewPicture} />
+                      ))}
+                  </ScrollView>
               ) : (
                   <View style={styles.imagePlaceholder}>
                       <Ionicons name="camera" size={40} color="#ccc" />
@@ -135,7 +139,7 @@ export default function ReserveInfoScreen() {
               >
                   <TouchableOpacity style={styles.popupOverlay} activeOpacity={1} onPressOut={() => setMenuVisible(false)}>
                       <View style={styles.popupMenu}>
-                          <TouchableOpacity style={styles.popupMenuItem}>
+                          <TouchableOpacity style={styles.popupMenuItem} onPress={() => handleEditReview(reserve.id)}>
                               <Text style={styles.popupMenuItemText}>Editar avaliação</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.popupMenuItem} onPress={() => setDeletionModalVisible(true)}>

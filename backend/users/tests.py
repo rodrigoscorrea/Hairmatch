@@ -23,7 +23,7 @@ from service.models import Service
 from agenda.models import Agenda
 from availability.models import Availability
 from reserve.models import Reserve
-from review.models import Review
+from review.models import Review, ReviewPicture
 from django.utils import timezone
 import base64
 from unittest.mock import patch, MagicMock
@@ -5635,15 +5635,17 @@ class CognitoDeleteAccountTest(TestCase):
                                   hairdresser=hairdresser, service=service)
         past = Reserve.objects.create(start_time=now - datetime.timedelta(days=7), customer=customer, service=service)
         Reserve.objects.create(start_time=now + datetime.timedelta(days=7), customer=customer, service=service)
-        past.review = Review.objects.create(
-            rating=5, customer=customer, hairdresser=hairdresser, picture=make_upload('corte.png', fmt='PNG')
-        )
+        past.review = Review.objects.create(rating=5, customer=customer, hairdresser=hairdresser)
+        for name in ('corte.png', 'barba.png'):
+            ReviewPicture.objects.create(review=past.review, picture=make_upload(name, fmt='PNG'))
         past.save()
         return hairdresser
 
     def test_a_hairdresser_account_is_deleted_with_its_services_agenda_and_cancelled_bookings(self):
         hairdresser = self._hairdresser_with_bookings()
-        pictures = [hairdresser.user.profile_picture.name, Review.objects.get().picture.name]
+        review_pictures = [p.picture.name for p in ReviewPicture.objects.all()]
+        self.assertEqual(len(review_pictures), 2)
+        pictures = [hairdresser.user.profile_picture.name, *review_pictures]
 
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.delete(self.own_url)
@@ -5651,7 +5653,7 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertNotIn('cabelo@example.com', self.fake.users)
         self.assertFalse(User.objects.filter(email='cabelo@example.com').exists())
-        for model in (Hairdresser, Service, Availability, Agenda, Reserve, Review):
+        for model in (Hairdresser, Service, Availability, Agenda, Reserve, Review, ReviewPicture):
             with self.subTest(model=model.__name__):
                 self.assertFalse(model.objects.exists())
         for name in pictures:
@@ -5666,7 +5668,8 @@ class CognitoDeleteAccountTest(TestCase):
             data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
             content_type='application/json',
         )
-        picture = Review.objects.get().picture.name
+        review_pictures = [p.picture.name for p in ReviewPicture.objects.all()]
+        self.assertEqual(len(review_pictures), 2)
 
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.delete(self.own_url)
@@ -5676,7 +5679,10 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertFalse(Customer.objects.exists())
         self.assertFalse(Reserve.objects.exists())
         self.assertFalse(Review.objects.exists())
-        self.assertFalse(default_storage.exists(picture))
+        self.assertFalse(ReviewPicture.objects.exists())
+        for name in review_pictures:
+            with self.subTest(picture=name):
+                self.assertFalse(default_storage.exists(name))
         # Only the slot without a booking (the hairdresser's own block) is left in the agenda.
         self.assertEqual(Agenda.objects.count(), 1)
         self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
@@ -5684,6 +5690,8 @@ class CognitoDeleteAccountTest(TestCase):
     def test_a_cognito_outage_keeps_the_hairdresser_rows_and_pictures(self):
         hairdresser = self._hairdresser_with_bookings()
         picture = hairdresser.user.profile_picture.name
+        review_pictures = [p.picture.name for p in ReviewPicture.objects.all()]
+        self.assertEqual(len(review_pictures), 2)
         self.fake.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
 
         with self.captureOnCommitCallbacks(execute=True):
@@ -5695,7 +5703,11 @@ class CognitoDeleteAccountTest(TestCase):
         self.assertEqual(Agenda.objects.count(), 3)
         self.assertTrue(Service.objects.filter(hairdresser=hairdresser).exists())
         self.assertTrue(Review.objects.exists())
+        self.assertEqual(ReviewPicture.objects.count(), 2)
         self.assertTrue(default_storage.exists(picture))
+        for name in review_pictures:
+            with self.subTest(picture=name):
+                self.assertTrue(default_storage.exists(name))
 
     def test_google_accounts_are_deleted_without_calling_cognito(self):
         google_user = _create_plain_user(email='goo@example.com', google_id='google-sub-1')
