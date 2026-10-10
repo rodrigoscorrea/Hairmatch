@@ -22,7 +22,7 @@ from users.models import Customer, Hairdresser
 
 from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
 from .models import CustomerRating, Review
-from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors
+from .pictures import INVALID_REVIEW_PICTURE_DETAIL, add_review_pictures, picture_errors, picture_names
 from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
 
 RATING_DETAIL = 'This field must be a number.'
@@ -176,7 +176,10 @@ class RemoveReview(APIView):
                 reserve.review = None
                 reserve.save()
 
+            # The CASCADE removes the rows but not the objects: they go after the commit, never on a rollback.
+            names = picture_names(review.pictures.all())
             review.delete()
+            transaction.on_commit(lambda: delete_stored_files(names))
         return HttpResponse(status=204)
 
 

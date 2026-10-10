@@ -778,6 +778,39 @@ class RemoveReview(ReviewsTestCase):
         self.reserve.refresh_from_db()
         self.assertIsNone(self.reserve.review)
 
+    def _add_pictures(self, count=2):
+        for _ in range(count):
+            ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG'))
+        return list(self.review.pictures.values_list('picture', flat=True))
+
+    def test_deleting_a_review_deletes_its_pictures_from_the_storage_once_committed(self):
+        """REV-25"""
+        names = self._add_pictures(2)
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.delete_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        for name in names:
+            with self.subTest(name=name):
+                self.assertFalse(default_storage.exists(name))
+
+    def test_the_objects_stay_in_the_storage_until_the_transaction_commits(self):
+        """REV-28"""
+        names = self._add_pictures(2)
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.delete_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(callbacks), 1)
+        for name in names:
+            with self.subTest(name=name):
+                self.assertTrue(default_storage.exists(name))
+
     def test_delete_review_unauthenticated(self):
         """Test that an unauthenticated request is forbidden."""
         # Log out the client

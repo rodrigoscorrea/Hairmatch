@@ -312,9 +312,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: uma review com 2 fotos, apagada dentro de `captureOnCommitCallbacks(execute=True)`, dá 204, remove as linhas e apaga as 2 chaves (REV-25).
-- [ ] Teste: sem executar os callbacks (rollback simulado), as chaves continuam no storage (REV-28).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 98 + 2.
+- [x] Teste: uma review com 2 fotos, apagada dentro de `captureOnCommitCallbacks(execute=True)`, dá 204, remove as linhas e apaga as 2 chaves (REV-25).
+- [x] Teste: sem executar os callbacks (rollback simulado), as chaves continuam no storage (REV-28).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 98 + 2.
 
 **Tests**: integration
 **Gate**: quick
