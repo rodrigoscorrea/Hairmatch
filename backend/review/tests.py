@@ -3,13 +3,14 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import threading
 from django.db import connection
-from django.test import TestCase, TransactionTestCase
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
@@ -18,6 +19,10 @@ from django.db import IntegrityError, transaction
 from hairmatch.problems import Problem
 from .customer_ratings import record_customer_rating, service_end
 from .models import CustomerRating, Review, ReviewPicture
+from .pictures import (
+    MAX_REVIEW_PICTURES, REVIEW_PICTURE_MAX_SIZE, add_review_pictures, picture_errors, picture_names,
+)
+from hairmatch.images import InvalidImage
 from reserve.models import Reserve
 from service.models import Service
 import jwt
@@ -1469,3 +1474,85 @@ class ReviewPictureModelTest(ReviewsTestCase):
         self.review.delete()
 
         self.assertEqual(list(ReviewPicture.objects.values_list('id', flat=True)), [kept.id])
+
+
+class PictureErrorsTest(SimpleTestCase):
+    """REV-04, REV-05, REV-11, REV-12, REV-13"""
+
+    @staticmethod
+    def _files(count, size=100):
+        return [SimpleNamespace(size=size) for _ in range(count)]
+
+    def test_no_files_are_only_an_error_when_required(self):
+        self.assertEqual(picture_errors([], required=True), [
+            {'pointer': '#/pictures', 'detail': 'This field is required.'},
+        ])
+        self.assertEqual(picture_errors([]), [])
+
+    def test_more_than_five_files_are_one_error(self):
+        too_many = [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}]
+
+        self.assertEqual(picture_errors(self._files(6)), too_many)
+        self.assertEqual(picture_errors(self._files(2), existing=4), too_many)
+        self.assertEqual(picture_errors(self._files(5), existing=0), [])
+        self.assertEqual(picture_errors(self._files(1), existing=4), [])
+
+    def test_a_file_over_5_mb_is_one_error_and_exactly_5_mb_passes(self):
+        too_big = [{'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'}]
+
+        self.assertEqual(REVIEW_PICTURE_MAX_SIZE, 5 * 1024 * 1024)
+        self.assertEqual(picture_errors(self._files(1, size=5 * 1024 * 1024 + 1)), too_big)
+        self.assertEqual(picture_errors(self._files(1, size=5 * 1024 * 1024)), [])
+
+    def test_the_first_applicable_error_is_the_only_one_by_the_required_limit_size_order(self):
+        big_and_many = self._files(6, size=REVIEW_PICTURE_MAX_SIZE + 1)
+
+        errors = picture_errors(big_and_many)
+        self.assertEqual(errors, [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}])
+        self.assertEqual(picture_errors([], required=True)[0]['detail'], 'This field is required.')
+
+    def test_no_file_is_opened(self):
+        files = [MagicMock(size=REVIEW_PICTURE_MAX_SIZE + 1) for _ in range(2)]
+
+        picture_errors(files)
+
+        for file in files:
+            file.open.assert_not_called()
+            file.read.assert_not_called()
+            file.seek.assert_not_called()
+
+
+class ReviewPicturesDomainTest(ReviewsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+
+    def test_a_failure_keeps_the_names_already_stored_in_the_list_of_the_caller(self):
+        """REV-06, REV-14"""
+        saved = []
+        files = [make_upload('a.png', fmt='PNG'), make_upload('b.png', fmt='PNG'),
+                 SimpleUploadedFile('c.png', b'not an image', content_type='image/png')]
+
+        with self.assertRaises(InvalidImage), transaction.atomic():
+            add_review_pictures(self.review, files, saved)
+
+        self.assertEqual(len(saved), 2)
+        self.assertEqual(ReviewPicture.objects.count(), 0)  # the savepoint of the view's atomic block is rolled back
+        for name in saved:
+            self.assertRegex(name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+            self.assertTrue(default_storage.exists(name))
+
+    def test_the_pictures_are_stored_in_the_order_received(self):
+        saved = []
+
+        add_review_pictures(self.review, [make_upload('a.png', fmt='PNG'), make_upload('b.png', fmt='PNG')], saved)
+
+        self.assertEqual(saved, [p.picture.name for p in self.review.pictures.all()])
+
+    def test_picture_names_are_the_names_of_the_pictures_of_the_queryset(self):
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        mine = [ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG')) for _ in range(2)]
+        ReviewPicture.objects.create(review=other, picture=make_upload(fmt='PNG'))
+
+        self.assertEqual(picture_names(self.review.pictures.all()), [p.picture.name for p in mine])
+        self.assertEqual(MAX_REVIEW_PICTURES, 5)

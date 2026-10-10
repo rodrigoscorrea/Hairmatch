@@ -196,13 +196,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `picture_errors([], required=True)` dá um item `#/pictures` "This field is required.". `picture_errors([])` dá `[]`.
-- [ ] Teste: 6 arquivos, e também 2 arquivos com `existing=4`, dão um item `#/pictures` "A review can have at most 5 pictures.". 5 arquivos com `existing=0` dão `[]`.
-- [ ] Teste: um arquivo com `size = 5 * 1024 * 1024 + 1` dá "Each picture must have at most 5 MB.", e um com exatamente 5 MB passa. Um mock prova que nenhum arquivo é aberto.
-- [ ] Teste: quando cabem dois erros, sai um item só, na ordem obrigatório → limite → tamanho.
-- [ ] Teste: `add_review_pictures` com [válida, válida, inválida] levanta `InvalidImage`, e `saved_names` tem as 2 chaves já gravadas.
-- [ ] Teste: `picture_names` devolve os nomes das fotos do queryset.
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 84 + 6.
+- [x] Teste: `picture_errors([], required=True)` dá um item `#/pictures` "This field is required.". `picture_errors([])` dá `[]`.
+- [x] Teste: 6 arquivos, e também 2 arquivos com `existing=4`, dão um item `#/pictures` "A review can have at most 5 pictures.". 5 arquivos com `existing=0` dão `[]`.
+- [x] Teste: um arquivo com `size = 5 * 1024 * 1024 + 1` dá "Each picture must have at most 5 MB.", e um com exatamente 5 MB passa. Um mock prova que nenhum arquivo é aberto.
+- [x] Teste: quando cabem dois erros, sai um item só, na ordem obrigatório → limite → tamanho.
+- [x] Teste: `add_review_pictures` com [válida, válida, inválida] levanta `InvalidImage`, e `saved_names` tem as 2 chaves já gravadas.
+- [x] Teste: `picture_names` devolve os nomes das fotos do queryset.
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 84 + 6.
 
 **Tests**: integration
 **Gate**: quick
