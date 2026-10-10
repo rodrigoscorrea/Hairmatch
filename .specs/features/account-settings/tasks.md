@@ -568,8 +568,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Os dois menus mostram o item, e o modal do cabeleireiro tem a frase das reservas dos clientes.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Os dois menus mostram o item, e o modal do cabeleireiro tem a frase das reservas dos clientes. Conferido por leitura: "Excluir conta" está em `customer/profile.tsx:108` e em `hairdresser/profile/settings.tsx:89`, e a descrição do papel `hairdresser` acrescenta a frase das reservas (`useDeleteAccount.ts:48`). O `deletingRef` barra o segundo toque (`:25`), e o 204 faz `router.replace('/(auth)/login')` e depois `clearSession()` no mesmo tick (`:41-42`). A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

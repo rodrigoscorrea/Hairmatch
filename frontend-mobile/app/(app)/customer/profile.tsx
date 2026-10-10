@@ -5,6 +5,8 @@ import { styles } from '../../../styles/customer/styles/ProfileStyle'; // Adjust
 import Icon from '@expo/vector-icons/Feather';
 import ConfirmationModal from "@/components/modals/confirmationModal/ConfirmationModal"; // Adjust path
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
+import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
+import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
 import { usePathname } from 'expo-router'; // Adjust path if needed
 
@@ -22,6 +24,8 @@ export default function ProfileScreen(){
 
     const handleMenuPress = (item: string) => {
     };
+
+    const deletion = useDeleteAccount("customer");
 
     // userInfo is null for a moment after the logout or the account deletion.
     if (!customer) return null;
@@ -98,6 +102,13 @@ export default function ProfileScreen(){
             subtitle="Fazer logout da conta"
             onPress={() => handleLogout()}
           />
+
+          <MenuItem
+            iconName="trash-2"
+            title="Excluir conta"
+            subtitle="Apagar sua conta permanentemente"
+            onPress={deletion.openDelete}
+          />
         </View>
 
         <View style={styles.spacer} />
@@ -113,6 +124,21 @@ export default function ProfileScreen(){
           onConfirm={confirmLogout} 
           onCancel={cancelLogout} 
       />  
+
+        {/* Account deletion */}
+        <ConfirmationModal
+            visible={deletion.confirmVisible}
+            title="Deseja realmente excluir sua conta?"
+            description={deletion.description}
+            confirmText={deletion.deleting ? "Excluindo..." : "Sim, excluir"}
+            onConfirm={deletion.confirmDelete}
+            onCancel={deletion.cancelDelete}
+        />
+        <ErrorModal
+            visible={deletion.errorModal.visible}
+            onClose={deletion.closeError}
+            message={deletion.errorModal.message}
+        />
     </SafeAreaView>
     );
 }
