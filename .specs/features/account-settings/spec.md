@@ -74,13 +74,13 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 **Why P1**: As telas desta feature passam a escrever pelo `PATCH`, que hoje grava qualquer valor.
 
 **Acceptance Criteria**:
-1. **ACC-01** IF o corpo do `PATCH /api/users/me` traz `first_name`, `last_name`, `phone`, `address`, `neighborhood`, `city`, `state` ou `postal_code` vazio, só com espaços ou com valor que não é string THEN o backend SHALL responder 400 `validation-error` com um item `{"pointer": "/<campo>"}` por campo e SHALL não gravar nenhum campo.
+1. **ACC-01** IF o corpo do `PATCH /api/users/me` traz `first_name`, `last_name`, `phone`, `address`, `neighborhood`, `city`, `state` ou `postal_code` vazio, só com espaços ou com valor que não é string THEN o backend SHALL responder 400 `validation-error` com um item `{"pointer": "#/<campo>"}` por campo (o formato do `body_error` do AD-006, `backend/hairmatch/problems.py`) e SHALL não gravar nenhum campo.
 2. **ACC-02** IF um campo de texto do corpo passa do `max_length` do modelo (`first_name` e `last_name` 100, `address`, `neighborhood`, `city` e `complement` 150, `number` 6) THEN o backend SHALL responder 400 `validation-error` com o pointer do campo e SHALL não gravar nenhum campo.
-3. **ACC-03** IF `phone`, sem os caracteres que não são dígitos, difere dos dígitos do telefone gravado e não casa com `^55\d{10,11}$` THEN o backend SHALL responder 400 `validation-error` com o pointer `/phone`.
-4. **ACC-04** IF `postal_code`, só com os dígitos, não tem exatamente 8 dígitos THEN o backend SHALL responder 400 `validation-error` com o pointer `/postal_code`.
-5. **ACC-05** IF `state` não tem exatamente 2 letras THEN o backend SHALL responder 400 `validation-error` com o pointer `/state`.
+3. **ACC-03** IF `phone`, sem os caracteres que não são dígitos, difere dos dígitos do telefone gravado e não casa com `^55\d{10,11}$` THEN o backend SHALL responder 400 `validation-error` com o pointer `#/phone`.
+4. **ACC-04** IF `postal_code`, só com os dígitos, não tem exatamente 8 dígitos THEN o backend SHALL responder 400 `validation-error` com o pointer `#/postal_code`.
+5. **ACC-05** IF `state` não tem exatamente 2 letras THEN o backend SHALL responder 400 `validation-error` com o pointer `#/state`.
 6. **ACC-06** IF um cliente envia `cpf` que, só com os dígitos, não tem 11 dígitos, ou um cabeleireiro envia `cnpj` que não tem 14 THEN o backend SHALL responder 400 `validation-error` com o pointer do campo.
-7. **ACC-07** IF um cabeleireiro envia `resume` que não é string ou que passa de 1000 caracteres THEN o backend SHALL responder 400 `validation-error` com o pointer `/resume`.
+7. **ACC-07** IF um cabeleireiro envia `resume` que não é string ou que passa de 1000 caracteres THEN o backend SHALL responder 400 `validation-error` com o pointer `#/resume`.
 8. **ACC-08** WHEN o `PATCH` recebe um corpo válido THEN o backend SHALL gravar `phone`, `postal_code`, `cpf` e `cnpj` só com os dígitos e `state` em maiúsculas, e responder 200.
 9. **ACC-09** WHEN o `PATCH` recebe `email` igual ao atual sem diferenciar maiúsculas THEN o backend SHALL ignorar o campo e manter o e-mail gravado.
 10. **ACC-10** IF o `PATCH` recebe `email` diferente do atual sem diferenciar maiúsculas THEN o backend SHALL responder 400 `email-change-unsupported` e SHALL não gravar nenhum campo.
@@ -105,7 +105,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 2. **ACC-17** WHEN o usuário toca em "Salvar" com campos alterados e válidos THEN o app SHALL enviar ao `PATCH /api/users/me` só os campos alterados, com o telefone como `55` + dígitos e os documentos só com os dígitos.
 3. **ACC-18** WHEN o `PATCH` responde 200 THEN o app SHALL recarregar o usuário (`loadSession`) e mostrar a mensagem "Dados atualizados com sucesso.".
 4. **ACC-19** WHEN o usuário toca em "Salvar" sem ter alterado nenhum campo THEN o app SHALL não chamar a API e SHALL mostrar a mensagem "Nenhuma alteração para salvar.".
-5. **ACC-20** IF um campo da tela está vazio ou em formato inválido (as regras de ACC-01, ACC-03 e ACC-06) THEN o app SHALL marcar o campo, mostrar o primeiro erro no `ErrorModal` e não chamar a API.
+5. **ACC-20** IF um campo que o usuário alterou está vazio ou em formato inválido (as regras de ACC-01, ACC-03 e ACC-06) THEN o app SHALL marcar o campo, mostrar o primeiro erro no `ErrorModal` e não chamar a API. Um campo que não foi alterado não é validado nem enviado, como o telefone gravado fora do formato (ACC-58).
 6. **ACC-21** IF o `PATCH` responde com erro THEN o app SHALL mostrar a mensagem do slug pelo `problemMessage` e manter na tela os valores digitados.
 7. **ACC-22** WHILE o `PATCH` está em andamento o app SHALL deixar o "Salvar" desabilitado e mostrar um indicador de carregamento.
 
@@ -121,7 +121,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 
 **Acceptance Criteria**:
 1. **ACC-23** WHEN a tela `configs/addressSetting` abre THEN o app SHALL mostrar o CEP primeiro, com máscara, seguido de logradouro, número, complemento, bairro, cidade e UF, preenchidos com o endereço atual.
-2. **ACC-24** WHEN o CEP digitado chega a 8 dígitos THEN o app SHALL consultar `GET /api/postal-codes/{cep}` pelo `useCepLookup` e preencher logradouro, bairro, cidade e UF com a resposta, sem apagar número nem complemento.
+2. **ACC-24** WHEN o CEP digitado chega a 8 dígitos THEN o app SHALL consultar `GET /api/postal-codes/{cep}` pelo `useCepLookup` e preencher logradouro, bairro, cidade e UF com a resposta, sem apagar número nem complemento. Um campo que a resposta não traz (o CEP de uma cidade inteira vem sem logradouro e sem bairro) mantém o valor gravado. Só é apagado o valor que a consulta anterior escreveu, como no merge do cadastro.
 3. **ACC-25** IF a consulta do CEP responde 404 `postal-code-not-found` ou falha THEN o app SHALL mostrar a mensagem do slug e deixar os campos editáveis à mão.
 4. **ACC-26** WHEN o usuário toca em "Salvar" com o endereço alterado e válido THEN o app SHALL enviar ao `PATCH /api/users/me` só os campos de endereço alterados, com o CEP só com os dígitos, e, no 200, SHALL recarregar o usuário e mostrar "Endereço atualizado com sucesso.".
 5. The tela de endereço SHALL aplicar ACC-19 a ACC-22 aos campos dela. **(ACC-27)**
@@ -159,8 +159,8 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 1. **ACC-35** WHEN `PUT /api/users/me/profile-picture` recebe multipart com uma imagem válida no campo `profile_picture` THEN o backend SHALL gravá-la pelo `WebPImageField` e responder 200 `{"profile_picture": "<url da foto nova>"}`.
 2. **ACC-36** WHEN o `PUT` grava uma foto nova e o usuário já tinha uma THEN o backend SHALL apagar o arquivo anterior do storage depois do commit.
 3. **ACC-37** IF o arquivo do `PUT` não é imagem THEN o backend SHALL responder 400 `invalid-image` e SHALL manter a foto e o arquivo anteriores.
-4. **ACC-38** IF o `PUT` não traz o campo `profile_picture` THEN o backend SHALL responder 400 `validation-error` com o pointer `/profile_picture`.
-5. **ACC-39** IF o arquivo do `PUT` tem mais de 5 MB (5 × 1024 × 1024 bytes) THEN o backend SHALL responder 400 `validation-error` com o pointer `/profile_picture` e SHALL não gravar nada.
+4. **ACC-38** IF o `PUT` não traz o campo `profile_picture` THEN o backend SHALL responder 400 `validation-error` com o pointer `#/profile_picture`.
+5. **ACC-39** IF o arquivo do `PUT` tem mais de 5 MB (5 × 1024 × 1024 bytes) THEN o backend SHALL responder 400 `validation-error` com o pointer `#/profile_picture` e SHALL não gravar nada.
 6. **ACC-40** WHEN `DELETE /api/users/me/profile-picture` é chamado THEN o backend SHALL deixar `profile_picture` nulo, apagar o arquivo depois do commit e responder 204, inclusive quando o usuário já não tinha foto.
 7. **ACC-41** IF `PUT` ou `DELETE /api/users/me/profile-picture` é chamado sem sessão válida THEN o backend SHALL responder 401 `invalid-session`.
 8. The backend SHALL expor `PUT` e `DELETE /api/users/me/profile-picture` na Route Table (RT-88 e RT-89) e no `ROUTE_TABLE` de `backend/hairmatch/test_routes.py`, com `profile-picture` entre os segmentos singulares do RT-54. **(ACC-42)**
