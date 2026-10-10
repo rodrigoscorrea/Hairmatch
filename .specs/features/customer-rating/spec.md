@@ -282,44 +282,44 @@ A issue #104 pede quatro coisas:
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| CRT-01 | P1: Avaliar pela API, AC1 | Tasks | Implementing |
-| CRT-02 | P1: Avaliar pela API, AC2 | Tasks | Implementing |
-| CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Implementing |
-| CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Implementing |
-| CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Implementing |
-| CRT-06 | P1: Avaliar pela API, AC6 | Tasks | Implementing |
-| CRT-07 | P1: Avaliar pela API, AC7 | Tasks | Implementing |
-| CRT-08 | P1: Avaliar pela API, AC8 | Tasks | Implementing |
-| CRT-09 | P1: Avaliar pela API, AC9 | Tasks | Implementing |
-| CRT-10 | P1: Avaliar pela API, AC10 | Tasks | Implementing |
-| CRT-11 | P1: Entrada validada, AC1 | Tasks | Implementing |
-| CRT-12 | P1: Entrada validada, AC2 | Tasks | Implementing |
-| CRT-13 | P1: Entrada validada, AC3 | Tasks | Implementing |
-| CRT-14 | P1: Entrada validada, AC4 | Tasks | Implementing |
-| CRT-15 | P1: Entrada validada, AC5 | Tasks | Implementing |
-| CRT-16 | P1: Entrada validada, AC6 | Tasks | Implementing |
-| CRT-17 | P1: Entrada validada, AC7 | Tasks | Implementing |
-| CRT-18 | P1: Média, AC1 | Tasks | Implementing |
-| CRT-19 | P1: Média, AC2 | Tasks | Implementing |
-| CRT-20 | P1: Média, AC3 | Tasks | Implementing |
-| CRT-21 | P1: Média, AC4 | Tasks | Implementing |
-| CRT-22 | P1: Média, AC5 | Tasks | Implementing |
-| CRT-23 | P1: Média, AC6 | Tasks | Implementing |
-| CRT-24 | P1: Média, AC7 | Tasks | Implementing |
-| CRT-25 | P1: Média, AC8 | Tasks | Implementing |
-| CRT-26 | P1: Média, AC9 | Tasks | Implementing |
-| CRT-27 | P1: Média, AC10 | Tasks | Implementing |
-| CRT-28 | P1: Listar, AC1 | Tasks | Implementing |
-| CRT-29 | P1: Listar, AC2 | Tasks | Implementing |
-| CRT-30 | P1: Listar, AC3 | Tasks | Implementing |
-| CRT-31 | P1: Listar, AC4 | Tasks | Implementing |
-| CRT-32 | P1: Listar, AC5 | Tasks | Implementing |
-| CRT-33 | P1: Listar, AC6 | Tasks | Implementing |
-| CRT-34 | P1: Listar, AC7 | Tasks | Implementing |
-| CRT-35 | P1: Listar, AC8 | Tasks | Implementing |
-| CRT-36 | P1: Agenda, AC1 | Tasks | Implementing |
-| CRT-37 | P1: Agenda, AC2 | Tasks | Implementing |
-| CRT-38 | P1: Agenda, AC3 | Tasks | Implementing |
+| CRT-01 | P1: Avaliar pela API, AC1 | Tasks | Verified |
+| CRT-02 | P1: Avaliar pela API, AC2 | Tasks | Verified |
+| CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Verified |
+| CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Verified |
+| CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Verified |
+| CRT-06 | P1: Avaliar pela API, AC6 | Tasks | Verified |
+| CRT-07 | P1: Avaliar pela API, AC7 | Tasks | Verified |
+| CRT-08 | P1: Avaliar pela API, AC8 | Tasks | Verified |
+| CRT-09 | P1: Avaliar pela API, AC9 | Tasks | Verified |
+| CRT-10 | P1: Avaliar pela API, AC10 | Tasks | Verified |
+| CRT-11 | P1: Entrada validada, AC1 | Tasks | Verified |
+| CRT-12 | P1: Entrada validada, AC2 | Tasks | Verified |
+| CRT-13 | P1: Entrada validada, AC3 | Tasks | Verified |
+| CRT-14 | P1: Entrada validada, AC4 | Tasks | Verified |
+| CRT-15 | P1: Entrada validada, AC5 | Tasks | Verified |
+| CRT-16 | P1: Entrada validada, AC6 | Tasks | Verified |
+| CRT-17 | P1: Entrada validada, AC7 | Tasks | Verified |
+| CRT-18 | P1: Média, AC1 | Tasks | Verified |
+| CRT-19 | P1: Média, AC2 | Tasks | Verified |
+| CRT-20 | P1: Média, AC3 | Tasks | Verified |
+| CRT-21 | P1: Média, AC4 | Tasks | Verified |
+| CRT-22 | P1: Média, AC5 | Tasks | Verified |
+| CRT-23 | P1: Média, AC6 | Tasks | Verified |
+| CRT-24 | P1: Média, AC7 | Tasks | Verified |
+| CRT-25 | P1: Média, AC8 | Tasks | Verified |
+| CRT-26 | P1: Média, AC9 | Tasks | Verified |
+| CRT-27 | P1: Média, AC10 | Tasks | Verified |
+| CRT-28 | P1: Listar, AC1 | Tasks | Verified |
+| CRT-29 | P1: Listar, AC2 | Tasks | Verified |
+| CRT-30 | P1: Listar, AC3 | Tasks | Verified |
+| CRT-31 | P1: Listar, AC4 | Tasks | Verified |
+| CRT-32 | P1: Listar, AC5 | Tasks | Verified |
+| CRT-33 | P1: Listar, AC6 | Tasks | Verified |
+| CRT-34 | P1: Listar, AC7 | Tasks | Verified |
+| CRT-35 | P1: Listar, AC8 | Tasks | Verified |
+| CRT-36 | P1: Agenda, AC1 | Tasks | Verified |
+| CRT-37 | P1: Agenda, AC2 | Tasks | Verified |
+| CRT-38 | P1: Agenda, AC3 | Tasks | Verified |
 | CRT-39 | P1: Avaliar pelo app, AC1 | Tasks | Implementing |
 | CRT-40 | P1: Avaliar pelo app, AC2 | Tasks | Implementing |
 | CRT-41 | P1: Avaliar pelo app, AC3 | Tasks | Implementing |
@@ -334,9 +334,9 @@ A issue #104 pede quatro coisas:
 | CRT-50 | P1: Perfil, AC1 | Tasks | Implementing |
 | CRT-51 | P1: Perfil, AC2 | Tasks | Implementing |
 | CRT-52 | P1: Perfil, AC3 | Tasks | Implementing |
-| CRT-53 | P1: Contrato, AC1 | Tasks | Implementing |
-| CRT-54 | P1: Contrato, AC2 | Tasks | Implementing |
-| CRT-55 | P1: Contrato, AC3 | Tasks | Implementing |
+| CRT-53 | P1: Contrato, AC1 | Tasks | Verified |
+| CRT-54 | P1: Contrato, AC2 | Tasks | Verified |
+| CRT-55 | P1: Contrato, AC3 | Tasks | Verified |
 | CRT-56 | P2: Nota na agenda, AC1 | Tasks | Implementing |
 | CRT-57 | P2: Nota na agenda, AC2 | Tasks | Implementing |
 | CRT-58 | P2: Avaliações recebidas, AC1 | Tasks | Implementing |
