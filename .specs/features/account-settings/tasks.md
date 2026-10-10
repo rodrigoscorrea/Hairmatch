@@ -400,8 +400,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] As regras batem com as do backend (T1): mesmos limites e mesmos formatos.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] As regras batem com as do backend (T1): mesmos limites e mesmos formatos. Uma função só, `validateAccountUpdate(fields)`, serve às três telas: como o backend, confere só os campos presentes no corpo que vai ser enviado. Obrigatórios: nome, sobrenome, telefone, endereço, bairro, cidade, UF e CEP; `number` e `complement` aceitam vazio; limites 100/150/6/1000; telefone `^55\d{10,11}$`, CEP 8 dígitos, UF 2 letras, CPF 11 e CNPJ 14 dígitos.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

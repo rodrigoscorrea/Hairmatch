@@ -240,14 +240,14 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-17 | P1: Dados da conta, AC2 | Tasks | Implementing |
 | ACC-18 | P1: Dados da conta, AC3 | Tasks | Pending |
 | ACC-19 | P1: Dados da conta, AC4 | Tasks | Pending |
-| ACC-20 | P1: Dados da conta, AC5 | Tasks | Pending |
+| ACC-20 | P1: Dados da conta, AC5 | Tasks | Implementing |
 | ACC-21 | P1: Dados da conta, AC6 | Tasks | Pending |
 | ACC-22 | P1: Dados da conta, AC7 | Tasks | Pending |
 | ACC-23 | P1: Endereço, AC1 | Tasks | Pending |
 | ACC-24 | P1: Endereço, AC2 | Tasks | Pending |
 | ACC-25 | P1: Endereço, AC3 | Tasks | Pending |
 | ACC-26 | P1: Endereço, AC4 | Tasks | Implementing |
-| ACC-27 | P1: Endereço, AC5 | Tasks | Pending |
+| ACC-27 | P1: Endereço, AC5 | Tasks | Implementing |
 | ACC-28 | P1: Excluir conta, AC1 | Tasks | Pending |
 | ACC-29 | P1: Excluir conta, AC2 | Tasks | Pending |
 | ACC-30 | P1: Excluir conta, AC3 | Tasks | Implementing |
@@ -274,7 +274,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-51 | P2: Preferências, AC5 | Tasks | Pending |
 | ACC-52 | P2: Preferências, AC6 | Tasks | Pending |
 | ACC-53 | P2: Resumo, AC1 | Tasks | Pending |
-| ACC-54 | P2: Resumo, AC2 | Tasks | Pending |
+| ACC-54 | P2: Resumo, AC2 | Tasks | Implementing |
 | ACC-55 | P2: Resumo, AC3 | Tasks | Pending |
 | ACC-56 | Edge Cases | Tasks | Implementing |
 | ACC-57 | Edge Cases | Tasks | Implementing |
