@@ -542,8 +542,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] A foto nova aparece depois do upload, e a imagem padrão aparece depois da remoção. Conferido no T21.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] A foto nova aparece depois do upload, e a imagem padrão aparece depois da remoção. Conferido por leitura: o upload e a remoção terminam em `loadSession()` (`useProfilePicture.ts:30`), e a imagem da tela vem de `userInfo` com o placeholder quando não há foto. "Remover foto" só aparece com foto (`AccountSettingScreen.tsx:114`), e a permissão negada mostra a mensagem do ACC-45 sem chamar a API (`useProfilePicture.ts:43-44`). A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

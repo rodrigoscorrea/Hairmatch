@@ -263,9 +263,9 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-40 | P2: Foto, AC6 | Tasks | Implementing |
 | ACC-41 | P2: Foto, AC7 | Tasks | Implementing |
 | ACC-42 | P2: Foto, AC8 | Tasks | Implementing |
-| ACC-43 | P2: Foto, AC9 | Tasks | Pending |
+| ACC-43 | P2: Foto, AC9 | Tasks | Implementing |
 | ACC-44 | P2: Foto, AC10 | Tasks | Implementing |
-| ACC-45 | P2: Foto, AC11 | Tasks | Pending |
+| ACC-45 | P2: Foto, AC11 | Tasks | Implementing |
 | ACC-46 | P2: Foto, AC12 | Tasks | Implementing |
 | ACC-47 | P2: Preferências, AC1 | Tasks | Pending |
 | ACC-48 | P2: Preferências, AC2 | Tasks | Pending |

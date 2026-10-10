@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FormInput } from '@/components/formInputs/FormInput';
 import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
 import { AccountRole, useAccountForm } from '@/hooks/accountHooks/useAccountForm';
+import { useProfilePicture } from '@/hooks/accountHooks/useProfilePicture';
 import { styles } from '@/styles/customer/styles/AccountConfigStyles';
+import { styles as optionStyles } from '@/components/modals/confirmationModal/ConfirmationModalStyles';
 
 // Where each role's settings menu lives.
 const SETTINGS_ROUTE = {
@@ -18,6 +20,7 @@ export function AccountSettingScreen({ role }: { role: AccountRole }) {
   const router = useRouter();
   const { values, errors, email, profilePicture, saving, modal, handleChange, handleSave, closeModal } =
     useAccountForm(role);
+  const picture = useProfilePicture();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,17 +36,22 @@ export function AccountSettingScreen({ role }: { role: AccountRole }) {
           <Text style={styles.headerTitle}>Dados da Conta</Text>
         </View>
 
-        <View style={styles.profilePicContainer}>
+        <TouchableOpacity
+          style={styles.profilePicContainer}
+          onPress={picture.openOptions}
+          disabled={picture.updating}
+        >
           <Image
             source={
               profilePicture
                 ? { uri: profilePicture }
                 : require('../../assets/images/profile_picture_placeholder.png')
             }
-            style={styles.profilePic}
+            style={[styles.profilePic, picture.updating && { opacity: 0.5 }]}
             resizeMode="cover"
           />
-        </View>
+          {picture.updating && <ActivityIndicator style={{ position: 'absolute', top: 50 }} />}
+        </TouchableOpacity>
 
         <View style={styles.form}>
           <FormInput
@@ -95,7 +103,30 @@ export function AccountSettingScreen({ role }: { role: AccountRole }) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* "Remover foto" only shows when there is a picture to remove. */}
+      <Modal visible={picture.optionsVisible} transparent animationType="fade" onRequestClose={picture.closeOptions}>
+        <View style={optionStyles.overlay}>
+          <View style={optionStyles.modalContainer}>
+            <Text style={optionStyles.title}>Foto de perfil</Text>
+            <TouchableOpacity style={[optionStyles.confirmButton, pictureOption]} onPress={picture.handlePickNew}>
+              <Text style={optionStyles.confirmText}>Escolher nova foto</Text>
+            </TouchableOpacity>
+            {picture.hasPicture && (
+              <TouchableOpacity style={[optionStyles.cancelButton, pictureOption]} onPress={picture.handleRemove}>
+                <Text style={optionStyles.cancelText}>Remover foto</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[pictureOption, { paddingVertical: 10 }]} onPress={picture.closeOptions}>
+              <Text style={optionStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <ErrorModal visible={modal.visible} onClose={closeModal} title={modal.title} message={modal.message} />
+      <ErrorModal visible={picture.modal.visible} onClose={picture.closeModal} message={picture.modal.message} />
     </SafeAreaView>
   );
 }
+
+const pictureOption = { alignItems: 'center', marginTop: 10 } as const;
