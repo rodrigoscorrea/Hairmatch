@@ -407,8 +407,8 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] As três funções usam `axiosInstance` e os paths de RT-94 a RT-96, e o `POST` manda `Content-Type: multipart/form-data`.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
+- [x] As três funções usam `axiosInstance` e os paths de RT-94 a RT-96, e o `POST` manda `Content-Type: multipart/form-data`.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`, sem erro novo.
 
 **Tests**: none
 **Gate**: app
