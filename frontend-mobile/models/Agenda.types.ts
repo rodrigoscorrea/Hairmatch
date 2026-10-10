@@ -1,9 +1,13 @@
-// An item of GET /api/hairdressers/{id}/agenda. The reservation fields are null when the slot has no reservation.
-export interface AgendaItemResponse {
+/**
+ * An item of `GET /api/hairdressers/{id}/agenda`. An external block has `service`, `customer` and `reservation_id`
+ * set to null. The reservation fields are also null when the slot has no reservation.
+ */
+export interface AgendaEntryResponse {
     id: number;
     start_time: string;
     end_time: string;
-    service: { id: number; name: string };
+    title: string;
+    service: { id: number; name: string } | null;
     reservation_id: number | null;
     customer: {
         id: number;
@@ -13,11 +17,20 @@ export interface AgendaItemResponse {
     customer_rating: { rating: number; comment: string | null } | null;
 }
 
+/** The body of `POST /api/agenda`. Without `service`, `title` and `end_time` are required. */
+export interface CreateAgendaRequest {
+    start_time: string; // YYYY-MM-DDTHH:mm:00, read as Manaus time
+    end_time: string;
+    title?: string;
+    service?: number;
+}
+
 export interface AgendaEvent {
-    id: any;
+    id: number;
     title: string;
     start: Date;
     end: Date;
+    isExternal: boolean;
     reservationId: number | null;
     customer: {
         id: number;

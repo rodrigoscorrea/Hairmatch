@@ -85,8 +85,18 @@
 - **Date**: 2026-10-04
 - **Status**: active
 
+### AD-009
+- **Decision**: Uma linha de `Agenda` com `service` nulo é um bloqueio externo: um atendimento feito fora do app, identificado pelo `title` (de 1 a 100 caracteres depois de `strip()`). O pareamento Agenda↔Reserve por `(service_id, start_time)` nunca considera essa linha: `ListAgenda` tira os itens sem serviço do `reserve_map`, e `AgendaSerializer.get_customer` devolve `None` cedo. Na listagem, `customer === null` identifica toda entrada que não é reserva do app, e o app mostra o rótulo "Externo". Toda nova escrita na `Agenda` sem reserva usa este formato, sem um campo `kind`.
+- **Reason**: A issue #113 pede para bloquear na agenda um atendimento externo, com ou sem serviço cadastrado. O cálculo de horários livres (app e chatbot) e a checagem de sobreposição da reserva já leem só `start_time` e `end_time` da `Agenda`, então um bloqueio sem serviço sai da oferta sem mudar esse código. `service` nulo mais `title` é a menor mudança de modelo, com uma migração aditiva (`0002_agenda_title_alter_agenda_service`).
+- **Trade-off**:
+  - Um bloqueio com serviço continua pareando com uma `Reserve` de mesmo serviço e início. A checagem de sobreposição impede duas linhas no mesmo início para o mesmo cabeleireiro.
+  - Um segundo tipo de bloqueio (folga, férias) exigiria um campo `kind` e uma migração.
+  - A corrida entre `CreateAgenda` e `CreateReserve` continua sem lock, nos dois caminhos.
+- **Scope**: `backend/agenda` (modelo, migração `0002`, `CreateAgenda`, `ListAgenda`, `AgendaSerializer`) e a agenda do cabeleireiro no `frontend-mobile` (`useAgenda`, `agenda/index.tsx`, `agenda/create.tsx`, `useExternalAppointmentForm`). `reserve/views.py` não muda.
+- **Date**: 2026-10-09
+- **Status**: active
+
 ### AD-010
-> O número AD-009 está reservado para a feature `external-appointment` (#113), que o registra na T12 dela.
 - **Decision**: `User.rating` é um valor **derivado**: a média aritmética das avaliações que o usuário recebeu, arredondada para 2 casas, ou `null` enquanto ele não recebeu nenhuma.
   - O campo é `FloatField(null=True, default=5)`.
   - A média é recalculada só no ponto de escrita da avaliação, na mesma transação do insert, com a linha `User` do avaliado travada por `select_for_update`.
@@ -102,6 +112,24 @@
 - **Status**: active
 
 ## Handoff
+
+- **Feature**: `external-appointment` (issue #113).
+- **Phase / Task**: Execute de T1 a T12 concluído. O Verificador deu FAIL (`validation.md`, ainda não commitado), e as quatro correções já entraram. Falta rodar o Verificador de novo. T13 (UAT manual no web e no Android) está pendente com o usuário.
+- **Completed**:
+  - Backend (T1 a T4): `Agenda.service` opcional e `Agenda.title`, migração `backend/agenda/migrations/0002_agenda_title_alter_agenda_service.py`, o contrato novo do `POST /api/agenda` (EXT-01 a EXT-14), a listagem com `title` e `customer: null` (EXT-18, EXT-19) e o teste de aceite em `reserve` (EXT-15 a EXT-17). Gate Full: 744 testes OK, `makemigrations --check` limpo.
+  - App (T5 a T11): tipos do contrato, serviço tipado, sub-stack `agenda/`, hook `useExternalAppointmentForm`, tela `agenda/create.tsx`, `useAgenda` com `useFocusEffect` e abertura pela célula, FAB "+" e rótulo "Externo". `npx tsc --noEmit` com exit 0. Lint sem erro nos arquivos tocados, e o erro `react-hooks/static-components` de `agenda/index.tsx` foi corrigido.
+  - AD-009 registrado (T12).
+- **Correções da validação**:
+  - EXT-09: um teste congela `timezone.now` e prova que um início igual a agora é aceito. Ele mata o mutante `<=`.
+  - EXT-05: o spec agora diz que `title: null` conta como ausente, e um teste fixa os dois casos.
+  - EXT-31: no web, o alerta de sucesso usa `window.alert`.
+  - EXT-25: o término é preenchido assim que o início fica completo, sem esperar o blur. Depois de 23:59, o campo é limpo.
+  - Os tipos de rota (`.expo/types/router.d.ts`) foram regenerados com o gerador de typed routes do próprio Expo, que dá a mesma saída do Metro, sem subir o Metro.
+- **Foco do UAT**: o alerta de sucesso no web; e no Android, digitar o início com um serviço escolhido e salvar direto.
+- **In-progress** (file:line): none
+- **Next step**:
+  - UAT da T13: os seis passos do roteiro no web (Metro em 8081, aba visível) e os passos 2 e 4 no Android. Depois marcar EXT-20 a EXT-34 como Verified.
+  - Rodar o Verificador de novo (`validation.md`) e commitar o relatório.
 
 - **Feature**: `customer-rating` (issue #104, RF23).
 - **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na primeira rodada (`validation.md`: 41 de 41 critérios de backend, 21 de 21 mutantes mortos, 777 testes).
@@ -130,5 +158,5 @@
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits. No checkout principal continuam pendentes, fora deste PR, `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
-- **Branch**: `104-dar-nota-para-o-cliente` (com a `develop` mesclada, que traz `account-settings`, #120)
+- **Uncommitted files**: neste worktree, só `frontend-mobile/eslint.config.js` (do usuário, fora do PR). Os arquivos sujos do checkout principal (`frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json`, `docs/`) continuam fora destas features.
+- **Branch**: `113-adicionar-servico-por-fora-na-agenda` (com a `develop` mesclada, que traz `customer-rating`, #104, e `account-settings`, #120)

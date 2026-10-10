@@ -1,16 +1,18 @@
 // hooks/hairdresserHooks/useAgenda.ts
 import { useState, useMemo, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { useAuth } from '@/app/_layout';
 import { listAgendaByHairdresser } from '@/services/agenda.service';
-import type { AgendaEvent, AgendaItemResponse, CalendarMode } from '@/models/Agenda.types';
+import type { AgendaEntryResponse, AgendaEvent, CalendarMode } from '@/models/Agenda.types';
 
 dayjs.locale('pt-br');
 
 export const useAgenda = () => {
+  const router = useRouter();
   const { userInfo } = useAuth();
+  const hairdresserId = userInfo?.hairdresser?.id;
 
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [selectedView, setSelectedView] = useState<CalendarMode>('agenda');
@@ -21,9 +23,8 @@ export const useAgenda = () => {
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
 
   // --- Data Fetching ---
-  const hairdresserId = userInfo?.hairdresser?.id;
-
-  // Refetched on every focus, so a rating sent from the rate-customer screen shows up when the hairdresser comes back.
+  // Runs on every focus, so a block saved in agenda/create and a rating sent from the rate-customer screen show up
+  // on the way back.
   useFocusEffect(
     useCallback(() => {
       const fetchAgendaEvents = async () => {
@@ -31,12 +32,15 @@ export const useAgenda = () => {
 
         try {
           const response = await listAgendaByHairdresser(hairdresserId);
-          const convertedEvents: AgendaEvent[] = response.data.map((ev: AgendaItemResponse) => {
+          if (!response) return;
+          const convertedEvents: AgendaEvent[] = response.data.map((ev: AgendaEntryResponse) => {
             return {
               id: ev.id,
-              title: `${ev.service.name}`,
+              // An external block has no service; its title names it.
+              title: ev.title || ev.service?.name || '',
               start: new Date(ev.start_time),
               end: new Date(ev.end_time),
+              isExternal: ev.customer === null,
               reservationId: ev.reservation_id,
               customer: ev.customer
                 ? {
@@ -66,11 +70,19 @@ export const useAgenda = () => {
   const handleViewChange = (view: CalendarMode) => setSelectedView(view);
 
   const handlePressCell = (date: Date) => {
-    setSelectedDate(date);
     if (selectedView === 'month') {
+      setSelectedDate(date);
       setSelectedView('day');
+      return;
     }
+    // Week and Day cells open the external appointment form at that slot.
+    router.push({
+      pathname: '/(app)/hairdresser/agenda/create',
+      params: { date: dayjs(date).format('YYYY-MM-DD'), time: dayjs(date).format('HH:mm') },
+    });
   };
+
+  const handleAddPress = () => router.push('/(app)/hairdresser/agenda/create');
   
   const onEventPress = (event: AgendaEvent) => {
     setSelectedEvent(event);
@@ -130,6 +142,7 @@ export const useAgenda = () => {
     goToPreviousPeriod,
     goToNextPeriod,
     handlePressCell,
+    handleAddPress,
     onEventPress,
     closeModal,
     confirmCancelEvent,

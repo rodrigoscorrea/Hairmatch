@@ -29,13 +29,13 @@ class SimpleServiceSerializer(serializers.ModelSerializer):
 
 class AgendaSerializer(serializers.ModelSerializer):
     customer = serializers.SerializerMethodField()
-    service = SimpleServiceSerializer() # Keep the nested service data
+    service = SimpleServiceSerializer(allow_null=True) # Keep the nested service data; null for an external block
     reservation_id = serializers.SerializerMethodField()
     customer_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Agenda
-        fields = ['id', 'start_time', 'end_time', 'service', 'customer', 'reservation_id', 'customer_rating']
+        fields = ['id', 'start_time', 'end_time', 'title', 'service', 'customer', 'reservation_id', 'customer_rating']
 
     def _reserve(self, obj: Agenda):
         return self.context.get('reserve_map', {}).get((obj.service_id, obj.start_time))
@@ -55,6 +55,10 @@ class AgendaSerializer(serializers.ModelSerializer):
         Looks for a customer in the pre-fetched data passed through the context.
         This avoids hitting the database for every single agenda item.
         """
+        # An external block has no service, so no reserve is ever its own
+        if obj.service_id is None:
+            return None
+
         # Create a unique key for the current agenda item
         lookup_key = (obj.service_id, obj.start_time)
         
