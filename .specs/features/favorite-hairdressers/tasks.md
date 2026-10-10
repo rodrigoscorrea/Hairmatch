@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 a T8 concluídas (backend completo; app em andamento).
+**Status**: Execute: T1 a T9 concluídas (backend completo; app em andamento).
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -349,9 +349,9 @@ A rota é registrada com `href: null` em `customer/_layout.tsx`.
 - Skill: NONE
 
 **Done when**:
-- [ ] A tela não aparece na barra de abas.
-- [ ] A mensagem de lista vazia é "Você ainda não tem cabeleireiros favoritos.".
-- [ ] Gate check passes: App.
+- [x] A tela não aparece na barra de abas.
+- [x] A mensagem de lista vazia é "Você ainda não tem cabeleireiros favoritos.".
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: app
