@@ -210,25 +210,25 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| GAL-01 | P1: Ver a galeria, AC1 | Tasks | Implementing |
-| GAL-02 | P1: Ver a galeria, AC2 | Tasks | Implementing |
-| GAL-03 | P1: Ver a galeria, AC3 | Tasks | Implementing |
-| GAL-04 | P1: Ver a galeria, AC4 | Tasks | Implementing |
-| GAL-05 | P1: Ver a galeria, AC5 | Tasks | Implementing |
+| GAL-01 | P1: Ver a galeria, AC1 | Tasks | Verified |
+| GAL-02 | P1: Ver a galeria, AC2 | Tasks | Verified |
+| GAL-03 | P1: Ver a galeria, AC3 | Tasks | Verified |
+| GAL-04 | P1: Ver a galeria, AC4 | Tasks | Verified |
+| GAL-05 | P1: Ver a galeria, AC5 | Tasks | Verified |
 | GAL-06 | P1: Ver a galeria, AC6 | Tasks | Implementing |
 | GAL-07 | P1: Ver a galeria, AC7 | Tasks | Implementing |
 | GAL-08 | P1: Ver a galeria, AC8 | Tasks | Implementing |
-| GAL-09 | P1: Adicionar fotos, AC1 | Tasks | Implementing |
-| GAL-10 | P1: Adicionar fotos, AC2 | Tasks | Implementing |
-| GAL-11 | P1: Adicionar fotos, AC3 | Tasks | Implementing |
-| GAL-12 | P1: Adicionar fotos, AC4 | Tasks | Implementing |
-| GAL-13 | P1: Adicionar fotos, AC5 | Tasks | Implementing |
-| GAL-14 | P1: Adicionar fotos, AC6 | Tasks | Implementing |
-| GAL-15 | P1: Adicionar fotos, AC7 | Tasks | Implementing |
-| GAL-16 | P1: Adicionar fotos, AC8 | Tasks | Implementing |
-| GAL-17 | P1: Adicionar fotos, AC9 | Tasks | Implementing |
-| GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Implementing |
-| GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Implementing |
+| GAL-09 | P1: Adicionar fotos, AC1 | Tasks | Verified |
+| GAL-10 | P1: Adicionar fotos, AC2 | Tasks | Verified |
+| GAL-11 | P1: Adicionar fotos, AC3 | Tasks | Verified |
+| GAL-12 | P1: Adicionar fotos, AC4 | Tasks | Verified |
+| GAL-13 | P1: Adicionar fotos, AC5 | Tasks | Verified |
+| GAL-14 | P1: Adicionar fotos, AC6 | Tasks | Verified |
+| GAL-15 | P1: Adicionar fotos, AC7 | Tasks | Verified |
+| GAL-16 | P1: Adicionar fotos, AC8 | Tasks | Verified |
+| GAL-17 | P1: Adicionar fotos, AC9 | Tasks | Verified |
+| GAL-18 | P1: Adicionar fotos, AC10 | Tasks | Verified |
+| GAL-19 | P1: Adicionar fotos, AC11 | Tasks | Verified |
 | GAL-20 | P1: Adicionar fotos, AC12 | Tasks | Implementing |
 | GAL-21 | P1: Adicionar fotos, AC13 | Tasks | Implementing |
 | GAL-22 | P1: Adicionar fotos, AC14 | Tasks | Implementing |
@@ -240,24 +240,24 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-28 | P1: Adicionar fotos, AC20 | Tasks | Implementing |
 | GAL-29 | P1: Adicionar fotos, AC21 | Tasks | Implementing |
 | GAL-30 | P1: Adicionar fotos, AC22 | Tasks | Implementing |
-| GAL-31 | P1: Remover fotos, AC1 | Tasks | Implementing |
-| GAL-32 | P1: Remover fotos, AC2 | Tasks | Implementing |
-| GAL-33 | P1: Remover fotos, AC3 | Tasks | Implementing |
-| GAL-34 | P1: Remover fotos, AC4 | Tasks | Implementing |
+| GAL-31 | P1: Remover fotos, AC1 | Tasks | Verified |
+| GAL-32 | P1: Remover fotos, AC2 | Tasks | Verified |
+| GAL-33 | P1: Remover fotos, AC3 | Tasks | Verified |
+| GAL-34 | P1: Remover fotos, AC4 | Tasks | Verified |
 | GAL-35 | P1: Remover fotos, AC5 | Tasks | Implementing |
 | GAL-36 | P1: Remover fotos, AC6 | Tasks | Implementing |
 | GAL-37 | P1: Remover fotos, AC7 | Tasks | Implementing |
 | GAL-38 | P1: Remover fotos, AC8 | Tasks | Implementing |
-| GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Implementing |
-| GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Implementing |
-| GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
-| GAL-42 | P2: Contrato, AC2 | Tasks | Implementing |
-| GAL-43 | P2: Contrato, AC3 | Tasks | Implementing |
-| GAL-44 | P2: Seed, AC1 | Tasks | Implementing |
-| GAL-45 | P2: Seed, AC2 | Tasks | Implementing |
-| GAL-46 | P2: Seed, AC3 | Tasks | Implementing |
-| GAL-47 | Edge Cases | Tasks | Implementing |
-| GAL-48 | Edge Cases | Tasks | Implementing |
+| GAL-39 | P1: Ciclo de vida, AC1 | Tasks | Verified |
+| GAL-40 | P1: Ciclo de vida, AC2 | Tasks | Verified |
+| GAL-41 | P2: Contrato, AC1 | Tasks | Verified |
+| GAL-42 | P2: Contrato, AC2 | Tasks | Verified |
+| GAL-43 | P2: Contrato, AC3 | Tasks | Verified |
+| GAL-44 | P2: Seed, AC1 | Tasks | Verified |
+| GAL-45 | P2: Seed, AC2 | Tasks | Verified |
+| GAL-46 | P2: Seed, AC3 | Tasks | Verified |
+| GAL-47 | Edge Cases | Tasks | Verified |
+| GAL-48 | Edge Cases | Tasks | Verified |
 | GAL-49 | Edge Cases | Tasks | Implementing |
 | GAL-50 | Edge Cases | Tasks | Implementing |
 | GAL-51 | Edge Cases | Tasks | Implementing |
@@ -273,6 +273,6 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 ## Success Criteria
 
 - [ ] UAT manual no web e no Android, como cabeleireiro (com uma conta nova, já que o banco de dev não ganha fotos do seed): adicionar várias fotos de uma vez, ver o contador, chegar ao limite, remover uma foto e conferir o bucket. Como cliente: ver a faixa no perfil público e abrir uma foto em tela cheia.
-- [ ] A suíte do backend passa com os 837 testes da baseline (`git grep -c "def test_"` em `2948100`) mais os novos, sem nenhum teste removido.
-- [ ] Cada critério de backend (GAL-01 a GAL-05, GAL-09 a GAL-19, GAL-31 a GAL-34, GAL-39 a GAL-45, GAL-47 e GAL-48) tem pelo menos um teste automatizado que falha se o comportamento for removido.
-- [ ] `cd frontend-mobile && npx tsc --noEmit` não ganha nenhum erro novo.
+- [x] A suíte do backend passa com os 837 testes da baseline (`git grep -c "def test_"` em `2948100`) mais os novos, sem nenhum teste removido.
+- [x] Cada critério de backend (GAL-01 a GAL-05, GAL-09 a GAL-19, GAL-31 a GAL-34, GAL-39 a GAL-45, GAL-47 e GAL-48) tem pelo menos um teste automatizado que falha se o comportamento for removido.
+- [x] `cd frontend-mobile && npx tsc --noEmit` não ganha nenhum erro novo.

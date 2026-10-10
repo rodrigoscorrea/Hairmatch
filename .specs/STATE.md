@@ -154,28 +154,25 @@
 - **Operacional, antes do deploy**: conferir o limite de corpo do proxy de produção. Um create com 5 fotos pode chegar a cerca de 25 MB.
 
 - **Feature**: `hairdresser-gallery` (issue #118, RF31 e RF32).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (GAL-01 a GAL-51), `context.md`, `design.md` e `tasks.md` (T1 a T18) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. O Execute não começou e aguarda a aprovação das tasks.
+- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está PENDENTE e é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 38 de 38 critérios de backend, 30 de 30 mutantes mortos, 882 testes). A primeira rodada deu FAIL por dois testes fracos do GAL-45 (M21 e M27), corrigidos só nos testes (`054a493`).
 - **Completed**:
-  - Decisões do usuário:
-    - a chave `hairdresser/gallery/<hairdresser_id>/<uuid>.webp`;
-    - o limite de 30 fotos;
-    - uma tela própria de gestão;
-    - a seleção múltipla com uma requisição por foto.
-  - AD-013: tabela própria, e não JSONB.
-  - Route Table do `api-restful-routes`: RT-94 a RT-96.
-  - Catálogo do `api-problem-details`: o slug `gallery-full`.
-- **Coordenação com `review-editing` (#105)**, especificada em paralelo:
-  - ela reserva AD-011, AD-012 e RT-90 a RT-93, por isso a galeria usa AD-013 e RT-94 a RT-96;
-  - o AD-011 dela (`ReviewPicture` em tabela) repete a regra geral do AD-013, e é preciso decidir qual dos dois fica como canônico;
-  - a #105 move `_delete_stored_files` para `hairmatch.storage`, e quem mesclar depois adapta o T6 e o T7 (risco no `design.md`).
+  - Backend (T1 a T9): slug `gallery-full`, modelo `GalleryPhoto` (migração `users/0014`), RT-94 a RT-96, limite de 30 com `select_for_update` na linha do `Hairdresser`, arquivos apagados no `on_commit` (remoção da foto e exclusão da conta), seed com 0 a 6 fotos e restauração no boot. Suíte: 882 testes OK (baseline de 835 executados), `makemigrations --check` limpo.
+  - App (T10 a T17): `gallery-full` no catálogo, serviço, `useGalleryPhotos`, `GalleryStrip`, faixa no perfil público e no do cabeleireiro, `useGalleryManager`, tela `hairdresser/profile/gallery` e o card "Minha galeria". `npx tsc --noEmit` com exit 0 (com os typed routes regenerados).
+  - Evidência no lugar do UAT em navegador: E2E de API contra servidor do worktree, MiniStack e LocalStack (56 verificações, seed e curl), resumido no `validation.md`.
+- **Desvios registrados**:
+  - GAL-43: o `Allow` da coleção traz `HEAD` (o DRF acrescenta a todo `GET`). O spec e o T4 foram ajustados.
+  - O `useGalleryPhotos` recarrega no foco dentro do hook (T12), e o perfil do cabeleireiro só usa o hook (T17).
+  - O teste do tamanho do catálogo passou de 40 para 41 slugs.
+  - A baseline executa 835 testes, e os 837 do spec são a contagem de `def test_`.
+  - O Execute rodou inline, sem sub-agentes de lote (pedido do usuário), e o gate do backend rodou em container descartável que monta o worktree.
+  - `eslint` não existe na `develop` e foi pulado.
 - **In-progress** (file:line): none
 - **Next step**:
-  1. Aprovar as tasks.
-  2. Criar a branch `118-galeria-de-fotos-do-cabeleireiro` a partir de `develop`.
-  3. Confirmar a baseline de 837 testes (`2948100`).
-  4. Começar pelo T1.
-
-  São 18 tarefas em 3 lotes, então o Execute oferece sub-agentes.
+  1. UAT do T18 (roteiro no `tasks.md`), no web e no Android: perfil público, adicionar várias fotos, limite, remover, permissão negada, exclusão da conta. Depois, marcar GAL-06 a GAL-08, GAL-20 a GAL-30, GAL-35 a GAL-38 e GAL-49 a GAL-51 como Verified.
+  2. Abrir o PR e, ao mesclar com a #105, adaptar o T6 e o T7 (`_delete_stored_files` vira `hairmatch.storage.delete_stored_files`) e o `IMAGE_UPLOAD_MAX_SIZE` (a #105 ainda usa `PROFILE_PICTURE_MAX_SIZE` em `users/views.py`).
+- **Coordenação com `review-editing` (#105)**:
+  - o AD-011 dela (`ReviewPicture` em tabela) repete a regra geral do AD-013, e é preciso decidir qual dos dois fica como canônico;
+  - a #105 move `_delete_stored_files` para `hairmatch.storage`, e quem mesclar depois adapta o T6 e o T7.
 
 - **Feature**: `external-appointment` (issue #113).
 - **Phase / Task**: Execute de T1 a T12 concluído. O Verificador deu FAIL (`validation.md`, ainda não commitado), e as quatro correções já entraram. Falta rodar o Verificador de novo. T13 (UAT manual no web e no Android) está pendente com o usuário.
