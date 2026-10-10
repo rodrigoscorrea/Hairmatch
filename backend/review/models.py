@@ -31,7 +31,7 @@ class ReviewPicture(models.Model):
 
 
 class CustomerRating(models.Model):
-    """A hairdresser's rating of the customer of one reservation. It is immutable once created."""
+    """A hairdresser's rating of the customer of one reservation. Its author can edit and delete it (#105)."""
     # By string: reserve.models imports this module. SET_NULL so cancelling a reservation cannot erase its rating.
     reservation = models.OneToOneField(
         'reserve.Reserve', on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_rating',

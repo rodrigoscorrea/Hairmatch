@@ -17,7 +17,7 @@ from users.models import User, Customer, Hairdresser
 from users.testing import activate_account
 from django.db import IntegrityError, transaction
 from hairmatch.problems import Problem
-from .customer_ratings import record_customer_rating, service_end
+from .customer_ratings import delete_customer_rating, record_customer_rating, service_end, update_customer_rating
 from .models import CustomerRating, Review, ReviewPicture
 from .pictures import (
     MAX_REVIEW_PICTURES, REVIEW_PICTURE_MAX_SIZE, add_review_pictures, picture_errors, picture_names,
@@ -2052,3 +2052,105 @@ class RemoveReviewPictureTest(ReviewsTestCase):
 
         assert_problem(response, 'method-not-allowed')
         self.assertIn('DELETE', response['Allow'].split(', '))
+
+
+class EditCustomerRatingTest(ReviewsTestCase):
+    """update_customer_rating and delete_customer_rating: the rating and the customer's average change together."""
+
+    def _rate(self, value, customer=None):
+        reservation = Reserve.objects.create(customer=customer or self.customer, service=self.service)
+        return record_customer_rating(self.hairdresser, reservation, value, None)
+
+    def _average(self, user=None):
+        user = user or self.customer_user
+        user.refresh_from_db()
+        return user.rating
+
+    def test_editing_a_rating_stores_the_new_average_and_keeps_the_others(self):
+        """REV-50, REV-53: 5 and 3 average 4.0, and the 3 becoming 4 gives 4.5."""
+        five, three = self._rate(5), self._rate(3)
+        self.assertEqual(self._average(), 4.0)
+
+        updated = update_customer_rating(three, 4, 'Melhorou')
+
+        self.assertEqual(self._average(), 4.5)
+        three.refresh_from_db()
+        self.assertEqual((three.rating, three.comment), (4, 'Melhorou'))
+        self.assertIs(updated, three)
+        five.refresh_from_db()
+        self.assertEqual((five.rating, five.comment), (5, None))
+
+    def test_the_average_has_2_decimals_after_an_edit_and_after_a_delete(self):
+        """REV-50: 5, 4 and 4 with the 5 edited to 3 give 3.67, then each step gives the average of what is left."""
+        five, four_a, four_b = self._rate(5), self._rate(4), self._rate(4)
+
+        update_customer_rating(five, 3, None)
+        self.assertEqual(self._average(), 3.67)
+
+        delete_customer_rating(four_a)
+        self.assertEqual(self._average(), 3.5)
+        update_customer_rating(five, 5, None)
+        delete_customer_rating(four_b)
+        self.assertEqual(self._average(), 5.0)
+
+    def test_deleting_a_rating_stores_the_average_of_the_rest(self):
+        """REV-50, REV-53: 5, 4 and 3, deleting the 5, gives 3.5."""
+        five, four, three = self._rate(5), self._rate(4), self._rate(3)
+
+        delete_customer_rating(five)
+
+        self.assertEqual(self._average(), 3.5)
+        self.assertFalse(CustomerRating.objects.filter(pk=five.pk).exists())
+        self.assertEqual(sorted(CustomerRating.objects.values_list('rating', flat=True)), [3, 4])
+        four.refresh_from_db()
+        self.assertEqual(four.rating, 4)
+
+    def test_deleting_the_only_rating_stores_none(self):
+        """REV-51"""
+        only = self._rate(4)
+        self.assertEqual(self._average(), 4.0)
+
+        delete_customer_rating(only)
+
+        self.assertIsNone(self._average())
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_the_ratings_of_other_customers_are_untouched(self):
+        """REV-53"""
+        mine = self._rate(4)
+        self._rate(2, customer=self.customer2)
+
+        update_customer_rating(mine, 5, None)
+        self.assertEqual(self._average(), 5.0)
+        self.assertEqual(self._average(self.customer2_user), 2.0)
+
+        delete_customer_rating(mine)
+        self.assertIsNone(self._average())
+        self.assertEqual(self._average(self.customer2_user), 2.0)
+
+    def _statements(self, queries):
+        return [query['sql'] for query in queries.captured_queries]
+
+    def test_the_customer_row_is_locked_before_the_update(self):
+        """REV-50"""
+        rating = self._rate(4)
+
+        with CaptureQueriesContext(connection) as queries:
+            update_customer_rating(rating, 2, None)
+
+        statements = self._statements(queries)
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql)
+        update = next(i for i, sql in enumerate(statements) if sql.startswith('UPDATE "review_customerrating"'))
+        self.assertLess(lock, update)
+
+    def test_the_customer_row_is_locked_before_the_delete(self):
+        """REV-50"""
+        rating = self._rate(4)
+
+        with CaptureQueriesContext(connection) as queries:
+            delete_customer_rating(rating)
+
+        statements = self._statements(queries)
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql)
+        delete = next(i for i, sql in enumerate(statements) if sql.startswith('DELETE FROM "review_customerrating"'))
+        self.assertLess(lock, delete)

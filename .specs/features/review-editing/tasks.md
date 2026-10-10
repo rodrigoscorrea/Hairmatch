@@ -433,12 +433,12 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: com notas 5 e 3 (média 4.0), `update_customer_rating(3 → 4)` grava 4.5 em `User.rating`, e a nota 5 fica igual (REV-50, REV-53).
-- [ ] Teste: com 5, 4 e 4, apagar a 5 grava 4.0. Com 5 e 4 e 4, editar a 5 para 3 grava 3.67 (2 casas).
-- [ ] Teste: apagar a única nota grava `User.rating = None` (REV-51).
-- [ ] Teste: `CaptureQueriesContext` mostra o `SELECT ... FOR UPDATE` do `User` antes do `UPDATE` e antes do `DELETE` da nota (REV-50).
-- [ ] Os testes de `RecordCustomerRatingTest` e `CustomerRatingRaceTest` continuam passando.
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 114 + 4.
+- [x] Teste: com notas 5 e 3 (média 4.0), `update_customer_rating(3 → 4)` grava 4.5 em `User.rating`, e a nota 5 fica igual (REV-50, REV-53).
+- [x] Teste: com 5, 4 e 4, apagar a 5 grava 4.0. Com 5 e 4 e 4, editar a 5 para 3 grava 3.67 (2 casas).
+- [x] Teste: apagar a única nota grava `User.rating = None` (REV-51).
+- [x] Teste: `CaptureQueriesContext` mostra o `SELECT ... FOR UPDATE` do `User` antes do `UPDATE` e antes do `DELETE` da nota (REV-50).
+- [x] Os testes de `RecordCustomerRatingTest` e `CustomerRatingRaceTest` continuam passando.
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 114 + 4.
 
 **Tests**: integration
 **Gate**: quick
