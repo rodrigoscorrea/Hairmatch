@@ -830,6 +830,40 @@ class CurrentUserView(APIView):
 
         return JsonResponse({'message': 'User updated successfully'}, status=200)
 
+
+PROFILE_PICTURE_MAX_SIZE = 5 * 1024 * 1024
+
+
+class ProfilePictureView(APIView):
+    """The profile picture of the session's user, replaced after sign-up (multipart, field `profile_picture`)."""
+
+    def put(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        picture = request.FILES.get('profile_picture')
+        if picture is None:
+            raise validation_problem([body_error('profile_picture', 'This field is required.')])
+        # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
+        if picture.size > PROFILE_PICTURE_MAX_SIZE:
+            raise validation_problem([body_error('profile_picture', 'The profile picture must have at most 5 MB.')])
+
+        user = session.user
+        old_name = user.profile_picture.name
+        try:
+            with transaction.atomic():
+                user.profile_picture = picture
+                user.save(update_fields=['profile_picture'])
+                # With S3 overwriting, an equal name is the new file itself.
+                if old_name and old_name != user.profile_picture.name:
+                    transaction.on_commit(lambda: _delete_stored_files([old_name]))
+        except InvalidImage:
+            # The conversion fails before the upload, so the old picture and its file are untouched.
+            return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+
+        return JsonResponse({'profile_picture': UserSerializer(user).data['profile_picture']}, status=200)
+
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request
 # Those views should only be used by admin personal or internal functions

@@ -269,16 +269,16 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `ProfilePictureViewTest` com:
+- [x] Classe nova `ProfilePictureViewTest` com:
   - PNG válido: 200, a URL termina em `.webp` e o arquivo existe no storage;
   - troca: o arquivo antigo some depois do commit (`captureOnCommitCallbacks(execute=True)`) e o novo fica;
   - texto como imagem: 400 `invalid-image`, com a foto e o arquivo antigos intactos;
   - sem o campo: 400 `validation-error` `/profile_picture`;
   - arquivo de 5 MB + 1 byte: 400, sem gravar;
   - sem cookie: 401 `invalid-session`.
-- [ ] `RouteTableTests` passa com RT-88.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-88.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção: 752 executados (746 + 6).
 
 **Tests**: integration
 **Gate**: full

@@ -6150,6 +6150,99 @@ class ProfileUpdateValidationTest(TestCase):
         self.assertEqual((current['user']['first_name'], current['resume']), ('Nova', 'Cachos'))
 
 
+class ProfilePictureViewTest(TestCase):
+    """PUT /api/users/me/profile-picture replaces the picture of the session's user (ACC-35 to ACC-41)."""
+
+    MAX_SIZE = 5 * 1024 * 1024
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('profile_picture')
+        self.client.post(reverse('register'), data=_register_payload(profile_picture=make_upload('antiga.png', fmt='PNG')))
+        activate_account('nova@example.com')
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        self.user = User.objects.get(email='nova@example.com')
+        self.old_name = self.user.profile_picture.name
+
+    def _put(self, picture):
+        return self.client.put(self.url, {'profile_picture': picture}, format='multipart')
+
+    def _assert_old_picture_kept(self):
+        self.assertEqual(User.objects.get(pk=self.user.pk).profile_picture.name, self.old_name)
+        self.assertTrue(default_storage.exists(self.old_name))
+
+    def test_a_valid_image_is_stored_as_webp_and_its_url_returned(self):
+        """ACC-35"""
+        response = self._put(make_upload('nova.png', fmt='PNG'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        name = User.objects.get(pk=self.user.pk).profile_picture.name
+        self.assertEqual(name, f'profile_pics/{self.user.pk}/nova.webp')
+        self.assertEqual(response.json(), {'profile_picture': default_storage.url(name)})
+        self.assertTrue(response.json()['profile_picture'].endswith('.webp'))
+        self.assertEqual(stored_image(name).format, 'WEBP')
+
+    def test_the_old_file_is_deleted_once_the_new_picture_is_committed(self):
+        """ACC-36"""
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self._put(make_upload('nova.png', fmt='PNG'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(default_storage.exists(self.old_name))
+        for callback in callbacks:
+            callback()
+        new_name = User.objects.get(pk=self.user.pk).profile_picture.name
+        self.assertNotEqual(new_name, self.old_name)
+        self.assertFalse(default_storage.exists(self.old_name))
+        self.assertTrue(default_storage.exists(new_name))
+
+    def test_a_file_that_is_not_an_image_answers_400_invalid_image_and_keeps_the_old_picture(self):
+        """ACC-37"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self._put(SimpleUploadedFile('foto.png', b'not an image', content_type='image/png'))
+
+        assert_problem(response, 'invalid-image', detail='The profile picture is not a valid image.')
+        self._assert_old_picture_kept()
+
+    def test_a_body_without_the_picture_answers_400_validation_error(self):
+        """ACC-38"""
+        response = self.client.put(self.url, {'other': 'x'}, format='multipart')
+
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/profile_picture', 'detail': 'This field is required.'}],
+        )
+        self._assert_old_picture_kept()
+
+    def test_a_file_over_5_mb_answers_400_validation_error_before_it_is_opened(self):
+        """ACC-39: bytes that are no image prove the size is checked first; 5 MB exactly goes on to the conversion."""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self._put(SimpleUploadedFile('big.png', b'\0' * (self.MAX_SIZE + 1), content_type='image/png'))
+
+        assert_problem(
+            response, 'validation-error',
+            errors=[{'pointer': '#/profile_picture', 'detail': 'The profile picture must have at most 5 MB.'}],
+        )
+        self._assert_old_picture_kept()
+
+        at_limit = self._put(SimpleUploadedFile('big.png', b'\0' * self.MAX_SIZE, content_type='image/png'))
+
+        assert_problem(at_limit, 'invalid-image')
+
+    def test_without_a_session_answers_401_and_changes_nothing(self):
+        """ACC-41"""
+        self.client.cookies.clear()
+
+        response = self._put(make_upload('nova.png', fmt='PNG'))
+
+        assert_problem(response, 'invalid-session')
+        self._assert_old_picture_kept()
+
+
 class SessionFormatTest(TestCase):
     """After T16 only Cognito access tokens and the new Google session open protected routes."""
 
