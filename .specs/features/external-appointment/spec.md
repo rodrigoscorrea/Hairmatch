@@ -233,14 +233,14 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 | EXT-22 | P1: Ver o bloqueio na agenda, AC5 | Tasks | Pending |
 | EXT-23 | P1: Tela de registro, AC1 | Tasks | Implementing |
 | EXT-24 | P1: Tela de registro, AC2 | Tasks | Pending |
-| EXT-25 | P1: Tela de registro, AC3 | Tasks | Pending |
-| EXT-26 | P1: Tela de registro, AC4 | Tasks | Pending |
-| EXT-27 | P1: Tela de registro, AC5 | Tasks | Pending |
-| EXT-28 | P1: Tela de registro, AC6 | Tasks | Pending |
-| EXT-29 | P1: Tela de registro, AC7 | Tasks | Pending |
+| EXT-25 | P1: Tela de registro, AC3 | Tasks | Implementing |
+| EXT-26 | P1: Tela de registro, AC4 | Tasks | Implementing |
+| EXT-27 | P1: Tela de registro, AC5 | Tasks | Implementing |
+| EXT-28 | P1: Tela de registro, AC6 | Tasks | Implementing |
+| EXT-29 | P1: Tela de registro, AC7 | Tasks | Implementing |
 | EXT-30 | P1: Tela de registro, AC8 | Tasks | Implementing |
-| EXT-31 | P1: Tela de registro, AC9 | Tasks | Pending |
-| EXT-32 | P1: Tela de registro, AC10 | Tasks | Pending |
+| EXT-31 | P1: Tela de registro, AC9 | Tasks | Implementing |
+| EXT-32 | P1: Tela de registro, AC10 | Tasks | Implementing |
 | EXT-33 | P2: Abrir pela célula, AC1 | Tasks | Pending |
 | EXT-34 | P2: Abrir pela célula, AC2 | Tasks | Pending |
 

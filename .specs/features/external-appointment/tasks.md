@@ -333,9 +333,9 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] As mensagens são exatamente as do spec (EXT-26 a EXT-29, EXT-31, EXT-32)
-- [ ] O corpo enviado omite `service` com "Sem serviço" e envia `title.trim()` (EXT-30)
-- [ ] Gate check passes: App
+- [x] As mensagens são exatamente as do spec (EXT-26 a EXT-29, EXT-31, EXT-32)
+- [x] O corpo enviado omite `service` com "Sem serviço" e envia `title.trim()` (EXT-30)
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App
