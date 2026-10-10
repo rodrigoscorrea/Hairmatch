@@ -389,8 +389,8 @@ Os testes ficam na mesma tarefa.
 
 **Done when**:
 
-- [ ] Nenhum acesso a `ev.service.name` sem `?.` (EXT-20)
-- [ ] Gate check passes: App
+- [x] Nenhum acesso a `ev.service.name` sem `?.` (EXT-20)
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App
