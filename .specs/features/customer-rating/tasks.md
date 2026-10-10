@@ -425,9 +425,9 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] A tela de review do cliente usa o componente, e o UAT do T18 confere que ela continua igual.
-- [ ] O modo só leitura não reage ao toque.
-- [ ] O gate App passa sem erro novo.
+- [x] A tela de review do cliente usa o componente, com os mesmos rótulos, tamanho 32, cores e margens. A conferência visual fica para o UAT do T18.
+- [x] O modo só leitura não reage ao toque: sem `onChange`, cada estrela é um `View`, sem `TouchableOpacity`.
+- [x] O gate App passa sem erro novo (`tsc` exit 0). O `eslint` da tela caiu de 1 erro (`react-hooks/static-components`, o `StarRating` criado no render) para 0, com os mesmos 9 warnings.
 
 **Tests**: none
 **Gate**: app
