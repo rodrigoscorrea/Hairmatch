@@ -162,6 +162,23 @@
 
 ## Handoff
 
+- **Feature**: `favorite-hairdressers` (issue #115, RF25), branch `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (FAV-01 a FAV-43), `context.md`, `design.md` e `tasks.md` (T1 a T11, em 4 fases) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Os 13 avisos são `Tests: none` das tasks de app e `Where` com vários arquivos, justificados na Task Granularity Check. O Execute não começou e aguarda a aprovação das tasks.
+- **Completed**:
+  - Decisões do usuário:
+    - o coração só no perfil público;
+    - a lista em cards, com desfavoritar direto no card, sem modal;
+    - o item "Favoritos" do cabeleireiro fica como está.
+  - Route Table do `api-restful-routes`: RT-97 a RT-99.
+  - Nenhum slug novo, nenhum AD novo. O modelo `FavoriteHairdresser` fica num app novo, `favorite`.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Aprovar as tasks.
+  2. Confirmar a baseline de 967 `def test_` com o gate Full e começar pelo T1.
+
+  São 11 tarefas em 2 lotes, então o Execute oferece sub-agentes.
+- **Fora do repositório**: o stash `stale specs before pulling #105/#118 (favorite-hairdressers planning)` guarda as cópias antigas de `.specs/` que estavam no checkout. Elas já estão na `develop` em versão mais nova. O WIP do `frontend-mobile` (`.env.example`, `package.json`, `package-lock.json`, `services/axios-instance.ts`, `eslint.config.js`) e as pastas `docs/requisitos-status.md`, `docs/security-audit/` e `docs/timezone/` seguem sem commit e não são desta feature.
+
 - **Feature**: `review-editing` (issue #105, RF29 e RF30), branch `105-editar-e-excluir-avaliacao`.
 - **Phase / Task**: Execute concluído em 2026-10-10 (T1 a T24, mais o substituto automatizado da T25). A suíte do backend passa, `makemigrations --check` fica limpo e `npx tsc --noEmit` não tem erro. O UAT manual no web e no Android (T25) está **PENDENTE**.
 - **Completed**:
@@ -174,7 +191,7 @@
   2. Antes do deploy: conferir o limite de corpo do proxy de produção. Uma criação pode levar 5 fotos de até 5 MB, cerca de 25 MB numa requisição.
   3. Decidir a canonicidade entre o AD-011 e o AD-013 (as duas decisões tratam de coleções de imagens, em branches diferentes) e tirar do AD-013 a nota que reserva os números AD-011, AD-012 e RT-90 a RT-93.
 - **Blockers**: none (a #118 já adaptou a referência ao `delete_stored_files` e a Route Table na mesclagem)
-- **Uncommitted files**: `.specs/LESSONS.md` e `.specs/lessons.json` (estado local do skill, fora dos commits).
+- **Uncommitted files**: none. `.specs/LESSONS.md` e `.specs/lessons.json`, que ficavam fora dos commits nas worktrees da #105 e da #118, foram unidos e commitados na branch `115-marcar-cabeleireiro-como-favorito` (`50aef57`). As lições da galeria passaram a L-020 e L-021.
 - **Branch**: `105-editar-e-excluir-avaliacao`
 
 - **Feature**: `hairdresser-gallery` (issue #118, RF31 e RF32).
