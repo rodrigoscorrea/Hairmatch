@@ -99,21 +99,22 @@
 ## Handoff
 
 - **Feature**: `external-appointment` (issue #113).
-- **Phase / Task**: Execute de T1 a T12 concluído. T13 (UAT manual no web e no Android) está pendente com o usuário. O Verificador da feature ainda não rodou, porque a T13 está aberta.
+- **Phase / Task**: Execute de T1 a T12 concluído. O Verificador deu FAIL (`validation.md`, ainda não commitado), e as quatro correções já entraram. Falta rodar o Verificador de novo. T13 (UAT manual no web e no Android) está pendente com o usuário.
 - **Completed**:
   - Backend (T1 a T4): `Agenda.service` opcional e `Agenda.title`, migração `backend/agenda/migrations/0002_agenda_title_alter_agenda_service.py`, o contrato novo do `POST /api/agenda` (EXT-01 a EXT-14), a listagem com `title` e `customer: null` (EXT-18, EXT-19) e o teste de aceite em `reserve` (EXT-15 a EXT-17). Gate Full: 744 testes OK, `makemigrations --check` limpo.
   - App (T5 a T11): tipos do contrato, serviço tipado, sub-stack `agenda/`, hook `useExternalAppointmentForm`, tela `agenda/create.tsx`, `useAgenda` com `useFocusEffect` e abertura pela célula, FAB "+" e rótulo "Externo". `npx tsc --noEmit` com exit 0. Lint sem erro nos arquivos tocados, e o erro `react-hooks/static-components` de `agenda/index.tsx` foi corrigido.
   - AD-009 registrado (T12).
-- **Notas para o Verificador**:
-  - `title: null` é tratado como título ausente. É uma lacuna de precisão do spec em EXT-05.
-  - A borda de EXT-09 "início igual a agora" não tem teste (comparação estrita `<` com `timezone.now()`).
+- **Correções da validação**:
+  - EXT-09: um teste congela `timezone.now` e prova que um início igual a agora é aceito. Ele mata o mutante `<=`.
+  - EXT-05: o spec agora diz que `title: null` conta como ausente, e um teste fixa os dois casos.
+  - EXT-31: no web, o alerta de sucesso usa `window.alert`.
+  - EXT-25: o término é preenchido assim que o início fica completo, sem esperar o blur. Depois de 23:59, o campo é limpo.
   - Os tipos de rota (`.expo/types/router.d.ts`) foram regenerados com o gerador de typed routes do próprio Expo, que dá a mesma saída do Metro, sem subir o Metro.
-- **Riscos para o UAT**:
-  - No web, `Alert.alert` não faz nada no react-native-web. O alerta "Sucesso!" de EXT-31 só aparece no Android. No web, a tela só volta para a agenda.
+- **Foco do UAT**: o alerta de sucesso no web; e no Android, digitar o início com um serviço escolhido e salvar direto.
 - **In-progress** (file:line): none
 - **Next step**:
   - UAT da T13: os seis passos do roteiro no web (Metro em 8081, aba visível) e os passos 2 e 4 no Android. Depois marcar EXT-20 a EXT-34 como Verified.
-  - Depois do UAT, rodar o Verificador da feature (`validation.md`).
+  - Rodar o Verificador de novo (`validation.md`) e commitar o relatório.
 - **Pendências de features anteriores**:
   - `email-confirmation` (#141): UAT manual da T23.
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
