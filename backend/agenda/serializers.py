@@ -8,13 +8,19 @@ from service.models import Service
 class SimpleUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name']
+        fields = ['first_name', 'last_name', 'rating']
 
 class SimpleCustomerSerializer(serializers.ModelSerializer):
     user = SimpleUserSerializer()
+    ratings_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Customer
-        fields = ['id', 'user']
+        fields = ['id', 'user', 'ratings_count']
+
+    def get_ratings_count(self, obj):
+        # Counted for every customer of the agenda in one query by the view.
+        return self.context.get('ratings_count_by_customer', {}).get(obj.id, 0)
 
 class SimpleServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,10 +30,25 @@ class SimpleServiceSerializer(serializers.ModelSerializer):
 class AgendaSerializer(serializers.ModelSerializer):
     customer = serializers.SerializerMethodField()
     service = SimpleServiceSerializer(allow_null=True) # Keep the nested service data; null for an external block
+    reservation_id = serializers.SerializerMethodField()
+    customer_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Agenda
-        fields = ['id', 'start_time', 'end_time', 'title', 'service', 'customer'] # Add customer to fields
+        fields = ['id', 'start_time', 'end_time', 'title', 'service', 'customer', 'reservation_id', 'customer_rating']
+
+    def _reserve(self, obj: Agenda):
+        return self.context.get('reserve_map', {}).get((obj.service_id, obj.start_time))
+
+    def get_reservation_id(self, obj: Agenda):
+        reserve = self._reserve(obj)
+        return reserve.id if reserve else None
+
+    def get_customer_rating(self, obj: Agenda):
+        """The hairdresser's rating of this reservation's customer, or None while it is not rated."""
+        # The reverse one-to-one raises an AttributeError subclass when the reservation has no rating.
+        rating = getattr(self._reserve(obj), 'customer_rating', None)
+        return {'rating': rating.rating, 'comment': rating.comment} if rating else None
 
     def get_customer(self, obj: Agenda):
         """
@@ -49,7 +70,7 @@ class AgendaSerializer(serializers.ModelSerializer):
 
         if matching_reserve:
             # If we found a match, serialize its customer
-            return SimpleCustomerSerializer(matching_reserve.customer).data
+            return SimpleCustomerSerializer(matching_reserve.customer, context=self.context).data
         
         # Return null if no corresponding reserve was found
         return None

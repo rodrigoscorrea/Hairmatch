@@ -8,7 +8,11 @@ from datetime import datetime, time, timedelta, timezone as dt_timezone
 from unittest import mock
 from django.utils import timezone
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+
 from users.models import User, Customer, Hairdresser
+from review.customer_ratings import record_customer_rating
 from service.models import Service
 from agenda.models import Agenda
 from availability.models import Availability
@@ -584,7 +588,7 @@ class ListAgendaTest(AgendaTestCase):
 
     # External blocks (EXT-18, EXT-19)
 
-    ITEM_KEYS = {'id', 'start_time', 'end_time', 'title', 'service', 'customer'}
+    ITEM_KEYS = {'id', 'start_time', 'end_time', 'title', 'service', 'customer', 'reservation_id', 'customer_rating'}
 
     def create_external_block(self):
         start = self.agenda_start_time + timedelta(hours=3)
@@ -620,6 +624,8 @@ class ListAgendaTest(AgendaTestCase):
                     self.assertEqual(set(item), self.ITEM_KEYS)
                 self.assertIsNone(items[block.id]['service'])
                 self.assertIsNone(items[block.id]['customer'])
+                self.assertIsNone(items[block.id]['reservation_id'])
+                self.assertIsNone(items[block.id]['customer_rating'])
                 self.assertEqual(items[block.id]['title'], 'Cliente do WhatsApp')
                 self.assertEqual(items[self.agenda.id]['service'], {'id': self.service.id, 'name': 'Haircut'})
                 self.assertEqual(items[self.agenda.id]['title'], '')
@@ -645,7 +651,11 @@ class ListAgendaTest(AgendaTestCase):
 
         self.assertEqual(
             items[self.agenda.id]['customer'],
-            {'id': customer.id, 'user': {'first_name': 'Maria', 'last_name': 'Silva'}},
+            {
+                'id': customer.id,
+                'user': {'first_name': 'Maria', 'last_name': 'Silva', 'rating': customer.user.rating},
+                'ratings_count': 0,
+            },
         )
 
 class RemoveAgendaTest(AgendaTestCase):
@@ -677,3 +687,79 @@ class RemoveAgendaTest(AgendaTestCase):
 
         assert_problem(response, 'invalid-session')
         self.assertTrue(Agenda.objects.filter(id=self.agenda.id).exists())
+
+
+class AgendaCustomerRatingTest(AgendaTestCase):
+    """CRT-36 to CRT-38: each agenda item names its reservation, the customer's rating and this reservation's rating."""
+
+    def setUp(self):
+        super().setUp()
+        self.login(self.hairdresser_user)
+        self.created = 0
+
+    def _booked(self, rated=True, comment='Pontual'):
+        """A past agenda slot with its reservation, for a new customer; rated 4 unless `rated` is False."""
+        self.created += 1
+        user = User.objects.create(
+            email=f'customer{self.created}@example.com', first_name='Cliente', last_name=str(self.created),
+            phone=f'55929000001{self.created:02d}', neighborhood='Centro', city='Manaus', state='AM',
+            address='Rua A', postal_code='69000000', role='customer', rating=None,
+        )
+        customer = Customer.objects.create(user=user, cpf='12345678900')
+        start = (timezone.now() - timedelta(days=self.created)).replace(microsecond=0)
+        Agenda.objects.create(
+            start_time=start, end_time=start + timedelta(minutes=60), hairdresser=self.hairdresser,
+            service=self.service,
+        )
+        reserve = Reserve.objects.create(customer=customer, service=self.service, start_time=start)
+        if rated:
+            record_customer_rating(self.hairdresser, reserve, 4, comment)
+        return reserve
+
+    def _items(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response.json()['data']
+
+    def test_a_booked_item_has_the_reservation_the_customer_rating_and_this_rating(self):
+        """CRT-36"""
+        rated = self._booked()
+        unrated = self._booked(rated=False)
+        urls = (self.list_url, reverse('hairdresser_agenda', args=[self.hairdresser.id]))
+        for url in urls:
+            with self.subTest(url=url):
+                items = {item['reservation_id']: item for item in self._items(url)}
+
+                self.assertEqual(items[rated.id]['customer'], {
+                    'id': rated.customer_id,
+                    'user': {'first_name': 'Cliente', 'last_name': '1', 'rating': 4.0},
+                    'ratings_count': 1,
+                })
+                self.assertEqual(items[rated.id]['customer_rating'], {'rating': 4, 'comment': 'Pontual'})
+                self.assertEqual(items[unrated.id]['customer'], {
+                    'id': unrated.customer_id,
+                    'user': {'first_name': 'Cliente', 'last_name': '2', 'rating': None},
+                    'ratings_count': 0,
+                })
+                self.assertIsNone(items[unrated.id]['customer_rating'])
+
+    def test_an_item_without_a_reservation_has_null_reservation_customer_and_rating(self):
+        """CRT-37"""
+        self._booked()
+
+        item = next(item for item in self._items(self.list_url) if item['id'] == self.agenda.id)
+
+        self.assertEqual(
+            (item['reservation_id'], item['customer'], item['customer_rating']), (None, None, None),
+        )
+
+    def test_the_number_of_queries_does_not_grow_with_the_reservations(self):
+        """CRT-38"""
+        self._booked()
+        with CaptureQueriesContext(connection) as one:
+            self.assertEqual(len(self._items(self.list_url)), 2)
+        for _ in range(4):
+            self._booked()
+
+        with self.assertNumQueries(len(one.captured_queries)):
+            self.assertEqual(len(self._items(self.list_url)), 6)

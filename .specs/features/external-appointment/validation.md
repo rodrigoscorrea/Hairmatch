@@ -88,7 +88,7 @@ Paths:
 
 | Criterion | Spec-defined outcome | `file:line` + assertion | Verdict |
 | --------- | -------------------- | ----------------------- | ------- |
-| EXT-18 | both routes; exact key set; block has service/customer null and its title | `agenda/tests.py:609-624`: `set(item) == ITEM_KEYS`, `service is None`, `customer is None`, `title == 'Cliente do WhatsApp'`; serviced row has the nested service and `title == ''` | PASS |
+| EXT-18 | both routes; exact key set; block has service/customer null and its title | `agenda/tests.py:609-624`: `set(item) == ITEM_KEYS` (which gained `reservation_id` and `customer_rating` from customer-rating, #104), `service is None`, `customer is None`, `title == 'Cliente do WhatsApp'`; serviced row has the nested service and `title == ''` | PASS |
 | EXT-19 | block item has `customer: null` despite a Reserve with the same start | `agenda/tests.py:627-635`; regression `agenda/tests.py:637-649` (a serviced block keeps its exact customer dict) | PASS |
 
 ### App ACs (no automated tests by project decision; code inspection, pending UAT T13)

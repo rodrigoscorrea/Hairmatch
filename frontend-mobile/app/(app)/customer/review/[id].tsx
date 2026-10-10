@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {styles} from '../../../../styles/customer/styles/ReviewStyles';
 import { FontAwesome } from '@expo/vector-icons';
 import { useReviewForm } from '@/hooks/customerHooks/useReviewForm';
+import { StarRating } from '@/components/StarRating/StarRating';
 import { router } from 'expo-router';
 
 export default function ReviewScreen() {
@@ -32,26 +33,6 @@ export default function ReviewScreen() {
     userInfo
   } = useReviewForm();
 
-  // Component to render the star rating selector
-  const StarRating = () => (
-    <View style={styles.starContainer}>
-      <Text style={styles.ratingLabel}>Ruim</Text>
-      <View style={styles.stars}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <TouchableOpacity key={star} onPress={() => setRating(star)}>
-            <FontAwesome
-              name={star <= rating ? 'star' : 'star-o'}
-              size={32}
-              color={star <= rating ? '#FFC107' : '#CCCCCC'}
-              style={styles.star}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.ratingLabel}>Ótimo</Text>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -60,7 +41,11 @@ export default function ReviewScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Como foi seu atendimento?</Text>
-          <StarRating />
+          <View style={styles.starContainer}>
+            <Text style={styles.ratingLabel}>Ruim</Text>
+            <StarRating rating={rating} onChange={setRating} />
+            <Text style={styles.ratingLabel}>Ótimo</Text>
+          </View>
         </View>
 
         <View style={styles.section}>

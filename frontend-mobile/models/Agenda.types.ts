@@ -1,11 +1,20 @@
-/** An item of `GET /api/hairdressers/{id}/agenda`. An external block has `service` and `customer` set to null. */
+/**
+ * An item of `GET /api/hairdressers/{id}/agenda`. An external block has `service`, `customer` and `reservation_id`
+ * set to null. The reservation fields are also null when the slot has no reservation.
+ */
 export interface AgendaEntryResponse {
     id: number;
     start_time: string;
     end_time: string;
     title: string;
     service: { id: number; name: string } | null;
-    customer: { id: number; user: { first_name: string; last_name: string } } | null;
+    reservation_id: number | null;
+    customer: {
+        id: number;
+        user: { first_name: string; last_name: string; rating: number | null };
+        ratings_count: number;
+    } | null;
+    customer_rating: { rating: number; comment: string | null } | null;
 }
 
 /** The body of `POST /api/agenda`. Without `service`, `title` and `end_time` are required. */
@@ -22,6 +31,15 @@ export interface AgendaEvent {
     start: Date;
     end: Date;
     isExternal: boolean;
+    reservationId: number | null;
+    customer: {
+        id: number;
+        name: string;
+        rating: number | null;
+        ratingsCount: number;
+    } | null;
+    // The hairdresser's rating of this reservation's customer, or null while it is not rated.
+    customerRating: { rating: number; comment: string | null } | null;
 }
   
 export type CalendarMode = 'month' | 'week' | 'day' | 'agenda';

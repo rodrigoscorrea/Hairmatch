@@ -23,7 +23,8 @@ export const useAgenda = () => {
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
 
   // --- Data Fetching ---
-  // Runs on every focus, so a block saved in agenda/create shows up on the way back.
+  // Runs on every focus, so a block saved in agenda/create and a rating sent from the rate-customer screen show up
+  // on the way back.
   useFocusEffect(
     useCallback(() => {
       const fetchAgendaEvents = async () => {
@@ -40,6 +41,16 @@ export const useAgenda = () => {
               start: new Date(ev.start_time),
               end: new Date(ev.end_time),
               isExternal: ev.customer === null,
+              reservationId: ev.reservation_id,
+              customer: ev.customer
+                ? {
+                    id: ev.customer.id,
+                    name: `${ev.customer.user.first_name} ${ev.customer.user.last_name}`,
+                    rating: ev.customer.user.rating,
+                    ratingsCount: ev.customer.ratings_count,
+                  }
+                : null,
+              customerRating: ev.customer_rating,
             }
           });
           setEvents(convertedEvents);
@@ -50,6 +61,10 @@ export const useAgenda = () => {
       fetchAgendaEvents();
     }, [hairdresserId])
   );
+
+  // Only a convenience: the device clock may differ from the server's, which answers 409 service-not-finished.
+  const canRate = (event: AgendaEvent) =>
+    !!event.reservationId && !event.customerRating && new Date() >= event.end;
 
   // --- Handlers ---
   const handleViewChange = (view: CalendarMode) => setSelectedView(view);
@@ -131,5 +146,6 @@ export const useAgenda = () => {
     onEventPress,
     closeModal,
     confirmCancelEvent,
+    canRate,
   };
 };

@@ -8,8 +8,9 @@ from django.http import HttpResponse, JsonResponse
 import json
 from datetime import timedelta, datetime
 from reserve.models import Reserve
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
+from review.models import CustomerRating
 from users.authentication import authenticated_hairdresser, forbidden
 from hairmatch.local_time import make_local_aware
 from hairmatch.problems import body_error, json_object, problem_response, validation_problem
@@ -126,16 +127,24 @@ class ListAgenda(APIView):
                 reserve_identifiers.add((item.service_id, item.start_time))
 
         reserve_map = {}
+        ratings_count_by_customer = {}
         if reserve_identifiers:
             q_objects = Q()
             for service_id, start_time in reserve_identifiers:
                 q_objects |= Q(service_id=service_id, start_time=start_time)
-            matching_reserves = Reserve.objects.filter(q_objects).select_related('customer__user')
+            matching_reserves = Reserve.objects.filter(q_objects).select_related('customer__user', 'customer_rating')
             reserve_map = {
                 (reserve.service_id, reserve.start_time): reserve
                 for reserve in matching_reserves
             }
-        serializer_context = {'reserve_map': reserve_map}
+            # One grouped query, so the agenda costs the same number of queries for any number of customers.
+            ratings_count_by_customer = dict(
+                CustomerRating.objects.filter(customer_id__in={reserve.customer_id for reserve in reserve_map.values()})
+                .values('customer_id')
+                .annotate(total=Count('id'))
+                .values_list('customer_id', 'total')
+            )
+        serializer_context = {'reserve_map': reserve_map, 'ratings_count_by_customer': ratings_count_by_customer}
         serializer = AgendaSerializer(agenda_items, many=True, context=serializer_context)
 
         return JsonResponse({'data': serializer.data}, status=200)

@@ -1,7 +1,10 @@
 from hairmatch.problem_testing import assert_problem
 from io import BytesIO
 from django.core.files.storage import default_storage
-from django.test import TestCase
+import threading
+from django.db import connection
+from django.test import TestCase, TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -11,13 +14,17 @@ from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
 from users.testing import activate_account
-from .models import Review
+from django.db import IntegrityError, transaction
+from hairmatch.problems import Problem
+from .customer_ratings import record_customer_rating, service_end
+from .models import CustomerRating, Review
 from reserve.models import Reserve
 from service.models import Service
 import jwt
 import json
 import datetime
 from django.conf import settings
+from django.utils import timezone
 from users.cognito import get_cognito
 
 class ReviewsTestCase(TestCase):
@@ -811,3 +818,608 @@ class ReviewOwnershipTest(ReviewsTestCase):
         assert_problem(remove, 'customer-required', detail='Only customers can perform this action.')
         self.review.refresh_from_db()
         self.assertEqual(self.review.rating, 4)
+
+
+class CustomerRatingModelTest(ReviewsTestCase):
+    """The table keeps one rating from 1 to 5 per reservation, and outlives the reservation and its author."""
+
+    def setUp(self):
+        super().setUp()
+        # A stored average, to show that deleting rows around a rating does not touch it.
+        self.customer_user.rating = 4.0
+        self.customer_user.save(update_fields=['rating'])
+        self.rating = CustomerRating.objects.create(
+            reservation=self.reserve, customer=self.customer, hairdresser=self.hairdresser, rating=4, comment='Pontual',
+        )
+
+    def _create(self, **fields):
+        values = {'customer': self.customer, 'hairdresser': self.hairdresser, 'rating': 3, **fields}
+        with transaction.atomic():
+            return CustomerRating.objects.create(**values)
+
+    def test_a_rating_outside_1_to_5_is_refused_by_the_database(self):
+        for value in (0, 6):
+            with self.subTest(rating=value):
+                with self.assertRaises(IntegrityError):
+                    self._create(reservation=self.reserve2, rating=value)
+        self.assertEqual(CustomerRating.objects.count(), 1)
+
+    def test_a_second_rating_of_the_same_reservation_is_refused_by_the_database(self):
+        """CRT-06"""
+        with self.assertRaises(IntegrityError):
+            self._create(reservation=self.reserve)
+        self.assertEqual(CustomerRating.objects.filter(reservation=self.reserve).count(), 1)
+
+    def test_ratings_without_a_reservation_coexist(self):
+        """CRT-24: the unique reservation does not stop many ratings whose reservation is gone."""
+        self._create(reservation=None)
+        self._create(reservation=None)
+
+        self.assertEqual(CustomerRating.objects.filter(reservation__isnull=True).count(), 2)
+
+    def test_cancelling_a_rated_reservation_keeps_the_rating_and_the_average(self):
+        """CRT-24"""
+        self.login_as_customer()
+
+        response = self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Reserve.objects.filter(id=self.reserve.id).exists())
+        self.rating.refresh_from_db()
+        self.assertIsNone(self.rating.reservation)
+        self.assertEqual((self.rating.rating, self.rating.customer_id), (4, self.customer.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_deleting_the_author_account_keeps_the_rating_and_the_average(self):
+        """CRT-25"""
+        self.login_as_hairdresser()
+
+        response = self.client.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Hairdresser.objects.filter(id=self.hairdresser.id).exists())
+        self.rating.refresh_from_db()
+        self.assertIsNone(self.rating.hairdresser)
+        self.assertEqual((self.rating.rating, self.rating.customer_id), (4, self.customer.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_deleting_the_customer_account_deletes_the_ratings_received(self):
+        """CRT-26"""
+        self._create(reservation=None)
+        other = CustomerRating.objects.create(customer=self.customer2, hairdresser=self.hairdresser, rating=5)
+        self.login_as_customer()
+
+        response = self.client.delete(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(CustomerRating.objects.filter(customer_id=self.customer.id).exists())
+        self.assertTrue(CustomerRating.objects.filter(id=other.id).exists())
+
+
+class RecordCustomerRatingTest(ReviewsTestCase):
+    """record_customer_rating: the rating and the customer's new average are written together."""
+
+    def _reserve(self, customer=None):
+        return Reserve.objects.create(customer=customer or self.customer, service=self.service)
+
+    def _record(self, reservation, rating, comment=None):
+        return record_customer_rating(self.hairdresser, reservation, rating, comment)
+
+    def test_the_average_is_stored_with_2_decimals(self):
+        """CRT-18: 5, 4 and 4 average 4.33."""
+        for value in (5, 4, 4):
+            self._record(self._reserve(), value)
+
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.33)
+
+    def test_a_single_rating_is_the_average(self):
+        """CRT-01 and CRT-18"""
+        created = self._record(self.reserve, 3, 'Pontual')
+
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 3.0)
+        created.refresh_from_db()
+        self.assertEqual(
+            (created.reservation_id, created.customer_id, created.hairdresser_id, created.rating, created.comment),
+            (self.reserve.id, self.customer.id, self.hairdresser.id, 3, 'Pontual'),
+        )
+
+    def test_a_customer_without_ratings_keeps_none(self):
+        """CRT-20"""
+        self._record(self.reserve, 5)
+
+        self.customer2_user.refresh_from_db()
+        self.assertIsNone(self.customer2_user.rating)
+
+    def test_rating_a_rated_reservation_raises_review_exists_and_changes_nothing(self):
+        """CRT-06: the unique reservation turns into review-exists, and the caller's transaction stays usable."""
+        self._record(self.reserve, 5)
+
+        with transaction.atomic():
+            with self.assertRaises(Problem) as raised:
+                self._record(self.reserve, 1)
+            # A query in the same transaction would raise TransactionManagementError if it were broken.
+            self.assertEqual(CustomerRating.objects.count(), 1)
+
+        self.assertEqual(raised.exception.slug, 'review-exists')
+        self.assertEqual(CustomerRating.objects.get().rating, 5)
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_the_customer_row_is_locked_before_the_insert(self):
+        """CRT-19"""
+        with CaptureQueriesContext(connection) as queries:
+            self._record(self.reserve, 4)
+
+        statements = [query['sql'] for query in queries.captured_queries]
+        lock = next(
+            i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql
+        )
+        insert = next(i for i, sql in enumerate(statements) if sql.startswith('INSERT INTO "review_customerrating"'))
+        self.assertLess(lock, insert)
+
+    def test_service_end_is_the_start_plus_the_duration(self):
+        """CRT-02: the service lasts 30 minutes."""
+        start = datetime.datetime(2026, 10, 9, 13, 0, tzinfo=datetime.timezone.utc)
+        reservation = Reserve.objects.create(customer=self.customer, service=self.service, start_time=start)
+
+        self.assertEqual(service_end(reservation), datetime.datetime(2026, 10, 9, 13, 30, tzinfo=datetime.timezone.utc))
+
+    def test_service_end_is_none_without_a_start_time(self):
+        """CRT-04"""
+        reservation = Reserve.objects.create(customer=self.customer, service=self.service, start_time=None)
+
+        self.assertIsNone(service_end(reservation))
+
+
+class CustomerRatingRaceTest(TransactionTestCase):
+    """CRT-19: two hairdressers rate the same customer at the same time, and the average counts both."""
+
+    def _user(self, email, phone, role):
+        return User.objects.create(
+            first_name='Race', last_name=role, email=email, phone=phone, neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', role=role,
+        )
+
+    def test_concurrent_ratings_of_the_same_customer_both_count(self):
+        customer = Customer.objects.create(user=self._user('c@example.com', '5592900000010', 'customer'), cpf='1')
+        work = []
+        for index, value in ((1, 5), (2, 1)):
+            hairdresser = Hairdresser.objects.create(
+                user=self._user(f'h{index}@example.com', f'559290000002{index}', 'hairdresser'), cnpj='1',
+            )
+            service = Service.objects.create(name='Corte', price=50, hairdresser=hairdresser, duration=30)
+            work.append((hairdresser, Reserve.objects.create(customer=customer, service=service), value))
+        barrier = threading.Barrier(len(work))
+        failures = []
+
+        def rate(hairdresser, reservation, value):
+            try:
+                barrier.wait(timeout=10)
+                record_customer_rating(hairdresser, reservation, value, None)
+            except Exception as exc:  # reported below: an exception in a thread does not fail the test
+                failures.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=rate, args=args) for args in work]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        self.assertEqual(failures, [])
+        self.assertEqual(CustomerRating.objects.filter(customer=customer).count(), 2)
+        self.assertEqual(User.objects.get(pk=customer.user_id).rating, 3.0)
+
+
+class CreateCustomerRatingTest(ReviewsTestCase):
+    """POST /api/customer-ratings (RT-86): the hairdresser rates the customer of a reservation that has ended."""
+
+    RATING_DETAIL = 'The rating must be an integer from 1 to 5.'
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('customer_ratings')
+        # The service lasts 30 minutes, so a reservation that started 2 hours ago has ended.
+        self.reserve.start_time = timezone.now() - datetime.timedelta(hours=2)
+        self.reserve.save()
+        self.login_as_hairdresser()
+
+    def _post(self, body, **extra):
+        return self.client.post(self.url, data=json.dumps(body), content_type='application/json', **extra)
+
+    def _body(self, **fields):
+        return {'reservation': self.reserve.id, 'rating': 4, 'comment': 'Pontual', **fields}
+
+    def _ended_reservation(self):
+        start = timezone.now() - datetime.timedelta(hours=2)
+        return Reserve.objects.create(customer=self.customer, service=self.service, start_time=start)
+
+    def _pointers(self, response):
+        return [item['pointer'] for item in assert_problem(response, 'validation-error')['errors']]
+
+    def test_a_hairdresser_rates_the_customer_of_an_ended_reservation(self):
+        """CRT-01"""
+        response = self._post(self._body())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.json()['data']
+        self.assertEqual(set(data), {'id', 'reservation', 'rating', 'comment', 'created_at'})
+        created = CustomerRating.objects.get()
+        self.assertEqual(
+            (data['id'], data['reservation'], data['rating'], data['comment']),
+            (created.id, self.reserve.id, 4, 'Pontual'),
+        )
+        self.assertIsNotNone(data['created_at'])
+        self.assertEqual((created.customer_id, created.hairdresser_id), (self.customer.id, self.hairdresser.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_a_reservation_that_ends_exactly_now_is_accepted(self):
+        """CRT-02"""
+        now = timezone.now()
+        self.reserve.start_time = now - datetime.timedelta(minutes=30)
+        self.reserve.save()
+
+        with patch('django.utils.timezone.now', return_value=now):
+            response = self._post(self._body())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(CustomerRating.objects.filter(reservation=self.reserve).exists())
+
+    def test_a_reservation_that_has_not_ended_answers_409(self):
+        """CRT-03"""
+        now = timezone.now()
+        starts = {
+            'ends in 1 minute': now - datetime.timedelta(minutes=29),
+            'started 10 minutes ago': now - datetime.timedelta(minutes=10),
+            'starts tomorrow': now + datetime.timedelta(days=1),
+        }
+        for case, start in starts.items():
+            with self.subTest(case=case):
+                self.reserve.start_time = start
+                self.reserve.save()
+
+                with patch('django.utils.timezone.now', return_value=now):
+                    response = self._post(self._body())
+
+                assert_problem(
+                    response, 'service-not-finished', detail='The service of this reservation has not finished yet.'
+                )
+                self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_reservation_without_a_start_time_answers_409(self):
+        """CRT-04"""
+        self.reserve.start_time = None
+        self.reserve.save()
+
+        assert_problem(self._post(self._body()), 'service-not-finished')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_second_rating_answers_409_and_keeps_the_first(self):
+        """CRT-05"""
+        self._post(self._body(rating=5, comment='Primeira'))
+
+        response = self._post(self._body(rating=1, comment='Segunda'))
+
+        assert_problem(response, 'review-exists', detail='This reservation has already been rated.')
+        rating = CustomerRating.objects.get()
+        self.assertEqual((rating.rating, rating.comment), (5, 'Primeira'))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_a_duplicate_that_passes_the_check_answers_409_not_500(self):
+        """CRT-06: the unique reservation in the database is what stops the second request of a race."""
+        record_customer_rating(self.hairdresser, self.reserve, 5, None)
+
+        with patch('review.views._is_rated', return_value=False):
+            response = self._post(self._body(rating=1))
+
+        assert_problem(response, 'review-exists', detail='This reservation has already been rated.')
+        self.assertEqual(CustomerRating.objects.get().rating, 5)
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_the_reservation_of_another_hairdresser_answers_403(self):
+        """CRT-07"""
+        other = dict(self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999')
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.client.post(
+            self.login_url, data=json.dumps({'email': other['email'], 'password': other['password']}),
+            content_type='application/json',
+        )
+
+        assert_problem(self._post(self._body()), 'forbidden')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_reservation_that_does_not_exist_answers_404(self):
+        """CRT-08"""
+        assert_problem(self._post(self._body(reservation=999999)), 'not-found', detail='Reservation not found.')
+
+    def test_no_session_answers_401(self):
+        """CRT-09"""
+        self.client.cookies.clear()
+
+        assert_problem(self._post(self._body()), 'invalid-session')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_customer_session_answers_403(self):
+        """CRT-10"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self._post(self._body()), 'hairdresser-required')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_rating_that_is_not_an_integer_from_1_to_5_answers_400(self):
+        """CRT-11"""
+        for value in (4.5, '5', True, 0, 6):
+            with self.subTest(rating=value):
+                response = self._post(self._body(rating=value))
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/rating', 'detail': self.RATING_DETAIL},
+                ])
+        body = self._body()
+        del body['rating']
+        assert_problem(self._post(body), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field is required.'},
+        ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_missing_or_non_integer_reservation_answers_400(self):
+        """CRT-12"""
+        body = self._body()
+        del body['reservation']
+        assert_problem(self._post(body), 'validation-error', errors=[
+            {'pointer': '#/reservation', 'detail': 'This field is required.'},
+        ])
+        assert_problem(self._post(self._body(reservation='abc')), 'validation-error', errors=[
+            {'pointer': '#/reservation', 'detail': 'This field must be an integer.'},
+        ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_comment_that_is_not_a_string_or_too_long_answers_400(self):
+        """CRT-13"""
+        cases = {
+            7: 'The comment must be a string.',
+            'a' * 501: 'The comment must have at most 500 characters.',
+        }
+        for value, detail in cases.items():
+            with self.subTest(comment=str(value)[:10]):
+                assert_problem(self._post(self._body(comment=value)), 'validation-error', errors=[
+                    {'pointer': '#/comment', 'detail': detail},
+                ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_comment_of_500_characters_after_the_trim_is_accepted(self):
+        """CRT-13 and CRT-14"""
+        response = self._post(self._body(comment='  ' + 'a' * 500 + '  '))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(CustomerRating.objects.get().comment, 'a' * 500)
+
+    def test_an_absent_null_or_blank_comment_is_stored_as_null(self):
+        """CRT-14"""
+        bodies = {'absent': self._body(), 'null': self._body(comment=None), 'blank': self._body(comment='   ')}
+        del bodies['absent']['comment']
+        for case, body in bodies.items():
+            with self.subTest(case=case):
+                body['reservation'] = self._ended_reservation().id
+
+                response = self._post(body)
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertIsNone(response.json()['data']['comment'])
+                self.assertIsNone(CustomerRating.objects.get(reservation_id=body['reservation']).comment)
+
+    def test_a_comment_is_stored_without_the_surrounding_spaces(self):
+        """CRT-14"""
+        response = self._post(self._body(comment='  ok  '))
+
+        self.assertEqual(response.json()['data']['comment'], 'ok')
+        self.assertEqual(CustomerRating.objects.get().comment, 'ok')
+
+    def test_every_invalid_field_is_reported_in_the_same_400(self):
+        """CRT-15"""
+        response = self._post({'reservation': 'abc', 'rating': 9})
+
+        self.assertEqual(self._pointers(response), ['#/reservation', '#/rating'])
+
+    def test_a_body_that_is_not_a_json_object_answers_400(self):
+        """CRT-16"""
+        assert_problem(self._post([]), 'malformed-request', detail='The request body must be a JSON object.')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_invalid_input_is_reported_before_the_reservation_is_looked_up(self):
+        """CRT-17: an unknown reservation with an invalid rating is a 400, not a 404."""
+        response = self._post({'reservation': 999999, 'rating': 0})
+
+        self.assertEqual(self._pointers(response), ['#/rating'])
+
+    def test_a_reservation_rebooked_after_a_rated_one_was_cancelled_can_be_rated(self):
+        """Edge case of CRT-24: the cancelled reservation's rating keeps no hold on the slot."""
+        self.assertEqual(self._post(self._body(rating=5)).status_code, status.HTTP_201_CREATED)
+        cancelled = self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+        self.assertEqual(cancelled.status_code, status.HTTP_204_NO_CONTENT)
+        rebooked = Reserve.objects.create(
+            customer=self.customer, service=self.service, start_time=self.reserve.start_time,
+        )
+
+        response = self._post(self._body(reservation=rebooked.id, rating=3))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            set(CustomerRating.objects.values_list('reservation_id', 'rating')), {(rebooked.id, 3), (None, 5)},
+        )
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        """CRT-55"""
+        for method in ('get', 'put', 'delete'):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.url)
+
+                assert_problem(response, 'method-not-allowed')
+                self.assertEqual(sorted(response['Allow'].split(', ')), ['OPTIONS', 'POST'])
+
+
+class ListCustomerRatingsTest(ReviewsTestCase):
+    """GET /api/customers/{id}/ratings (RT-87): average and count for hairdressers, comments for their writers."""
+
+    def setUp(self):
+        super().setUp()
+        other = dict(
+            self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999',
+            first_name='Outra', last_name='Cabeleireira',
+        )
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.other_hairdresser = Hairdresser.objects.get(user__email=other['email'])
+        other_service = Service.objects.create(
+            name='Escova', price=40.00, hairdresser=self.other_hairdresser, duration=45,
+        )
+        self.other_reserve = Reserve.objects.create(customer=self.customer, service=other_service)
+        self.first = record_customer_rating(self.hairdresser, self.reserve, 5, 'Pontual')
+        self.second = record_customer_rating(self.other_hairdresser, self.other_reserve, 4, None)
+        self.url = reverse('customer_ratings_by_customer', args=[self.customer.id])
+
+    def _login(self, email, password='Password123'):
+        self.client.cookies.clear()
+        self.client.post(
+            self.login_url, data=json.dumps({'email': email, 'password': password}), content_type='application/json',
+        )
+
+    def _ids(self, response):
+        return [item['id'] for item in response.json()['data']['ratings']]
+
+    def test_the_customer_sees_every_rating_most_recent_first(self):
+        """CRT-28: by created_at, so the older id comes first once it is the newer rating."""
+        CustomerRating.objects.filter(id=self.first.id).update(
+            created_at=timezone.now() + datetime.timedelta(hours=1)
+        )
+        self.login_as_customer()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['data']['count'], 2)
+        self.assertEqual(self._ids(response), [self.first.id, self.second.id])
+
+    def test_each_hairdresser_sees_the_count_the_average_and_only_their_own_ratings(self):
+        """CRT-29"""
+        for email, own in (
+            (self.hairdresser_payload['email'], self.first),
+            ('other.hairdresser@example.com', self.second),
+        ):
+            with self.subTest(hairdresser=email):
+                self._login(email)
+
+                response = self.client.get(self.url)
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                data = response.json()['data']
+                self.assertEqual((data['average'], data['count']), (4.5, 2))
+                self.assertEqual(self._ids(response), [own.id])
+
+    def test_another_customer_answers_403(self):
+        """CRT-30"""
+        self._login(self.customer2_payload['email'])
+
+        assert_problem(self.client.get(self.url), 'forbidden')
+
+    def test_a_customer_that_does_not_exist_answers_404(self):
+        """CRT-31"""
+        self.login_as_hairdresser()
+
+        response = self.client.get(reverse('customer_ratings_by_customer', args=[999999]))
+
+        assert_problem(response, 'not-found', detail='Customer not found.')
+
+    def test_no_session_answers_401(self):
+        """CRT-32"""
+        assert_problem(self.client.get(self.url), 'invalid-session')
+
+    def test_each_item_has_the_rating_the_comment_the_service_and_the_hairdresser(self):
+        """CRT-33"""
+        self.login_as_customer()
+
+        items = {item['id']: item for item in self.client.get(self.url).json()['data']['ratings']}
+
+        first = items[self.first.id]
+        self.assertEqual(set(first), {'id', 'rating', 'comment', 'created_at', 'service_name', 'hairdresser_name'})
+        self.assertEqual(
+            (first['rating'], first['comment'], first['service_name'], first['hairdresser_name']),
+            (5, 'Pontual', 'Test Service', 'Test Hairdresser'),
+        )
+        self.assertIsNotNone(first['created_at'])
+        second = items[self.second.id]
+        self.assertEqual(
+            (second['rating'], second['comment'], second['service_name'], second['hairdresser_name']),
+            (4, None, 'Escova', 'Outra Cabeleireira'),
+        )
+
+    def test_the_names_are_null_once_the_reservation_or_the_author_is_gone(self):
+        """CRT-33"""
+        self.login_as_customer()
+        self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+        self._login('other.hairdresser@example.com')
+        self.assertEqual(self.client.delete(reverse('current_user')).status_code, status.HTTP_204_NO_CONTENT)
+        self.login_as_customer()
+
+        items = {item['id']: item for item in self.client.get(self.url).json()['data']['ratings']}
+
+        self.assertEqual(
+            (items[self.first.id]['service_name'], items[self.first.id]['hairdresser_name']),
+            (None, 'Test Hairdresser'),
+        )
+        self.assertIsNone(items[self.second.id]['hairdresser_name'])
+
+    def test_a_customer_without_ratings_gets_null_zero_and_an_empty_list(self):
+        """CRT-34"""
+        self._login(self.customer2_payload['email'])
+
+        response = self.client.get(reverse('customer_ratings_by_customer', args=[self.customer2.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': {'average': None, 'count': 0, 'ratings': []}})
+
+    def test_a_pending_customer_is_answered_like_any_other(self):
+        """Edge case: a customer who has not confirmed the e-mail is 200 with no ratings for a hairdresser, 403 for another customer."""
+        pending = dict(self.customer2_payload, email='pending@example.com', phone='+5592984507777', cpf='12345678999')
+        self.client.post(self.register_url, data=pending)
+        customer = Customer.objects.get(user__email='pending@example.com')
+        self.assertFalse(customer.user.is_active)
+        url = reverse('customer_ratings_by_customer', args=[customer.id])
+
+        self.login_as_hairdresser()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': {'average': None, 'count': 0, 'ratings': []}})
+
+        self.login_as_customer()
+        assert_problem(self.client.get(url), 'forbidden')
+
+    def test_the_average_is_the_stored_user_rating(self):
+        """CRT-35: a stored value that differs from the rows shows it is read, not recomputed."""
+        User.objects.filter(pk=self.customer_user.pk).update(rating=4.33)
+        self.login_as_hairdresser()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.json()['data']['average'], 4.33)
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        """CRT-55"""
+        self.login_as_customer()
+
+        response = self.client.post(self.url, data=json.dumps({}), content_type='application/json')
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS'])

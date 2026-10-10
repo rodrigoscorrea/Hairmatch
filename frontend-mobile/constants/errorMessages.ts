@@ -22,5 +22,13 @@ export const ERROR_MESSAGES = {
   postal_code_invalid: "CEP inválido. Formato esperado: XXXXX-XXX",
   cep_not_found: "CEP não encontrado. Confira o número ou preencha o endereço manualmente.",
   cep_lookup_failed: "Não foi possível buscar o CEP. Preencha o endereço manualmente.",
+  first_name_too_long: "Nome deve ter até 100 caracteres",
+  last_name_too_long: "Sobrenome deve ter até 100 caracteres",
+  address_too_long: "Endereço deve ter até 150 caracteres",
+  complement_too_long: "Complemento deve ter até 150 caracteres",
+  neighborhood_too_long: "Bairro deve ter até 150 caracteres",
+  city_too_long: "Cidade deve ter até 150 caracteres",
+  state_invalid: "UF inválida. Use as 2 letras do estado",
+  resume_too_long: "O resumo deve ter até 1000 caracteres",
 
 };

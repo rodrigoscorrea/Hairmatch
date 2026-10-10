@@ -5,23 +5,33 @@ import { styles } from '../../../styles/customer/styles/ProfileStyle'; // Adjust
 import Icon from '@expo/vector-icons/Feather';
 import ConfirmationModal from "@/components/modals/confirmationModal/ConfirmationModal"; // Adjust path
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
+import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
+import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
-import { usePathname } from 'expo-router'; // Adjust path if needed
+import { usePathname, useRouter } from 'expo-router'; // Adjust path if needed
 
 export default function ProfileScreen(){
     const pathname = usePathname();
     const { 
       customer, 
+      ratingLabel,
       isModalVisible, 
       handleLogout, 
       confirmLogout, 
       cancelLogout, 
       handleAccountSettings,
-      handleAddressSettings
+      handleAddressSettings,
+      handleReceivedRatings
     } = useCustomerProfile();
 
     const handleMenuPress = (item: string) => {
     };
+
+    const router = useRouter();
+    const deletion = useDeleteAccount("customer");
+
+    // userInfo is null for a moment after the logout or the account deletion.
+    if (!customer) return null;
 
     const customer_image = customer.user.profile_picture;
     
@@ -46,7 +56,7 @@ export default function ProfileScreen(){
                       <Text style={styles.profileName}>{customer?.user?.first_name} {customer?.user?.last_name}</Text>
                       <View style={styles.profileRating}>
                           <Icon name="star" size={16} color="#eab308" />
-                          <Text style={styles.ratingText}>{customer?.user?.rating}</Text>
+                          <Text style={styles.ratingText}>{ratingLabel}</Text>
                       </View>
                   </View>
               </View>
@@ -66,6 +76,20 @@ export default function ProfileScreen(){
             title="Endereço"
             subtitle="Alterar seu endereço"
             onPress={() => handleAddressSettings()}
+          />
+
+          <MenuItem
+            iconName="sliders"
+            title="Preferências"
+            subtitle="Alterar suas preferências"
+            onPress={() => router.push('/(app)/customer/configs/preferencesSetting')}
+          />
+          
+          <MenuItem
+            iconName="star"
+            title="Avaliações recebidas"
+            subtitle="Veja o que os profissionais disseram sobre você"
+            onPress={() => handleReceivedRatings()}
           />
           
           <MenuItem
@@ -95,6 +119,13 @@ export default function ProfileScreen(){
             subtitle="Fazer logout da conta"
             onPress={() => handleLogout()}
           />
+
+          <MenuItem
+            iconName="trash-2"
+            title="Excluir conta"
+            subtitle="Apagar sua conta permanentemente"
+            onPress={deletion.openDelete}
+          />
         </View>
 
         <View style={styles.spacer} />
@@ -110,6 +141,21 @@ export default function ProfileScreen(){
           onConfirm={confirmLogout} 
           onCancel={cancelLogout} 
       />  
+
+        {/* Account deletion */}
+        <ConfirmationModal
+            visible={deletion.confirmVisible}
+            title="Deseja realmente excluir sua conta?"
+            description={deletion.description}
+            confirmText={deletion.deleting ? "Excluindo..." : "Sim, excluir"}
+            onConfirm={deletion.confirmDelete}
+            onCancel={deletion.cancelDelete}
+        />
+        <ErrorModal
+            visible={deletion.errorModal.visible}
+            onClose={deletion.closeError}
+            message={deletion.errorModal.message}
+        />
     </SafeAreaView>
     );
 }

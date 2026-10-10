@@ -9,6 +9,8 @@ import { Accordion } from '@/components/Accordion';
 
 export default function HairdresserProfileScreen() {
   const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability } = useHairdresserProfile();
+  // userInfo is null for a moment after the logout or the account deletion.
+  if (!hairdresser) return null;
   const hairdresser_image = hairdresser.user.profile_picture;
 
   return (

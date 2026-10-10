@@ -29,6 +29,7 @@ export default function HairdresserTabLayout() {
       ))}
        {/* You can add any stack-only (non-tab) screens for hairdressers here later */}
        {/* e.g., <Tabs.Screen name="edit-service" options={{ href: null }} /> */}
+      <Tabs.Screen name="rate-customer/[reservationId]" options={{ href: null }} />
     </Tabs>
   );
 }
