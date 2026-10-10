@@ -334,10 +334,10 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste novo na classe do seed: com `random` fixado, o comando cria fotos em `hairdresser/gallery/<id>/*.webp`, entre 0 e 6 por cabeleireiro, e todos os objetos existem no storage.
-- [ ] `frontend-mobile/assets/hairdressers/gallery/` não existe mais, e `grep -rn "hairdressers/gallery" frontend-mobile --include=*.ts*` (fora do `node_modules`) não acha nada.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: total sem remoção.
+- [x] Teste novo na classe do seed: com `random` fixado, o comando cria fotos em `hairdresser/gallery/<id>/*.webp`, entre 0 e 6 por cabeleireiro, e todos os objetos existem no storage.
+- [x] `frontend-mobile/assets/hairdressers/gallery/` não existe mais, e `grep -rn "hairdressers/gallery" frontend-mobile --include=*.ts*` (fora do `node_modules`) não acha nada.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: quick

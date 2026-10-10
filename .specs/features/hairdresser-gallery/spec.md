@@ -253,9 +253,9 @@ A foto de perfil (#120) já resolve upload, conversão para WebP (AD-003) e limp
 | GAL-41 | P2: Contrato, AC1 | Tasks | Implementing |
 | GAL-42 | P2: Contrato, AC2 | Tasks | Implementing |
 | GAL-43 | P2: Contrato, AC3 | Tasks | Implementing |
-| GAL-44 | P2: Seed, AC1 | Tasks | Pending |
+| GAL-44 | P2: Seed, AC1 | Tasks | Implementing |
 | GAL-45 | P2: Seed, AC2 | Tasks | Pending |
-| GAL-46 | P2: Seed, AC3 | Tasks | Pending |
+| GAL-46 | P2: Seed, AC3 | Tasks | Implementing |
 | GAL-47 | Edge Cases | Tasks | Implementing |
 | GAL-48 | Edge Cases | Tasks | Implementing |
 | GAL-49 | Edge Cases | Tasks | Pending |

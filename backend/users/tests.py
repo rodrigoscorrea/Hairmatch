@@ -28,6 +28,7 @@ from django.utils import timezone
 import base64
 from unittest.mock import patch, MagicMock
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import JsonResponse
 from .auth_tokens import (
@@ -50,6 +51,7 @@ from django.test.utils import CaptureQueriesContext
 from .views import RegisterView
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
 import importlib
+import random
 import os
 import tempfile
 import threading
@@ -3108,6 +3110,17 @@ class PopulateHairdressersCommandTest(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+        # Two gallery assets of different shapes, so the stored photo says which asset it came from.
+        gallery_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(gallery_dir.cleanup)
+        for file_name, size in (('galery1.jpg', (64, 48)), ('galery2.jpg', (48, 64))):
+            with open(os.path.join(gallery_dir.name, file_name), 'wb') as f:
+                f.write(make_image_bytes(size=size, fmt='JPEG'))
+        self.gallery_dir = gallery_dir.name
+        gallery_patcher = patch.object(populate_hairdressers, 'GALLERY_DIR', gallery_dir.name)
+        gallery_patcher.start()
+        self.addCleanup(gallery_patcher.stop)
+
         # The command assigns preference ids 1-17
         Preferences.objects.bulk_create([Preferences(id=i, name=f'pref{i}') for i in range(1, 18)])
 
@@ -3180,6 +3193,25 @@ class PopulateHairdressersCommandTest(TestCase):
         self._run()
 
         self.assertFalse(default_storage.exists(key))
+
+    def test_gives_each_seeded_hairdresser_0_to_6_gallery_photos_from_the_gallery_assets(self):
+        """GAL-44"""
+        random.seed(2026)
+
+        self._run()
+
+        counts = [GalleryPhoto.objects.filter(hairdresser=h).count() for h in Hairdresser.objects.all()]
+        self.assertEqual(len(counts), 40)
+        self.assertTrue(all(0 <= count <= 6 for count in counts))
+        self.assertGreater(sum(counts), 0)
+        self.assertIn(6, counts)
+        self.assertIn(0, counts)
+        for photo in GalleryPhoto.objects.all():
+            with self.subTest(photo=photo.image.name):
+                self.assertRegex(photo.image.name, rf'^hairdresser/gallery/{photo.hairdresser_id}/[0-9a-f]{{32}}\.webp$')
+                stored = stored_image(photo.image.name)
+                self.assertEqual(stored.format, 'WEBP')
+                self.assertIn(stored.size, [(64, 48), (48, 64)])
 
     def _login_status(self, email, password='Senha123'):
         return APIClient().post(
