@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Review
+from .models import CustomerRating, Review
 from users.models import User
 from users.serializers import CustomerNameSerializer
 
@@ -14,4 +14,9 @@ class ReviewLiteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = '__all__'
-    
+
+
+class CustomerRatingCreatedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerRating
+        fields = ['id', 'reservation', 'rating', 'comment', 'created_at']

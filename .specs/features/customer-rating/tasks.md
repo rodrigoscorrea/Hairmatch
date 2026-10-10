@@ -259,18 +259,18 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: o happy path devolve 201 com `{data: {id, reservation, rating, comment, created_at}}`, e a linha tem o cliente e o cabeleireiro da reserva (CRT-01).
-- [ ] Teste: uma reserva que termina exatamente agora é aceita; o `timezone.now` é fixado com `mock.patch` (CRT-02).
-- [ ] Teste: uma reserva que termina 1 minuto no futuro, ou que começou mas não terminou, devolve 409 `service-not-finished` sem linha nova (CRT-03).
-- [ ] Teste: `start_time=None` devolve 409 `service-not-finished` (CRT-04).
-- [ ] Teste: uma segunda avaliação devolve 409 `review-exists`, com a avaliação e `User.rating` iguais (CRT-05).
-- [ ] Teste: com a pré-checagem contornada por `mock.patch` (o `exists` devolve `False`), o `IntegrityError` vira 409 `review-exists` e nunca 500 (CRT-06).
-- [ ] Testes de autorização:
+- [x] Teste: o happy path devolve 201 com `{data: {id, reservation, rating, comment, created_at}}`, e a linha tem o cliente e o cabeleireiro da reserva (CRT-01).
+- [x] Teste: uma reserva que termina exatamente agora é aceita; o `timezone.now` é fixado com `mock.patch` (CRT-02).
+- [x] Teste: uma reserva que termina 1 minuto no futuro, ou que começou mas não terminou, devolve 409 `service-not-finished` sem linha nova (CRT-03).
+- [x] Teste: `start_time=None` devolve 409 `service-not-finished` (CRT-04).
+- [x] Teste: uma segunda avaliação devolve 409 `review-exists`, com a avaliação e `User.rating` iguais (CRT-05).
+- [x] Teste: com a pré-checagem contornada por `mock.patch` (o `exists` devolve `False`), o `IntegrityError` vira 409 `review-exists` e nunca 500 (CRT-06).
+- [x] Testes de autorização:
   - a reserva de outro cabeleireiro devolve 403 `forbidden` (CRT-07);
   - um id inexistente devolve 404 `not-found` (CRT-08);
   - sem cookie, 401 `invalid-session` (CRT-09);
   - uma sessão de cliente devolve 403 `hairdresser-required` (CRT-10).
-- [ ] Testes de validação:
+- [x] Testes de validação:
   - `rating` com valor 4.5, `"5"`, `true`, 0, 6 ou ausente devolve 400 com `#/rating` (CRT-11);
   - `reservation` ausente ou `"abc"` devolve 400 com `#/reservation` (CRT-12);
   - `comment` com 501 caracteres ou o número 7 devolve 400 com `#/comment`, e 500 caracteres são aceitos (CRT-13);
@@ -278,10 +278,10 @@ T17 → T18
   - `rating` e `reservation` inválidos juntos devolvem 2 itens (CRT-15);
   - o corpo `[]` devolve 400 `malformed-request` (CRT-16);
   - uma entrada inválida para uma reserva inexistente devolve 400, e não 404 (CRT-17).
-- [ ] Teste: `GET`, `PUT` e `DELETE` em `/api/customer-ratings` devolvem 405 `method-not-allowed` com `Allow: POST, OPTIONS` (CRT-55).
-- [ ] `test_routes.py` passa com a RT-86, e a linha está no spec `api-restful-routes` (CRT-54).
-- [ ] O gate Full passa.
-- [ ] Contagem: `review` ≥ 46 + 20.
+- [x] Teste: `GET`, `PUT` e `DELETE` em `/api/customer-ratings` devolvem 405 `method-not-allowed` com `Allow: POST, OPTIONS` (CRT-55).
+- [x] `test_routes.py` passa com a RT-86, e a linha está no spec `api-restful-routes` (CRT-54).
+- [x] O gate Full passa.
+- [x] Contagem: `review` ≥ 46 + 20 (69). Suíte: 762 OK.
 
 **Tests**: integration
 **Gate**: full

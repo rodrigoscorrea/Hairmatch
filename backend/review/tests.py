@@ -24,6 +24,7 @@ import jwt
 import json
 import datetime
 from django.conf import settings
+from django.utils import timezone
 from users.cognito import get_cognito
 
 class ReviewsTestCase(TestCase):
@@ -1013,3 +1014,239 @@ class CustomerRatingRaceTest(TransactionTestCase):
         self.assertEqual(failures, [])
         self.assertEqual(CustomerRating.objects.filter(customer=customer).count(), 2)
         self.assertEqual(User.objects.get(pk=customer.user_id).rating, 3.0)
+
+
+class CreateCustomerRatingTest(ReviewsTestCase):
+    """POST /api/customer-ratings (RT-86): the hairdresser rates the customer of a reservation that has ended."""
+
+    RATING_DETAIL = 'The rating must be an integer from 1 to 5.'
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('customer_ratings')
+        # The service lasts 30 minutes, so a reservation that started 2 hours ago has ended.
+        self.reserve.start_time = timezone.now() - datetime.timedelta(hours=2)
+        self.reserve.save()
+        self.login_as_hairdresser()
+
+    def _post(self, body, **extra):
+        return self.client.post(self.url, data=json.dumps(body), content_type='application/json', **extra)
+
+    def _body(self, **fields):
+        return {'reservation': self.reserve.id, 'rating': 4, 'comment': 'Pontual', **fields}
+
+    def _ended_reservation(self):
+        start = timezone.now() - datetime.timedelta(hours=2)
+        return Reserve.objects.create(customer=self.customer, service=self.service, start_time=start)
+
+    def _pointers(self, response):
+        return [item['pointer'] for item in assert_problem(response, 'validation-error')['errors']]
+
+    def test_a_hairdresser_rates_the_customer_of_an_ended_reservation(self):
+        """CRT-01"""
+        response = self._post(self._body())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.json()['data']
+        self.assertEqual(set(data), {'id', 'reservation', 'rating', 'comment', 'created_at'})
+        created = CustomerRating.objects.get()
+        self.assertEqual(
+            (data['id'], data['reservation'], data['rating'], data['comment']),
+            (created.id, self.reserve.id, 4, 'Pontual'),
+        )
+        self.assertIsNotNone(data['created_at'])
+        self.assertEqual((created.customer_id, created.hairdresser_id), (self.customer.id, self.hairdresser.id))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
+    def test_a_reservation_that_ends_exactly_now_is_accepted(self):
+        """CRT-02"""
+        now = timezone.now()
+        self.reserve.start_time = now - datetime.timedelta(minutes=30)
+        self.reserve.save()
+
+        with patch('django.utils.timezone.now', return_value=now):
+            response = self._post(self._body())
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(CustomerRating.objects.filter(reservation=self.reserve).exists())
+
+    def test_a_reservation_that_has_not_ended_answers_409(self):
+        """CRT-03"""
+        now = timezone.now()
+        starts = {
+            'ends in 1 minute': now - datetime.timedelta(minutes=29),
+            'started 10 minutes ago': now - datetime.timedelta(minutes=10),
+            'starts tomorrow': now + datetime.timedelta(days=1),
+        }
+        for case, start in starts.items():
+            with self.subTest(case=case):
+                self.reserve.start_time = start
+                self.reserve.save()
+
+                with patch('django.utils.timezone.now', return_value=now):
+                    response = self._post(self._body())
+
+                assert_problem(
+                    response, 'service-not-finished', detail='The service of this reservation has not finished yet.'
+                )
+                self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_reservation_without_a_start_time_answers_409(self):
+        """CRT-04"""
+        self.reserve.start_time = None
+        self.reserve.save()
+
+        assert_problem(self._post(self._body()), 'service-not-finished')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_second_rating_answers_409_and_keeps_the_first(self):
+        """CRT-05"""
+        self._post(self._body(rating=5, comment='Primeira'))
+
+        response = self._post(self._body(rating=1, comment='Segunda'))
+
+        assert_problem(response, 'review-exists', detail='This reservation has already been rated.')
+        rating = CustomerRating.objects.get()
+        self.assertEqual((rating.rating, rating.comment), (5, 'Primeira'))
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_a_duplicate_that_passes_the_check_answers_409_not_500(self):
+        """CRT-06: the unique reservation in the database is what stops the second request of a race."""
+        record_customer_rating(self.hairdresser, self.reserve, 5, None)
+
+        with patch('review.views._is_rated', return_value=False):
+            response = self._post(self._body(rating=1))
+
+        assert_problem(response, 'review-exists', detail='This reservation has already been rated.')
+        self.assertEqual(CustomerRating.objects.get().rating, 5)
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 5.0)
+
+    def test_the_reservation_of_another_hairdresser_answers_403(self):
+        """CRT-07"""
+        other = dict(self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999')
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.client.post(
+            self.login_url, data=json.dumps({'email': other['email'], 'password': other['password']}),
+            content_type='application/json',
+        )
+
+        assert_problem(self._post(self._body()), 'forbidden')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_reservation_that_does_not_exist_answers_404(self):
+        """CRT-08"""
+        assert_problem(self._post(self._body(reservation=999999)), 'not-found', detail='Reservation not found.')
+
+    def test_no_session_answers_401(self):
+        """CRT-09"""
+        self.client.cookies.clear()
+
+        assert_problem(self._post(self._body()), 'invalid-session')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_customer_session_answers_403(self):
+        """CRT-10"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self._post(self._body()), 'hairdresser-required')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_rating_that_is_not_an_integer_from_1_to_5_answers_400(self):
+        """CRT-11"""
+        for value in (4.5, '5', True, 0, 6):
+            with self.subTest(rating=value):
+                response = self._post(self._body(rating=value))
+
+                assert_problem(response, 'validation-error', errors=[
+                    {'pointer': '#/rating', 'detail': self.RATING_DETAIL},
+                ])
+        body = self._body()
+        del body['rating']
+        assert_problem(self._post(body), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field is required.'},
+        ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_missing_or_non_integer_reservation_answers_400(self):
+        """CRT-12"""
+        body = self._body()
+        del body['reservation']
+        assert_problem(self._post(body), 'validation-error', errors=[
+            {'pointer': '#/reservation', 'detail': 'This field is required.'},
+        ])
+        assert_problem(self._post(self._body(reservation='abc')), 'validation-error', errors=[
+            {'pointer': '#/reservation', 'detail': 'This field must be an integer.'},
+        ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_comment_that_is_not_a_string_or_too_long_answers_400(self):
+        """CRT-13"""
+        cases = {
+            7: 'The comment must be a string.',
+            'a' * 501: 'The comment must have at most 500 characters.',
+        }
+        for value, detail in cases.items():
+            with self.subTest(comment=str(value)[:10]):
+                assert_problem(self._post(self._body(comment=value)), 'validation-error', errors=[
+                    {'pointer': '#/comment', 'detail': detail},
+                ])
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_a_comment_of_500_characters_after_the_trim_is_accepted(self):
+        """CRT-13 and CRT-14"""
+        response = self._post(self._body(comment='  ' + 'a' * 500 + '  '))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(CustomerRating.objects.get().comment, 'a' * 500)
+
+    def test_an_absent_null_or_blank_comment_is_stored_as_null(self):
+        """CRT-14"""
+        bodies = {'absent': self._body(), 'null': self._body(comment=None), 'blank': self._body(comment='   ')}
+        del bodies['absent']['comment']
+        for case, body in bodies.items():
+            with self.subTest(case=case):
+                body['reservation'] = self._ended_reservation().id
+
+                response = self._post(body)
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertIsNone(response.json()['data']['comment'])
+                self.assertIsNone(CustomerRating.objects.get(reservation_id=body['reservation']).comment)
+
+    def test_a_comment_is_stored_without_the_surrounding_spaces(self):
+        """CRT-14"""
+        response = self._post(self._body(comment='  ok  '))
+
+        self.assertEqual(response.json()['data']['comment'], 'ok')
+        self.assertEqual(CustomerRating.objects.get().comment, 'ok')
+
+    def test_every_invalid_field_is_reported_in_the_same_400(self):
+        """CRT-15"""
+        response = self._post({'reservation': 'abc', 'rating': 9})
+
+        self.assertEqual(self._pointers(response), ['#/reservation', '#/rating'])
+
+    def test_a_body_that_is_not_a_json_object_answers_400(self):
+        """CRT-16"""
+        assert_problem(self._post([]), 'malformed-request', detail='The request body must be a JSON object.')
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_invalid_input_is_reported_before_the_reservation_is_looked_up(self):
+        """CRT-17: an unknown reservation with an invalid rating is a 400, not a 404."""
+        response = self._post({'reservation': 999999, 'rating': 0})
+
+        self.assertEqual(self._pointers(response), ['#/rating'])
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        """CRT-55"""
+        for method in ('get', 'put', 'delete'):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.url)
+
+                assert_problem(response, 'method-not-allowed')
+                self.assertEqual(sorted(response['Allow'].split(', ')), ['OPTIONS', 'POST'])

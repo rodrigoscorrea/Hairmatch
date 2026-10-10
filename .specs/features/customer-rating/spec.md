@@ -282,23 +282,23 @@ A issue #104 pede quatro coisas:
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| CRT-01 | P1: Avaliar pela API, AC1 | Tasks | Pending |
+| CRT-01 | P1: Avaliar pela API, AC1 | Tasks | Implementing |
 | CRT-02 | P1: Avaliar pela API, AC2 | Tasks | Implementing |
-| CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Pending |
-| CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Pending |
-| CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Pending |
+| CRT-03 | P1: Avaliar pela API, AC3 | Tasks | Implementing |
+| CRT-04 | P1: Avaliar pela API, AC4 | Tasks | Implementing |
+| CRT-05 | P1: Avaliar pela API, AC5 | Tasks | Implementing |
 | CRT-06 | P1: Avaliar pela API, AC6 | Tasks | Implementing |
-| CRT-07 | P1: Avaliar pela API, AC7 | Tasks | Pending |
-| CRT-08 | P1: Avaliar pela API, AC8 | Tasks | Pending |
-| CRT-09 | P1: Avaliar pela API, AC9 | Tasks | Pending |
-| CRT-10 | P1: Avaliar pela API, AC10 | Tasks | Pending |
-| CRT-11 | P1: Entrada validada, AC1 | Tasks | Pending |
-| CRT-12 | P1: Entrada validada, AC2 | Tasks | Pending |
-| CRT-13 | P1: Entrada validada, AC3 | Tasks | Pending |
-| CRT-14 | P1: Entrada validada, AC4 | Tasks | Pending |
-| CRT-15 | P1: Entrada validada, AC5 | Tasks | Pending |
-| CRT-16 | P1: Entrada validada, AC6 | Tasks | Pending |
-| CRT-17 | P1: Entrada validada, AC7 | Tasks | Pending |
+| CRT-07 | P1: Avaliar pela API, AC7 | Tasks | Implementing |
+| CRT-08 | P1: Avaliar pela API, AC8 | Tasks | Implementing |
+| CRT-09 | P1: Avaliar pela API, AC9 | Tasks | Implementing |
+| CRT-10 | P1: Avaliar pela API, AC10 | Tasks | Implementing |
+| CRT-11 | P1: Entrada validada, AC1 | Tasks | Implementing |
+| CRT-12 | P1: Entrada validada, AC2 | Tasks | Implementing |
+| CRT-13 | P1: Entrada validada, AC3 | Tasks | Implementing |
+| CRT-14 | P1: Entrada validada, AC4 | Tasks | Implementing |
+| CRT-15 | P1: Entrada validada, AC5 | Tasks | Implementing |
+| CRT-16 | P1: Entrada validada, AC6 | Tasks | Implementing |
+| CRT-17 | P1: Entrada validada, AC7 | Tasks | Implementing |
 | CRT-18 | P1: Média, AC1 | Tasks | Implementing |
 | CRT-19 | P1: Média, AC2 | Tasks | Implementing |
 | CRT-20 | P1: Média, AC3 | Tasks | Implementing |
@@ -335,8 +335,8 @@ A issue #104 pede quatro coisas:
 | CRT-51 | P1: Perfil, AC2 | Tasks | Pending |
 | CRT-52 | P1: Perfil, AC3 | Tasks | Pending |
 | CRT-53 | P1: Contrato, AC1 | Tasks | Implementing |
-| CRT-54 | P1: Contrato, AC2 | Tasks | Pending |
-| CRT-55 | P1: Contrato, AC3 | Tasks | Pending |
+| CRT-54 | P1: Contrato, AC2 | Tasks | Implementing |
+| CRT-55 | P1: Contrato, AC3 | Tasks | Implementing |
 | CRT-56 | P2: Nota na agenda, AC1 | Tasks | Pending |
 | CRT-57 | P2: Nota na agenda, AC2 | Tasks | Pending |
 | CRT-58 | P2: Avaliações recebidas, AC1 | Tasks | Pending |
