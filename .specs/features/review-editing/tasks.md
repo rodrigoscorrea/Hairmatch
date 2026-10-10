@@ -726,10 +726,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os params da edição são `customerName`, `customerId` e `ratingId` (REV-76).
-- [ ] Depois do DELETE, a agenda é buscada de novo, e o evento fica sem `customerRating` (REV-80).
-- [ ] Um DELETE com falha mostra o `problemMessage` (REV-81).
-- [ ] Gate App passa.
+- [x] Os params da edição são `customerName`, `customerId` e `ratingId` (REV-76).
+- [x] Depois do DELETE, a agenda é buscada de novo, e o evento fica sem `customerRating` (REV-80).
+- [x] Um DELETE com falha mostra o `problemMessage` (REV-81).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
