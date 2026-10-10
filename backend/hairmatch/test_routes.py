@@ -73,6 +73,7 @@ ROUTE_TABLE = {
     ('GET', 'hairdressers/{id}/gallery-photos'),                  # RT-94
     ('POST', 'hairdressers/{id}/gallery-photos'),                 # RT-95
     ('DELETE', 'hairdressers/{id}/gallery-photos/{id}'),         # RT-96
+    ('GET', 'customers/me/favorite-hairdressers'),                # RT-97
     ('PUT', 'customers/me/favorite-hairdressers/{id}'),           # RT-98
     ('DELETE', 'customers/me/favorite-hairdressers/{id}'),        # RT-99
 }

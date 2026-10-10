@@ -1,11 +1,28 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.views import APIView
 
 from hairmatch.problems import problem_response
 from users.authentication import authenticated_customer
 from users.models import Hairdresser
+from users.serializers import PublicHairdresserSerializer
 
 from .models import FavoriteHairdresser
+
+
+class FavoriteHairdresserList(APIView):
+    """Lists the favorites of the logged customer, most recently favorited first, in the public hairdresser format."""
+
+    def get(self, request):
+        session, customer, error = authenticated_customer(request)
+        if error:
+            return error
+
+        # A pending hairdresser (AD-008) is out of every listing, the same filter the search applies.
+        favorites = FavoriteHairdresser.objects.filter(
+            customer=customer, hairdresser__user__is_active=True,
+        ).select_related('hairdresser__user')
+
+        return JsonResponse({'data': PublicHairdresserSerializer([favorite.hairdresser for favorite in favorites], many=True).data})
 
 
 class FavoriteHairdresserDetail(APIView):

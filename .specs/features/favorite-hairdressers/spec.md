@@ -191,13 +191,13 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-15 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-16 | P1: Favoritar pelo perfil | Tasks | Pending |
 | FAV-17 | P1: Favoritar pelo perfil | Tasks | Pending |
-| FAV-18 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-18 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-19 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-20 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-21 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-22 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-23 | P1: Lista de favoritos | Tasks | Pending |
-| FAV-24 | P1: Lista de favoritos | Tasks | Pending |
+| FAV-20 | P1: Lista de favoritos | Tasks | Implemented |
+| FAV-21 | P1: Lista de favoritos | Tasks | Implemented |
+| FAV-22 | P1: Lista de favoritos | Tasks | Implemented |
+| FAV-23 | P1: Lista de favoritos | Tasks | Implemented |
+| FAV-24 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-25 | P1: Lista de favoritos | Tasks | Pending |
 | FAV-26 | P1: Lista de favoritos | Tasks | Pending |
 | FAV-27 | P1: Lista de favoritos | Tasks | Pending |
@@ -213,9 +213,9 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-37 | P1: Ciclo de vida | Tasks | Pending |
 | FAV-38 | P1: Ciclo de vida | Tasks | Pending |
 | FAV-39 | Edge Cases | Tasks | Implemented |
-| FAV-40 | Edge Cases | Tasks | Pending |
+| FAV-40 | Edge Cases | Tasks | Implemented |
 | FAV-41 | Edge Cases | Tasks | Pending |
-| FAV-42 | Edge Cases | Tasks | Pending |
+| FAV-42 | Edge Cases | Tasks | Implemented |
 | FAV-43 | P1: Ciclo de vida | Tasks | Pending |
 
 **ID format:** `FAV-NN`.

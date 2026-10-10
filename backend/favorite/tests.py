@@ -309,3 +309,105 @@ class FavoriteHairdresserRaceTest(FavoriteAccounts, TransactionTestCase):
                 self.assertEqual(failures, [])
                 self.assertEqual(statuses, [204] * self.REQUESTS_PER_ROUND)
                 self.assertEqual(FavoriteHairdresser.objects.filter(customer=customer, hairdresser=hairdresser).count(), 1)
+
+
+class FavoriteHairdresserListTest(FavoriteAccounts, TestCase):
+    """GET /api/customers/me/favorite-hairdressers (RT-97)."""
+
+    URL = '/api/customers/me/favorite-hairdressers'
+
+    def setUp(self):
+        self.customer_a, self.client_a = self.sign_up('customer', 1)
+        self.customer_b, self.client_b = self.sign_up('customer', 2)
+        self.hairdressers = [self.sign_up('hairdresser', index)[0] for index in (3, 4, 5)]
+        _, self.hairdresser_client = self.sign_up('hairdresser', 6)
+        self.anonymous = APIClient()
+
+    def favorite(self, client, hairdresser):
+        self.assertEqual(client.put(self.detail_url(hairdresser.id)).status_code, 204)
+
+    def listed_ids(self, client):
+        response = client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        return [item['id'] for item in response.json()['data']]
+
+    def test_each_item_has_the_public_hairdresser_format(self):
+        """FAV-18"""
+        self.favorite(self.client_a, self.hairdressers[0])
+
+        response = self.client_a.get(self.URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.json()), {'data'})
+        (item,) = response.json()['data']
+        self.assertEqual(set(item), {'id', 'user', 'resume'})
+        self.assertEqual((item['id'], item['resume']), (self.hairdressers[0].id, 'Resume'))
+        self.assertEqual(
+            (item['user']['id'], item['user']['first_name'], item['user']['neighborhood'], item['user']['city']),
+            (self.hairdressers[0].user_id, 'Fav3', 'Centro', 'Manaus'),
+        )
+        self.assertFalse({'email', 'phone', 'postal_code'} & set(item['user']))
+
+    def test_items_come_from_the_most_recently_favorited_to_the_oldest(self):
+        """FAV-19: created_at is rewritten out of insertion order, so the order comes from the timestamp, not the id."""
+        for hairdresser in self.hairdressers:
+            self.favorite(self.client_a, hairdresser)
+        now = timezone.now()
+        for hairdresser, age in zip(self.hairdressers, (2, 1, 3)):
+            FavoriteHairdresser.objects.filter(customer=self.customer_a, hairdresser=hairdresser).update(
+                created_at=now - datetime.timedelta(days=age),
+            )
+
+        self.assertEqual(
+            self.listed_ids(self.client_a),
+            [self.hairdressers[1].id, self.hairdressers[0].id, self.hairdressers[2].id],
+        )
+
+    def test_a_customer_without_favorites_gets_an_empty_list(self):
+        """FAV-20"""
+        response = self.client_a.get(self.URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'data': []})
+
+    def test_a_customer_only_sees_their_own_favorites(self):
+        """FAV-21"""
+        self.favorite(self.client_a, self.hairdressers[0])
+        self.favorite(self.client_b, self.hairdressers[1])
+
+        self.assertEqual(self.listed_ids(self.client_a), [self.hairdressers[0].id])
+        self.assertEqual(self.listed_ids(self.client_b), [self.hairdressers[1].id])
+
+    def test_a_pending_hairdresser_leaves_the_list_and_comes_back_when_active(self):
+        """FAV-22"""
+        self.favorite(self.client_a, self.hairdressers[0])
+        self.favorite(self.client_a, self.hairdressers[1])
+
+        User.objects.filter(pk=self.hairdressers[0].user_id).update(is_active=False)
+        self.assertEqual(self.listed_ids(self.client_a), [self.hairdressers[1].id])
+
+        User.objects.filter(pk=self.hairdressers[0].user_id).update(is_active=True)
+        self.assertEqual(self.listed_ids(self.client_a), [self.hairdressers[1].id, self.hairdressers[0].id])
+
+    def test_without_a_session_the_list_answers_401(self):
+        """FAV-23"""
+        assert_problem(self.anonymous.get(self.URL), 'invalid-session')
+
+    def test_with_a_hairdresser_session_the_list_answers_403(self):
+        """FAV-24"""
+        assert_problem(self.hairdresser_client.get(self.URL), 'customer-required')
+
+    def test_favoriting_again_after_unfavoriting_lists_the_hairdresser_once_in_the_latest_position(self):
+        """FAV-40"""
+        first, second = self.hairdressers[:2]
+        self.favorite(self.client_a, first)
+        self.favorite(self.client_a, second)
+        self.assertEqual(self.client_a.delete(self.detail_url(first.id)).status_code, 204)
+        self.favorite(self.client_a, first)
+
+        self.assertEqual(self.listed_ids(self.client_a), [first.id, second.id])
+
+    def test_put_on_the_list_path_answers_405(self):
+        """FAV-42: the Allow header is not pinned, because DRF adds HEAD to every GET."""
+        assert_problem(self.client_a.put(self.URL), 'method-not-allowed')
+        self.assertEqual(FavoriteHairdresser.objects.count(), 0)

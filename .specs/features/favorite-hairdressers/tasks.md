@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 e T2 concluídas.
+**Status**: Execute: T1 a T3 concluídas.
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -186,7 +186,7 @@ T11
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe `FavoriteHairdresserListTest`:
+- [x] Classe `FavoriteHairdresserListTest`:
   - FAV-18: cada item tem exatamente as chaves `id`, `user` e `resume`. O `user` não tem `email`, `phone` nem `postal_code`, e o item não tem `cnpj`;
   - FAV-19: três favoritos com o `created_at` reescrito fora da ordem de inserção saem do mais recente para o mais antigo;
   - FAV-20: um cliente sem favoritos recebe 200 `{"data": []}`;
@@ -196,9 +196,9 @@ T11
   - FAV-24: com sessão de cabeleireiro, 403 `customer-required`;
   - FAV-40: favoritar A, favoritar B, desfavoritar A e favoritar A de novo deixa a lista `[A, B]`, sem A repetido;
   - FAV-42: `PUT /api/customers/me/favorite-hairdressers` responde 405 `method-not-allowed`. O teste não fixa o conteúdo do `Allow`, porque o DRF acrescenta `HEAD` a todo `GET` (desvio do GAL-43).
-- [ ] O `RouteTableTests` passa com RT-97.
-- [ ] Gate check passes: Full.
-- [ ] Test count: total sem remoção.
+- [x] O `RouteTableTests` passa com RT-97.
+- [x] Gate check passes: Full.
+- [x] Test count: 984 → 993 (9 testes novos), sem remoção.
 
 **Tests**: integration
 **Gate**: full
