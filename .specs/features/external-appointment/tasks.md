@@ -419,8 +419,8 @@ Os estilos `fab` e `externalBadge` entram em `AgendaManagerStyles.ts`.
 
 **Done when**:
 
-- [ ] O lint de `agenda/index.tsx` tem 0 errors
-- [ ] Gate check passes: App
+- [x] O lint de `agenda/index.tsx` tem 0 errors
+- [x] Gate check passes: App
 
 **Tests**: none
 **Gate**: App

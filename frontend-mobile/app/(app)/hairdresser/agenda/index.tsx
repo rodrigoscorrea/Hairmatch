@@ -3,13 +3,15 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, Modal, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-big-calendar';
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { formatDate } from '../../../../utils/date-formater';
 import { formatTime } from '../../../../utils/time-formater';
 import { styles, calendarTheme } from '@/styles/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
+import { colors } from '@/assets/colors';
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
-import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
+import type { AgendaEvent, AgendaViewProps, CalendarMode } from '@/models/Agenda.types';
 import 'dayjs/locale/pt-br';
 
 // The Agenda list view can be a separate component for cleanliness
@@ -27,6 +29,7 @@ const AgendaListView: React.FC<AgendaViewProps> = ({ events, onEventPress }) => 
             <Text style={styles.monthText}>{dayjs(item.start).format('MMM').toUpperCase()}</Text>
           </View>
           <View style={styles.detailsContainer}>
+            {item.isExternal && <Text style={styles.externalBadge}>Externo</Text>}
             <Text style={styles.titleText}>{item.title}</Text>
             <Text style={styles.timeText}>
               {formatTime((item.start).toISOString())} - {formatTime((item.end).toISOString())}
@@ -36,6 +39,46 @@ const AgendaListView: React.FC<AgendaViewProps> = ({ events, onEventPress }) => 
       </TouchableOpacity>
     )}
   />
+);
+
+const calendarViews = [
+  { label: 'Agenda', value: 'agenda' },
+  { label: 'Mês', value: 'month' },
+  { label: 'Semana', value: 'week' },
+  { label: 'Dia', value: 'day' },
+] as const;
+
+interface HeaderProps {
+  selectedView: CalendarMode;
+  onViewChange: (view: CalendarMode) => void;
+}
+
+// Declared outside the screen so React keeps the same component between renders.
+const Header: React.FC<HeaderProps> = ({ selectedView, onViewChange }) => (
+  <View style={styles.header}>
+    <StatusBar barStyle="dark-content" backgroundColor="#F5E6D3" />
+    <View style={styles.tabContainer}>
+      {calendarViews.map((viewInfo) => (
+      <TouchableOpacity
+        key={viewInfo.value} 
+        style={[
+          styles.tab,
+          selectedView === viewInfo.value && styles.activeTab,
+        ]}
+        onPress={() => onViewChange(viewInfo.value)}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            selectedView === viewInfo.value && styles.activeTabText,
+          ]}
+        >
+          {viewInfo.label}
+        </Text>
+      </TouchableOpacity>
+      ))}
+    </View>
+  </View>
 );
 
 export default function AgendaManagerScreen() {
@@ -51,48 +94,15 @@ export default function AgendaManagerScreen() {
     goToPreviousPeriod,
     goToNextPeriod,
     handlePressCell,
+    handleAddPress,
     onEventPress,
     closeModal,
     confirmCancelEvent,
   } = useAgenda();
 
-  const calendarViews = [
-    { label: 'Agenda', value: 'agenda' },
-    { label: 'Mês', value: 'month' },
-    { label: 'Semana', value: 'week' },
-    { label: 'Dia', value: 'day' },
-  ] as const;
-
-  const Header = () => (
-    <View style={styles.header}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5E6D3" />
-      <View style={styles.tabContainer}>
-        {calendarViews.map((viewInfo) => (
-        <TouchableOpacity
-          key={viewInfo.value} 
-          style={[
-            styles.tab,
-            selectedView === viewInfo.value && styles.activeTab,
-          ]}
-          onPress={() => handleViewChange(viewInfo.value)}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              selectedView === viewInfo.value && styles.activeTabText,
-            ]}
-          >
-            {viewInfo.label}
-          </Text>
-        </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header selectedView={selectedView} onViewChange={handleViewChange} />
       
       {/* Calendar Header is part of the main component now */}
       <View style={[styles.calendarHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
@@ -125,6 +135,10 @@ export default function AgendaManagerScreen() {
           />
         </View>
       )}
+
+      <TouchableOpacity style={styles.fab} onPress={handleAddPress}>
+        <Ionicons name="add" size={28} color={colors.white} />
+      </TouchableOpacity>
 
       {/* --- Cancellation Modal --- */}
       <Modal visible={modalVisible} transparent={true} animationType="slide" onRequestClose={closeModal}>
