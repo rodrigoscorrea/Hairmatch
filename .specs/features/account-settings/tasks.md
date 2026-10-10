@@ -140,7 +140,7 @@ T21
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `ProfileUpdateValidationTest` em `backend/users/tests.py`, com um teste por critério:
+- [x] Classe nova `ProfileUpdateValidationTest` em `backend/users/tests.py`, com um teste por critério:
   - vazio, só espaços e não string, para cada campo obrigatório, com o pointer e nenhuma linha alterada;
   - `max_length` de cada campo de texto;
   - telefone com 9, 14 e sem `55`;
@@ -151,9 +151,9 @@ T21
   - gravação normalizada (`55 (92) 99999-0000` → `5592999990000`, `69057-000` → `69057000`, `am` → `AM`);
   - e-mail em outra caixa ignorado e e-mail diferente com 400 sem gravar nada;
   - `rating`, `role`, `cognito_sub`, `google_id` e `is_active` ignorados.
-- [ ] Os testes atuais do `PATCH` continuam passando sem mudar o que afirmam.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: `users` ≥ 384 + os novos, sem remoção.
+- [x] Os testes atuais do `PATCH` continuam passando sem mudar o que afirmam.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: `users` ≥ 384 + os novos, sem remoção: 398 executados. A baseline executada é 382 (o `git grep -c "def test_"` conta 384).
 
 **Tests**: integration
 **Gate**: quick

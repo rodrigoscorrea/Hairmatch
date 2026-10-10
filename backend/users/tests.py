@@ -5829,6 +5829,212 @@ class UpdateProfilePhoneTest(TestCase):
         self.assertEqual(User.objects.get(email='nova@example.com').phone, '5592911112222')
 
 
+class ProfileUpdateValidationTest(TestCase):
+    """PATCH /api/users/me refuses what the sign-up would not accept and stores the normalized values (ACC-01 to ACC-10)."""
+
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'phone', 'address', 'neighborhood', 'city', 'state', 'postal_code']
+
+    def setUp(self):
+        self.client = APIClient()
+        self.own_url = reverse('current_user')
+        for payload in (_register_payload(), _hairdresser_payload()):
+            self.client.post(reverse('register'), data=payload)
+            activate_account(payload['email'])
+        self._login('nova@example.com')
+
+    def _login(self, email):
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': email, 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+
+    def _patch(self, body):
+        return self.client.patch(self.own_url, data=json.dumps(body), content_type='application/json')
+
+    def _rows(self, email):
+        user = User.objects.values().get(email=email)
+        profile = (Customer if user['role'] == 'customer' else Hairdresser).objects.values().get(user_id=user['id'])
+        return user, profile
+
+    def _assert_refused(self, body, errors, email='nova@example.com'):
+        before = self._rows(email)
+
+        response = self._patch(body)
+
+        assert_problem(response, 'validation-error', detail='One or more fields are invalid.', errors=errors)
+        self.assertEqual(self._rows(email), before)
+
+    def test_an_empty_blank_or_non_string_required_field_answers_400_and_changes_nothing(self):
+        """ACC-01"""
+        for field in self.REQUIRED_FIELDS:
+            for value, detail in (('', 'This field is required.'), ('   ', 'This field is required.'),
+                                  (42, 'This field must be a string.')):
+                with self.subTest(field=field, value=value):
+                    self._assert_refused(
+                        {'complement': 'Mudou', field: value}, [{'pointer': f'#/{field}', 'detail': detail}]
+                    )
+
+    def test_a_text_field_over_the_model_max_length_answers_400_and_changes_nothing(self):
+        """ACC-02: the model's max_length is the limit, and a value at the limit is stored."""
+        limits = {
+            'first_name': 100, 'last_name': 100, 'address': 150, 'neighborhood': 150,
+            'city': 150, 'complement': 150, 'number': 6,
+        }
+        for field, limit in limits.items():
+            with self.subTest(field=field):
+                self._assert_refused(
+                    {'state': 'RJ', field: 'a' * (limit + 1)},
+                    [{'pointer': f'#/{field}', 'detail': f'This field must have at most {limit} characters.'}],
+                )
+
+                response = self._patch({field: 'a' * limit})
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(User.objects.values_list(field, flat=True).get(email='nova@example.com'), 'a' * limit)
+
+    def test_a_phone_that_is_not_55_and_10_or_11_digits_answers_400(self):
+        """ACC-03"""
+        for phone in ('929912345', '55929912345678', '92991234567', '(92) 3234-5678', '55929912345６７'):
+            with self.subTest(phone=phone):
+                self._assert_refused(
+                    {'first_name': 'Mudou', 'phone': phone},
+                    [{'pointer': '#/phone', 'detail': 'The phone number must be 55 followed by 10 or 11 digits.'}],
+                )
+
+    def test_a_landline_phone_with_55_and_10_digits_is_stored(self):
+        """ACC-03: 55 + 10 digits is a valid phone."""
+        response = self._patch({'phone': '+55 (92) 3234-5678'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.get(email='nova@example.com').phone, '559232345678')
+
+    def test_a_postal_code_without_8_digits_answers_400(self):
+        """ACC-04"""
+        for postal_code in ('6905700', '690570001', '69057-00', 'abcdefgh'):
+            with self.subTest(postal_code=postal_code):
+                self._assert_refused(
+                    {'first_name': 'Mudou', 'postal_code': postal_code},
+                    [{'pointer': '#/postal_code', 'detail': 'The postal code must have 8 digits.'}],
+                )
+
+    def test_a_state_that_is_not_2_letters_answers_400(self):
+        """ACC-05"""
+        for state in ('Amazonas', 'A1', 'A'):
+            with self.subTest(state=state):
+                self._assert_refused(
+                    {'first_name': 'Mudou', 'state': state},
+                    [{'pointer': '#/state', 'detail': 'The state must be 2 letters.'}],
+                )
+
+    def test_a_cpf_without_11_digits_answers_400(self):
+        """ACC-06"""
+        for cpf, detail in (('1234567890', 'The CPF must have 11 digits.'),
+                            ('123456789000', 'The CPF must have 11 digits.'),
+                            (12345678900, 'This field must be a string.')):
+            with self.subTest(cpf=cpf):
+                self._assert_refused({'first_name': 'Mudou', 'cpf': cpf}, [{'pointer': '#/cpf', 'detail': detail}])
+
+    def test_a_cnpj_without_14_digits_answers_400(self):
+        """ACC-06"""
+        self._login('cabelo@example.com')
+        for cnpj in ('1234567800019', '123456780001900'):
+            with self.subTest(cnpj=cnpj):
+                self._assert_refused(
+                    {'first_name': 'Mudou', 'cnpj': cnpj},
+                    [{'pointer': '#/cnpj', 'detail': 'The CNPJ must have 14 digits.'}],
+                    email='cabelo@example.com',
+                )
+
+    def test_a_resume_over_1000_characters_or_not_a_string_answers_400(self):
+        """ACC-07"""
+        self._login('cabelo@example.com')
+        for resume, detail in (('a' * 1001, 'The resume must have at most 1000 characters.'),
+                               (42, 'This field must be a string.')):
+            with self.subTest(resume=resume):
+                self._assert_refused(
+                    {'first_name': 'Mudou', 'resume': resume},
+                    [{'pointer': '#/resume', 'detail': detail}],
+                    email='cabelo@example.com',
+                )
+
+    def test_a_resume_of_1000_characters_or_empty_is_stored(self):
+        """ACC-07"""
+        self._login('cabelo@example.com')
+        for resume in ('a' * 1000, ''):
+            with self.subTest(length=len(resume)):
+                response = self._patch({'resume': resume})
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(Hairdresser.objects.get(user__email='cabelo@example.com').resume, resume)
+
+    def test_every_invalid_field_is_reported_in_one_response(self):
+        """ACC-01 and ACC-05: one item per field, in the same 400."""
+        self._assert_refused(
+            {'first_name': '', 'state': 'Amazonas'},
+            [
+                {'pointer': '#/first_name', 'detail': 'This field is required.'},
+                {'pointer': '#/state', 'detail': 'The state must be 2 letters.'},
+            ],
+        )
+
+    def test_a_valid_body_is_stored_with_digits_only_and_the_state_in_uppercase(self):
+        """ACC-08"""
+        response = self._patch({
+            'phone': '55 (92) 99999-0000', 'postal_code': '69057-000', 'state': 'am', 'cpf': '987.654.321-00',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'message': 'User updated successfully'})
+        user = User.objects.get(email='nova@example.com')
+        self.assertEqual((user.phone, user.postal_code, user.state), ('5592999990000', '69057000', 'AM'))
+        self.assertEqual(Customer.objects.get(user=user).cpf, '98765432100')
+
+    def test_a_valid_cnpj_is_stored_with_digits_only(self):
+        """ACC-08"""
+        self._login('cabelo@example.com')
+
+        response = self._patch({'cnpj': '98.765.432/0001-90'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Hairdresser.objects.get(user__email='cabelo@example.com').cnpj, '98765432000190')
+
+    def test_the_own_email_in_another_case_is_ignored(self):
+        """ACC-09"""
+        pk = User.objects.get(email='nova@example.com').pk
+
+        response = self._patch({'email': 'NOVA@Example.COM', 'first_name': 'Trocado'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(pk=pk)
+        self.assertEqual((user.email, user.first_name), ('nova@example.com', 'Trocado'))
+
+    def test_a_different_email_in_another_case_answers_400_and_changes_nothing(self):
+        """ACC-10"""
+        before = self._rows('nova@example.com')
+
+        response = self._patch({'email': 'OUTRA@example.com', 'first_name': 'Trocado'})
+
+        assert_problem(response, 'email-change-unsupported', detail='Changing the email is not supported.')
+        self.assertEqual(self._rows('nova@example.com'), before)
+
+    def test_fields_the_user_does_not_own_are_ignored(self):
+        """ACC-57"""
+        before = User.objects.get(email='nova@example.com')
+
+        response = self._patch({
+            'rating': 1, 'role': 'hairdresser', 'cognito_sub': 'outro-sub', 'google_id': 'google-x',
+            'is_active': False, 'first_name': 'Trocado',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        after = User.objects.get(pk=before.pk)
+        self.assertEqual(
+            (after.rating, after.role, after.cognito_sub, after.google_id, after.is_active, after.first_name),
+            (before.rating, before.role, before.cognito_sub, before.google_id, True, 'Trocado'),
+        )
+
+
 class SessionFormatTest(TestCase):
     """After T16 only Cognito access tokens and the new Google session open protected routes."""
 

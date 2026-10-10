@@ -221,16 +221,16 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ACC-01 | P1: Validar PATCH, AC1 | Tasks | Pending |
-| ACC-02 | P1: Validar PATCH, AC2 | Tasks | Pending |
-| ACC-03 | P1: Validar PATCH, AC3 | Tasks | Pending |
-| ACC-04 | P1: Validar PATCH, AC4 | Tasks | Pending |
-| ACC-05 | P1: Validar PATCH, AC5 | Tasks | Pending |
-| ACC-06 | P1: Validar PATCH, AC6 | Tasks | Pending |
-| ACC-07 | P1: Validar PATCH, AC7 | Tasks | Pending |
-| ACC-08 | P1: Validar PATCH, AC8 | Tasks | Pending |
-| ACC-09 | P1: Validar PATCH, AC9 | Tasks | Pending |
-| ACC-10 | P1: Validar PATCH, AC10 | Tasks | Pending |
+| ACC-01 | P1: Validar PATCH, AC1 | Tasks | Implementing |
+| ACC-02 | P1: Validar PATCH, AC2 | Tasks | Implementing |
+| ACC-03 | P1: Validar PATCH, AC3 | Tasks | Implementing |
+| ACC-04 | P1: Validar PATCH, AC4 | Tasks | Implementing |
+| ACC-05 | P1: Validar PATCH, AC5 | Tasks | Implementing |
+| ACC-06 | P1: Validar PATCH, AC6 | Tasks | Implementing |
+| ACC-07 | P1: Validar PATCH, AC7 | Tasks | Implementing |
+| ACC-08 | P1: Validar PATCH, AC8 | Tasks | Implementing |
+| ACC-09 | P1: Validar PATCH, AC9 | Tasks | Implementing |
+| ACC-10 | P1: Validar PATCH, AC10 | Tasks | Implementing |
 | ACC-11 | P1: Validar PATCH, AC11 | Tasks | Pending |
 | ACC-12 | P1: Validar PATCH, AC12 | Tasks | Pending |
 | ACC-13 | P1: Validar PATCH, AC13 | Tasks | Pending |
@@ -276,8 +276,8 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-53 | P2: Resumo, AC1 | Tasks | Pending |
 | ACC-54 | P2: Resumo, AC2 | Tasks | Pending |
 | ACC-55 | P2: Resumo, AC3 | Tasks | Pending |
-| ACC-56 | Edge Cases | Tasks | Pending |
-| ACC-57 | Edge Cases | Tasks | Pending |
+| ACC-56 | Edge Cases | Tasks | Implementing |
+| ACC-57 | Edge Cases | Tasks | Implementing |
 | ACC-58 | Edge Cases | Tasks | Pending |
 | ACC-59 | Edge Cases | Tasks | Pending |
 | ACC-60 | Edge Cases | Tasks | Pending |
