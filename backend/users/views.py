@@ -814,19 +814,19 @@ class CurrentUserView(APIView):
 
         for field, value in user_fields.items():
             setattr(user, field, value)
+        profile_model = {'customer': Customer, 'hairdresser': Hairdresser}.get(user.role)
         try:
+            # The account and its profile are saved together: a failed profile save undoes the user's.
             with transaction.atomic():
                 user.save(update_fields=list(user_fields))
+                profile = profile_model.objects.filter(user=user).first() if profile_model else None
+                if profile and profile_fields:
+                    for field, value in profile_fields.items():
+                        setattr(profile, field, value)
+                    profile.save(update_fields=list(profile_fields))
         except IntegrityError:
             # A request that ran at the same time took the phone after the check above.
             return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
-
-        profile_model = {'customer': Customer, 'hairdresser': Hairdresser}.get(user.role)
-        profile = profile_model.objects.filter(user=user).first() if profile_model else None
-        if profile and profile_fields:
-            for field, value in profile_fields.items():
-                setattr(profile, field, value)
-            profile.save(update_fields=list(profile_fields))
 
         return JsonResponse({'message': 'User updated successfully'}, status=200)
 

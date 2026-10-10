@@ -5903,7 +5903,7 @@ class UpdateProfilePhoneTest(TestCase):
 
 
 class ProfileUpdateValidationTest(TestCase):
-    """PATCH /api/users/me refuses what the sign-up would not accept and stores the normalized values (ACC-01 to ACC-10)."""
+    """PATCH /api/users/me refuses what the sign-up would not accept and stores the normalized values, all or nothing (ACC-01 to ACC-10, ACC-15)."""
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'phone', 'address', 'neighborhood', 'city', 'state', 'postal_code']
 
@@ -6106,6 +6106,32 @@ class ProfileUpdateValidationTest(TestCase):
             (after.rating, after.role, after.cognito_sub, after.google_id, after.is_active, after.first_name),
             (before.rating, before.role, before.cognito_sub, before.google_id, True, 'Trocado'),
         )
+
+    def _assert_failed_profile_save_keeps_the_account(self, model, body, role):
+        with patch.object(model, 'save', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._patch(body)
+
+        assert_problem(response, 'internal-error')
+        return self.client.get(self.own_url).json()[role]
+
+    def test_a_failed_customer_save_undoes_the_user_save(self):
+        """ACC-15"""
+        current = self._assert_failed_profile_save_keeps_the_account(
+            Customer, {'first_name': 'Trocado', 'cpf': '98765432100'}, 'customer'
+        )
+
+        self.assertEqual((current['user']['first_name'], current['cpf']), ('Nova', '12345678900'))
+
+    def test_a_failed_hairdresser_save_undoes_the_user_save(self):
+        """ACC-15"""
+        self._login('cabelo@example.com')
+
+        current = self._assert_failed_profile_save_keeps_the_account(
+            Hairdresser, {'first_name': 'Trocado', 'resume': 'Novo resumo'}, 'hairdresser'
+        )
+
+        self.assertEqual((current['user']['first_name'], current['resume']), ('Nova', 'Cachos'))
 
 
 class SessionFormatTest(TestCase):

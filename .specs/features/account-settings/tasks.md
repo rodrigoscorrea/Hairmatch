@@ -210,10 +210,10 @@ T21
 - Skill: NONE
 
 **Done when**:
-- [ ] O teste novo força uma exceção no `save` do `Customer` (`patch.object(Customer, 'save', side_effect=...)`) com um corpo que muda `first_name` e `cpf`. A resposta é 500 `internal-error`, e o `GET /api/users/me` seguinte devolve o `first_name` antigo.
-- [ ] O mesmo teste para o `Hairdresser`, com `resume`.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: `users` sem remoção.
+- [x] O teste novo força uma exceção no `save` do `Customer` (`patch.object(Customer, 'save', side_effect=...)`) com um corpo que muda `first_name` e `cpf`. A resposta é 500 `internal-error`, e o `GET /api/users/me` seguinte devolve o `first_name` antigo.
+- [x] O mesmo teste para o `Hairdresser`, com `resume`.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: `users` sem remoção: 405 executados (403 + 2).
 
 **Tests**: integration
 **Gate**: quick
