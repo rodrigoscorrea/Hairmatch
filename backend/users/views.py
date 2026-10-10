@@ -20,7 +20,8 @@ from service.models import Service
 from agenda.models import Agenda
 from reserve.models import Reserve
 from reserve.views import cancel_reserve
-from review.models import Review
+from review.models import ReviewPicture
+from review.pictures import picture_names
 from itertools import chain
 from rest_framework.parsers import MultiPartParser, FormParser
 from preferences.models import Preferences
@@ -241,11 +242,9 @@ def _delete_account_rows(user):
     Service.objects.filter(hairdresser__user=user).delete()
 
     # Reviews written and received go with the profiles (CASCADE); their pictures stay in storage otherwise.
-    pictures = [
-        name for name in Review.objects.filter(
-            Q(customer__user=user) | Q(hairdresser__user=user)
-        ).values_list('picture', flat=True) if name
-    ]
+    pictures = picture_names(ReviewPicture.objects.filter(
+        Q(review__customer__user=user) | Q(review__hairdresser__user=user)
+    ))
     if user.profile_picture:
         pictures.append(user.profile_picture.name)
     user.delete()

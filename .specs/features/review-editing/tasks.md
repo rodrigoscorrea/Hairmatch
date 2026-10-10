@@ -339,12 +339,12 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: as exclusões de conta do cabeleireiro e do cliente apagam, depois do commit, as 2 chaves das fotos da review do fixture (REV-26). É a reescrita de `users/tests.py:5646` e `:5669`.
-- [ ] O teste da queda do Cognito que mantém as linhas e as fotos continua passando, agora também com as chaves de `ReviewPicture` (REV-28).
-- [ ] Teste: `PUT /api/reviews/{id}` com `picture` no corpo não cria nem remove fotos (REV-20). É a reescrita de `review/tests.py:452`.
-- [ ] Teste: o detalhe da reserva e a lista do cabeleireiro não trazem a chave `picture` na review (REV-30).
-- [ ] `git grep -nE "review\.picture\b|Review\.objects\.create\([^)]*picture=|\.get\(\)\.picture" -- backend` não acha nenhum leitor antigo. A prova principal é o gate Full: um leitor que sobrar levanta `FieldError` depois da remoção da coluna.
-- [ ] Gate Full passa, com `makemigrations --check` limpo. Contagem: `users` ≥ 423, `review` ≥ 100 + 1.
+- [x] Teste: as exclusões de conta do cabeleireiro e do cliente apagam, depois do commit, as 2 chaves das fotos da review do fixture (REV-26). É a reescrita de `users/tests.py:5646` e `:5669`.
+- [x] O teste da queda do Cognito que mantém as linhas e as fotos continua passando, agora também com as chaves de `ReviewPicture` (REV-28).
+- [x] Teste: `PUT /api/reviews/{id}` com `picture` no corpo não cria nem remove fotos (REV-20). É a reescrita de `review/tests.py:452`.
+- [x] Teste: o detalhe da reserva e a lista do cabeleireiro não trazem a chave `picture` na review (REV-30).
+- [x] `git grep -nE "review\.picture\b|Review\.objects\.create\([^)]*picture=|\.get\(\)\.picture" -- backend` não acha nenhum leitor antigo. A prova principal é o gate Full: um leitor que sobrar levanta `FieldError` depois da remoção da coluna.
+- [x] Gate Full passa, com `makemigrations --check` limpo. Contagem: `users` ≥ 423, `review` ≥ 100 + 1.
 
 **Tests**: integration
 **Gate**: full

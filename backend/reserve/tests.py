@@ -837,6 +837,7 @@ class ReservationReviewPicturesTest(ReserveTestCase):
                 reserve = data if isinstance(data, dict) else data[0]
                 self.assertEqual(len(reserve['review']['pictures']), 2)
                 self.assertEqual(reserve['review']['pictures'], self._expected(review))
+                self.assertNotIn('picture', reserve['review'])
 
     def test_a_reservation_without_a_review_keeps_review_null(self):
         self.login(self.customer_user)

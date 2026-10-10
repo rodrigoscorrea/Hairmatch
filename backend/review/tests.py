@@ -549,13 +549,22 @@ class UpdateReviewProblemsTest(ReviewsTestCase):
                 self.review.refresh_from_db()
                 self.assertEqual(self.review.rating, rating)
 
-    def test_a_picture_in_the_body_is_ignored(self):
-        response = self._put({'rating': 5, 'picture': '../../outro-usuario/profile_pictures/x.webp'})
+    def test_a_picture_in_the_body_does_not_create_or_remove_pictures(self):
+        """REV-20 (replaces the single-picture test)"""
+        kept = ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG'))
+        before = review_keys()
+
+        response = self._put({
+            'rating': 5,
+            'picture': '../../outro-usuario/profile_pictures/x.webp',
+            'pictures': ['../../outro-usuario/profile_pictures/y.webp'],
+        })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.review.refresh_from_db()
-        self.assertFalse(self.review.picture)
         self.assertEqual(self.review.rating, 5)
+        self.assertEqual(list(self.review.pictures.values_list('id', flat=True)), [kept.id])
+        self.assertEqual(review_keys(), before)
 
 
 class ListReviewTest(ReviewsTestCase):
@@ -1710,6 +1719,7 @@ class ListReviewPicturesTest(ReviewsTestCase):
             {'id': pictures[1].id, 'url': default_storage.url(pictures[1].picture.name)},
         ])
         self.assertLess(data[0]['pictures'][0]['id'], data[0]['pictures'][1]['id'])
+        self.assertNotIn('picture', data[0])
 
     def test_a_review_without_pictures_lists_an_empty_array(self):
         self._review_with_pictures(0)

@@ -132,6 +132,7 @@ class ListReview(APIView):
             Review.objects.filter(hairdresser_id=hairdresser_id)
             .select_related('customer__user')
             .prefetch_related('pictures')
+            .order_by('id')  # the joins above leave the order to the planner otherwise
         )
         serializer = ReviewSerializer(reviews, many=True)
         return JsonResponse({'data': serializer.data}, status=200)
