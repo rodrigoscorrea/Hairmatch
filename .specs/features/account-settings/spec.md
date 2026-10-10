@@ -252,7 +252,7 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-29 | P1: Excluir conta, AC2 | Tasks | Pending |
 | ACC-30 | P1: Excluir conta, AC3 | Tasks | Implementing |
 | ACC-31 | P1: Excluir conta, AC4 | Tasks | Implementing |
-| ACC-32 | P1: Excluir conta, AC5 | Tasks | Pending |
+| ACC-32 | P1: Excluir conta, AC5 | Tasks | Implementing |
 | ACC-33 | P1: Excluir conta, AC6 | Tasks | Pending |
 | ACC-34 | P1: Excluir conta, AC7 | Tasks | Implementing |
 | ACC-35 | P2: Foto, AC1 | Tasks | Implementing |

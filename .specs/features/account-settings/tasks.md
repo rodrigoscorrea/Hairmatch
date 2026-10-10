@@ -377,8 +377,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Com `userInfo` nulo, nenhuma das telas lê uma propriedade de `undefined`. Conferido por leitura e no UAT (T21: logout e exclusão).
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Com `userInfo` nulo, nenhuma das telas lê uma propriedade de `undefined`. Conferido por leitura e no UAT (T21: logout e exclusão). Cada tela retorna `null` antes de ler `x.user` (as duas `configs/accountSetting.tsx` também). Os hooks `useCustomerProfile`, `useHairdresserProfile` e `useHairdresserSettings` já usavam `?.` e não mudaram; as `configs/addressSetting.tsx` já usavam `?.`.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app

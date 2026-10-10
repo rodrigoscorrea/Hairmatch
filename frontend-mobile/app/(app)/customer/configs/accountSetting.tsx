@@ -9,6 +9,8 @@ import { styles } from '@/styles/customer/styles/AccountConfigStyles';
 
 export default function AccountDetailsScreen() {
   const {customer, handleGoBack} = useCustomerProfile();
+  // userInfo is null for a moment after the logout or the account deletion.
+  if (!customer) return null;
   const customer_image = customer.user.profile_picture;
   return (
     <SafeAreaView style={styles.container}>

@@ -23,6 +23,9 @@ export default function ProfileScreen(){
     const handleMenuPress = (item: string) => {
     };
 
+    // userInfo is null for a moment after the logout or the account deletion.
+    if (!customer) return null;
+
     const customer_image = customer.user.profile_picture;
     
     return (

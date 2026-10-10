@@ -10,6 +10,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
+    // userInfo is null for a moment after the logout or the account deletion.
+    if (!hairdresser) return null;
     const hairdresser_image = hairdresser.user.profile_picture;
     return (
     <SafeAreaView style={styles.safeArea}>        

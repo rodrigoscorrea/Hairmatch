@@ -9,6 +9,8 @@ import { styles } from '@/styles/customer/styles/AccountConfigStyles';
 
 export default function AccountDetailsScreen() {
   const {hairdresser, handleGoBack} = useHairdresserProfile();
+  // userInfo is null for a moment after the logout or the account deletion.
+  if (!hairdresser) return null;
   const hairdresser_image = hairdresser.user.profile_picture;
   return (
     <SafeAreaView style={styles.container}>
