@@ -460,8 +460,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] As duas rotas mostram a mesma tela, com CPF para o cliente e CNPJ para o cabeleireiro.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] As duas rotas mostram a mesma tela, com CPF para o cliente e CNPJ para o cabeleireiro. Conferido por leitura: as duas rotas só renderizam `<AccountSettingScreen role=... />`, e o campo do documento usa `formatCPF` ou `formatCNPJ` pelo papel. A tela no app fica para o T21.
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
