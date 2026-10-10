@@ -411,6 +411,9 @@ def _create_role_profile(user, data):
             user=user,
             cpf=data.get('cpf'),
         )
+        # A customer's rating is the average of the ratings received, and a new one has none (AD-010).
+        user.rating = None
+        user.save(update_fields=['rating'])
     elif role == 'hairdresser':
         Hairdresser.objects.create(
             user=user,

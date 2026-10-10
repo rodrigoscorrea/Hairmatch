@@ -28,7 +28,7 @@ class User(AbstractUser):
     number = models.CharField(max_length=6, blank=True, null=True)
     postal_code = models.CharField(max_length=10,  blank=False, null=False)
 
-    rating = models.PositiveSmallIntegerField(blank=True, null=True, default=5)
+    rating = models.FloatField(blank=True, null=True, default=5)
     username = None
     
     USERNAME_FIELD='email'

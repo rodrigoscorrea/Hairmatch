@@ -131,13 +131,14 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Antes de mudar qualquer coisa, a suíte inteira passa com 724 testes (baseline).
-- [ ] Teste: um cliente cadastrado por e-mail/senha e outro pelo Google têm `rating is None`, e um cabeleireiro tem `rating == 5` (CRT-21).
-- [ ] Teste: a função da migração de dados, rodada sobre um cliente com 5 e um cabeleireiro com 4.5, deixa `None` e 4.5 (CRT-22). Um cliente com `role` em maiúsculas também vira `None`.
-- [ ] Teste: `GET /api/users/me` do cliente devolve `"rating": null`. Com `rating=4.33` gravado, devolve o número `4.33`, nunca a string (CRT-23).
-- [ ] Teste: `PATCH /api/users/me` com `rating: 1` não altera o valor (CRT-27). Se já existir teste equivalente, acrescentar a asserção para o cliente com `null`.
-- [ ] O gate Full passa, com `makemigrations --check` limpo.
-- [ ] Contagem: `users` ≥ 384 + 5.
+- [x] Antes de mudar qualquer coisa, a suíte inteira passa com 724 testes (baseline). Executados: 722 OK (o `git grep -c "def test_"` conta 724; os dois números são acompanhados).
+- [x] Teste: um cliente cadastrado por e-mail/senha e outro pelo Google têm `rating is None`, e um cabeleireiro tem `rating == 5` (CRT-21).
+- [x] Teste: a função da migração de dados, rodada sobre um cliente com 5 e um cabeleireiro com 4.5, deixa `None` e 4.5 (CRT-22). Um cliente com `role` em maiúsculas também vira `None`.
+- [x] Teste: `GET /api/users/me` do cliente devolve `"rating": null`. Com `rating=4.33` gravado, devolve o número `4.33`, nunca a string (CRT-23).
+- [x] Teste: `PATCH /api/users/me` com `rating: 1` não altera o valor (CRT-27). Se já existir teste equivalente, acrescentar a asserção para o cliente com `null`.
+- [x] Os testes de `RatingIsNotUserSettableTest` que esperavam 5 para o cliente passam a esperar `None` (CRT-21). O payload com `rating` continua, então eles ainda provam que o corpo é ignorado.
+- [x] O gate Full passa, com `makemigrations --check` limpo.
+- [x] Contagem: `users` ≥ 384 + 5. Suíte: 727 OK.
 
 **Tests**: integration
 **Gate**: full

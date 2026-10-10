@@ -301,14 +301,14 @@ A issue #104 pede quatro coisas:
 | CRT-17 | P1: Entrada validada, AC7 | Tasks | Pending |
 | CRT-18 | P1: Média, AC1 | Tasks | Pending |
 | CRT-19 | P1: Média, AC2 | Tasks | Pending |
-| CRT-20 | P1: Média, AC3 | Tasks | Pending |
-| CRT-21 | P1: Média, AC4 | Tasks | Pending |
-| CRT-22 | P1: Média, AC5 | Tasks | Pending |
-| CRT-23 | P1: Média, AC6 | Tasks | Pending |
+| CRT-20 | P1: Média, AC3 | Tasks | Implementing |
+| CRT-21 | P1: Média, AC4 | Tasks | Implementing |
+| CRT-22 | P1: Média, AC5 | Tasks | Implementing |
+| CRT-23 | P1: Média, AC6 | Tasks | Implementing |
 | CRT-24 | P1: Média, AC7 | Tasks | Pending |
 | CRT-25 | P1: Média, AC8 | Tasks | Pending |
 | CRT-26 | P1: Média, AC9 | Tasks | Pending |
-| CRT-27 | P1: Média, AC10 | Tasks | Pending |
+| CRT-27 | P1: Média, AC10 | Tasks | Implementing |
 | CRT-28 | P1: Listar, AC1 | Tasks | Pending |
 | CRT-29 | P1: Listar, AC2 | Tasks | Pending |
 | CRT-30 | P1: Listar, AC3 | Tasks | Pending |
