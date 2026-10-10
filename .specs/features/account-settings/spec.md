@@ -231,10 +231,10 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-08 | P1: Validar PATCH, AC8 | Tasks | Implementing |
 | ACC-09 | P1: Validar PATCH, AC9 | Tasks | Implementing |
 | ACC-10 | P1: Validar PATCH, AC10 | Tasks | Implementing |
-| ACC-11 | P1: Validar PATCH, AC11 | Tasks | Pending |
-| ACC-12 | P1: Validar PATCH, AC12 | Tasks | Pending |
-| ACC-13 | P1: Validar PATCH, AC13 | Tasks | Pending |
-| ACC-14 | P1: Validar PATCH, AC14 | Tasks | Pending |
+| ACC-11 | P1: Validar PATCH, AC11 | Tasks | Implementing |
+| ACC-12 | P1: Validar PATCH, AC12 | Tasks | Implementing |
+| ACC-13 | P1: Validar PATCH, AC13 | Tasks | Implementing |
+| ACC-14 | P1: Validar PATCH, AC14 | Tasks | Implementing |
 | ACC-15 | P1: Validar PATCH, AC15 | Tasks | Pending |
 | ACC-16 | P1: Dados da conta, AC1 | Tasks | Pending |
 | ACC-17 | P1: Dados da conta, AC2 | Tasks | Pending |
@@ -278,9 +278,9 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-55 | P2: Resumo, AC3 | Tasks | Pending |
 | ACC-56 | Edge Cases | Tasks | Implementing |
 | ACC-57 | Edge Cases | Tasks | Implementing |
-| ACC-58 | Edge Cases | Tasks | Pending |
+| ACC-58 | Edge Cases | Tasks | Implementing |
 | ACC-59 | Edge Cases | Tasks | Pending |
-| ACC-60 | Edge Cases | Tasks | Pending |
+| ACC-60 | Edge Cases | Tasks | Implementing |
 
 **ID format:** `ACC-NN`
 

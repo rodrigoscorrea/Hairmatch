@@ -5828,6 +5828,79 @@ class UpdateProfilePhoneTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(User.objects.get(email='nova@example.com').phone, '5592911112222')
 
+    def _pending_holder(self):
+        """A sign-up never confirmed, holding the phone 5592977776666."""
+        response = self.client.post(
+            reverse('register'), data=_register_payload(email='pendente@example.com', phone='92977776666'),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        fake = get_cognito().client
+        fake.calls.clear()
+        return User.objects.get(email='pendente@example.com'), fake
+
+    def test_the_phone_of_a_pending_account_replaces_that_account_and_is_stored(self):
+        """ACC-12"""
+        pending, fake = self._pending_holder()
+
+        response = self._put({'phone': '55 (92) 97777-6666'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [kwargs['Username'] for name, kwargs in fake.calls if name == 'admin_delete_user'], ['pendente@example.com']
+        )
+        self.assertNotIn('pendente@example.com', fake.users)
+        self.assertFalse(User.objects.filter(pk=pending.pk).exists())
+        self.assertEqual(User.objects.get(email='nova@example.com').phone, '5592977776666')
+
+    def test_a_cognito_failure_while_replacing_the_pending_account_answers_503_or_429_and_keeps_both(self):
+        """ACC-13"""
+        pending, fake = self._pending_holder()
+        for error, check in ((EndpointConnectionError(endpoint_url='http://x'), assert_auth_unavailable),
+                             ('TooManyRequestsException', assert_throttled)):
+            with self.subTest(error=error):
+                fake.fail_next('admin_delete_user', error)
+
+                response = self._put({'phone': '5592977776666', 'first_name': 'Trocado'})
+
+                check(response)
+                self.assertTrue(User.objects.filter(pk=pending.pk, phone='5592977776666').exists())
+                self.assertIn('pendente@example.com', fake.users)
+                user = User.objects.get(email='nova@example.com')
+                self.assertEqual((user.phone, user.first_name), ('5592991234567', 'Nova'))
+
+    def test_a_phone_taken_by_a_concurrent_request_answers_409_and_not_500(self):
+        """ACC-14: the unique constraint refuses the phone after the check found it free."""
+        with patch.object(User, 'save', side_effect=IntegrityError('duplicate key value violates unique constraint')):
+            response = self._put({'phone': '5592911112222', 'first_name': 'Trocado'})
+
+        assert_problem(response, 'phone-taken', detail='This phone number is already registered.')
+        user = User.objects.get(email='nova@example.com')
+        self.assertEqual((user.phone, user.first_name), ('5592991234567', 'Nova'))
+
+    def test_the_own_phone_in_a_raw_seed_format_is_kept_and_the_other_fields_are_stored(self):
+        """ACC-58: the seed stores raw Faker phones, which do not match 55 + digits."""
+        User.objects.filter(email='nova@example.com').update(phone='74 8985-0719')
+        for phone in ('74 8985-0719', '7489850719'):
+            with self.subTest(phone=phone):
+                response = self._put({'phone': phone, 'first_name': f'Trocado {phone}'})
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                user = User.objects.get(email='nova@example.com')
+                self.assertEqual((user.phone, user.first_name), ('74 8985-0719', f'Trocado {phone}'))
+
+    def test_a_failed_save_after_the_replacement_answers_the_error_and_the_pending_account_stays_deleted(self):
+        """ACC-60, as EMC-12 at sign-up."""
+        pending, fake = self._pending_holder()
+
+        with patch.object(User, 'save', side_effect=RuntimeError('database failure')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._put({'phone': '5592977776666'})
+
+        assert_problem(response, 'internal-error')
+        self.assertFalse(User.objects.filter(pk=pending.pk).exists())
+        self.assertNotIn('pendente@example.com', fake.users)
+        self.assertEqual(User.objects.get(email='nova@example.com').phone, '5592991234567')
+
 
 class ProfileUpdateValidationTest(TestCase):
     """PATCH /api/users/me refuses what the sign-up would not accept and stores the normalized values (ACC-01 to ACC-10)."""

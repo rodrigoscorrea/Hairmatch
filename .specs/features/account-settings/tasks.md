@@ -179,16 +179,16 @@ T21
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes novos em `UpdateProfilePhoneTest`:
+- [x] Testes novos em `UpdateProfilePhoneTest`:
   - conta pendente com o telefone: o `admin_delete_user` aparece nas chamadas do fake, a conta some e o telefone é gravado;
   - `fail_next('admin_delete_user', ...)` com indisponibilidade: 503 `auth-unavailable` e as duas contas intactas;
   - com throttling: 429 `too-many-requests`;
   - `IntegrityError` simulado no `save` (`patch.object`): 409 `phone-taken`, e não 500;
   - o próprio telefone num formato cru do seed (`74 8985-0719`) junto com `first_name`: 200, o nome muda e o telefone gravado não muda;
   - falha na gravação depois da substituição: a conta pendente continua apagada.
-- [ ] Os três testes atuais de `UpdateProfilePhoneTest` continuam passando.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
-- [ ] Test count: `users` sem remoção.
+- [x] Os três testes atuais de `UpdateProfilePhoneTest` continuam passando.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py test --noinput users'`
+- [x] Test count: `users` sem remoção: 403 executados (398 + 5).
 
 **Tests**: integration
 **Gate**: quick

@@ -149,6 +149,9 @@ def _profile_update(user, data):
 
         if field == 'phone':
             value = _digits(value)
+            if value == _digits(user.phone):
+                # The own phone is kept as stored, even in a format sign-up no longer writes (the seed's raw phones).
+                continue
             if not _UPDATE_PHONE_PATTERN.fullmatch(value):
                 errors.append(body_error(field, 'The phone number must be 55 followed by 10 or 11 digits.'))
                 continue
@@ -798,12 +801,25 @@ class CurrentUserView(APIView):
 
         # Unlike sign-up, the phone here is the full stored number (55 included), as GET returns it.
         if 'phone' in user_fields:
-            if User.objects.filter(phone=user_fields['phone']).exclude(id=user.id).exists():
+            holders = User.objects.filter(phone=user_fields['phone']).exclude(id=user.id)
+            if holders.exclude(_PENDING_ACCOUNT).exists():
                 return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
+            # As at sign-up, an unconfirmed account never holds the phone of someone else. It is replaced
+            # before the save, outside its transaction, so a failed save leaves it deleted in both places.
+            try:
+                for pending in holders.filter(_PENDING_ACCOUNT):
+                    _replace_pending_account(pending)
+            except CognitoError as err:
+                return _cognito_error_response(request, err)
 
         for field, value in user_fields.items():
             setattr(user, field, value)
-        user.save(update_fields=list(user_fields))
+        try:
+            with transaction.atomic():
+                user.save(update_fields=list(user_fields))
+        except IntegrityError:
+            # A request that ran at the same time took the phone after the check above.
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         profile_model = {'customer': Customer, 'hairdresser': Hairdresser}.get(user.role)
         profile = profile_model.objects.filter(user=user).first() if profile_model else None
