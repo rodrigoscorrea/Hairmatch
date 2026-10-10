@@ -171,10 +171,10 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `ReviewPicture.objects.create(review=r, picture=make_upload('Foto.PNG', fmt='PNG'))` grava a chave que casa com `^reviews/<r.id>/[0-9a-f]{32}\.webp$`, e o conteúdo abre como `WEBP` (REV-02).
-- [ ] Teste: duas fotos com o mesmo nome de arquivo na mesma review têm chaves diferentes.
-- [ ] Teste: `review.pictures.all()` vem por id crescente. Apagar a review apaga as linhas (REV-33).
-- [ ] Gate Full passa, com `makemigrations --check` limpo. Contagem: `review` ≥ 81 + 3.
+- [x] Teste: `ReviewPicture.objects.create(review=r, picture=make_upload('Foto.PNG', fmt='PNG'))` grava a chave que casa com `^reviews/<r.id>/[0-9a-f]{32}\.webp$`, e o conteúdo abre como `WEBP` (REV-02).
+- [x] Teste: duas fotos com o mesmo nome de arquivo na mesma review têm chaves diferentes.
+- [x] Teste: `review.pictures.all()` vem por id crescente. Apagar a review apaga as linhas (REV-33).
+- [x] Gate Full passa, com `makemigrations --check` limpo. Contagem: `review` ≥ 81 + 3.
 
 **Tests**: integration
 **Gate**: full

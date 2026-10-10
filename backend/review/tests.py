@@ -17,11 +17,12 @@ from users.testing import activate_account
 from django.db import IntegrityError, transaction
 from hairmatch.problems import Problem
 from .customer_ratings import record_customer_rating, service_end
-from .models import CustomerRating, Review
+from .models import CustomerRating, Review, ReviewPicture
 from reserve.models import Reserve
 from service.models import Service
 import jwt
 import json
+import re
 import datetime
 from django.conf import settings
 from django.utils import timezone
@@ -1423,3 +1424,48 @@ class ListCustomerRatingsTest(ReviewsTestCase):
 
         assert_problem(response, 'method-not-allowed')
         self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS'])
+
+
+class ReviewPictureModelTest(ReviewsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+
+    def _add(self, name='Foto.PNG', review=None):
+        return ReviewPicture.objects.create(review=review or self.review, picture=make_upload(name, fmt='PNG'))
+
+    def test_the_picture_is_stored_under_its_review_as_a_webp(self):
+        """REV-02"""
+        picture = self._add('Foto.PNG')
+
+        self.assertRegex(picture.picture.name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+        with default_storage.open(picture.picture.name) as stored:
+            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+
+    def test_two_pictures_with_the_same_file_name_get_different_keys(self):
+        """REV-02"""
+        first, second = self._add('foto.png'), self._add('foto.png')
+
+        self.assertNotEqual(first.picture.name, second.picture.name)
+        self.assertTrue(default_storage.exists(first.picture.name))
+        self.assertTrue(default_storage.exists(second.picture.name))
+
+    def test_the_pictures_of_a_review_come_by_ascending_id(self):
+        """REV-33"""
+        ids = [self._add().id for _ in range(3)]
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        self._add(review=other)
+
+        self.assertEqual([p.id for p in self.review.pictures.all()], ids)
+        self.assertEqual(ids, sorted(ids))
+
+    def test_deleting_the_review_deletes_its_pictures(self):
+        """REV-33"""
+        self._add()
+        self._add()
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        kept = self._add(review=other)
+
+        self.review.delete()
+
+        self.assertEqual(list(ReviewPicture.objects.values_list('id', flat=True)), [kept.id])

@@ -273,7 +273,7 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | REV-01 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-02 | P1: Várias fotos na avaliação | Tasks | Pending |
+| REV-02 | P1: Várias fotos na avaliação | Tasks | Implemented |
 | REV-03 | P1: Várias fotos na avaliação | Tasks | Pending |
 | REV-04 | P1: Várias fotos na avaliação | Tasks | Pending |
 | REV-05 | P1: Várias fotos na avaliação | Tasks | Pending |
@@ -298,7 +298,7 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-30 | P1: Lista de fotos nas respostas | Tasks | Pending |
 | REV-31 | P1: Lista de fotos nas respostas | Tasks | Pending |
 | REV-32 | P1: Lista de fotos nas respostas | Tasks | Pending |
-| REV-33 | P1: Lista de fotos nas respostas | Tasks | Pending |
+| REV-33 | P1: Lista de fotos nas respostas | Tasks | Implemented |
 | REV-40 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
 | REV-41 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
 | REV-42 | P1: Cabeleireiro edita e exclui | Tasks | Pending |

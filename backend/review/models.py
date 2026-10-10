@@ -1,6 +1,15 @@
+import os
+import uuid
+
 from django.db import models
 from hairmatch.images import WebPImageField
 from users.models import User, Hairdresser, Customer
+
+
+def review_picture_path(instance, filename):
+    # A fresh name per picture: two uploads called "foto.jpg" must not collide or be renamed by the storage.
+    # `review_id` and not `review.pk`: the picture has no pk of its own yet when the file is saved.
+    return f"reviews/{instance.review_id}/{uuid.uuid4().hex}{os.path.splitext(filename)[1]}"
 
 
 class Review(models.Model):
@@ -10,7 +19,17 @@ class Review(models.Model):
     picture = WebPImageField(upload_to='reviews/images/', blank=True, null=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='reviews')
     hairdresser = models.ForeignKey(Hairdresser, on_delete=models.CASCADE, related_name='reviews')
-    
+
+
+class ReviewPicture(models.Model):
+    """One picture of a review. A review has at most 5 (enforced by the views, with the review row locked)."""
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='pictures')
+    picture = WebPImageField(upload_to=review_picture_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+
 
 class CustomerRating(models.Model):
     """A hairdresser's rating of the customer of one reservation. It is immutable once created."""
