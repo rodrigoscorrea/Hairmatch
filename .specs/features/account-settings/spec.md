@@ -268,11 +268,11 @@ A troca de senha e de e-mail saiu desta feature e foi para a #175, porque passa 
 | ACC-45 | P2: Foto, AC11 | Tasks | Implementing |
 | ACC-46 | P2: Foto, AC12 | Tasks | Implementing |
 | ACC-47 | P2: Preferências, AC1 | Tasks | Pending |
-| ACC-48 | P2: Preferências, AC2 | Tasks | Pending |
+| ACC-48 | P2: Preferências, AC2 | Tasks | Implementing |
 | ACC-49 | P2: Preferências, AC3 | Tasks | Implementing |
-| ACC-50 | P2: Preferências, AC4 | Tasks | Pending |
-| ACC-51 | P2: Preferências, AC5 | Tasks | Pending |
-| ACC-52 | P2: Preferências, AC6 | Tasks | Pending |
+| ACC-50 | P2: Preferências, AC4 | Tasks | Implementing |
+| ACC-51 | P2: Preferências, AC5 | Tasks | Implementing |
+| ACC-52 | P2: Preferências, AC6 | Tasks | Implementing |
 | ACC-53 | P2: Resumo, AC1 | Tasks | Pending |
 | ACC-54 | P2: Resumo, AC2 | Tasks | Implementing |
 | ACC-55 | P2: Resumo, AC3 | Tasks | Pending |

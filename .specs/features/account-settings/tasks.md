@@ -596,8 +596,8 @@ As peças da rota entram juntas porque o RT-50 (`test_routes.py`) falha se a rot
 - Skill: NONE
 
 **Done when**:
-- [ ] Sem mudança na seleção, o hook não faz chamada.
-- [ ] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
+- [x] Sem mudança na seleção, o hook não faz chamada. Conferido por leitura: o `handleSave` sai com "Nenhuma alteração para salvar." quando não há adicionada nem removida (`usePreferencesSetting.ts:73`), antes do laço que chama `assignPreference` e `unassignPreference` em sequência (`:82-83`). O 404 vira lista vazia (`:32`), a falha na carga deixa o "Salvar" desabilitado (`:52` e `:107`), e a falha no salvamento recarrega do servidor (`:90`).
+- [x] Gate check passes: `cd frontend-mobile && npx tsc --noEmit`
 
 **Tests**: none (app sem suíte; gate App)
 **Gate**: app
