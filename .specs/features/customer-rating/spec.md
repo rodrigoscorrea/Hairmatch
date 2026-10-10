@@ -227,7 +227,7 @@ A issue #104 pede quatro coisas:
 **Why P2**: É útil, mas a issue não pede.
 
 **Acceptance Criteria**:
-1. WHEN o modal de um agendamento com reserva abre THEN o app SHALL mostrar a nota do cliente com 1 casa decimal e o total, por exemplo "4.3 (3 avaliações)". **(CRT-56)**
+1. WHEN o modal de um agendamento com reserva abre THEN o app SHALL mostrar a nota do cliente com 1 casa decimal e o total, por exemplo "4.3 (3)", o mesmo formato do perfil (CRT-50). **(CRT-56)**
 2. WHILE `ratings_count` é 0, the app SHALL mostrar "Sem avaliações". **(CRT-57)**
 
 **Independent Test**: UAT. Um cliente avaliado mostra a média no modal, e um cliente novo mostra "Sem avaliações".

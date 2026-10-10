@@ -104,18 +104,17 @@
 ## Handoff
 
 - **Feature**: `customer-rating` (issue #104, RF23).
-- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente (`validation.md`) ainda não rodou.
+- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na primeira rodada (`validation.md`: 41 de 41 critérios de backend, 21 de 21 mutantes mortos, 777 testes).
 - **Completed**:
   - Backend (T1 a T7): `User.rating` em `FloatField`, com `null` para cliente sem avaliação; modelo `CustomerRating`; `record_customer_rating` com lock e savepoint (AD-010); slug `service-not-finished`; RT-86 `POST /api/customer-ratings`; RT-87 `GET /api/customers/{id}/ratings`; agenda com `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating`. Suíte: 777 testes OK, `makemigrations --check` limpo.
   - App (T8 a T16): types, service e `formatCustomerRating`; slug no `api-problem.ts`; `StarRating` compartilhado; `useAgenda` com `useFocusEffect` e `canRate`; modal da agenda com o cliente, a nota, "Sua avaliação: N★" e "Avaliar cliente"; tela `hairdresser/rate-customer/[reservationId]`; média no perfil do cliente; tela "Avaliações recebidas". `npx tsc --noEmit` com exit 0, e nenhum erro novo de `eslint` nos arquivos tocados.
 - **Desvios registrados**:
   - Design: a tela de avaliação vai para a agenda com `router.push` em vez de `router.back()` (`useRateCustomer.ts`, `SPEC_DEVIATION`). O voltar das abas pode cair em outra aba, e um refresh do web não tem histórico.
-  - O CRT-56 dá o exemplo "4.3 (3 avaliações)", mas o design e o T18 usam "4.0 (1)". O modal mostra "Nota do cliente: 4.3 (3)" com a função compartilhada.
+  - O exemplo do CRT-56 passou a ser "4.3 (3)", o formato do perfil (CRT-50) que a função compartilhada mostra.
   - `docs/requisitos-status.md` não está versionado e não existe no worktree. A marcação de RF23 como ✅ e as observações de RF29/RF30 ficam para o usuário fazer no checkout principal, ou para autorizar o versionamento do arquivo.
 - **In-progress** (file:line): none
 - **Next step**:
   - UAT do T18 (roteiro no `tasks.md`), no web e no Android. Depois, marcar CRT-39 a CRT-52 e CRT-56 a CRT-60 como Verified.
-  - Rodar o Verificador da feature e gravar `validation.md`.
   - Atualizar RF23 em `docs/requisitos-status.md` (ver desvios).
 - **Pendências de features anteriores**:
   - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
