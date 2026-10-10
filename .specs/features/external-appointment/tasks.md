@@ -110,9 +110,9 @@ T12 → T13
 
 **Done when**:
 
-- [ ] A migração tem só `AddField(title)` e `AlterField(service, null=True, blank=True)`
-- [ ] Gate check passes: Full. São 722 testes OK, e `makemigrations --check` dá "No changes detected" depois da migração.
-- [ ] Test count: 722, sem remoções
+- [x] A migração tem só `AddField(title)` e `AlterField(service, null=True, blank=True)`
+- [x] Gate check passes: Full. São 722 testes OK, e `makemigrations --check` dá "No changes detected" depois da migração.
+- [x] Test count: 722, sem remoções
 
 **Tests**: none
 **Gate**: full

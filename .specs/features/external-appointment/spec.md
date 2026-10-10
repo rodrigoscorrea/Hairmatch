@@ -209,42 +209,42 @@ O backend já tem `POST /api/agenda`, e os horários livres oferecidos ao client
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| EXT-01 | P1: Bloqueio pela API, AC1 | Design | Pending |
-| EXT-02 | P1: Bloqueio pela API, AC2 | Design | Pending |
-| EXT-03 | P1: Bloqueio pela API, AC3 | Design | Pending |
-| EXT-04 | P1: Bloqueio pela API, AC4 | Design | Pending |
-| EXT-05 | P1: Bloqueio pela API, AC5 | Design | Pending |
-| EXT-06 | P1: Bloqueio pela API, AC6 | Design | Pending |
-| EXT-07 | P1: Bloqueio pela API, AC7 | Design | Pending |
-| EXT-08 | P1: Bloqueio pela API, AC8 | Design | Pending |
-| EXT-09 | P1: Bloqueio pela API, AC9 | Design | Pending |
-| EXT-10 | P1: Bloqueio pela API, AC10 | Design | Pending |
-| EXT-11 | P1: Bloqueio pela API, AC11 | Design | Pending |
-| EXT-12 | P1: Bloqueio pela API, AC12 | Design | Pending |
-| EXT-13 | P1: Bloqueio pela API, AC13 | Design | Pending |
-| EXT-14 | P1: Bloqueio pela API, AC14 | Design | Pending |
-| EXT-15 | P1: Horário deixa de ser oferecido, AC1 | Design | Pending |
-| EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Design | Pending |
-| EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Design | Pending |
-| EXT-18 | P1: Ver o bloqueio na agenda, AC1 | Design | Pending |
-| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Design | Pending |
-| EXT-20 | P1: Ver o bloqueio na agenda, AC3 | Design | Pending |
-| EXT-21 | P1: Ver o bloqueio na agenda, AC4 | Design | Pending |
-| EXT-22 | P1: Ver o bloqueio na agenda, AC5 | Design | Pending |
-| EXT-23 | P1: Tela de registro, AC1 | Design | Pending |
-| EXT-24 | P1: Tela de registro, AC2 | Design | Pending |
-| EXT-25 | P1: Tela de registro, AC3 | Design | Pending |
-| EXT-26 | P1: Tela de registro, AC4 | Design | Pending |
-| EXT-27 | P1: Tela de registro, AC5 | Design | Pending |
-| EXT-28 | P1: Tela de registro, AC6 | Design | Pending |
-| EXT-29 | P1: Tela de registro, AC7 | Design | Pending |
-| EXT-30 | P1: Tela de registro, AC8 | Design | Pending |
-| EXT-31 | P1: Tela de registro, AC9 | Design | Pending |
-| EXT-32 | P1: Tela de registro, AC10 | Design | Pending |
-| EXT-33 | P2: Abrir pela célula, AC1 | Design | Pending |
-| EXT-34 | P2: Abrir pela célula, AC2 | Design | Pending |
+| EXT-01 | P1: Bloqueio pela API, AC1 | Tasks | Implementing |
+| EXT-02 | P1: Bloqueio pela API, AC2 | Tasks | Pending |
+| EXT-03 | P1: Bloqueio pela API, AC3 | Tasks | Pending |
+| EXT-04 | P1: Bloqueio pela API, AC4 | Tasks | Pending |
+| EXT-05 | P1: Bloqueio pela API, AC5 | Tasks | Pending |
+| EXT-06 | P1: Bloqueio pela API, AC6 | Tasks | Pending |
+| EXT-07 | P1: Bloqueio pela API, AC7 | Tasks | Pending |
+| EXT-08 | P1: Bloqueio pela API, AC8 | Tasks | Pending |
+| EXT-09 | P1: Bloqueio pela API, AC9 | Tasks | Pending |
+| EXT-10 | P1: Bloqueio pela API, AC10 | Tasks | Pending |
+| EXT-11 | P1: Bloqueio pela API, AC11 | Tasks | Pending |
+| EXT-12 | P1: Bloqueio pela API, AC12 | Tasks | Pending |
+| EXT-13 | P1: Bloqueio pela API, AC13 | Tasks | Pending |
+| EXT-14 | P1: Bloqueio pela API, AC14 | Tasks | Pending |
+| EXT-15 | P1: Horário deixa de ser oferecido, AC1 | Tasks | Pending |
+| EXT-16 | P1: Horário deixa de ser oferecido, AC2 | Tasks | Pending |
+| EXT-17 | P1: Horário deixa de ser oferecido, AC3 | Tasks | Pending |
+| EXT-18 | P1: Ver o bloqueio na agenda, AC1 | Tasks | Implementing |
+| EXT-19 | P1: Ver o bloqueio na agenda, AC2 | Tasks | Pending |
+| EXT-20 | P1: Ver o bloqueio na agenda, AC3 | Tasks | Pending |
+| EXT-21 | P1: Ver o bloqueio na agenda, AC4 | Tasks | Pending |
+| EXT-22 | P1: Ver o bloqueio na agenda, AC5 | Tasks | Pending |
+| EXT-23 | P1: Tela de registro, AC1 | Tasks | Pending |
+| EXT-24 | P1: Tela de registro, AC2 | Tasks | Pending |
+| EXT-25 | P1: Tela de registro, AC3 | Tasks | Pending |
+| EXT-26 | P1: Tela de registro, AC4 | Tasks | Pending |
+| EXT-27 | P1: Tela de registro, AC5 | Tasks | Pending |
+| EXT-28 | P1: Tela de registro, AC6 | Tasks | Pending |
+| EXT-29 | P1: Tela de registro, AC7 | Tasks | Pending |
+| EXT-30 | P1: Tela de registro, AC8 | Tasks | Pending |
+| EXT-31 | P1: Tela de registro, AC9 | Tasks | Pending |
+| EXT-32 | P1: Tela de registro, AC10 | Tasks | Pending |
+| EXT-33 | P2: Abrir pela célula, AC1 | Tasks | Pending |
+| EXT-34 | P2: Abrir pela célula, AC2 | Tasks | Pending |
 
-**Coverage:** 34 total, 0 mapped to tasks, 34 unmapped ⚠️ (mapeados no tasks.md)
+**Coverage:** 34 total, 34 mapped to tasks, 0 unmapped
 
 ---
 
