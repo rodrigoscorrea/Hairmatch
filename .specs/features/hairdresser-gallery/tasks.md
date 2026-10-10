@@ -277,16 +277,16 @@ T18
 - Skill: NONE
 
 **Done when**:
-- [ ] Classe nova `GalleryPhotoDeleteTest` com:
+- [x] Classe nova `GalleryPhotoDeleteTest` com:
   - a foto própria: 204, a linha some, e o arquivo some só depois do commit;
   - uma foto de outro cabeleireiro sob o próprio `{id}`: 404, com a linha e o arquivo intactos;
   - um `photo_id` inexistente: 404; `photo_id` `abc`: 404;
   - sem cookie: 401; cliente: 403 `hairdresser-required`; `{id}` de outro: 403 `forbidden`, sem apagar;
   - o `delete` do storage levantando exceção: ainda 204, e o log (`assertLogs`) cita a chave;
   - `GET` no item: 405 com `Allow: DELETE, OPTIONS`.
-- [ ] `RouteTableTests` passa com RT-96.
-- [ ] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
-- [ ] Test count: total sem remoção.
+- [x] `RouteTableTests` passa com RT-96.
+- [x] Gate check passes: `docker exec hairmatch_backend sh -c 'cd /app/backend && python manage.py makemigrations --check --dry-run && coverage run manage.py test --noinput'`
+- [x] Test count: total sem remoção.
 
 **Tests**: integration
 **Gate**: full

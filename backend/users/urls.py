@@ -13,6 +13,7 @@ from .views import (
     CurrentUserView,
     ProfilePictureView,
     GalleryPhotoCollection,
+    GalleryPhotoDetail,
     ChangePasswordView,
     CustomerHomeView,
     HomeView,
@@ -39,4 +40,5 @@ urlpatterns = [
     path('hairdressers/description-drafts', GeminiChatView.as_view(), name='gemini_completion'),
     path('hairdressers/<int:hairdresser_id>', HairdresserInfoView.as_view(), name='hairdresser_info'),
     path('hairdressers/<int:hairdresser_id>/gallery-photos', GalleryPhotoCollection.as_view(), name='gallery_photos'),
+    path('hairdressers/<int:hairdresser_id>/gallery-photos/<int:photo_id>', GalleryPhotoDetail.as_view(), name='gallery_photo'),
 ]

@@ -68,6 +68,7 @@ ROUTE_TABLE = {
     ('DELETE', 'users/me/profile-picture'),                       # RT-89
     ('GET', 'hairdressers/{id}/gallery-photos'),                  # RT-94
     ('POST', 'hairdressers/{id}/gallery-photos'),                 # RT-95
+    ('DELETE', 'hairdressers/{id}/gallery-photos/{id}'),         # RT-96
 }
 
 # RT-54: the only singular or non-plural segments the table allows.

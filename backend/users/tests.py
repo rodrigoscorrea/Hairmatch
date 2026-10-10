@@ -6939,3 +6939,105 @@ class GalleryPhotoRaceTest(TransactionTestCase):
         )
         self.assertEqual(GalleryPhoto.objects.filter(hairdresser=hairdresser).count(), 30)
         self.assertEqual(len(_gallery_files(hairdresser)), 2)
+
+
+class GalleryPhotoDeleteTest(GalleryApiTestCase):
+    """DELETE /api/hairdressers/{id}/gallery-photos/{photo_id} (RT-96, GAL-31 to GAL-34, GAL-43, GAL-47)."""
+
+    def setUp(self):
+        super().setUp()
+        self.photo = _add_gallery_photo(self.hairdresser)
+        self.other_photo = _add_gallery_photo(self.other)
+
+    def _delete(self, photo=None, hairdresser=None):
+        photo = photo or self.photo
+        hairdresser = hairdresser or self.hairdresser
+        return self.client.delete(reverse('gallery_photo', args=[hairdresser.pk, photo.pk]))
+
+    def _assert_untouched(self):
+        self.assertEqual(GalleryPhoto.objects.count(), 2)
+        self.assertTrue(default_storage.exists(self.photo.image.name))
+        self.assertTrue(default_storage.exists(self.other_photo.image.name))
+
+    def test_deleting_an_own_photo_answers_204_and_removes_the_file_once_committed(self):
+        """GAL-31"""
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self._delete()
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertFalse(GalleryPhoto.objects.filter(pk=self.photo.pk).exists())
+        self.assertTrue(default_storage.exists(self.photo.image.name))
+        for callback in callbacks:
+            callback()
+        self.assertFalse(default_storage.exists(self.photo.image.name))
+        self.assertTrue(default_storage.exists(self.other_photo.image.name))
+
+    def test_the_photo_of_another_hairdresser_under_the_own_id_answers_404_and_keeps_it(self):
+        """GAL-32"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(reverse('gallery_photo', args=[self.hairdresser.pk, self.other_photo.pk]))
+
+        assert_problem(response, 'not-found')
+        self._assert_untouched()
+
+    def test_an_unknown_photo_answers_404(self):
+        """GAL-32"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(reverse('gallery_photo', args=[self.hairdresser.pk, self.other_photo.pk + 1000]))
+
+        assert_problem(response, 'not-found')
+        self._assert_untouched()
+
+    def test_a_photo_id_that_is_not_an_integer_answers_404_not_found(self):
+        """GAL-47"""
+        response = self.client.delete(f'/api/hairdressers/{self.hairdresser.pk}/gallery-photos/abc')
+
+        assert_problem(response, 'not-found')
+        self._assert_untouched()
+
+    def test_without_a_session_answers_401_and_deletes_nothing(self):
+        """GAL-33"""
+        self.client.cookies.clear()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self._delete()
+
+        assert_problem(response, 'invalid-session')
+        self._assert_untouched()
+
+    def test_a_customer_session_answers_403_hairdresser_required_and_deletes_nothing(self):
+        """GAL-33"""
+        self._login(self.CUSTOMER_EMAIL)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self._delete()
+
+        assert_problem(response, 'hairdresser-required')
+        self._assert_untouched()
+
+    def test_the_id_of_another_hairdresser_answers_403_forbidden_and_deletes_nothing(self):
+        """GAL-33: even for the photo that is theirs."""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self._delete(photo=self.other_photo, hairdresser=self.other)
+
+        assert_problem(response, 'forbidden')
+        self._assert_untouched()
+
+    def test_a_storage_failure_after_the_commit_keeps_204_and_logs_the_key(self):
+        """GAL-34"""
+        with patch.object(default_storage, 'delete', side_effect=RuntimeError('bucket down')):
+            with self.assertLogs('users.views', level='ERROR') as logs:
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self._delete()
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(GalleryPhoto.objects.filter(pk=self.photo.pk).exists())
+        self.assertIn(f'Could not delete {self.photo.image.name} from the media storage', logs.output[0])
+
+    def test_get_on_the_item_answers_405_with_the_methods_of_the_path(self):
+        """GAL-43"""
+        response = self.client.get(reverse('gallery_photo', args=[self.hairdresser.pk, self.photo.pk]))
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['DELETE', 'OPTIONS'])

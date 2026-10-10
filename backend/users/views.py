@@ -929,6 +929,27 @@ class GalleryPhotoCollection(APIView):
         return JsonResponse({'data': GalleryPhotoSerializer(photo).data}, status=201)
 
 
+class GalleryPhotoDetail(APIView):
+    """One photo of the session's own gallery, removed with its file."""
+
+    def delete(self, request, hairdresser_id, photo_id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+        if hairdresser_id != hairdresser.id:
+            return forbidden(request)
+
+        photo = GalleryPhoto.objects.filter(pk=photo_id, hairdresser=hairdresser).first()
+        if photo is None:
+            return problem_response(request, 'not-found', 'Photo not found.')
+
+        name = photo.image.name
+        with transaction.atomic():
+            photo.delete()
+            transaction.on_commit(lambda: _delete_stored_files([name]))
+        return HttpResponse(status=204)
+
+
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request
 # Those views should only be used by admin personal or internal functions
