@@ -326,6 +326,17 @@ class CustomerRatingCollection(APIView):
 class CustomerRatingDetail(APIView):
     """`/api/customer-ratings/{id}`: PUT edits and DELETE removes a rating the logged hairdresser wrote."""
 
+    @staticmethod
+    def _authored_rating(request, id, hairdresser):
+        """The rating `id` and no error, or None and the 404 or 403 response."""
+        customer_rating = CustomerRating.objects.select_related('customer').filter(id=id).first()
+        if customer_rating is None:
+            return None, problem_response(request, 'not-found', 'Rating not found.')
+        # Only the author. A rating whose author deleted the account (hairdresser None) belongs to no one.
+        if customer_rating.hairdresser_id != hairdresser.id:
+            return None, forbidden(request)
+        return customer_rating, None
+
     def put(self, request, id):
         session, hairdresser, error = authenticated_hairdresser(request)
         if error:
@@ -337,16 +348,25 @@ class CustomerRatingDetail(APIView):
         if errors:
             raise validation_problem(errors)
 
-        customer_rating = CustomerRating.objects.select_related('customer').filter(id=id).first()
-        if customer_rating is None:
-            return problem_response(request, 'not-found', 'Rating not found.')
-        # Only the author. A rating whose author deleted the account (hairdresser None) belongs to no one.
-        if customer_rating.hairdresser_id != hairdresser.id:
-            return forbidden(request)
+        customer_rating, error = self._authored_rating(request, id, hairdresser)
+        if error:
+            return error
 
         comment = (data.get('comment') or '').strip() or None
         update_customer_rating(customer_rating, data['rating'], comment)
         return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=200)
+
+    def delete(self, request, id):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        customer_rating, error = self._authored_rating(request, id, hairdresser)
+        if error:
+            return error
+
+        delete_customer_rating(customer_rating)
+        return HttpResponse(status=204)
 
 
 class CustomerRatingsByCustomer(APIView):

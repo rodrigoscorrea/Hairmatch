@@ -496,13 +496,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: o autor apaga e recebe 204. A nota some, e `User.rating` vira a média das restantes, ou `null` se era a única (REV-49, REV-51).
-- [ ] Teste: depois do DELETE, `POST /api/customer-ratings` para a mesma reserva dá 201 (REV-52).
-- [ ] Teste: id inexistente dá 404 (REV-46). Outro cabeleireiro, e uma nota sem autor, dão 403 e não apagam (REV-47).
-- [ ] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
-- [ ] Teste: `GET /api/customer-ratings/{id}` dá 405, com `Allow` contendo `PUT` e `DELETE`.
-- [ ] `hairmatch.test_routes` passa com RT-93 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 127 + 6.
+- [x] Teste: o autor apaga e recebe 204. A nota some, e `User.rating` vira a média das restantes, ou `null` se era a única (REV-49, REV-51).
+- [x] Teste: depois do DELETE, `POST /api/customer-ratings` para a mesma reserva dá 201 (REV-52).
+- [x] Teste: id inexistente dá 404 (REV-46). Outro cabeleireiro, e uma nota sem autor, dão 403 e não apagam (REV-47).
+- [x] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
+- [x] Teste: `GET /api/customer-ratings/{id}` dá 405, com `Allow` contendo `PUT` e `DELETE`.
+- [x] `hairmatch.test_routes` passa com RT-93 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 127 + 6.
 
 **Tests**: integration
 **Gate**: full

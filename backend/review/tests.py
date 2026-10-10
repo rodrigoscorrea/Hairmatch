@@ -2311,3 +2311,86 @@ class UpdateCustomerRatingTest(CustomerRatingEditingTestCase):
 
         assert_problem(self._put({'rating': 1}), 'hairdresser-required')
         self._assert_untouched()
+
+
+class DeleteCustomerRatingTest(CustomerRatingEditingTestCase):
+    """DELETE /api/customer-ratings/{id} (RT-93)"""
+
+    def test_the_author_deletes_the_rating_and_the_average_is_that_of_the_rest(self):
+        """REV-49, REV-51"""
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertFalse(CustomerRating.objects.filter(pk=self.three.pk).exists())
+        self.assertEqual(self._average(), 5.0)
+        self.five.refresh_from_db()
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+
+    def test_deleting_the_only_rating_makes_the_average_null(self):
+        """REV-51"""
+        CustomerRating.objects.filter(pk=self.five.pk).delete()
+
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(CustomerRating.objects.exists())
+        self.assertIsNone(self._average())
+
+    def test_the_reservation_can_be_rated_again_after_the_delete(self):
+        """REV-52"""
+        self.reserve.start_time = timezone.now() - datetime.timedelta(hours=2)
+        self.reserve.save()
+        rate_again = {'reservation': self.reserve.id, 'rating': 2, 'comment': 'De novo'}
+        post = lambda: self.client.post(  # noqa: E731
+            reverse('customer_ratings'), data=json.dumps(rate_again), content_type='application/json',
+        )
+        assert_problem(post(), 'review-exists')
+
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(post().status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self._average(), 3.5)
+
+    def test_a_rating_that_does_not_exist_answers_404(self):
+        """REV-46"""
+        assert_problem(
+            self.client.delete(reverse('customer_rating_detail', args=[999999])),
+            'not-found', detail='Rating not found.',
+        )
+        self.assertEqual(CustomerRating.objects.count(), 2)
+
+    def test_another_hairdresser_answers_403_and_deletes_nothing(self):
+        """REV-47"""
+        self._login_as_other_hairdresser()
+
+        assert_problem(self.client.delete(self.url), 'forbidden')
+        self._assert_untouched()
+
+    def test_a_rating_without_an_author_answers_403_and_deletes_nothing(self):
+        """REV-47"""
+        CustomerRating.objects.filter(pk=self.three.pk).update(hairdresser=None)
+
+        assert_problem(self.client.delete(self.url), 'forbidden')
+        self.assertTrue(CustomerRating.objects.filter(pk=self.three.pk).exists())
+        self.assertEqual(self._average(), 4.0)
+
+    def test_without_a_session_answers_401(self):
+        """REV-48"""
+        self.client.cookies.clear()
+
+        assert_problem(self.client.delete(self.url), 'invalid-session')
+        self._assert_untouched()
+
+    def test_a_customer_session_answers_403_hairdresser_required(self):
+        """REV-48"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self.client.delete(self.url), 'hairdresser-required')
+        self._assert_untouched()
+
+    def test_get_answers_405_with_put_and_delete_in_the_allow_header(self):
+        response = self.client.get(self.url)
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['DELETE', 'OPTIONS', 'PUT'])
