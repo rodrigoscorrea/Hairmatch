@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
 from django.core.files.base import ContentFile, File
-from django.core.files.storage import Storage
+from django.core.files.storage import Storage, default_storage
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.http import JsonResponse
 from PIL import Image, ImageCms
@@ -17,7 +17,7 @@ from PIL import Image, ImageCms
 from hairmatch.image_fixtures import make_image_bytes
 from hairmatch.problems import Problem
 from hairmatch.images import InvalidImage, WebPImageField, to_webp, webp_name
-from hairmatch.storage import S3MediaStorage
+from hairmatch.storage import S3MediaStorage, delete_stored_files
 
 from users.models import Hairdresser, User
 from preferences.models import Preferences
@@ -446,6 +446,44 @@ class WebPImageFieldFileTest(SimpleTestCase):
 
     def test_field_deconstructs_to_its_own_import_path(self):
         self.assertEqual(WebPImageField().deconstruct()[1], 'hairmatch.images.WebPImageField')
+
+
+class DeleteStoredFilesTest(SimpleTestCase):
+    """REV-27: a failed delete is logged and does not stop the other names."""
+
+    def setUp(self):
+        self.names = ['delete_stored_files_tests/a.webp', 'delete_stored_files_tests/b.webp']
+        for name in self.names:
+            default_storage.save(name, ContentFile(b'x'))
+        self.addCleanup(lambda: [default_storage.delete(name) for name in self.names])
+
+    def test_every_name_is_deleted_and_an_empty_one_is_skipped(self):
+        with patch.object(default_storage, 'delete', wraps=default_storage.delete) as storage_delete:
+            delete_stored_files([self.names[0], '', None, self.names[1]])
+
+        for name in self.names:
+            with self.subTest(name=name):
+                self.assertFalse(default_storage.exists(name))
+        self.assertEqual([call.args[0] for call in storage_delete.call_args_list], self.names)
+
+    def test_a_failure_is_logged_with_its_traceback_and_the_next_name_is_still_deleted(self):
+        real_delete = default_storage.delete
+
+        def fail_on_the_first(name):
+            if name == self.names[0]:
+                raise OSError('bucket unreachable')
+            real_delete(name)
+
+        with patch.object(default_storage, 'delete', side_effect=fail_on_the_first):
+            with self.assertLogs('hairmatch.storage', level='ERROR') as logs:
+                delete_stored_files(self.names)
+
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(logs.records[0].getMessage(), f'Could not delete {self.names[0]} from the media storage')
+        self.assertIn('bucket unreachable', ''.join(logs.output))
+        self.assertIsNotNone(logs.records[0].exc_info)
+        self.assertTrue(default_storage.exists(self.names[0]))
+        self.assertFalse(default_storage.exists(self.names[1]))
 
 
 class DatabaseCacheTest(TestCase):

@@ -1,7 +1,13 @@
-// A hairdresser's rating of the customer of a reservation (RT-86 and RT-87).
+// A hairdresser's rating of the customer of a reservation (RT-86, RT-87, RT-92 and RT-93).
 
 export interface CustomerRatingRequest {
     reservation: number;
+    rating: number;
+    comment?: string | null;
+}
+
+// The body of PUT /api/customer-ratings/{id}: it replaces the rating and the comment (empty becomes null).
+export interface CustomerRatingUpdate {
     rating: number;
     comment?: string | null;
 }

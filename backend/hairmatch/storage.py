@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 from urllib.parse import quote
 
@@ -5,8 +6,10 @@ import boto3
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.files.storage import Storage
+from django.core.files.storage import Storage, default_storage
 from django.utils.deconstruct import deconstructible
+
+logger = logging.getLogger(__name__)
 
 # Python before 3.13 has no built-in .webp entry, and the upload would go out as octet-stream.
 mimetypes.add_type('image/webp', '.webp')
@@ -69,3 +72,14 @@ class S3MediaStorage(Storage):
             return f"{public_endpoint.rstrip('/')}/{self.bucket}/{key}"
         region = self.client.meta.region_name
         return f"https://{self.bucket}.s3.{region}.amazonaws.com/{key}"
+
+
+def delete_stored_files(names):
+    """Deletes each named object from the media storage. A failure is logged and the other names still go."""
+    for name in names:
+        if not name:
+            continue
+        try:
+            default_storage.delete(name)
+        except Exception:
+            logger.exception('Could not delete %s from the media storage', name)

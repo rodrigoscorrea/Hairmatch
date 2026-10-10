@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/review-editing/spec.md`
 **Design**: `.specs/features/review-editing/design.md`
-**Status**: Draft (aguardando aprovação para Execute)
+**Status**: Execute concluído (T1 a T24 e o substituto automatizado da T25). UAT manual no web e no Android PENDENTE.
 **Branch**: `105-editar-e-excluir-avaliacao`, criada a partir de `develop` em `2948100`.
 
 **Pré-requisitos do Execute:**
@@ -145,11 +145,11 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Antes de mudar qualquer coisa, a suíte passa com 835 testes (baseline).
-- [ ] Teste: com dois nomes gravados no `InMemoryStorage`, os dois somem. Um nome vazio é ignorado sem erro.
-- [ ] Teste: com `default_storage.delete` levantando no primeiro nome, o segundo ainda é apagado, e `assertLogs` captura o `ERROR` com traceback (REV-27).
-- [ ] Os testes de exclusão de conta e de foto de perfil de `users` passam sem mudança.
-- [ ] Gate Quick (`hairmatch` e `users`) passa. Contagem: `hairmatch` ≥ 101 + 2.
+- [x] Antes de mudar qualquer coisa, a suíte passa com 835 testes (baseline).
+- [x] Teste: com dois nomes gravados no `InMemoryStorage`, os dois somem. Um nome vazio é ignorado sem erro.
+- [x] Teste: com `default_storage.delete` levantando no primeiro nome, o segundo ainda é apagado, e `assertLogs` captura o `ERROR` com traceback (REV-27).
+- [x] Os testes de exclusão de conta e de foto de perfil de `users` passam sem mudança.
+- [x] Gate Quick (`hairmatch` e `users`) passa. Contagem: `hairmatch` ≥ 101 + 2.
 
 **Tests**: integration
 **Gate**: quick
@@ -171,10 +171,10 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `ReviewPicture.objects.create(review=r, picture=make_upload('Foto.PNG', fmt='PNG'))` grava a chave que casa com `^reviews/<r.id>/[0-9a-f]{32}\.webp$`, e o conteúdo abre como `WEBP` (REV-02).
-- [ ] Teste: duas fotos com o mesmo nome de arquivo na mesma review têm chaves diferentes.
-- [ ] Teste: `review.pictures.all()` vem por id crescente. Apagar a review apaga as linhas (REV-33).
-- [ ] Gate Full passa, com `makemigrations --check` limpo. Contagem: `review` ≥ 81 + 3.
+- [x] Teste: `ReviewPicture.objects.create(review=r, picture=make_upload('Foto.PNG', fmt='PNG'))` grava a chave que casa com `^reviews/<r.id>/[0-9a-f]{32}\.webp$`, e o conteúdo abre como `WEBP` (REV-02).
+- [x] Teste: duas fotos com o mesmo nome de arquivo na mesma review têm chaves diferentes.
+- [x] Teste: `review.pictures.all()` vem por id crescente. Apagar a review apaga as linhas (REV-33).
+- [x] Gate Full passa, com `makemigrations --check` limpo. Contagem: `review` ≥ 81 + 3.
 
 **Tests**: integration
 **Gate**: full
@@ -196,13 +196,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `picture_errors([], required=True)` dá um item `#/pictures` "This field is required.". `picture_errors([])` dá `[]`.
-- [ ] Teste: 6 arquivos, e também 2 arquivos com `existing=4`, dão um item `#/pictures` "A review can have at most 5 pictures.". 5 arquivos com `existing=0` dão `[]`.
-- [ ] Teste: um arquivo com `size = 5 * 1024 * 1024 + 1` dá "Each picture must have at most 5 MB.", e um com exatamente 5 MB passa. Um mock prova que nenhum arquivo é aberto.
-- [ ] Teste: quando cabem dois erros, sai um item só, na ordem obrigatório → limite → tamanho.
-- [ ] Teste: `add_review_pictures` com [válida, válida, inválida] levanta `InvalidImage`, e `saved_names` tem as 2 chaves já gravadas.
-- [ ] Teste: `picture_names` devolve os nomes das fotos do queryset.
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 84 + 6.
+- [x] Teste: `picture_errors([], required=True)` dá um item `#/pictures` "This field is required.". `picture_errors([])` dá `[]`.
+- [x] Teste: 6 arquivos, e também 2 arquivos com `existing=4`, dão um item `#/pictures` "A review can have at most 5 pictures.". 5 arquivos com `existing=0` dão `[]`.
+- [x] Teste: um arquivo com `size = 5 * 1024 * 1024 + 1` dá "Each picture must have at most 5 MB.", e um com exatamente 5 MB passa. Um mock prova que nenhum arquivo é aberto.
+- [x] Teste: quando cabem dois erros, sai um item só, na ordem obrigatório → limite → tamanho.
+- [x] Teste: `add_review_pictures` com [válida, válida, inválida] levanta `InvalidImage`, e `saved_names` tem as 2 chaves já gravadas.
+- [x] Teste: `picture_names` devolve os nomes das fotos do queryset.
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 84 + 6.
 
 **Tests**: integration
 **Gate**: quick
@@ -227,10 +227,10 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `GET /api/hairdressers/{id}/reviews` com uma review de 2 fotos traz `pictures` com 2 itens `{id, url}` por id crescente, e `url == default_storage.url(nome)` (REV-30, REV-31).
-- [ ] Teste: uma review sem fotos traz `pictures: []`.
-- [ ] Teste: `assertNumQueries` mede o mesmo número com 1 e com 3 reviews com fotos (REV-32).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 90 + 3.
+- [x] Teste: `GET /api/hairdressers/{id}/reviews` com uma review de 2 fotos traz `pictures` com 2 itens `{id, url}` por id crescente, e `url == default_storage.url(nome)` (REV-30, REV-31).
+- [x] Teste: uma review sem fotos traz `pictures: []`.
+- [x] Teste: `assertNumQueries` mede o mesmo número com 1 e com 3 reviews com fotos (REV-32).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 90 + 3.
 
 **Tests**: integration
 **Gate**: quick
@@ -252,9 +252,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `GET /api/reservations/{id}` de uma reserva avaliada com 2 fotos traz `review.pictures` com 2 itens (REV-30). O mesmo vale para `GET /api/reservations` e para `GET /api/customers/{id}/reservations`.
-- [ ] Teste: `GET /api/customers/{id}/reservations` mede o mesmo número de queries com 1 e com 3 reservas avaliadas com fotos (REV-32).
-- [ ] Gate Full passa. Contagem: `reserve` ≥ 49 + 3.
+- [x] Teste: `GET /api/reservations/{id}` de uma reserva avaliada com 2 fotos traz `review.pictures` com 2 itens (REV-30). O mesmo vale para `GET /api/reservations` e para `GET /api/customers/{id}/reservations`.
+- [x] Teste: `GET /api/customers/{id}/reservations` mede o mesmo número de queries com 1 e com 3 reservas avaliadas com fotos (REV-32).
+- [x] Gate Full passa. Contagem: `reserve` ≥ 49 + 3.
 
 **Tests**: integration
 **Gate**: full
@@ -282,15 +282,15 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: 3 PNGs em `pictures` dão 201 e 3 `ReviewPicture` na ordem de envio, com chaves em `reviews/<id>/` e conteúdo WebP (REV-01, REV-02). É a reescrita do WEBP-03.
-- [ ] Teste: sem `pictures`, dá 201 e a review sem fotos (REV-03).
-- [ ] Teste: 6 arquivos dão 400 `#/pictures`, sem review e com o storage sem chave nova (REV-04).
-- [ ] Teste: um arquivo acima de 5 MB dá 400 `#/pictures`, sem review, e um mock de `to_webp` prova que nada foi convertido (REV-05).
-- [ ] Teste: [PNG válido, PNG válido, arquivo que não é imagem] dá 400 `invalid-image` "The review picture is not a valid image.", sem review, com a reserva sem avaliação e sem nenhuma chave em `reviews/` (REV-06). É a reescrita do WEBP-12, e a do WEBP-13 (bomba de pixels) vem com `pictures`.
-- [ ] Teste: uma falha inesperada depois do upload (por exemplo `reserve.save` levantando) deixa o storage sem chave e propaga a exceção (REV-06, REV-28).
-- [ ] Teste: `rating` inválido mais 6 fotos dá um 400 com os dois ponteiros (REV-07).
-- [ ] Teste: um arquivo em `picture` dá 201 sem foto (REV-08).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 93 + 5 (os 3 reescritos continuam contando).
+- [x] Teste: 3 PNGs em `pictures` dão 201 e 3 `ReviewPicture` na ordem de envio, com chaves em `reviews/<id>/` e conteúdo WebP (REV-01, REV-02). É a reescrita do WEBP-03.
+- [x] Teste: sem `pictures`, dá 201 e a review sem fotos (REV-03).
+- [x] Teste: 6 arquivos dão 400 `#/pictures`, sem review e com o storage sem chave nova (REV-04).
+- [x] Teste: um arquivo acima de 5 MB dá 400 `#/pictures`, sem review, e um mock de `to_webp` prova que nada foi convertido (REV-05).
+- [x] Teste: [PNG válido, PNG válido, arquivo que não é imagem] dá 400 `invalid-image` "The review picture is not a valid image.", sem review, com a reserva sem avaliação e sem nenhuma chave em `reviews/` (REV-06). É a reescrita do WEBP-12, e a do WEBP-13 (bomba de pixels) vem com `pictures`.
+- [x] Teste: uma falha inesperada depois do upload (por exemplo `reserve.save` levantando) deixa o storage sem chave e propaga a exceção (REV-06, REV-28).
+- [x] Teste: `rating` inválido mais 6 fotos dá um 400 com os dois ponteiros (REV-07).
+- [x] Teste: um arquivo em `picture` dá 201 sem foto (REV-08).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 93 + 5 (os 3 reescritos continuam contando).
 
 **Tests**: integration
 **Gate**: quick
@@ -312,9 +312,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: uma review com 2 fotos, apagada dentro de `captureOnCommitCallbacks(execute=True)`, dá 204, remove as linhas e apaga as 2 chaves (REV-25).
-- [ ] Teste: sem executar os callbacks (rollback simulado), as chaves continuam no storage (REV-28).
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 98 + 2.
+- [x] Teste: uma review com 2 fotos, apagada dentro de `captureOnCommitCallbacks(execute=True)`, dá 204, remove as linhas e apaga as 2 chaves (REV-25).
+- [x] Teste: sem executar os callbacks (rollback simulado), as chaves continuam no storage (REV-28).
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 98 + 2.
 
 **Tests**: integration
 **Gate**: quick
@@ -339,12 +339,12 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: as exclusões de conta do cabeleireiro e do cliente apagam, depois do commit, as 2 chaves das fotos da review do fixture (REV-26). É a reescrita de `users/tests.py:5646` e `:5669`.
-- [ ] O teste da queda do Cognito que mantém as linhas e as fotos continua passando, agora também com as chaves de `ReviewPicture` (REV-28).
-- [ ] Teste: `PUT /api/reviews/{id}` com `picture` no corpo não cria nem remove fotos (REV-20). É a reescrita de `review/tests.py:452`.
-- [ ] Teste: o detalhe da reserva e a lista do cabeleireiro não trazem a chave `picture` na review (REV-30).
-- [ ] `git grep -nE "review\.picture\b|Review\.objects\.create\([^)]*picture=|\.get\(\)\.picture" -- backend` não acha nenhum leitor antigo. A prova principal é o gate Full: um leitor que sobrar levanta `FieldError` depois da remoção da coluna.
-- [ ] Gate Full passa, com `makemigrations --check` limpo. Contagem: `users` ≥ 423, `review` ≥ 100 + 1.
+- [x] Teste: as exclusões de conta do cabeleireiro e do cliente apagam, depois do commit, as 2 chaves das fotos da review do fixture (REV-26). É a reescrita de `users/tests.py:5646` e `:5669`.
+- [x] O teste da queda do Cognito que mantém as linhas e as fotos continua passando, agora também com as chaves de `ReviewPicture` (REV-28).
+- [x] Teste: `PUT /api/reviews/{id}` com `picture` no corpo não cria nem remove fotos (REV-20). É a reescrita de `review/tests.py:452`.
+- [x] Teste: o detalhe da reserva e a lista do cabeleireiro não trazem a chave `picture` na review (REV-30).
+- [x] `git grep -nE "review\.picture\b|Review\.objects\.create\([^)]*picture=|\.get\(\)\.picture" -- backend` não acha nenhum leitor antigo. A prova principal é o gate Full: um leitor que sobrar levanta `FieldError` depois da remoção da coluna.
+- [x] Gate Full passa, com `makemigrations --check` limpo. Contagem: `users` ≥ 423, `review` ≥ 100 + 1.
 
 **Tests**: integration
 **Gate**: full
@@ -368,14 +368,14 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: numa review com 1 foto, enviar 2 dá 201 com `data` de 3 itens por id crescente (REV-10).
-- [ ] Teste: `pictures` ausente dá 400 `#/pictures` (REV-11). Com 4 fotos, enviar 2 dá 400 e mantém 4 (REV-12). Um arquivo acima de 5 MB dá 400 sem conversão (REV-13).
-- [ ] Teste: [válida, inválida] dá 400 `invalid-image`, sem linha nova e sem chave nova no storage (REV-14).
-- [ ] Teste (`TransactionTestCase`): duas threads com 3 fotos cada numa review sem fotos terminam com uma 201 e uma 400, e a review fica com 3 fotos (REV-15). Um teste com `CaptureQueriesContext` prova `FOR UPDATE` antes do `COUNT`.
-- [ ] Teste: uma review de outro cliente ou inexistente dá 404 `not-found`, sem alteração (REV-17).
-- [ ] Teste: sem sessão dá 401 `invalid-session`, e um cabeleireiro recebe 403 `customer-required` (REV-19).
-- [ ] `hairmatch.test_routes` passa com RT-90 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 101 + 7.
+- [x] Teste: numa review com 1 foto, enviar 2 dá 201 com `data` de 3 itens por id crescente (REV-10).
+- [x] Teste: `pictures` ausente dá 400 `#/pictures` (REV-11). Com 4 fotos, enviar 2 dá 400 e mantém 4 (REV-12). Um arquivo acima de 5 MB dá 400 sem conversão (REV-13).
+- [x] Teste: [válida, inválida] dá 400 `invalid-image`, sem linha nova e sem chave nova no storage (REV-14).
+- [x] Teste (`TransactionTestCase`): duas threads com 3 fotos cada numa review sem fotos terminam com uma 201 e uma 400, e a review fica com 3 fotos (REV-15). Um teste com `CaptureQueriesContext` prova `FOR UPDATE` antes do `COUNT`.
+- [x] Teste: uma review de outro cliente ou inexistente dá 404 `not-found`, sem alteração (REV-17).
+- [x] Teste: sem sessão dá 401 `invalid-session`, e um cabeleireiro recebe 403 `customer-required` (REV-19).
+- [x] `hairmatch.test_routes` passa com RT-90 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 101 + 7.
 
 **Tests**: integration
 **Gate**: full
@@ -399,14 +399,14 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: remover uma de 2 fotos dá 204, deixa 1 linha e, depois do commit, apaga só a chave dela (REV-16).
-- [ ] Teste: sem executar os callbacks, a chave continua no storage (REV-28).
-- [ ] Teste: uma review de outro cliente dá 404 e não remove nada (REV-17).
-- [ ] Teste: uma foto de outra review do mesmo cliente, ou um id inexistente, dá 404 e não remove nada (REV-18).
-- [ ] Teste: sem sessão dá 401, e um cabeleireiro recebe 403 `customer-required` (REV-19).
-- [ ] Teste: `GET` na rota dá 405, com `Allow` contendo `DELETE`.
-- [ ] `hairmatch.test_routes` passa com RT-91 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 108 + 6.
+- [x] Teste: remover uma de 2 fotos dá 204, deixa 1 linha e, depois do commit, apaga só a chave dela (REV-16).
+- [x] Teste: sem executar os callbacks, a chave continua no storage (REV-28).
+- [x] Teste: uma review de outro cliente dá 404 e não remove nada (REV-17).
+- [x] Teste: uma foto de outra review do mesmo cliente, ou um id inexistente, dá 404 e não remove nada (REV-18).
+- [x] Teste: sem sessão dá 401, e um cabeleireiro recebe 403 `customer-required` (REV-19).
+- [x] Teste: `GET` na rota dá 405, com `Allow` contendo `DELETE`.
+- [x] `hairmatch.test_routes` passa com RT-91 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 108 + 6.
 
 **Tests**: integration
 **Gate**: full
@@ -433,12 +433,12 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: com notas 5 e 3 (média 4.0), `update_customer_rating(3 → 4)` grava 4.5 em `User.rating`, e a nota 5 fica igual (REV-50, REV-53).
-- [ ] Teste: com 5, 4 e 4, apagar a 5 grava 4.0. Com 5 e 4 e 4, editar a 5 para 3 grava 3.67 (2 casas).
-- [ ] Teste: apagar a única nota grava `User.rating = None` (REV-51).
-- [ ] Teste: `CaptureQueriesContext` mostra o `SELECT ... FOR UPDATE` do `User` antes do `UPDATE` e antes do `DELETE` da nota (REV-50).
-- [ ] Os testes de `RecordCustomerRatingTest` e `CustomerRatingRaceTest` continuam passando.
-- [ ] Gate Quick (`review`) passa. Contagem: `review` ≥ 114 + 4.
+- [x] Teste: com notas 5 e 3 (média 4.0), `update_customer_rating(3 → 4)` grava 4.5 em `User.rating`, e a nota 5 fica igual (REV-50, REV-53).
+- [x] Teste: com 5, 4 e 4, apagar a 5 grava 4.0. Com 5 e 4 e 4, editar a 5 para 3 grava 3.67 (2 casas).
+- [x] Teste: apagar a única nota grava `User.rating = None` (REV-51).
+- [x] Teste: `CaptureQueriesContext` mostra o `SELECT ... FOR UPDATE` do `User` antes do `UPDATE` e antes do `DELETE` da nota (REV-50).
+- [x] Os testes de `RecordCustomerRatingTest` e `CustomerRatingRaceTest` continuam passando.
+- [x] Gate Quick (`review`) passa. Contagem: `review` ≥ 114 + 4.
 
 **Tests**: integration
 **Gate**: quick
@@ -463,16 +463,16 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: o autor envia `{rating: 4, comment: "  Pontual  "}`, recebe 200 com `{data: {id, reservation, rating: 4, comment: "Pontual", created_at}}`, e `User.rating` é recalculado (REV-40, REV-41, REV-50).
-- [ ] Teste: `comment` ausente, `null` e `"   "` gravam `null` (REV-41).
-- [ ] Teste: `rating` ausente, 4.5, `"5"`, `true`, 0 e 6 dão 400 `#/rating` (REV-42). Um comentário com 501 caracteres depois do trim, ou numérico, dá 400 `#/comment` (REV-43). Os dois juntos dão dois itens.
-- [ ] Teste: um corpo que é lista JSON dá 400 `malformed-request` (REV-44).
-- [ ] Teste: corpo inválido com id inexistente dá 400, não 404. Corpo inválido em nota de outro autor dá 400, não 403 (REV-45).
-- [ ] Teste: id inexistente dá 404 `not-found` (REV-46).
-- [ ] Teste: outro cabeleireiro, e uma nota com `hairdresser = None`, dão 403 `forbidden`, sem mudar a nota nem `User.rating` (REV-47).
-- [ ] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
-- [ ] `hairmatch.test_routes` passa com RT-92 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 118 + 9.
+- [x] Teste: o autor envia `{rating: 4, comment: "  Pontual  "}`, recebe 200 com `{data: {id, reservation, rating: 4, comment: "Pontual", created_at}}`, e `User.rating` é recalculado (REV-40, REV-41, REV-50).
+- [x] Teste: `comment` ausente, `null` e `"   "` gravam `null` (REV-41).
+- [x] Teste: `rating` ausente, 4.5, `"5"`, `true`, 0 e 6 dão 400 `#/rating` (REV-42). Um comentário com 501 caracteres depois do trim, ou numérico, dá 400 `#/comment` (REV-43). Os dois juntos dão dois itens.
+- [x] Teste: um corpo que é lista JSON dá 400 `malformed-request` (REV-44).
+- [x] Teste: corpo inválido com id inexistente dá 400, não 404. Corpo inválido em nota de outro autor dá 400, não 403 (REV-45).
+- [x] Teste: id inexistente dá 404 `not-found` (REV-46).
+- [x] Teste: outro cabeleireiro, e uma nota com `hairdresser = None`, dão 403 `forbidden`, sem mudar a nota nem `User.rating` (REV-47).
+- [x] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
+- [x] `hairmatch.test_routes` passa com RT-92 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 118 + 9.
 
 **Tests**: integration
 **Gate**: full
@@ -496,13 +496,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: o autor apaga e recebe 204. A nota some, e `User.rating` vira a média das restantes, ou `null` se era a única (REV-49, REV-51).
-- [ ] Teste: depois do DELETE, `POST /api/customer-ratings` para a mesma reserva dá 201 (REV-52).
-- [ ] Teste: id inexistente dá 404 (REV-46). Outro cabeleireiro, e uma nota sem autor, dão 403 e não apagam (REV-47).
-- [ ] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
-- [ ] Teste: `GET /api/customer-ratings/{id}` dá 405, com `Allow` contendo `PUT` e `DELETE`.
-- [ ] `hairmatch.test_routes` passa com RT-93 (REV-56).
-- [ ] Gate Full passa. Contagem: `review` ≥ 127 + 6.
+- [x] Teste: o autor apaga e recebe 204. A nota some, e `User.rating` vira a média das restantes, ou `null` se era a única (REV-49, REV-51).
+- [x] Teste: depois do DELETE, `POST /api/customer-ratings` para a mesma reserva dá 201 (REV-52).
+- [x] Teste: id inexistente dá 404 (REV-46). Outro cabeleireiro, e uma nota sem autor, dão 403 e não apagam (REV-47).
+- [x] Teste: sem sessão dá 401, e um cliente recebe 403 `hairdresser-required` (REV-48).
+- [x] Teste: `GET /api/customer-ratings/{id}` dá 405, com `Allow` contendo `PUT` e `DELETE`.
+- [x] `hairmatch.test_routes` passa com RT-93 (REV-56).
+- [x] Gate Full passa. Contagem: `review` ≥ 127 + 6.
 
 **Tests**: integration
 **Gate**: full
@@ -524,9 +524,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: um item com nota traz `customer_rating == {id, rating, comment}` com o id da nota, e um item sem nota traz `null` (REV-55).
-- [ ] O teste de queries constantes da agenda (CRT-38) continua passando.
-- [ ] Gate Quick (`agenda`) passa. Contagem: `agenda` ≥ 46 + 1.
+- [x] Teste: um item com nota traz `customer_rating == {id, rating, comment}` com o id da nota, e um item sem nota traz `null` (REV-55).
+- [x] O teste de queries constantes da agenda (CRT-38) continua passando.
+- [x] Gate Quick (`agenda`) passa. Contagem: `agenda` ≥ 46 + 1.
 
 **Tests**: integration
 **Gate**: quick
@@ -551,9 +551,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] AD-011 e AD-012 com Decision, Reason, Trade-off, Scope, Date e Status.
-- [ ] O AD-003 e o AD-010 apontam para os ADs novos.
-- [ ] Gate Full passa (nenhum código muda).
+- [x] AD-011 e AD-012 com Decision, Reason, Trade-off, Scope, Date e Status.
+- [x] O AD-003 e o AD-010 apontam para os ADs novos.
+- [x] Gate Full passa (nenhum código muda).
 
 **Tests**: none
 **Gate**: full
@@ -580,9 +580,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] As quatro funções têm a assinatura do design, e as de multipart mandam `Content-Type: multipart/form-data`.
-- [ ] As chamadas existentes a `createReview` são ajustadas, ou ficam com o erro de tipo que a T17 resolve. A baseline do `tsc` registra qual.
-- [ ] Gate App passa, sem erro novo além dos que a T17 remove.
+- [x] As quatro funções têm a assinatura do design, e as de multipart mandam `Content-Type: multipart/form-data`.
+- [x] As chamadas existentes a `createReview` são ajustadas, ou ficam com o erro de tipo que a T17 resolve. A baseline do `tsc` registra qual.
+- [x] Gate App passa, sem erro novo além dos que a T17 remove.
 
 **Tests**: none
 **Gate**: app
@@ -608,13 +608,13 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Numa reserva com review, o hook preenche `rating`, `comment` e `existing` (REV-61).
-- [ ] `selectionLimit` é `5 − existing.length − queued.length`. A seleção que passa do limite é cortada, e o aviso "Você pode enviar até 5 fotos." aparece (REV-62, REV-63).
-- [ ] A remoção só mexe no estado local (REV-65).
-- [ ] Criar chama `createReview` uma vez (REV-66). Editar chama PUT, depois um DELETE por foto removida, depois um POST com as novas, pulando o que está vazio (REV-67).
-- [ ] Em erro, o hook mostra o `problemMessage`, recarrega a reserva, refaz `existing` e mantém `queued`, `rating` e `comment`. As fotos marcadas para remoção que ainda existem no servidor continuam escondidas e na lista de remoção, para o próximo salvar (REV-68).
-- [ ] O formulário só é limpo depois do sucesso, e um `useRef` barra o segundo toque (REV-69).
-- [ ] Gate App passa.
+- [x] Numa reserva com review, o hook preenche `rating`, `comment` e `existing` (REV-61).
+- [x] `selectionLimit` é `5 − existing.length − queued.length`. A seleção que passa do limite é cortada, e o aviso "Você pode enviar até 5 fotos." aparece (REV-62, REV-63).
+- [x] A remoção só mexe no estado local (REV-65).
+- [x] Criar chama `createReview` uma vez (REV-66). Editar chama PUT, depois um DELETE por foto removida, depois um POST com as novas, pulando o que está vazio (REV-67).
+- [x] Em erro, o hook mostra o `problemMessage`, recarrega a reserva, refaz `existing` e mantém `queued`, `rating` e `comment`. As fotos marcadas para remoção que ainda existem no servidor continuam escondidas e na lista de remoção, para o próximo salvar (REV-68).
+- [x] O formulário só é limpo depois do sucesso, e um `useRef` barra o segundo toque (REV-69).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -643,10 +643,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] O título muda conforme o modo (REV-60, REV-61).
-- [ ] Cada miniatura tem "x", e o botão de adicionar some com 5 fotos (REV-64, REV-65).
-- [ ] O `StarRating` local da tela é trocado pelo componente compartilhado.
-- [ ] Gate App passa.
+- [x] O título muda conforme o modo (REV-60, REV-61).
+- [x] Cada miniatura tem "x", e o botão de adicionar some com 5 fotos (REV-64, REV-65).
+- [x] O `StarRating` local da tela é trocado pelo componente compartilhado.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -670,10 +670,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] "Editar avaliação" abre a tela de avaliação da reserva (REV-61).
-- [ ] Uma review com 3 fotos mostra 3 imagens roláveis. Sem fotos, mostra o placeholder (REV-70).
-- [ ] Nenhuma referência a `review.picture` sobra no app (`git grep -n "review?*\.picture\b" -- frontend-mobile`).
-- [ ] Gate App passa.
+- [x] "Editar avaliação" abre a tela de avaliação da reserva (REV-61).
+- [x] Uma review com 3 fotos mostra 3 imagens roláveis. Sem fotos, mostra o placeholder (REV-70).
+- [x] Nenhuma referência a `review.picture` sobra no app (`git grep -n "review?*\.picture\b" -- frontend-mobile`).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -699,9 +699,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] As duas funções chamam `PUT` e `DELETE /api/customer-ratings/{id}`.
-- [ ] `AgendaEvent.customerRating` tem `id`.
-- [ ] Gate App passa.
+- [x] As duas funções chamam `PUT` e `DELETE /api/customer-ratings/{id}`.
+- [x] `AgendaEvent.customerRating` tem `id`.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -726,10 +726,10 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os params da edição são `customerName`, `customerId` e `ratingId` (REV-76).
-- [ ] Depois do DELETE, a agenda é buscada de novo, e o evento fica sem `customerRating` (REV-80).
-- [ ] Um DELETE com falha mostra o `problemMessage` (REV-81).
-- [ ] Gate App passa.
+- [x] Os params da edição são `customerName`, `customerId` e `ratingId` (REV-76).
+- [x] Depois do DELETE, a agenda é buscada de novo, e o evento fica sem `customerRating` (REV-80).
+- [x] Um DELETE com falha mostra o `problemMessage` (REV-81).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -753,9 +753,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Os dois botões aparecem só quando há nota. "Avaliar cliente" continua aparecendo só pelo `canRate` (REV-75).
-- [ ] "Excluir avaliação" abre a confirmação antes do DELETE (REV-80).
-- [ ] Gate App passa.
+- [x] Os dois botões aparecem só quando há nota. "Avaliar cliente" continua aparecendo só pelo `canRate` (REV-75).
+- [x] "Excluir avaliação" abre a confirmação antes do DELETE (REV-80).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -780,11 +780,11 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Com `ratingId` válido, o formulário abre preenchido (REV-76).
-- [ ] Com `ratingId` fora da lista, ou com a busca falhando, aparece o erro, e fechar leva para a agenda (REV-77).
-- [ ] Salvar chama o PUT e volta para a agenda (REV-78). Uma falha mantém o formulário e mostra o `problemMessage` (REV-81).
-- [ ] O reset ao trocar de reserva também zera o modo edição.
-- [ ] Gate App passa.
+- [x] Com `ratingId` válido, o formulário abre preenchido (REV-76).
+- [x] Com `ratingId` fora da lista, ou com a busca falhando, aparece o erro, e fechar leva para a agenda (REV-77).
+- [x] Salvar chama o PUT e volta para a agenda (REV-78). Uma falha mantém o formulário e mostra o `problemMessage` (REV-81).
+- [x] O reset ao trocar de reserva também zera o modo edição.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -809,9 +809,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Título, botão e confirmação mudam conforme o modo (REV-76, REV-78).
-- [ ] O texto "não pode ser alterada" sumiu do app (REV-79).
-- [ ] Gate App passa.
+- [x] Título, botão e confirmação mudam conforme o modo (REV-76, REV-78).
+- [x] O texto "não pode ser alterada" sumiu do app (REV-79).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
@@ -840,13 +840,16 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: `run`
 
 **Done when**:
-- [ ] Os 7 passos passam, ou cada falha vira uma task de correção.
-- [ ] Os critérios de app ficam como Verified no spec.
+- [ ] PENDENTE: os 7 passos manuais passam no web e no Android, ou cada falha vira uma task de correção.
+- [ ] PENDENTE: os critérios de app (REV-60 a REV-81) ficam como Verified no spec depois do UAT manual.
+- [x] Substituto automatizado do UAT, feito sem navegador: o script `e2e_review_editing.py` exercitou, com `curl`, todas as rotas novas e alteradas num servidor de dev subido do worktree (porta 8015, banco e bucket próprios). 113 verificações, 0 falhas, e o bucket terminou vazio. O resumo está em `validation.md`; o script e a saída ficaram fora do repositório.
+
+> O UAT manual (web e Android) **não foi feito**. O substituto cobre o backend ponta a ponta (REV-01 a REV-56), não as telas. Os critérios de app só têm `npx tsc --noEmit` e a leitura do código, e continuam "Implemented", não "Verified".
 
 **Tests**: none
 **Gate**: build
 
-**Commit**: `docs(specs): record the review editing UAT`
+**Commit**: `docs(specs): record the review editing api check`
 
 ---
 

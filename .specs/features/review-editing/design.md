@@ -1,7 +1,7 @@
 # Editar e excluir avaliações, com várias fotos Design
 
 **Spec**: `.specs/features/review-editing/spec.md`
-**Status**: Draft (aguardando aprovação junto com as tasks)
+**Status**: Approved, implementado
 
 ---
 

@@ -66,6 +66,12 @@ export const useReserveDetails = () => {
     router.push(`/customer/review/${reserveId}`);
   }
 
+  // The menu entry "Editar avaliação": the review screen opens filled when the reservation already has a review.
+  const handleEditReview = (reserveId: number) => {
+    setMenuVisible(false);
+    handleReviewScreen(reserveId);
+  }
+
   const handleDeleteReview = async () => {
     if (!reserve?.review?.id) {
         Alert.alert("Erro", "Não foi possível encontrar a avaliação para excluir.");
@@ -95,6 +101,7 @@ export const useReserveDetails = () => {
     handleBack,
     confirmCancel,
     handleReviewScreen,
+    handleEditReview,
     menuVisible,
     setMenuVisible,
     deletionModalVisible,

@@ -14,7 +14,7 @@ export interface AgendaEntryResponse {
         user: { first_name: string; last_name: string; rating: number | null };
         ratings_count: number;
     } | null;
-    customer_rating: { rating: number; comment: string | null } | null;
+    customer_rating: { id: number; rating: number; comment: string | null } | null;
 }
 
 /** The body of `POST /api/agenda`. Without `service`, `title` and `end_time` are required. */
@@ -39,7 +39,7 @@ export interface AgendaEvent {
         ratingsCount: number;
     } | null;
     // The hairdresser's rating of this reservation's customer, or null while it is not rated.
-    customerRating: { rating: number; comment: string | null } | null;
+    customerRating: { id: number; rating: number; comment: string | null } | null;
 }
   
 export type CalendarMode = 'month' | 'week' | 'day' | 'agenda';

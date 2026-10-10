@@ -1,3 +1,4 @@
+import { Review } from "./Review.types";
 import { ServiceWithHairdresserFullInfo } from "./Service.types";
 
 export interface ReserveSlots {
@@ -7,7 +8,7 @@ export interface ReserveSlots {
 export interface ReserveWithService {
     id: number;
     customer: number;
-    review: any | null;
+    review: Review | null;
     service: ServiceWithHairdresserFullInfo;
     start_time: string;
 }

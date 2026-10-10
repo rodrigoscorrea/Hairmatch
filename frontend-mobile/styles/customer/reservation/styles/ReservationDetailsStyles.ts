@@ -263,11 +263,14 @@ export const styles = StyleSheet.create({
       marginLeft: 4,
       color: '#333',
   },
-  reviewImage: {
-      width: '100%',
+  reviewPictures: {
+      marginTop: 12,
+  },
+  reviewPicture: {
+      width: 180,
       height: 180,
       borderRadius: 8,
-      marginTop: 12,
+      marginRight: 8,
   },
   imagePlaceholder: {
       width: '100%',

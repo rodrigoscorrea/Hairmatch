@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+from django.db import connection
 from django.test import SimpleTestCase, TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -11,6 +13,9 @@ from django.utils import timezone
 from users.models import User, Customer, Hairdresser
 from service.models import Service
 from reserve.models import Reserve
+from review.models import Review, ReviewPicture
+from hairmatch.image_fixtures import make_upload
+from django.core.files.storage import default_storage
 from agenda.models import Agenda
 from availability.models import Availability
 from users.cognito import get_cognito
@@ -794,3 +799,63 @@ class ExternalBlockTest(ReserveTestCase):
         )
         self.assertEqual(Reserve.objects.count(), reserves)
         self.assertEqual(Agenda.objects.count(), agendas)
+
+
+class ReservationReviewPicturesTest(ReserveTestCase):
+    """REV-30, REV-32: the review of a reservation carries its pictures in RT-43, RT-45 and RT-46."""
+
+    def _review(self, reserve, pictures):
+        review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        for _ in range(pictures):
+            ReviewPicture.objects.create(review=review, picture=make_upload(fmt='PNG'))
+        reserve.review = review
+        reserve.save()
+        return review
+
+    def _extra_reviewed_reserves(self, count):
+        for _ in range(count):
+            reserve = Reserve.objects.create(
+                start_time=self.reserve_start_time, customer=self.customer, service=self.service
+            )
+            self._review(reserve, 2)
+
+    def _expected(self, review):
+        return [{'id': p.id, 'url': default_storage.url(p.picture.name)} for p in review.pictures.all()]
+
+    def test_the_three_reads_return_the_pictures_of_the_review(self):
+        review = self._review(self.reserve, 2)
+        self.login(self.customer_user)
+        urls = {
+            'RT-43': reverse('reservation_detail', args=[self.reserve.id]),
+            'RT-45': self.list_url,
+            'RT-46': reverse('customer_reservations', args=[self.customer.id]),
+        }
+
+        for name, url in urls.items():
+            with self.subTest(route=name):
+                data = self.client.get(url).json()['data']
+                reserve = data if isinstance(data, dict) else data[0]
+                self.assertEqual(len(reserve['review']['pictures']), 2)
+                self.assertEqual(reserve['review']['pictures'], self._expected(review))
+                self.assertNotIn('picture', reserve['review'])
+
+    def test_a_reservation_without_a_review_keeps_review_null(self):
+        self.login(self.customer_user)
+
+        data = self.client.get(reverse('reservation_detail', args=[self.reserve.id])).json()['data']
+
+        self.assertIsNone(data['review'])
+
+    def test_the_customer_list_runs_the_same_number_of_queries_with_one_and_three_reviews(self):
+        url = reverse('customer_reservations', args=[self.customer.id])
+        self._review(self.reserve, 2)
+        self.login(self.customer_user)
+        with CaptureQueriesContext(connection) as one:
+            self.client.get(url)
+
+        self._extra_reviewed_reserves(2)
+        with CaptureQueriesContext(connection) as three:
+            data = self.client.get(url).json()['data']
+
+        self.assertEqual([len(r['review']['pictures']) for r in data], [2, 2, 2])
+        self.assertEqual(len(three), len(one))

@@ -3,29 +3,44 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import threading
 from django.db import connection
-from django.test import TestCase, TransactionTestCase
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse, NoReverseMatch
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 from PIL import Image
 from hairmatch.image_fixtures import make_upload
 from users.models import User, Customer, Hairdresser
 from users.testing import activate_account
 from django.db import IntegrityError, transaction
 from hairmatch.problems import Problem
-from .customer_ratings import record_customer_rating, service_end
-from .models import CustomerRating, Review
+from .customer_ratings import delete_customer_rating, record_customer_rating, service_end, update_customer_rating
+from .models import CustomerRating, Review, ReviewPicture
+from .pictures import (
+    MAX_REVIEW_PICTURES, REVIEW_PICTURE_MAX_SIZE, add_review_pictures, picture_errors, picture_names,
+)
+from hairmatch.images import InvalidImage
 from reserve.models import Reserve
 from service.models import Service
 import jwt
 import json
+import re
 import datetime
 from django.conf import settings
 from django.utils import timezone
 from users.cognito import get_cognito
+
+def review_keys():
+    """Every key stored under reviews/, to prove that a request left the storage as it found it."""
+    try:
+        folders, _ = default_storage.listdir('reviews')
+    except FileNotFoundError:
+        return set()
+    return {f'reviews/{folder}/{name}' for folder in folders for name in default_storage.listdir(f'reviews/{folder}')[1]}
+
 
 class ReviewsTestCase(TestCase):
     def setUp(self):
@@ -201,57 +216,142 @@ class CreateReviewTest(ReviewsTestCase):
         self.reserve.refresh_from_db()
         self.assertEqual(self.reserve.review, created_review)
 
-    def test_create_review_with_picture_stores_a_webp(self):
-        """WEBP-03: the picture is saved as reviews/images/<stem>.webp with WebP content."""
-        self.login_as_customer()
-
-        response = self.client.post(self.create_url, data={
+    def _post_review_with_pictures(self, pictures, **extra):
+        data = {
             'rating': 5,
             'comment': 'With photo',
             'hairdresser': self.hairdresser.id,
             'reserve': self.reserve.id,
-            'picture': make_upload('review_photo.png', fmt='PNG'),
-        })
+            'pictures': pictures,
+        }
+        data.update(extra)
+        return self.client.post(self.create_url, data=data)
+
+    def _assert_nothing_created(self, response, keys_before):
+        self.assertEqual(Review.objects.count(), 0)
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        self.reserve.refresh_from_db()
+        self.assertIsNone(self.reserve.review)
+        self.assertEqual(review_keys(), keys_before)
+
+    def test_create_review_with_pictures_stores_one_webp_per_picture_in_order(self):
+        """REV-01, REV-02 (replaces WEBP-03)"""
+        self.login_as_customer()
+        uploads = [make_upload(f'Foto{i}.PNG', fmt='PNG', size=(20 + i, 10)) for i in range(3)]
+
+        response = self._post_review_with_pictures(uploads)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         review = Review.objects.get()
-        self.assertEqual(review.picture.name, 'reviews/images/review_photo.webp')
-        with default_storage.open(review.picture.name) as stored:
-            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+        pictures = list(review.pictures.all())
+        self.assertEqual(len(pictures), 3)
+        for index, picture in enumerate(pictures):
+            with self.subTest(picture=index):
+                self.assertRegex(picture.picture.name, rf'^reviews/{review.id}/[0-9a-f]{{32}}\.webp$')
+                with default_storage.open(picture.picture.name) as stored:
+                    image = Image.open(BytesIO(stored.read()))
+                self.assertEqual(image.format, 'WEBP')
+                self.assertEqual(image.size, (20 + index, 10))  # the order of the upload
 
-    def _post_review_with_picture(self, picture):
-        return self.client.post(self.create_url, data={
-            'rating': 5,
-            'comment': 'With photo',
-            'hairdresser': self.hairdresser.id,
-            'reserve': self.reserve.id,
-            'picture': picture,
+    def test_create_review_without_pictures_creates_a_review_without_pictures(self):
+        """REV-03"""
+        self.login_as_customer()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 5, 'comment': 'No photo', 'hairdresser': self.hairdresser.id, 'reserve': self.reserve.id,
         })
 
-    def _assert_rejected_with_no_review(self, response):
-        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
-        self.assertEqual(Review.objects.count(), 0)
-        self.reserve.refresh_from_db()
-        self.assertIsNone(self.reserve.review)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.get().pictures.count(), 0)
 
-    def test_create_review_with_a_file_that_is_not_an_image_returns_400(self):
-        """WEBP-12: nothing is created and the reservation stays unreviewed."""
+    def test_create_review_with_six_pictures_returns_400_and_creates_nothing(self):
+        """REV-04"""
         self.login_as_customer()
+        before = review_keys()
 
-        response = self._post_review_with_picture(
-            SimpleUploadedFile('notes.jpg', b'just some notes', content_type='image/jpeg')
-        )
+        response = self._post_review_with_pictures([make_upload(f'{i}.png', fmt='PNG') for i in range(6)])
 
-        self._assert_rejected_with_no_review(response)
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'},
+        ])
+        self._assert_nothing_created(response, before)
+
+    def test_create_review_with_a_picture_over_5_mb_returns_400_without_converting_anything(self):
+        """REV-05"""
+        self.login_as_customer()
+        before = review_keys()
+        big = SimpleUploadedFile('big.png', b'x' * (5 * 1024 * 1024 + 1), content_type='image/png')
+
+        with patch('hairmatch.images.to_webp') as to_webp:
+            response = self._post_review_with_pictures([make_upload(fmt='PNG'), big])
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'},
+        ])
+        to_webp.assert_not_called()
+        self._assert_nothing_created(response, before)
+
+    def test_create_review_with_a_file_that_is_not_an_image_returns_400_and_cleans_the_earlier_pictures(self):
+        """REV-06 (replaces WEBP-12): the two valid pictures that were already stored are deleted again."""
+        self.login_as_customer()
+        before = review_keys()
+
+        response = self._post_review_with_pictures([
+            make_upload('a.png', fmt='PNG'),
+            make_upload('b.png', fmt='PNG'),
+            SimpleUploadedFile('notes.jpg', b'just some notes', content_type='image/jpeg'),
+        ])
+
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self._assert_nothing_created(response, before)
 
     def test_create_review_with_an_image_over_the_pixel_limit_returns_400(self):
-        """WEBP-13: a decompression bomb gets the same answer as an invalid image."""
+        """REV-06 (replaces WEBP-13): a decompression bomb gets the same answer as an invalid image."""
         self.login_as_customer()
+        before = review_keys()
 
         with patch.object(Image, 'MAX_IMAGE_PIXELS', 10):
-            response = self._post_review_with_picture(make_upload('big.jpg'))
+            response = self._post_review_with_pictures([make_upload('big.jpg')])
 
-        self._assert_rejected_with_no_review(response)
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self._assert_nothing_created(response, before)
+
+    def test_an_unexpected_failure_after_the_upload_leaves_no_object_in_the_storage(self):
+        """REV-06, REV-28"""
+        self.login_as_customer()
+        before = review_keys()
+
+        with patch.object(Reserve, 'save', side_effect=RuntimeError('db down')):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post_review_with_pictures([make_upload(fmt='PNG'), make_upload(fmt='PNG')])
+
+        assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self._assert_nothing_created(response, before)
+
+    def test_invalid_fields_and_too_many_pictures_are_reported_together(self):
+        """REV-07"""
+        self.login_as_customer()
+
+        response = self._post_review_with_pictures([make_upload(fmt='PNG') for _ in range(6)], rating='top')
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'This field must be a number.'},
+            {'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'},
+        ])
+
+    def test_a_file_in_the_old_picture_field_is_ignored(self):
+        """REV-08"""
+        self.login_as_customer()
+        before = review_keys()
+
+        response = self.client.post(self.create_url, data={
+            'rating': 5, 'comment': 'Old field', 'hairdresser': self.hairdresser.id, 'reserve': self.reserve.id,
+            'picture': make_upload(fmt='PNG'),
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Review.objects.get().pictures.count(), 0)
+        self.assertEqual(review_keys(), before)
 
     def test_create_review_missing_reserve_id(self):
         """Test that providing no reserve ID results in a 400 Bad Request."""
@@ -449,13 +549,22 @@ class UpdateReviewProblemsTest(ReviewsTestCase):
                 self.review.refresh_from_db()
                 self.assertEqual(self.review.rating, rating)
 
-    def test_a_picture_in_the_body_is_ignored(self):
-        response = self._put({'rating': 5, 'picture': '../../outro-usuario/profile_pictures/x.webp'})
+    def test_a_picture_in_the_body_does_not_create_or_remove_pictures(self):
+        """REV-20 (replaces the single-picture test)"""
+        kept = ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG'))
+        before = review_keys()
+
+        response = self._put({
+            'rating': 5,
+            'picture': '../../outro-usuario/profile_pictures/x.webp',
+            'pictures': ['../../outro-usuario/profile_pictures/y.webp'],
+        })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.review.refresh_from_db()
-        self.assertFalse(self.review.picture)
         self.assertEqual(self.review.rating, 5)
+        self.assertEqual(list(self.review.pictures.values_list('id', flat=True)), [kept.id])
+        self.assertEqual(review_keys(), before)
 
 
 class ListReviewTest(ReviewsTestCase):
@@ -677,6 +786,39 @@ class RemoveReview(ReviewsTestCase):
         # Assert that the review was unlinked from the reserve
         self.reserve.refresh_from_db()
         self.assertIsNone(self.reserve.review)
+
+    def _add_pictures(self, count=2):
+        for _ in range(count):
+            ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG'))
+        return list(self.review.pictures.values_list('picture', flat=True))
+
+    def test_deleting_a_review_deletes_its_pictures_from_the_storage_once_committed(self):
+        """REV-25"""
+        names = self._add_pictures(2)
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.delete_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        for name in names:
+            with self.subTest(name=name):
+                self.assertFalse(default_storage.exists(name))
+
+    def test_the_objects_stay_in_the_storage_until_the_transaction_commits(self):
+        """REV-28"""
+        names = self._add_pictures(2)
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.delete_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(callbacks), 1)
+        for name in names:
+            with self.subTest(name=name):
+                self.assertTrue(default_storage.exists(name))
 
     def test_delete_review_unauthenticated(self):
         """Test that an unauthenticated request is forbidden."""
@@ -1423,3 +1565,902 @@ class ListCustomerRatingsTest(ReviewsTestCase):
 
         assert_problem(response, 'method-not-allowed')
         self.assertEqual(sorted(response['Allow'].split(', ')), ['GET', 'HEAD', 'OPTIONS'])
+
+
+class ReviewPictureModelTest(ReviewsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+
+    def _add(self, name='Foto.PNG', review=None):
+        return ReviewPicture.objects.create(review=review or self.review, picture=make_upload(name, fmt='PNG'))
+
+    def test_the_picture_is_stored_under_its_review_as_a_webp(self):
+        """REV-02"""
+        picture = self._add('Foto.PNG')
+
+        self.assertRegex(picture.picture.name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+        with default_storage.open(picture.picture.name) as stored:
+            self.assertEqual(Image.open(BytesIO(stored.read())).format, 'WEBP')
+
+    def test_two_pictures_with_the_same_file_name_get_different_keys(self):
+        """REV-02"""
+        first, second = self._add('foto.png'), self._add('foto.png')
+
+        self.assertNotEqual(first.picture.name, second.picture.name)
+        self.assertTrue(default_storage.exists(first.picture.name))
+        self.assertTrue(default_storage.exists(second.picture.name))
+
+    def test_the_pictures_of_a_review_come_by_ascending_id(self):
+        """REV-33"""
+        ids = [self._add().id for _ in range(3)]
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        self._add(review=other)
+
+        self.assertEqual([p.id for p in self.review.pictures.all()], ids)
+        self.assertEqual(ids, sorted(ids))
+
+    def test_the_order_by_id_does_not_depend_on_where_the_rows_sit(self):
+        """REV-33: updating the first row moves it in the heap, and the pictures still come by ascending id."""
+        ids = [self._add().id for _ in range(3)]
+        ReviewPicture.objects.filter(pk=ids[0]).update(created_at=timezone.now())
+
+        self.assertEqual([p.id for p in self.review.pictures.all()], ids)
+
+    def test_deleting_the_review_deletes_its_pictures(self):
+        """REV-33"""
+        self._add()
+        self._add()
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        kept = self._add(review=other)
+
+        self.review.delete()
+
+        self.assertEqual(list(ReviewPicture.objects.values_list('id', flat=True)), [kept.id])
+
+
+class PictureErrorsTest(SimpleTestCase):
+    """REV-04, REV-05, REV-11, REV-12, REV-13"""
+
+    @staticmethod
+    def _files(count, size=100):
+        return [SimpleNamespace(size=size) for _ in range(count)]
+
+    def test_no_files_are_only_an_error_when_required(self):
+        self.assertEqual(picture_errors([], required=True), [
+            {'pointer': '#/pictures', 'detail': 'This field is required.'},
+        ])
+        self.assertEqual(picture_errors([]), [])
+
+    def test_more_than_five_files_are_one_error(self):
+        too_many = [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}]
+
+        self.assertEqual(picture_errors(self._files(6)), too_many)
+        self.assertEqual(picture_errors(self._files(2), existing=4), too_many)
+        self.assertEqual(picture_errors(self._files(5), existing=0), [])
+        self.assertEqual(picture_errors(self._files(1), existing=4), [])
+
+    def test_a_file_over_5_mb_is_one_error_and_exactly_5_mb_passes(self):
+        too_big = [{'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'}]
+
+        self.assertEqual(REVIEW_PICTURE_MAX_SIZE, 5 * 1024 * 1024)
+        self.assertEqual(picture_errors(self._files(1, size=5 * 1024 * 1024 + 1)), too_big)
+        self.assertEqual(picture_errors(self._files(1, size=5 * 1024 * 1024)), [])
+
+    def test_the_first_applicable_error_is_the_only_one_by_the_required_limit_size_order(self):
+        big_and_many = self._files(6, size=REVIEW_PICTURE_MAX_SIZE + 1)
+
+        errors = picture_errors(big_and_many)
+        self.assertEqual(errors, [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}])
+        self.assertEqual(picture_errors([], required=True)[0]['detail'], 'This field is required.')
+
+    def test_no_file_is_opened(self):
+        files = [MagicMock(size=REVIEW_PICTURE_MAX_SIZE + 1) for _ in range(2)]
+
+        picture_errors(files)
+
+        for file in files:
+            file.open.assert_not_called()
+            file.read.assert_not_called()
+            file.seek.assert_not_called()
+
+
+class ReviewPicturesDomainTest(ReviewsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+
+    def test_a_failure_keeps_the_names_already_stored_in_the_list_of_the_caller(self):
+        """REV-06, REV-14"""
+        saved = []
+        files = [make_upload('a.png', fmt='PNG'), make_upload('b.png', fmt='PNG'),
+                 SimpleUploadedFile('c.png', b'not an image', content_type='image/png')]
+
+        with self.assertRaises(InvalidImage), transaction.atomic():
+            add_review_pictures(self.review, files, saved)
+
+        self.assertEqual(len(saved), 2)
+        self.assertEqual(ReviewPicture.objects.count(), 0)  # the savepoint of the view's atomic block is rolled back
+        for name in saved:
+            self.assertRegex(name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+            self.assertTrue(default_storage.exists(name))
+
+    def test_the_pictures_are_stored_in_the_order_received(self):
+        saved = []
+
+        add_review_pictures(self.review, [make_upload('a.png', fmt='PNG'), make_upload('b.png', fmt='PNG')], saved)
+
+        self.assertEqual(saved, [p.picture.name for p in self.review.pictures.all()])
+
+    def test_picture_names_are_the_names_of_the_pictures_of_the_queryset(self):
+        other = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        mine = [ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG')) for _ in range(2)]
+        ReviewPicture.objects.create(review=other, picture=make_upload(fmt='PNG'))
+
+        self.assertEqual(picture_names(self.review.pictures.all()), [p.picture.name for p in mine])
+        self.assertEqual(MAX_REVIEW_PICTURES, 5)
+
+
+class ListReviewPicturesTest(ReviewsTestCase):
+    """REV-30, REV-31, REV-32 for GET /api/hairdressers/{id}/reviews."""
+
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse('list_review', args=[self.hairdresser.id])
+
+    def _review_with_pictures(self, count):
+        review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        for _ in range(count):
+            ReviewPicture.objects.create(review=review, picture=make_upload(fmt='PNG'))
+        return review
+
+    def test_a_review_lists_its_pictures_by_ascending_id_with_the_storage_url(self):
+        review = self._review_with_pictures(2)
+        pictures = list(review.pictures.all())
+
+        data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['pictures'], [
+            {'id': pictures[0].id, 'url': default_storage.url(pictures[0].picture.name)},
+            {'id': pictures[1].id, 'url': default_storage.url(pictures[1].picture.name)},
+        ])
+        self.assertLess(data[0]['pictures'][0]['id'], data[0]['pictures'][1]['id'])
+        self.assertNotIn('picture', data[0])
+
+    def test_a_review_without_pictures_lists_an_empty_array(self):
+        self._review_with_pictures(0)
+
+        data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual(data[0]['pictures'], [])
+
+    def test_the_number_of_queries_does_not_grow_with_the_reviews_or_the_pictures(self):
+        self._review_with_pictures(2)
+        with CaptureQueriesContext(connection) as one:
+            self.client.get(self.list_url)
+
+        self._review_with_pictures(3)
+        self._review_with_pictures(1)
+        with CaptureQueriesContext(connection) as three:
+            data = self.client.get(self.list_url).json()['data']
+
+        self.assertEqual([len(review['pictures']) for review in data], [2, 3, 1])
+        self.assertEqual(len(three), len(one))
+
+
+class AddReviewPicturesTest(ReviewsTestCase):
+    """POST /api/reviews/{id}/pictures (RT-90)"""
+
+    TOO_MANY = [{'pointer': '#/pictures', 'detail': 'A review can have at most 5 pictures.'}]
+
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        self.url = reverse('review_pictures', args=[self.review.id])
+
+    def _png(self, name='nova.png'):
+        return make_upload(name, fmt='PNG')
+
+    def _seed(self, count, review=None):
+        for _ in range(count):
+            ReviewPicture.objects.create(review=review or self.review, picture=self._png())
+
+    def _post(self, files, url=None):
+        return self.client.post(url or self.url, data={'pictures': files} if files is not None else {})
+
+    def _ids(self, review=None):
+        return list((review or self.review).pictures.values_list('id', flat=True))
+
+    def test_adding_two_pictures_to_a_review_with_one_returns_all_three_by_ascending_id(self):
+        """REV-10"""
+        self._seed(1)
+        self.login_as_customer()
+
+        response = self._post([self._png('a.png'), self._png('b.png')])
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        pictures = list(self.review.pictures.all())
+        self.assertEqual(len(pictures), 3)
+        self.assertEqual(response.json(), {'data': [
+            {'id': p.id, 'url': default_storage.url(p.picture.name)} for p in pictures
+        ]})
+        self.assertEqual(self._ids(), sorted(self._ids()))
+        for picture in pictures:
+            self.assertRegex(picture.picture.name, rf'^reviews/{self.review.id}/[0-9a-f]{{32}}\.webp$')
+
+    def test_a_missing_or_empty_pictures_field_answers_400(self):
+        """REV-11"""
+        self.login_as_customer()
+
+        for files in (None, []):
+            with self.subTest(files=files):
+                assert_problem(self._post(files), 'validation-error', errors=[
+                    {'pointer': '#/pictures', 'detail': 'This field is required.'},
+                ])
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_going_over_five_pictures_answers_400_and_keeps_the_existing_ones(self):
+        """REV-12"""
+        self._seed(4)
+        before_ids, before_keys = self._ids(), review_keys()
+        self.login_as_customer()
+
+        response = self._post([self._png(), self._png()])
+
+        assert_problem(response, 'validation-error', errors=self.TOO_MANY)
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
+    def test_a_full_review_refuses_more_until_one_is_removed(self):
+        """REV-12"""
+        self._seed(5)
+        self.login_as_customer()
+
+        assert_problem(self._post([self._png()]), 'validation-error', errors=self.TOO_MANY)
+
+        ReviewPicture.objects.filter(id=self._ids()[0]).delete()
+        self.assertEqual(self._post([self._png()]).status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.review.pictures.count(), 5)
+
+    def test_six_pictures_at_once_answer_400(self):
+        """REV-12"""
+        self.login_as_customer()
+
+        assert_problem(self._post([self._png() for _ in range(6)]), 'validation-error', errors=self.TOO_MANY)
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_a_picture_over_5_mb_answers_400_without_converting_anything(self):
+        """REV-13"""
+        self.login_as_customer()
+        before = review_keys()
+        big = SimpleUploadedFile('big.png', b'x' * (5 * 1024 * 1024 + 1), content_type='image/png')
+
+        with patch('hairmatch.images.to_webp') as to_webp:
+            response = self._post([self._png(), big])
+
+        assert_problem(response, 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'Each picture must have at most 5 MB.'},
+        ])
+        to_webp.assert_not_called()
+        self.assertEqual(self.review.pictures.count(), 0)
+        self.assertEqual(review_keys(), before)
+
+    def test_an_undecodable_file_answers_400_and_leaves_no_row_and_no_object(self):
+        """REV-14"""
+        self._seed(1)
+        before_ids, before_keys = self._ids(), review_keys()
+        self.login_as_customer()
+
+        response = self._post([self._png(), SimpleUploadedFile('x.jpg', b'not an image', content_type='image/jpeg')])
+
+        assert_problem(response, 'invalid-image', detail='The review picture is not a valid image.')
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
+    def test_an_unexpected_failure_after_the_upload_leaves_no_row_and_no_object(self):
+        """REV-14: the objects of a request that fails after storing some are deleted at once."""
+        self.login_as_customer()
+        before_ids, before_keys = self._ids(), review_keys()
+
+        def store_then_fail(review, files, saved_names):
+            add_review_pictures(review, files, saved_names)
+            raise RuntimeError('db down')
+
+        with patch('review.views.add_review_pictures', side_effect=store_then_fail):
+            with self.assertLogs('hairmatch.problems', level='ERROR'):
+                response = self._post([self._png(), self._png()])
+
+        assert_problem(response, 'internal-error', detail='An unexpected error occurred.')
+        self.assertEqual(self._ids(), before_ids)
+        self.assertEqual(review_keys(), before_keys)
+
+    def test_the_review_row_is_locked_before_the_pictures_are_counted(self):
+        """REV-15"""
+        self.login_as_customer()
+
+        with CaptureQueriesContext(connection) as queries:
+            self._post([self._png()])
+
+        statements = [query['sql'] for query in queries.captured_queries]
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "review_review"' in sql)
+        count = next(i for i, sql in enumerate(statements) if 'COUNT(' in sql and 'FROM "review_reviewpicture"' in sql)
+        self.assertLess(lock, count)
+
+    def test_a_review_of_another_customer_or_one_that_does_not_exist_answers_404(self):
+        """REV-17"""
+        other = Review.objects.create(rating=3, customer=self.customer2, hairdresser=self.hairdresser)
+        self.login_as_customer()
+        before = review_keys()
+
+        for review_id in (other.id, 999999):
+            with self.subTest(review=review_id):
+                response = self._post([self._png()], url=reverse('review_pictures', args=[review_id]))
+                assert_problem(response, 'not-found', detail='Review not found.')
+        self.assertEqual(ReviewPicture.objects.count(), 0)
+        self.assertEqual(review_keys(), before)
+
+    def test_an_invalid_body_answers_400_even_for_a_review_that_does_not_exist(self):
+        """REV-11, REV-13: what does not depend on the review is checked before the lookup."""
+        self.login_as_customer()
+        url = reverse('review_pictures', args=[999999])
+
+        assert_problem(self._post(None, url=url), 'validation-error', errors=[
+            {'pointer': '#/pictures', 'detail': 'This field is required.'},
+        ])
+
+    def test_without_a_session_answers_401(self):
+        """REV-19"""
+        assert_problem(self._post([self._png()]), 'invalid-session')
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_a_hairdresser_answers_403_customer_required(self):
+        """REV-19"""
+        self.login_as_hairdresser()
+
+        assert_problem(self._post([self._png()]), 'customer-required')
+        self.assertEqual(self.review.pictures.count(), 0)
+
+    def test_other_methods_answer_405_with_the_allow_header(self):
+        self.login_as_customer()
+
+        for method in ('get', 'put', 'delete'):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.url)
+                assert_problem(response, 'method-not-allowed')
+                self.assertEqual(sorted(response['Allow'].split(', ')), ['OPTIONS', 'POST'])
+
+
+class AddReviewPicturesRaceTest(TransactionTestCase):
+    """REV-15: two requests that together exceed the limit cannot both succeed."""
+
+    def test_two_requests_of_three_pictures_leave_the_review_with_three(self):
+        user = User.objects.create(
+            first_name='Race', last_name='Customer', email='race.c@example.com', phone='5592900000030',
+            neighborhood='Centro', city='Manaus', state='AM', address='Rua A', postal_code='69000000',
+            role='customer', cognito_sub='sub-race-customer',
+        )
+        customer = Customer.objects.create(user=user, cpf='1')
+        hairdresser = Hairdresser.objects.create(
+            user=User.objects.create(
+                first_name='Race', last_name='Hairdresser', email='race.h@example.com', phone='5592900000031',
+                neighborhood='Centro', city='Manaus', state='AM', address='Rua A', postal_code='69000000',
+                role='hairdresser', cognito_sub='sub-race-hairdresser',
+            ),
+            cnpj='1',
+        )
+        review = Review.objects.create(rating=5, customer=customer, hairdresser=hairdresser)
+        url = reverse('review_pictures', args=[review.id])
+        token = get_cognito().client.make_access_token(user.cognito_sub)
+        barrier = threading.Barrier(2)
+        statuses, failures = [], []
+
+        def add_three():
+            try:
+                client = APIClient()
+                client.cookies['jwt'] = token
+                files = [make_upload(f'{i}.png', fmt='PNG') for i in range(3)]
+                barrier.wait(timeout=10)
+                statuses.append(client.post(url, data={'pictures': files}).status_code)
+            except Exception as exc:  # reported below: an exception in a thread does not fail the test
+                failures.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=add_three) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=60)
+
+        self.assertEqual(failures, [])
+        self.assertEqual(sorted(statuses), [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
+        self.assertEqual(review.pictures.count(), 3)
+
+
+class RemoveReviewPictureTest(ReviewsTestCase):
+    """DELETE /api/reviews/{id}/pictures/{picture_id} (RT-91)"""
+
+    def setUp(self):
+        super().setUp()
+        self.review = Review.objects.create(rating=5, customer=self.customer, hairdresser=self.hairdresser)
+        self.first, self.second = [
+            ReviewPicture.objects.create(review=self.review, picture=make_upload(fmt='PNG')) for _ in range(2)
+        ]
+        self.url = reverse('review_picture_detail', args=[self.review.id, self.first.id])
+
+    def _assert_nothing_removed(self):
+        self.assertEqual(self.review.pictures.count(), 2)
+        self.assertTrue(default_storage.exists(self.first.picture.name))
+        self.assertTrue(default_storage.exists(self.second.picture.name))
+
+    def test_removing_one_of_two_pictures_deletes_only_that_row_and_object_once_committed(self):
+        """REV-16"""
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertEqual(self._ids(), [self.second.id])
+        self.assertFalse(default_storage.exists(self.first.picture.name))
+        self.assertTrue(default_storage.exists(self.second.picture.name))
+
+    def _ids(self):
+        return list(self.review.pictures.values_list('id', flat=True))
+
+    def test_a_storage_failure_when_deleting_is_logged_and_the_answer_stays_204(self):
+        """REV-27"""
+        self.login_as_customer()
+
+        with patch.object(default_storage, 'delete', side_effect=OSError('bucket unreachable')):
+            with self.assertLogs('hairmatch.storage', level='ERROR') as logs:
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(self._ids(), [self.second.id])
+
+    def test_the_object_stays_in_the_storage_until_the_transaction_commits(self):
+        """REV-28"""
+        self.login_as_customer()
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(callbacks), 1)
+        self.assertEqual(self._ids(), [self.second.id])
+        self.assertTrue(default_storage.exists(self.first.picture.name))
+
+    def test_the_review_of_another_customer_answers_404_and_removes_nothing(self):
+        """REV-17"""
+        self.login_as_customer()
+        other = Review.objects.create(rating=3, customer=self.customer2, hairdresser=self.hairdresser)
+        theirs = ReviewPicture.objects.create(review=other, picture=make_upload(fmt='PNG'))
+
+        for review_id, picture_id in ((other.id, theirs.id), (999999, self.first.id)):
+            with self.subTest(review=review_id):
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(reverse('review_picture_detail', args=[review_id, picture_id]))
+                assert_problem(response, 'not-found', detail='Review not found.')
+        self._assert_nothing_removed()
+        self.assertTrue(default_storage.exists(theirs.picture.name))
+
+    def test_a_picture_of_another_review_or_one_that_does_not_exist_answers_404(self):
+        """REV-18"""
+        self.login_as_customer()
+        sibling = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        elsewhere = ReviewPicture.objects.create(review=sibling, picture=make_upload(fmt='PNG'))
+
+        for picture_id in (elsewhere.id, 999999):
+            with self.subTest(picture=picture_id):
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.delete(reverse('review_picture_detail', args=[self.review.id, picture_id]))
+                assert_problem(response, 'not-found', detail='Picture not found.')
+        self._assert_nothing_removed()
+        self.assertEqual(sibling.pictures.count(), 1)
+        self.assertTrue(default_storage.exists(elsewhere.picture.name))
+
+    def test_without_a_session_answers_401(self):
+        """REV-19"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        assert_problem(response, 'invalid-session')
+        self._assert_nothing_removed()
+
+    def test_a_hairdresser_answers_403_customer_required(self):
+        """REV-19"""
+        self.login_as_hairdresser()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        assert_problem(response, 'customer-required')
+        self._assert_nothing_removed()
+
+    def test_get_answers_405_with_delete_in_the_allow_header(self):
+        self.login_as_customer()
+
+        response = self.client.get(self.url)
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertIn('DELETE', response['Allow'].split(', '))
+
+
+class EditCustomerRatingTest(ReviewsTestCase):
+    """update_customer_rating and delete_customer_rating: the rating and the customer's average change together."""
+
+    def _rate(self, value, customer=None):
+        reservation = Reserve.objects.create(customer=customer or self.customer, service=self.service)
+        return record_customer_rating(self.hairdresser, reservation, value, None)
+
+    def _average(self, user=None):
+        user = user or self.customer_user
+        user.refresh_from_db()
+        return user.rating
+
+    def test_editing_a_rating_stores_the_new_average_and_keeps_the_others(self):
+        """REV-50, REV-53: 5 and 3 average 4.0, and the 3 becoming 4 gives 4.5."""
+        five, three = self._rate(5), self._rate(3)
+        self.assertEqual(self._average(), 4.0)
+
+        updated = update_customer_rating(three, 4, 'Melhorou')
+
+        self.assertEqual(self._average(), 4.5)
+        three.refresh_from_db()
+        self.assertEqual((three.rating, three.comment), (4, 'Melhorou'))
+        self.assertIs(updated, three)
+        five.refresh_from_db()
+        self.assertEqual((five.rating, five.comment), (5, None))
+
+    def test_the_average_has_2_decimals_after_an_edit_and_after_a_delete(self):
+        """REV-50: 5, 4 and 4 with the 5 edited to 3 give 3.67, then each step gives the average of what is left."""
+        five, four_a, four_b = self._rate(5), self._rate(4), self._rate(4)
+
+        update_customer_rating(five, 3, None)
+        self.assertEqual(self._average(), 3.67)
+
+        delete_customer_rating(four_a)
+        self.assertEqual(self._average(), 3.5)
+        update_customer_rating(five, 5, None)
+        delete_customer_rating(four_b)
+        self.assertEqual(self._average(), 5.0)
+
+    def test_deleting_a_rating_stores_the_average_of_the_rest(self):
+        """REV-50, REV-53: 5, 4 and 3, deleting the 5, gives 3.5."""
+        five, four, three = self._rate(5), self._rate(4), self._rate(3)
+
+        delete_customer_rating(five)
+
+        self.assertEqual(self._average(), 3.5)
+        self.assertFalse(CustomerRating.objects.filter(pk=five.pk).exists())
+        self.assertEqual(sorted(CustomerRating.objects.values_list('rating', flat=True)), [3, 4])
+        four.refresh_from_db()
+        self.assertEqual(four.rating, 4)
+
+    def test_deleting_the_only_rating_stores_none(self):
+        """REV-51"""
+        only = self._rate(4)
+        self.assertEqual(self._average(), 4.0)
+
+        delete_customer_rating(only)
+
+        self.assertIsNone(self._average())
+        self.assertFalse(CustomerRating.objects.exists())
+
+    def test_the_ratings_of_other_customers_are_untouched(self):
+        """REV-53"""
+        mine = self._rate(4)
+        self._rate(2, customer=self.customer2)
+
+        update_customer_rating(mine, 5, None)
+        self.assertEqual(self._average(), 5.0)
+        self.assertEqual(self._average(self.customer2_user), 2.0)
+
+        delete_customer_rating(mine)
+        self.assertIsNone(self._average())
+        self.assertEqual(self._average(self.customer2_user), 2.0)
+
+    def _statements(self, queries):
+        return [query['sql'] for query in queries.captured_queries]
+
+    def test_the_customer_row_is_locked_before_the_update(self):
+        """REV-50"""
+        rating = self._rate(4)
+
+        with CaptureQueriesContext(connection) as queries:
+            update_customer_rating(rating, 2, None)
+
+        statements = self._statements(queries)
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql)
+        update = next(i for i, sql in enumerate(statements) if sql.startswith('UPDATE "review_customerrating"'))
+        self.assertLess(lock, update)
+
+    def test_the_customer_row_is_locked_before_the_delete(self):
+        """REV-50"""
+        rating = self._rate(4)
+
+        with CaptureQueriesContext(connection) as queries:
+            delete_customer_rating(rating)
+
+        statements = self._statements(queries)
+        lock = next(i for i, sql in enumerate(statements) if 'FOR UPDATE' in sql and 'FROM "users_user"' in sql)
+        delete = next(i for i, sql in enumerate(statements) if sql.startswith('DELETE FROM "review_customerrating"'))
+        self.assertLess(lock, delete)
+
+
+class CustomerRatingEditingTestCase(ReviewsTestCase):
+    """A rating of 5 by `self.hairdresser` on the customer, and a second one of 3 that the tests edit around."""
+
+    def setUp(self):
+        super().setUp()
+        self.five = record_customer_rating(
+            self.hairdresser, Reserve.objects.create(customer=self.customer, service=self.service), 5, 'Ótima',
+        )
+        self.three = record_customer_rating(
+            self.hairdresser, self.reserve, 3, 'Ok',
+        )
+        self.url = reverse('customer_rating_detail', args=[self.three.id])
+        self.login_as_hairdresser()
+
+    def _average(self):
+        self.customer_user.refresh_from_db()
+        return self.customer_user.rating
+
+    def _login_as_other_hairdresser(self):
+        other = dict(self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999')
+        self.client.post(self.register_url, data=other)
+        activate_account(other['email'])
+        self.client.cookies.clear()
+        self.client.post(
+            self.login_url, data=json.dumps({'email': other['email'], 'password': other['password']}),
+            content_type='application/json',
+        )
+
+    def _assert_untouched(self):
+        self.three.refresh_from_db()
+        self.five.refresh_from_db()
+        self.assertEqual((self.three.rating, self.three.comment), (3, 'Ok'))
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+        self.assertEqual(self._average(), 4.0)
+
+
+class UpdateCustomerRatingTest(CustomerRatingEditingTestCase):
+    """PUT /api/customer-ratings/{id} (RT-92)"""
+
+    def _put(self, body, url=None):
+        if not isinstance(body, str):
+            body = json.dumps(body)
+        return self.client.put(url or self.url, data=body, content_type='application/json')
+
+    def test_the_author_edits_the_rating_and_the_average_follows(self):
+        """REV-40, REV-41, REV-50, REV-53"""
+        response = self._put({'rating': 4, 'comment': '  Pontual  '})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()['data']
+        self.assertEqual(set(data), {'id', 'reservation', 'rating', 'comment', 'created_at'})
+        self.assertEqual(
+            (data['id'], data['reservation'], data['rating'], data['comment']),
+            (self.three.id, self.reserve.id, 4, 'Pontual'),
+        )
+        self.three.refresh_from_db()
+        self.assertEqual((self.three.rating, self.three.comment), (4, 'Pontual'))
+        self.assertIsNotNone(data['created_at'])
+        self.assertEqual(self._average(), 4.5)
+        self.five.refresh_from_db()
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+
+    def test_an_absent_null_or_blank_comment_is_stored_as_null(self):
+        """REV-41"""
+        for body in ({'rating': 4}, {'rating': 4, 'comment': None}, {'rating': 4, 'comment': '   '}):
+            with self.subTest(body=body):
+                CustomerRating.objects.filter(pk=self.three.pk).update(comment='Ok')
+
+                self.assertEqual(self._put(body).status_code, status.HTTP_200_OK)
+
+                self.three.refresh_from_db()
+                self.assertIsNone(self.three.comment)
+
+    def test_a_rating_that_is_not_an_integer_from_1_to_5_answers_400(self):
+        """REV-42"""
+        for value in (None, 4.5, '5', True, 0, 6):
+            with self.subTest(rating=value):
+                body = {} if value is None else {'rating': value}
+                response = self._put(body)
+                self.assertEqual([e['pointer'] for e in assert_problem(response, 'validation-error')['errors']],
+                                 ['#/rating'])
+        self._assert_untouched()
+
+    def test_a_comment_that_is_not_a_string_or_too_long_answers_400(self):
+        """REV-43"""
+        for value, detail in ((7, 'The comment must be a string.'),
+                              ('a' * 501, 'The comment must have at most 500 characters.'),
+                              (' ' + 'a' * 501, 'The comment must have at most 500 characters.')):
+            with self.subTest(comment=str(value)[:10]):
+                assert_problem(self._put({'rating': 4, 'comment': value}), 'validation-error', errors=[
+                    {'pointer': '#/comment', 'detail': detail},
+                ])
+        self._assert_untouched()
+
+    def test_both_invalid_fields_are_reported_together(self):
+        """REV-42, REV-43"""
+        assert_problem(self._put({'rating': 9, 'comment': 7}), 'validation-error', errors=[
+            {'pointer': '#/rating', 'detail': 'The rating must be an integer from 1 to 5.'},
+            {'pointer': '#/comment', 'detail': 'The comment must be a string.'},
+        ])
+
+    def test_a_comment_of_500_characters_after_the_trim_is_accepted(self):
+        """REV-43"""
+        self.assertEqual(self._put({'rating': 4, 'comment': '  ' + 'a' * 500 + '  '}).status_code, 200)
+
+    def test_a_body_that_is_not_a_json_object_answers_400(self):
+        """REV-44"""
+        assert_problem(self._put([]), 'malformed-request', detail='The request body must be a JSON object.')
+        self._assert_untouched()
+
+    def test_an_invalid_body_answers_400_before_the_rating_is_looked_up(self):
+        """REV-45: a rating that does not exist, and the rating of another author, still answer 400."""
+        missing = reverse('customer_rating_detail', args=[999999])
+        assert_problem(self._put({'rating': 9}, url=missing), 'validation-error')
+
+        self._login_as_other_hairdresser()
+        assert_problem(self._put({'rating': 9}), 'validation-error')
+        self._assert_untouched()
+
+    def test_a_rating_that_does_not_exist_answers_404(self):
+        """REV-46"""
+        response = self._put({'rating': 4}, url=reverse('customer_rating_detail', args=[999999]))
+
+        assert_problem(response, 'not-found', detail='Rating not found.')
+
+    def test_another_hairdresser_answers_403_and_changes_nothing(self):
+        """REV-47"""
+        self._login_as_other_hairdresser()
+
+        assert_problem(self._put({'rating': 1, 'comment': 'hijack'}), 'forbidden')
+        self._assert_untouched()
+
+    def test_a_rating_whose_author_deleted_the_account_answers_403_to_everyone(self):
+        """REV-47"""
+        CustomerRating.objects.filter(pk=self.three.pk).update(hairdresser=None)
+
+        assert_problem(self._put({'rating': 1}), 'forbidden')
+        self.three.refresh_from_db()
+        self.assertEqual(self.three.rating, 3)
+        self.assertEqual(self._average(), 4.0)
+
+    def test_without_a_session_answers_401(self):
+        """REV-48"""
+        self.client.cookies.clear()
+
+        assert_problem(self._put({'rating': 1}), 'invalid-session')
+        self._assert_untouched()
+
+    def test_a_customer_session_answers_403_hairdresser_required(self):
+        """REV-48"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self._put({'rating': 1}), 'hairdresser-required')
+        self._assert_untouched()
+
+
+class DeleteCustomerRatingTest(CustomerRatingEditingTestCase):
+    """DELETE /api/customer-ratings/{id} (RT-93)"""
+
+    def test_the_author_deletes_the_rating_and_the_average_is_that_of_the_rest(self):
+        """REV-49, REV-51"""
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b'')
+        self.assertFalse(CustomerRating.objects.filter(pk=self.three.pk).exists())
+        self.assertEqual(self._average(), 5.0)
+        self.five.refresh_from_db()
+        self.assertEqual((self.five.rating, self.five.comment), (5, 'Ótima'))
+
+    def test_deleting_the_only_rating_makes_the_average_null(self):
+        """REV-51"""
+        CustomerRating.objects.filter(pk=self.five.pk).delete()
+
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(CustomerRating.objects.exists())
+        self.assertIsNone(self._average())
+
+    def test_the_reservation_can_be_rated_again_after_the_delete(self):
+        """REV-52"""
+        self.reserve.start_time = timezone.now() - datetime.timedelta(hours=2)
+        self.reserve.save()
+        rate_again = {'reservation': self.reserve.id, 'rating': 2, 'comment': 'De novo'}
+        post = lambda: self.client.post(  # noqa: E731
+            reverse('customer_ratings'), data=json.dumps(rate_again), content_type='application/json',
+        )
+        assert_problem(post(), 'review-exists')
+
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(post().status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self._average(), 3.5)
+
+    def test_a_rating_that_does_not_exist_answers_404(self):
+        """REV-46"""
+        assert_problem(
+            self.client.delete(reverse('customer_rating_detail', args=[999999])),
+            'not-found', detail='Rating not found.',
+        )
+        self.assertEqual(CustomerRating.objects.count(), 2)
+
+    def test_another_hairdresser_answers_403_and_deletes_nothing(self):
+        """REV-47"""
+        self._login_as_other_hairdresser()
+
+        assert_problem(self.client.delete(self.url), 'forbidden')
+        self._assert_untouched()
+
+    def test_a_rating_without_an_author_answers_403_and_deletes_nothing(self):
+        """REV-47"""
+        CustomerRating.objects.filter(pk=self.three.pk).update(hairdresser=None)
+
+        assert_problem(self.client.delete(self.url), 'forbidden')
+        self.assertTrue(CustomerRating.objects.filter(pk=self.three.pk).exists())
+        self.assertEqual(self._average(), 4.0)
+
+    def test_without_a_session_answers_401(self):
+        """REV-48"""
+        self.client.cookies.clear()
+
+        assert_problem(self.client.delete(self.url), 'invalid-session')
+        self._assert_untouched()
+
+    def test_a_customer_session_answers_403_hairdresser_required(self):
+        """REV-48"""
+        self.client.cookies.clear()
+        self.login_as_customer()
+
+        assert_problem(self.client.delete(self.url), 'hairdresser-required')
+        self._assert_untouched()
+
+    def test_get_answers_405_with_put_and_delete_in_the_allow_header(self):
+        response = self.client.get(self.url)
+
+        assert_problem(response, 'method-not-allowed')
+        self.assertEqual(sorted(response['Allow'].split(', ')), ['DELETE', 'OPTIONS', 'PUT'])
+
+
+class CustomerRatingAtomicityTest(TransactionTestCase):
+    """REV-50: the rating and the average are written in one transaction, so a failure in the average undoes the rating."""
+
+    def setUp(self):
+        user = lambda email, phone, role: User.objects.create(
+            first_name='Atomic', last_name=role, email=email, phone=phone, neighborhood='Centro', city='Manaus',
+            state='AM', address='Rua A', postal_code='69000000', role=role, rating=None,
+        )
+        self.customer = Customer.objects.create(user=user('at.c@example.com', '5592900000040', 'customer'), cpf='1')
+        self.hairdresser = Hairdresser.objects.create(user=user('at.h@example.com', '5592900000041', 'hairdresser'), cnpj='1')
+        service = Service.objects.create(name='Corte', price=50, hairdresser=self.hairdresser, duration=30)
+        reservation = Reserve.objects.create(customer=self.customer, service=service)
+        self.rating = record_customer_rating(self.hairdresser, reservation, 4, 'Ok')
+
+    def test_a_failure_while_storing_the_average_undoes_the_edit(self):
+        with patch('review.customer_ratings._store_average', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                update_customer_rating(self.rating, 1, 'Mudou')
+
+        self.rating.refresh_from_db()
+        self.assertEqual((self.rating.rating, self.rating.comment), (4, 'Ok'))
+        self.assertEqual(User.objects.get(pk=self.customer.user_id).rating, 4.0)
+
+    def test_a_failure_while_storing_the_average_undoes_the_delete(self):
+        rating_id = self.rating.pk  # the instance loses its pk when the delete runs
+        with patch('review.customer_ratings._store_average', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                delete_customer_rating(self.rating)
+
+        self.assertTrue(CustomerRating.objects.filter(pk=rating_id).exists())
+        self.assertEqual(User.objects.get(pk=self.customer.user_id).rating, 4.0)

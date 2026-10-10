@@ -25,6 +25,7 @@ export default function RateCustomerScreen() {
     errorModal,
     closeError,
     goToAgenda,
+    isEditing,
   } = useRateCustomer();
 
   const submitDisabled = rating === 0 || isSubmitting;
@@ -32,7 +33,7 @@ export default function RateCustomerScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Avaliar Cliente</Text>
+        <Text style={styles.title}>{isEditing ? 'Editar Avaliação' : 'Avaliar Cliente'}</Text>
         <Text style={styles.customerName}>{customerName}</Text>
         <Text style={styles.subtitle}>
           {reservation ? `${reservation.service.name} · ${formatDate(reservation.start_time)}` : ''}
@@ -71,16 +72,20 @@ export default function RateCustomerScreen() {
             onPress={openConfirm}
             disabled={submitDisabled}
           >
-            <Text style={styles.submitButtonText}>{isSubmitting ? 'Enviando...' : 'Enviar avaliação'}</Text>
+            <Text style={styles.submitButtonText}>{isSubmitting ? 'Enviando...' : isEditing ? 'Salvar alterações' : 'Enviar avaliação'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <ConfirmationModal
         visible={confirmVisible}
-        title="Enviar avaliação?"
-        description="A avaliação não pode ser alterada depois de enviada."
-        confirmText="Enviar"
+        title={isEditing ? 'Salvar alterações?' : 'Enviar avaliação?'}
+        description={
+          isEditing
+            ? 'Salvar as alterações da avaliação?'
+            : 'Você poderá editar ou excluir a avaliação depois.'
+        }
+        confirmText={isEditing ? 'Salvar' : 'Enviar'}
         onConfirm={submit}
         onCancel={closeConfirm}
       />

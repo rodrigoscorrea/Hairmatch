@@ -48,7 +48,7 @@ class AgendaSerializer(serializers.ModelSerializer):
         """The hairdresser's rating of this reservation's customer, or None while it is not rated."""
         # The reverse one-to-one raises an AttributeError subclass when the reservation has no rating.
         rating = getattr(self._reserve(obj), 'customer_rating', None)
-        return {'rating': rating.rating, 'comment': rating.comment} if rating else None
+        return {'id': rating.id, 'rating': rating.rating, 'comment': rating.comment} if rating else None
 
     def get_customer(self, obj: Agenda):
         """

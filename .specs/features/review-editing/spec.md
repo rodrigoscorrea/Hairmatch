@@ -272,67 +272,67 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| REV-01 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-02 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-03 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-04 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-05 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-06 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-07 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-08 | P1: Várias fotos na avaliação | Tasks | Pending |
-| REV-10 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-11 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-12 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-13 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-14 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-15 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-16 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-17 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-18 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-19 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-20 | P1: Adicionar e remover fotos | Tasks | Pending |
-| REV-25 | P1: Nenhum arquivo órfão | Tasks | Pending |
-| REV-26 | P1: Nenhum arquivo órfão | Tasks | Pending |
-| REV-27 | P1: Nenhum arquivo órfão | Tasks | Pending |
-| REV-28 | P1: Nenhum arquivo órfão | Tasks | Pending |
-| REV-30 | P1: Lista de fotos nas respostas | Tasks | Pending |
-| REV-31 | P1: Lista de fotos nas respostas | Tasks | Pending |
-| REV-32 | P1: Lista de fotos nas respostas | Tasks | Pending |
-| REV-33 | P1: Lista de fotos nas respostas | Tasks | Pending |
-| REV-40 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-41 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-42 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-43 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-44 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-45 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-46 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-47 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-48 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-49 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-50 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-51 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-52 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-53 | P1: Cabeleireiro edita e exclui | Tasks | Pending |
-| REV-55 | P1: Agenda e Route Table | Tasks | Pending |
-| REV-56 | P1: Agenda e Route Table | Tasks | Pending |
-| REV-60 | P1: Cliente pelo app | Tasks | Pending |
-| REV-61 | P1: Cliente pelo app | Tasks | Pending |
-| REV-62 | P1: Cliente pelo app | Tasks | Pending |
-| REV-63 | P1: Cliente pelo app | Tasks | Pending |
-| REV-64 | P1: Cliente pelo app | Tasks | Pending |
-| REV-65 | P1: Cliente pelo app | Tasks | Pending |
-| REV-66 | P1: Cliente pelo app | Tasks | Pending |
-| REV-67 | P1: Cliente pelo app | Tasks | Pending |
-| REV-68 | P1: Cliente pelo app | Tasks | Pending |
-| REV-69 | P1: Cliente pelo app | Tasks | Pending |
-| REV-70 | P1: Cliente pelo app | Tasks | Pending |
-| REV-75 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-76 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-77 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-78 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-79 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-80 | P1: Cabeleireiro pelo app | Tasks | Pending |
-| REV-81 | P1: Cabeleireiro pelo app | Tasks | Pending |
+| REV-01 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-02 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-03 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-04 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-05 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-06 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-07 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-08 | P1: Várias fotos na avaliação | Tasks | Implemented |
+| REV-10 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-11 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-12 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-13 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-14 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-15 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-16 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-17 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-18 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-19 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-20 | P1: Adicionar e remover fotos | Tasks | Implemented |
+| REV-25 | P1: Nenhum arquivo órfão | Tasks | Implemented |
+| REV-26 | P1: Nenhum arquivo órfão | Tasks | Implemented |
+| REV-27 | P1: Nenhum arquivo órfão | Tasks | Implemented |
+| REV-28 | P1: Nenhum arquivo órfão | Tasks | Implemented |
+| REV-30 | P1: Lista de fotos nas respostas | Tasks | Implemented |
+| REV-31 | P1: Lista de fotos nas respostas | Tasks | Implemented |
+| REV-32 | P1: Lista de fotos nas respostas | Tasks | Implemented |
+| REV-33 | P1: Lista de fotos nas respostas | Tasks | Implemented |
+| REV-40 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-41 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-42 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-43 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-44 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-45 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-46 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-47 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-48 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-49 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-50 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-51 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-52 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-53 | P1: Cabeleireiro edita e exclui | Tasks | Implemented |
+| REV-55 | P1: Agenda e Route Table | Tasks | Implemented |
+| REV-56 | P1: Agenda e Route Table | Tasks | Implemented |
+| REV-60 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-61 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-62 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-63 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-64 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-65 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-66 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-67 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-68 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-69 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-70 | P1: Cliente pelo app | Tasks | Implemented |
+| REV-75 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-76 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-77 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-78 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-79 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-80 | P1: Cabeleireiro pelo app | Tasks | Implemented |
+| REV-81 | P1: Cabeleireiro pelo app | Tasks | Implemented |
 
 **ID format:** `REV-NN`. As lacunas na numeração separam as histórias.
 
