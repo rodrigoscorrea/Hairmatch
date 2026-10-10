@@ -107,6 +107,106 @@ def _string_field_errors(data, fields):
     return errors
 
 
+PROFILE_REQUIRED_FIELDS = ['first_name', 'last_name', 'phone', 'address', 'neighborhood', 'city', 'state', 'postal_code']
+PROFILE_OPTIONAL_FIELDS = ['complement', 'number']
+RESUME_MAX_LENGTH = 1000
+# ASCII digits only: `\d` and str.isdigit() also take other scripts' digits, which the chatbot lookup would not match.
+_NON_DIGIT = re.compile(r'[^0-9]')
+_UPDATE_PHONE_PATTERN = re.compile(r'55[0-9]{10,11}')
+_STATE_PATTERN = re.compile(r'[A-Za-z]{2}')
+
+
+def _digits(value):
+    return _NON_DIGIT.sub('', value)
+
+
+def _profile_update(user, data):
+    """
+    The fields of a PATCH /api/users/me body that may be stored, validated and normalized, as
+    (user_fields, profile_fields). Fields absent from the body are left alone and unknown ones ignored.
+    Raises Problem('validation-error') with every invalid field, or Problem('email-change-unsupported').
+    """
+    errors, user_fields, profile_fields = [], {}, {}
+
+    for field in PROFILE_REQUIRED_FIELDS + PROFILE_OPTIONAL_FIELDS:
+        if field not in data:
+            continue
+        value = data[field]
+        if field in PROFILE_OPTIONAL_FIELDS and value in (None, ''):
+            user_fields[field] = value
+            continue
+        if value is None:
+            errors.append(body_error(field, 'This field is required.'))
+            continue
+        if not isinstance(value, str):
+            errors.append(body_error(field, 'This field must be a string.'))
+            continue
+        if field in PROFILE_REQUIRED_FIELDS:
+            value = value.strip()
+            if not value:
+                errors.append(body_error(field, 'This field is required.'))
+                continue
+
+        if field == 'phone':
+            value = _digits(value)
+            if value == _digits(user.phone):
+                # The own phone is kept as stored, even in a format sign-up no longer writes (the seed's raw phones).
+                continue
+            if not _UPDATE_PHONE_PATTERN.fullmatch(value):
+                errors.append(body_error(field, 'The phone number must be 55 followed by 10 or 11 digits.'))
+                continue
+        elif field == 'postal_code':
+            value = _digits(value)
+            if len(value) != 8:
+                errors.append(body_error(field, 'The postal code must have 8 digits.'))
+                continue
+        elif field == 'state':
+            if not _STATE_PATTERN.fullmatch(value):
+                errors.append(body_error(field, 'The state must be 2 letters.'))
+                continue
+            value = value.upper()
+        else:
+            limit = User._meta.get_field(field).max_length
+            if len(value) > limit:
+                errors.append(body_error(field, f'This field must have at most {limit} characters.'))
+                continue
+        user_fields[field] = value
+
+    # The document of the other role is ignored: the account has no such profile.
+    document_field = ROLE_DOCUMENT_FIELD.get(user.role)
+    if document_field in data:
+        value = data[document_field]
+        size = 11 if document_field == 'cpf' else 14
+        if not isinstance(value, str):
+            errors.append(body_error(document_field, 'This field must be a string.'))
+        elif len(_digits(value)) != size:
+            errors.append(body_error(document_field, f'The {document_field.upper()} must have {size} digits.'))
+        else:
+            profile_fields[document_field] = _digits(value)
+
+    if user.role == 'hairdresser':
+        if 'resume' in data:
+            resume = data['resume']
+            if not isinstance(resume, str):
+                errors.append(body_error('resume', 'This field must be a string.'))
+            elif len(resume) > RESUME_MAX_LENGTH:
+                errors.append(body_error('resume', f'The resume must have at most {RESUME_MAX_LENGTH} characters.'))
+            else:
+                profile_fields['resume'] = resume
+        if 'experience_years' in data:
+            profile_fields['experience_years'] = data['experience_years']
+
+    if errors:
+        raise validation_problem(errors)
+
+    # The e-mail is the Cognito username, and changing it there needs a verification step.
+    email = data.get('email', user.email)
+    if not isinstance(email, str) or email.lower() != user.email.lower():
+        raise Problem('email-change-unsupported', 'Changing the email is not supported.')
+
+    return user_fields, profile_fields
+
+
 def _delete_account(request, user):
     """
     Deletes the user's rows and then the Cognito user (e-mail accounts), all or nothing, and clears the
@@ -698,48 +798,89 @@ class CurrentUserView(APIView):
             return error
 
         user = session.user
-        data = json_object(request)
-
-        # The e-mail is the Cognito username, and changing it there needs a verification step.
-        if 'email' in data and data['email'] != user.email:
-            return problem_response(request, 'email-change-unsupported', 'Changing the email is not supported.')
+        # The rating is not the user's to set: it is the public score hairdressers are ranked by.
+        # Like the role and the identity fields, _profile_update never reads it from the body.
+        user_fields, profile_fields = _profile_update(user, json_object(request))
 
         # Unlike sign-up, the phone here is the full stored number (55 included), as GET returns it.
-        if 'phone' in data:
-            data['phone'] = ''.join(ch for ch in str(data['phone']) if ch.isdigit())
-            if User.objects.filter(phone=data['phone']).exclude(id=user.id).exists():
+        if 'phone' in user_fields:
+            holders = User.objects.filter(phone=user_fields['phone']).exclude(id=user.id)
+            if holders.exclude(_PENDING_ACCOUNT).exists():
                 return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
+            # As at sign-up, an unconfirmed account never holds the phone of someone else. It is replaced
+            # before the save, outside its transaction, so a failed save leaves it deleted in both places.
+            try:
+                for pending in holders.filter(_PENDING_ACCOUNT):
+                    _replace_pending_account(pending)
+            except CognitoError as err:
+                return _cognito_error_response(request, err)
 
-        # The rating is not the user's to set: it is the public score hairdressers are ranked by.
-        allowed_fields = [
-            'first_name', 'last_name', 'phone', 'email',
-            'address', 'number', 'postal_code',
-            'complement', 'neighborhood', 'city', 'state'
-        ]
-
-        for field in allowed_fields:
-            if field in data:
-                setattr(user, field, data[field])
-
-        user.save()
-
-        if user.role == 'customer':
-            customer = Customer.objects.filter(user=user).first()
-            if customer and 'cpf' in data:
-                customer.cpf = data['cpf']
-                customer.save()
-        elif user.role == 'hairdresser':
-            hairdresser = Hairdresser.objects.filter(user=user).first()
-            if hairdresser:
-                if 'experience_years' in data:
-                    hairdresser.experience_years = data['experience_years']
-                if 'resume' in data:
-                    hairdresser.resume = data['resume']
-                if 'cnpj' in data:
-                    hairdresser.cnpj = data['cnpj']
-                hairdresser.save()
+        for field, value in user_fields.items():
+            setattr(user, field, value)
+        profile_model = {'customer': Customer, 'hairdresser': Hairdresser}.get(user.role)
+        try:
+            # The account and its profile are saved together: a failed profile save undoes the user's.
+            with transaction.atomic():
+                user.save(update_fields=list(user_fields))
+                profile = profile_model.objects.filter(user=user).first() if profile_model else None
+                if profile and profile_fields:
+                    for field, value in profile_fields.items():
+                        setattr(profile, field, value)
+                    profile.save(update_fields=list(profile_fields))
+        except IntegrityError:
+            # A request that ran at the same time took the phone after the check above.
+            return problem_response(request, 'phone-taken', PHONE_TAKEN_DETAIL)
 
         return JsonResponse({'message': 'User updated successfully'}, status=200)
+
+
+PROFILE_PICTURE_MAX_SIZE = 5 * 1024 * 1024
+
+
+class ProfilePictureView(APIView):
+    """The profile picture of the session's user, replaced after sign-up (multipart, field `profile_picture`)."""
+
+    def put(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        picture = request.FILES.get('profile_picture')
+        if picture is None:
+            raise validation_problem([body_error('profile_picture', 'This field is required.')])
+        # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
+        if picture.size > PROFILE_PICTURE_MAX_SIZE:
+            raise validation_problem([body_error('profile_picture', 'The profile picture must have at most 5 MB.')])
+
+        user = session.user
+        old_name = user.profile_picture.name
+        try:
+            with transaction.atomic():
+                user.profile_picture = picture
+                user.save(update_fields=['profile_picture'])
+                # The storage renames on collision, but if the old object is already gone from the bucket while
+                # the row still names it, the new upload takes that same key: deleting it would delete the new file.
+                if old_name and old_name != user.profile_picture.name:
+                    transaction.on_commit(lambda: _delete_stored_files([old_name]))
+        except InvalidImage:
+            # The conversion fails before the upload, so the old picture and its file are untouched.
+            return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+
+        return JsonResponse({'profile_picture': UserSerializer(user).data['profile_picture']}, status=200)
+
+    def delete(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        user = session.user
+        old_name = user.profile_picture.name
+        if old_name:
+            with transaction.atomic():
+                # NULL, as an account that never had a picture: the field would save None as ''.
+                User.objects.filter(pk=user.pk).update(profile_picture=None)
+                transaction.on_commit(lambda: _delete_stored_files([old_name]))
+        return HttpResponse(status=204)
 
 # 3 - The following views are related to the User Info
 # Those views works WITHOUT the presence of cookies in the request

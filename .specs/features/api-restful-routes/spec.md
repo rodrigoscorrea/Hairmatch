@@ -152,6 +152,8 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-85 | `POST /api/auth/confirmation-codes` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
 | RT-86 | `POST /api/customer-ratings` | (nova, feature `customer-rating`, #104) | profissional | - |
 | RT-87 | `GET /api/customers/{id}/ratings` | (nova, feature `customer-rating`, #104) | sessão (cliente dono ou profissional) | - |
+| RT-88 | `PUT /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | multipart, campo `profile_picture`; 200 `{profile_picture}` |
+| RT-89 | `DELETE /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | 204, idempotente |
 
 ---
 
@@ -169,7 +171,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 2. WHEN um cliente chama uma rota da Route Table THEN o backend SHALL aplicar a mesma autenticação, validação, status e corpo de sucesso da rota antiga correspondente, exceto as mudanças da coluna "Mudança além do path". **(RT-51)**
 3. WHEN um cliente chama um path antigo que não está na Route Table como "igual" THEN o backend SHALL responder 404 `not-found` em problem+json. **(RT-52)**
 4. WHEN um cliente chama uma rota da Route Table com um método que ela não lista THEN o backend SHALL responder 405 `method-not-allowed`, com o header `Allow` listando os métodos daquele path. **(RT-53)**
-5. The backend SHALL usar em todo path novo só letras minúsculas, dígitos, `-` e `/`, sem barra final, com coleções no plural e sem verbo. As exceções são os singulares da Route Table (`agenda`, `home`, `search`, `me`, `password`, `session`, `chatbot`, `webhook`) e os controllers de sessão em `/api/auth/` (`login`, `logout`, `refresh`, `google`). **(RT-54)**
+5. The backend SHALL usar em todo path novo só letras minúsculas, dígitos, `-` e `/`, sem barra final, com coleções no plural e sem verbo. As exceções são os singulares da Route Table (`agenda`, `home`, `search`, `me`, `password`, `profile-picture`, `session`, `chatbot`, `webhook`) e os controllers de sessão em `/api/auth/` (`login`, `logout`, `refresh`, `google`). **(RT-54)**
 
 **Independent Test**: a suíte do backend chama cada rota da tabela e confere status e corpo. `GET /api/service/list` responde 404 `not-found`, e `POST /api/services/1` responde 405.
 

@@ -5,11 +5,18 @@ import { styles } from '@/styles/hairdresser/profile/styles/HairdresserSettingsS
 import Icon from '@expo/vector-icons/Feather';
 import ConfirmationModal from "@/components/modals/confirmationModal/ConfirmationModal"; // Adjust path
 import MenuItem from "@/components/modals/MenuItem/MenuItem"; // Adjust path
+import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
+import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
+    const router = useRouter();
+    const deletion = useDeleteAccount("hairdresser");
+    // userInfo is null for a moment after the logout or the account deletion.
+    if (!hairdresser) return null;
     const hairdresser_image = hairdresser.user.profile_picture;
     return (
     <SafeAreaView style={styles.safeArea}>        
@@ -53,6 +60,20 @@ export default function HairdresserSettingsScreen(){
             subtitle="Alterar seu endereço"
             onPress={handleAddressSettings}
           />
+
+          <MenuItem
+            iconName="sliders"
+            title="Preferências"
+            subtitle="Alterar suas preferências"
+            onPress={() => router.push('/(app)/hairdresser/configs/preferencesSetting')}
+          />
+
+          <MenuItem
+            iconName="file-text"
+            title="Resumo"
+            subtitle="Editar a descrição do seu perfil"
+            onPress={() => router.push('/(app)/hairdresser/configs/resumeSetting')}
+          />
           
           <MenuItem
             iconName="heart"
@@ -78,6 +99,13 @@ export default function HairdresserSettingsScreen(){
             subtitle="Fazer logout da conta"
             onPress={handleLogout}
           />
+
+          <MenuItem
+            iconName="trash-2"
+            title="Excluir conta"
+            subtitle="Apagar sua conta permanentemente"
+            onPress={deletion.openDelete}
+          />
         </View>
 
         <View style={styles.spacer} />
@@ -91,6 +119,21 @@ export default function HairdresserSettingsScreen(){
             confirmText="Sim, tenho certeza"
             onConfirm={confirmLogout}
             onCancel={cancelLogout}
+        />
+
+        {/* Account deletion */}
+        <ConfirmationModal
+            visible={deletion.confirmVisible}
+            title="Deseja realmente excluir sua conta?"
+            description={deletion.description}
+            confirmText={deletion.deleting ? "Excluindo..." : "Sim, excluir"}
+            onConfirm={deletion.confirmDelete}
+            onCancel={deletion.cancelDelete}
+        />
+        <ErrorModal
+            visible={deletion.errorModal.visible}
+            onClose={deletion.closeError}
+            message={deletion.errorModal.message}
         />
     </SafeAreaView>
     );

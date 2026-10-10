@@ -116,10 +116,19 @@
 - **Next step**:
   - UAT do T18 (roteiro no `tasks.md`), no web e no Android. Depois, marcar CRT-39 a CRT-52 e CRT-56 a CRT-60 como Verified.
   - Atualizar RF23 em `docs/requisitos-status.md` (ver desvios).
+
+- **Feature**: `account-settings` (issue #120).
+- **Phase / Task**: Execute de T1 a T20 concluído. T21 (UAT no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 28 de 28 critérios de backend, 32 de 33 mutantes mortos e 1 equivalente, 756 testes).
+- **Completed**:
+  - Backend (T1 a T6): `PATCH /api/users/me` valida e normaliza o corpo (ponteiros `#/<campo>`), libera o telefone de conta pendente e responde 409 na corrida de telefone, e grava `User` e perfil numa transação. RT-88 `PUT` e RT-89 `DELETE /api/users/me/profile-picture`. Teste da exclusão de conta Google.
+  - App (T7 a T20): serviço da conta, `clearSession`, guardas de nulo no perfil, `validateAccountUpdate` (só os campos alterados), telas de dados da conta, endereço (CEP com autofill), foto (trocar e remover), exclusão da conta, preferências e resumo do cabeleireiro. `npx tsc --noEmit` com exit 0 e nenhum erro de eslint nos arquivos tocados.
+  - Rodada 1 do Verificador: FAIL por falta de `null` no teste de campo obrigatório (ACC-01, mutante M02). Corrigido, junto com o comentário do guard do PUT e a redação de ACC-20, ACC-24 e dos ponteiros.
+- **In-progress** (file:line): none
+- **Next step**: UAT do T21 (roteiro no `tasks.md`, com os itens extras do `validation.md`: CEP de cidade inteira e troca de foto com edição não salva). Depois, marcar os critérios de app como Verified.
 - **Pendências de features anteriores**:
   - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
 - **Blockers**: none
 - **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits. No checkout principal continuam pendentes, fora deste PR, `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
-- **Branch**: 104-dar-nota-para-o-cliente
+- **Branch**: `104-dar-nota-para-o-cliente` (com a `develop` mesclada, que traz `account-settings`, #120)
