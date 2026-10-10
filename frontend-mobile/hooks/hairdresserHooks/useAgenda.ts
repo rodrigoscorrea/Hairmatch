@@ -1,10 +1,11 @@
 // hooks/hairdresserHooks/useAgenda.ts
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { useAuth } from '@/app/_layout';
 import { listAgendaByHairdresser } from '@/services/agenda.service';
-import type { AgendaEvent, CalendarMode } from '@/models/Agenda.types';
+import type { AgendaEvent, AgendaItemResponse, CalendarMode } from '@/models/Agenda.types';
 
 dayjs.locale('pt-br');
 
@@ -20,28 +21,46 @@ export const useAgenda = () => {
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
 
   // --- Data Fetching ---
-  useEffect(() => {
-    const fetchAgendaEvents = async () => {
-      const hairdresserId = userInfo?.hairdresser?.id;
-      if (!hairdresserId) return;
+  const hairdresserId = userInfo?.hairdresser?.id;
 
-      try {
-        const response = await listAgendaByHairdresser(hairdresserId);
-        const convertedEvents: AgendaEvent[] = response.data.map((ev: any) => {
-          return {
-            id: ev.id,
-            title: `${ev.service.name}`,
-            start: new Date(ev.start_time),
-            end: new Date(ev.end_time),
-          }
-        });
-        setEvents(convertedEvents);
-      } catch (error) {
-        console.log('Error while fetching agenda events', error);
-      }
-    };
-    fetchAgendaEvents();
-  }, [userInfo]); // Re-fetch if the user info changes
+  // Refetched on every focus, so a rating sent from the rate-customer screen shows up when the hairdresser comes back.
+  useFocusEffect(
+    useCallback(() => {
+      const fetchAgendaEvents = async () => {
+        if (!hairdresserId) return;
+
+        try {
+          const response = await listAgendaByHairdresser(hairdresserId);
+          const convertedEvents: AgendaEvent[] = response.data.map((ev: AgendaItemResponse) => {
+            return {
+              id: ev.id,
+              title: `${ev.service.name}`,
+              start: new Date(ev.start_time),
+              end: new Date(ev.end_time),
+              reservationId: ev.reservation_id,
+              customer: ev.customer
+                ? {
+                    id: ev.customer.id,
+                    name: `${ev.customer.user.first_name} ${ev.customer.user.last_name}`,
+                    rating: ev.customer.user.rating,
+                    ratingsCount: ev.customer.ratings_count,
+                  }
+                : null,
+              customerRating: ev.customer_rating,
+            }
+          });
+          setEvents(convertedEvents);
+        } catch (error) {
+          console.log('Error while fetching agenda events', error);
+        }
+      };
+      fetchAgendaEvents();
+    }, [hairdresserId])
+  );
+
+  // Only a convenience: the device clock may differ from the server's, which answers 409 service-not-finished.
+  const canRate = (event: AgendaEvent) =>
+    !!event.reservationId && !event.customerRating && new Date() >= event.end;
 
   // --- Handlers ---
   const handleViewChange = (view: CalendarMode) => setSelectedView(view);
@@ -114,5 +133,6 @@ export const useAgenda = () => {
     onEventPress,
     closeModal,
     confirmCancelEvent,
+    canRate,
   };
 };

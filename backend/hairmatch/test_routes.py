@@ -8,7 +8,8 @@ from django.urls.resolvers import URLPattern, URLResolver
 import hairmatch.urls
 
 # The Route Table of .specs/features/api-restful-routes/spec.md (RT-01 to RT-49, plus RT-84 and RT-85 from email-confirmation
-# and RT-88 and RT-89 from account-settings), one (method, route) pair per row.
+# and RT-86 and RT-87 from customer-rating, and RT-88 and RT-89 from account-settings), one (method, route)
+# pair per row.
 # `{id}` is an integer segment and `{cep}` is free text.
 ROUTE_TABLE = {
     ('POST', 'users'),                                            # RT-01
@@ -61,6 +62,8 @@ ROUTE_TABLE = {
     ('POST', 'chatbot/webhook'),                                  # RT-49
     ('POST', 'auth/email-confirmations'),                         # RT-84
     ('POST', 'auth/confirmation-codes'),                          # RT-85
+    ('POST', 'customer-ratings'),                                 # RT-86
+    ('GET', 'customers/{id}/ratings'),                            # RT-87
     ('PUT', 'users/me/profile-picture'),                          # RT-88
     ('DELETE', 'users/me/profile-picture'),                       # RT-89
 }

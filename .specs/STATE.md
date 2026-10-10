@@ -85,7 +85,37 @@
 - **Date**: 2026-10-04
 - **Status**: active
 
+### AD-010
+> O número AD-009 está reservado para a feature `external-appointment` (#113), que o registra na T12 dela.
+- **Decision**: `User.rating` é um valor **derivado**: a média aritmética das avaliações que o usuário recebeu, arredondada para 2 casas, ou `null` enquanto ele não recebeu nenhuma.
+  - O campo é `FloatField(null=True, default=5)`.
+  - A média é recalculada só no ponto de escrita da avaliação, na mesma transação do insert, com a linha `User` do avaliado travada por `select_for_update`.
+  - Nenhum endpoint de edição de perfil grava `rating`.
+  - Para o cliente, as avaliações são `CustomerRating` (feature `customer-rating`, #104), e o cliente nasce com `null`. O cabeleireiro mantém o default 5 até a feature que recalcular a nota dele a partir das `Review`, que deve seguir o mesmo padrão.
+- **Reason**: O inteiro truncava a média, e um `Decimal` sai como string no `JsonResponse` e no DRF, o que quebra o `toFixed` do app. Sem o lock, duas avaliações simultâneas do mesmo usuário fazem a última escrita descartar uma nota. O 5 fixo dos clientes era fictício: nenhuma avaliação existia.
+- **Trade-off**:
+  - Avaliações do mesmo usuário são serializadas pelo lock.
+  - A média gravada pode divergir das linhas se alguém escrever avaliações fora de `record_customer_rating` (seed, admin).
+  - Cliente e cabeleireiro dividem um campo com semânticas diferentes até a nota do cabeleireiro também ser derivada.
+- **Scope**: `backend/users` (modelo e cadastro), `backend/review` e toda tela do `frontend-mobile` que mostra a nota de cliente. Toda avaliação nova que afete `User.rating` passa por uma função de domínio com o mesmo padrão.
+- **Date**: 2026-10-09
+- **Status**: active
+
 ## Handoff
+
+- **Feature**: `customer-rating` (issue #104, RF23).
+- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na primeira rodada (`validation.md`: 41 de 41 critérios de backend, 21 de 21 mutantes mortos, 777 testes).
+- **Completed**:
+  - Backend (T1 a T7): `User.rating` em `FloatField`, com `null` para cliente sem avaliação; modelo `CustomerRating`; `record_customer_rating` com lock e savepoint (AD-010); slug `service-not-finished`; RT-86 `POST /api/customer-ratings`; RT-87 `GET /api/customers/{id}/ratings`; agenda com `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating`. Suíte: 777 testes OK, `makemigrations --check` limpo.
+  - App (T8 a T16): types, service e `formatCustomerRating`; slug no `api-problem.ts`; `StarRating` compartilhado; `useAgenda` com `useFocusEffect` e `canRate`; modal da agenda com o cliente, a nota, "Sua avaliação: N★" e "Avaliar cliente"; tela `hairdresser/rate-customer/[reservationId]`; média no perfil do cliente; tela "Avaliações recebidas". `npx tsc --noEmit` com exit 0, e nenhum erro novo de `eslint` nos arquivos tocados.
+- **Desvios registrados**:
+  - Design: a tela de avaliação vai para a agenda com `router.push` em vez de `router.back()` (`useRateCustomer.ts`, `SPEC_DEVIATION`). O voltar das abas pode cair em outra aba, e um refresh do web não tem histórico.
+  - O exemplo do CRT-56 passou a ser "4.3 (3)", o formato do perfil (CRT-50) que a função compartilhada mostra.
+  - `docs/requisitos-status.md` não está versionado e não existe no worktree. A marcação de RF23 como ✅ e as observações de RF29/RF30 ficam para o usuário fazer no checkout principal, ou para autorizar o versionamento do arquivo.
+- **In-progress** (file:line): none
+- **Next step**:
+  - UAT do T18 (roteiro no `tasks.md`), no web e no Android. Depois, marcar CRT-39 a CRT-52 e CRT-56 a CRT-60 como Verified.
+  - Atualizar RF23 em `docs/requisitos-status.md` (ver desvios).
 
 - **Feature**: `account-settings` (issue #120).
 - **Phase / Task**: Execute de T1 a T20 concluído. T21 (UAT no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 28 de 28 critérios de backend, 32 de 33 mutantes mortos e 1 equivalente, 756 testes).
@@ -100,5 +130,5 @@
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits.
-- **Branch**: `120-editar-dados-da-conta-e-excluir-conta`
+- **Uncommitted files**: `frontend-mobile/eslint.config.js` é do usuário e fica fora dos commits. No checkout principal continuam pendentes, fora deste PR, `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` e `docs/`.
+- **Branch**: `104-dar-nota-para-o-cliente` (com a `develop` mesclada, que traz `account-settings`, #120)

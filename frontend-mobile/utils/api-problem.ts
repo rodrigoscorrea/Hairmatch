@@ -38,6 +38,7 @@ export type ProblemSlug =
   | 'review-exists'
   | 'slot-unavailable'
   | 'customer-schedule-conflict'
+  | 'service-not-finished'
   | 'unsupported-media-type'
   | 'too-many-requests'
   | 'internal-error'
@@ -99,6 +100,7 @@ export const PROBLEM_MESSAGES: Record<ProblemSlug, string> = {
   'review-exists': 'Esta reserva já foi avaliada.',
   'slot-unavailable': 'O profissional não está disponível neste horário.',
   'customer-schedule-conflict': 'Você já tem outra reserva agendada para o mesmo horário.',
+  'service-not-finished': 'O atendimento ainda não terminou.',
   'unsupported-media-type': GENERIC_MESSAGE,
   'too-many-requests': 'Muitas tentativas. Aguarde e tente novamente.',
   'internal-error': 'Ocorreu um erro no servidor. Tente novamente mais tarde.',

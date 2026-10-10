@@ -2,6 +2,7 @@ import math
 
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 
@@ -15,15 +16,18 @@ from hairmatch.problems import (
     validation_problem,
 )
 from reserve.models import Reserve
-from users.authentication import authenticated_customer, forbidden
-from users.models import Hairdresser
+from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
+from users.models import Customer, Hairdresser
 
-from .models import Review
-from .serializers import ReviewSerializer
+from .customer_ratings import ALREADY_RATED_DETAIL, record_customer_rating, service_end
+from .models import CustomerRating, Review
+from .serializers import CustomerRatingCreatedSerializer, CustomerRatingSerializer, ReviewSerializer
 
 RATING_DETAIL = 'This field must be a number.'
 RATING_RANGE_DETAIL = 'The rating must be between 1 and 5.'
 MIN_RATING, MAX_RATING = 1, 5
+MAX_COMMENT_LENGTH = 500
+REQUIRED_DETAIL = 'This field is required.'
 
 
 def _is_id(value):
@@ -165,3 +169,96 @@ class RemoveReview(APIView):
 
 class ReviewDetail(UpdateReview, RemoveReview):
     """`/api/reviews/{id}`: PUT updates and DELETE removes the review of the logged customer."""
+
+
+def _customer_rating_errors(data):
+    """The `errors` items of a POST /api/customer-ratings body, one per invalid field."""
+    errors = []
+    reservation = data.get('reservation')
+    if reservation is None or reservation == '':
+        errors.append(body_error('reservation', REQUIRED_DETAIL))
+    elif not _is_id(reservation):
+        errors.append(body_error('reservation', 'This field must be an integer.'))
+
+    # A JSON integer only: the app sends whole stars, so 4.5, "5" and true are refused.
+    rating = data.get('rating')
+    if rating is None:
+        errors.append(body_error('rating', REQUIRED_DETAIL))
+    elif isinstance(rating, bool) or not isinstance(rating, int) or not MIN_RATING <= rating <= MAX_RATING:
+        errors.append(body_error('rating', 'The rating must be an integer from 1 to 5.'))
+
+    comment = data.get('comment')
+    if comment is not None and not isinstance(comment, str):
+        errors.append(body_error('comment', 'The comment must be a string.'))
+    elif comment is not None and len(comment.strip()) > MAX_COMMENT_LENGTH:
+        errors.append(body_error('comment', f'The comment must have at most {MAX_COMMENT_LENGTH} characters.'))
+    return errors
+
+
+def _is_rated(reservation):
+    return CustomerRating.objects.filter(reservation=reservation).exists()
+
+
+class CustomerRatingCollection(APIView):
+    """`/api/customer-ratings`: POST rates the customer of a reservation whose service has ended."""
+
+    def post(self, request):
+        session, hairdresser, error = authenticated_hairdresser(request)
+        if error:
+            return error
+
+        # The whole body is checked before the reservation is looked up: invalid input is always a 400.
+        data = json_object(request)
+        errors = _customer_rating_errors(data)
+        if errors:
+            raise validation_problem(errors)
+        comment = (data.get('comment') or '').strip() or None
+
+        try:
+            reservation = Reserve.objects.select_related('service', 'customer__user').get(id=data['reservation'])
+        except Reserve.DoesNotExist:
+            return problem_response(request, 'not-found', 'Reservation not found.')
+        if reservation.service.hairdresser_id != hairdresser.id:
+            return forbidden(request)
+        if _is_rated(reservation):
+            return problem_response(request, 'review-exists', ALREADY_RATED_DETAIL)
+        end = service_end(reservation)
+        if end is None or timezone.now() < end:
+            return problem_response(
+                request, 'service-not-finished', 'The service of this reservation has not finished yet.'
+            )
+
+        customer_rating = record_customer_rating(hairdresser, reservation, data['rating'], comment)
+        return JsonResponse({'data': CustomerRatingCreatedSerializer(customer_rating).data}, status=201)
+
+
+class CustomerRatingsByCustomer(APIView):
+    """
+    `/api/customers/{id}/ratings`: the customer's average and count, which any hairdresser may see, and the
+    ratings with their comments: all of them for the customer, only their own for a hairdresser.
+    """
+
+    def get(self, request, customer_id):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        try:
+            customer = Customer.objects.select_related('user').get(id=customer_id)
+        except Customer.DoesNotExist:
+            return problem_response(request, 'not-found', 'Customer not found.')
+
+        ratings = CustomerRating.objects.filter(customer=customer)
+        count = ratings.count()
+        if customer.user_id != session.user.id:
+            hairdresser = Hairdresser.objects.filter(user=session.user).first()
+            if hairdresser is None:
+                return forbidden(request)
+            ratings = ratings.filter(hairdresser=hairdresser)
+
+        ratings = ratings.select_related('reservation__service', 'hairdresser__user').order_by('-created_at', '-id')
+        return JsonResponse({'data': {
+            'average': customer.user.rating,
+            'count': count,
+            'ratings': CustomerRatingSerializer(ratings, many=True).data,
+        }}, status=200)

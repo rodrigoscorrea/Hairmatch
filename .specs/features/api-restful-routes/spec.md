@@ -150,6 +150,8 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-49 | `POST /api/chatbot/webhook` | `POST /api/chatbot/test` | nenhuma (como hoje) | - |
 | RT-84 | `POST /api/auth/email-confirmations` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
 | RT-85 | `POST /api/auth/confirmation-codes` | (nova, feature `email-confirmation`, #141) | nenhuma (throttle por IP e por e-mail) | - |
+| RT-86 | `POST /api/customer-ratings` | (nova, feature `customer-rating`, #104) | profissional | - |
+| RT-87 | `GET /api/customers/{id}/ratings` | (nova, feature `customer-rating`, #104) | sessão (cliente dono ou profissional) | - |
 | RT-88 | `PUT /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | multipart, campo `profile_picture`; 200 `{profile_picture}` |
 | RT-89 | `DELETE /api/users/me/profile-picture` | (nova, feature `account-settings`, #120) | sessão | 204, idempotente |
 

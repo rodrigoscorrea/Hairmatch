@@ -48,8 +48,10 @@ from django.core.cache import cache
 from django.db import IntegrityError, connection
 from .views import RegisterView
 from .cep_lookup import lookup_cep, InvalidCep, CepNotFound, CepServiceUnavailable
+import importlib
 import os
 import tempfile
+from django.apps import apps as django_apps
 from io import BytesIO, StringIO
 from PIL import Image
 from django.core.files.storage import default_storage
@@ -5768,12 +5770,13 @@ class RatingIsNotUserSettableTest(TestCase):
         self.client = APIClient()
 
     def test_sign_up_by_email_ignores_the_rating(self):
-        for payload in (_register_payload(rating=1), _hairdresser_payload(rating=32767)):
+        # CRT-21: a customer starts unrated (None) and a hairdresser with the default 5, whatever the body says.
+        for payload, expected in ((_register_payload(rating=1), None), (_hairdresser_payload(rating=32767), 5)):
             with self.subTest(role=payload['role']):
                 response = self.client.post(reverse('register'), data=payload)
 
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertEqual(User.objects.get(email=payload['email']).rating, 5)
+                self.assertEqual(User.objects.get(email=payload['email']).rating, expected)
 
     def test_sign_up_with_google_ignores_the_rating(self):
         payload = {
@@ -5784,7 +5787,8 @@ class RatingIsNotUserSettableTest(TestCase):
         response = self.client.post(reverse('register'), data=payload)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.get(email='ana@gmail.com').rating, 5)
+        # CRT-21: the Google sign-up of a customer starts unrated too.
+        self.assertIsNone(User.objects.get(email='ana@gmail.com').rating)
 
     def test_patch_ignores_the_rating_and_updates_the_other_fields(self):
         self.client.post(reverse('register'), data=_hairdresser_payload())
@@ -5804,6 +5808,82 @@ class RatingIsNotUserSettableTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user = User.objects.get(email='cabelo@example.com')
         self.assertEqual(user.rating, 5)
+        self.assertEqual(user.first_name, 'Trocado')
+
+
+class CustomerRatingFieldTest(TestCase):
+    """CRT-22, CRT-23 and CRT-27: `User.rating` is a float, and `None` means a customer with no ratings."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def _login_new_customer(self):
+        self.client.post(reverse('register'), data=_register_payload())
+        activate_account('nova@example.com')
+        self.client.post(
+            reverse('login'),
+            data=json.dumps({'email': 'nova@example.com', 'password': 'Senha123'}),
+            content_type='application/json',
+        )
+        return User.objects.get(email='nova@example.com')
+
+    def _run_data_migration(self):
+        migration = importlib.import_module('users.migrations.0013_null_customer_ratings')
+        migration.null_customer_ratings(django_apps, None)
+
+    def test_the_data_migration_nulls_every_customer_by_the_profile(self):
+        lower = _create_plain_user(email='lower@example.com', phone='5592900000001', role='customer', rating=5)
+        upper = _create_plain_user(email='upper@example.com', phone='5592900000002', role='CUSTOMER', rating=5)
+        for user in (lower, upper):
+            Customer.objects.create(user=user, cpf='12345678900')
+
+        self._run_data_migration()
+
+        lower.refresh_from_db()
+        upper.refresh_from_db()
+        self.assertIsNone(lower.rating)
+        self.assertIsNone(upper.rating)
+
+    def test_the_data_migration_keeps_the_hairdresser_rating(self):
+        user = _create_plain_user(email='salao@example.com', role='hairdresser', rating=4.5)
+        Hairdresser.objects.create(user=user, cnpj='12345678000199')
+
+        self._run_data_migration()
+
+        user.refresh_from_db()
+        self.assertEqual(user.rating, 4.5)
+
+    def test_me_answers_null_for_a_new_customer(self):
+        self._login_new_customer()
+
+        response = self.client.get(reverse('current_user'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('rating', response.json()['customer']['user'])
+        self.assertIsNone(response.json()['customer']['user']['rating'])
+
+    def test_me_answers_the_stored_average_as_a_json_number(self):
+        user = self._login_new_customer()
+        User.objects.filter(pk=user.pk).update(rating=4.33)
+
+        response = self.client.get(reverse('current_user'))
+
+        rating = response.json()['customer']['user']['rating']
+        self.assertIsInstance(rating, float)
+        self.assertEqual(rating, 4.33)
+
+    def test_patch_ignores_the_rating_of_an_unrated_customer(self):
+        self._login_new_customer()
+
+        response = self.client.patch(
+            reverse('current_user'),
+            data=json.dumps({'rating': 1, 'first_name': 'Trocado'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(email='nova@example.com')
+        self.assertIsNone(user.rating)
         self.assertEqual(user.first_name, 'Trocado')
 
 

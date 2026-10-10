@@ -10,6 +10,8 @@ import { formatTime } from '../../../utils/time-formater';
 import { styles, calendarTheme } from '@/styles/hairdresser/agenda/AgendaManagerStyles'; // Adjust path
 import { useAgenda } from '@/hooks/hairdresserHooks/useAgenda'; // Our new hook
 import type { AgendaEvent, AgendaViewProps } from '@/models/Agenda.types';
+import { formatCustomerRating } from '@/utils/rating';
+import { router } from 'expo-router';
 import 'dayjs/locale/pt-br';
 
 // The Agenda list view can be a separate component for cleanliness
@@ -54,7 +56,17 @@ export default function AgendaManagerScreen() {
     onEventPress,
     closeModal,
     confirmCancelEvent,
+    canRate,
   } = useAgenda();
+
+  const goToRateCustomer = (event: AgendaEvent) => {
+    // The modal is closed first: it would stay over the rate screen, and the agenda refetches on the way back.
+    closeModal();
+    router.push({
+      pathname: '/(app)/hairdresser/rate-customer/[reservationId]',
+      params: { reservationId: String(event.reservationId), customerName: event.customer?.name ?? '' },
+    });
+  };
 
   const calendarViews = [
     { label: 'Agenda', value: 'agenda' },
@@ -135,7 +147,26 @@ export default function AgendaManagerScreen() {
                 <Text>Serviço agendado: {selectedEvent?.title}</Text> 
                 <Text>Data: {selectedEvent ? formatDate(selectedEvent.start.toISOString()) : ""}</Text>
                 <Text>Horário: {selectedEvent ? formatTime(selectedEvent.start.toISOString()) : ""}</Text>
+                {selectedEvent?.customer && (
+                  <>
+                    <Text>Cliente: {selectedEvent.customer.name}</Text>
+                    <Text>
+                      Nota do cliente: {formatCustomerRating(selectedEvent.customer.rating, selectedEvent.customer.ratingsCount)}
+                    </Text>
+                  </>
+                )}
+                {selectedEvent?.customerRating && (
+                  <Text>Sua avaliação: {selectedEvent.customerRating.rating}★</Text>
+                )}
             </View>
+            {selectedEvent && canRate(selectedEvent) && (
+              <TouchableOpacity
+                style={[styles.modalAcceptButton, { flex: 0, width: '100%', marginBottom: 10 }]}
+                onPress={() => goToRateCustomer(selectedEvent)}
+              >
+                <Text style={styles.modalAcceptButtonText}>Avaliar cliente</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.modalButtonGroup}>
                 <TouchableOpacity style={styles.modalBackButton} onPress={closeModal}>
                     <Text style={styles.modalBackButtonText}>Voltar</Text>
