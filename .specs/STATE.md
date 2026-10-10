@@ -111,7 +111,71 @@
 - **Date**: 2026-10-09
 - **Status**: active
 
+### AD-013
+> Os números AD-011 e AD-012, e as rotas RT-90 a RT-93, estão reservados para a feature `review-editing` (#105), cuja spec está em andamento.
+- **Decision**: Uma coleção de imagens de um dono é uma tabela filha, com FK para o dono e um `WebPImageField` por linha, e nunca um array de chaves em `JSONField`. A primeira é `GalleryPhoto` (feature `hairdresser-gallery`, #118):
+  - a FK é para `Hairdresser`, com `CASCADE`;
+  - a chave é `hairdresser/gallery/<hairdresser_id>/<uuid4 hex>.webp`;
+  - o limite é de 30 fotos por cabeleireiro.
+
+  O limite por dono é garantido numa transação, com `select_for_update` na linha do dono antes de contar e inserir, como no AD-010. Os arquivos saem do bucket em `transaction.on_commit`: na remoção da linha e na exclusão da conta (`_delete_account_rows`), porque o `CASCADE` não apaga arquivo.
+- **Reason**:
+  - O `WebPImageField` é um campo de modelo. Um array JSONB obrigaria a chamar `to_webp` e o storage à mão, fora do ponto único do AD-003.
+  - Com vários uploads em paralelo, o insert por linha não perde escrita, e o array reescrito perderia.
+  - A remoção é por PK, e a posse é um filtro de FK.
+  - Na escala de dezenas de imagens, ler uma tabela indexada custa o mesmo que ler o JSONB, e a coleção não pesa nas listagens do dono.
+- **Trade-off**:
+  - Os uploads do mesmo dono ficam serializados pelo lock, que dura a conversão e o upload de uma foto.
+  - Toda nova coleção de mídia precisa de uma migração.
+  - O apagamento do arquivo depois do commit é best-effort: a falha só fica no log (`_delete_stored_files`).
+- **Scope**: `backend/users` (modelo, views da galeria, exclusão de conta e seed). Vale para qualquer coleção de mídia futura (fotos de serviço, por exemplo).
+- **Date**: 2026-10-10
+- **Status**: active
+
 ## Handoff
+
+- **Feature**: `review-editing` (issue #105, RF29 e RF30).
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (REV-01 a REV-81, 61 critérios), `design.md` e `tasks.md` (T1 a T25, em 5 fases) foram validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Os 11 avisos são `Tests: none` das tasks de app e de documentação, que a matriz prevê. O Execute não começou e aguarda a aprovação das tasks.
+- **Completed**:
+  - Decisões do usuário:
+    - fotos numa tabela, e não em JSONB, com chave `reviews/<review_id>/<uuid>.webp`;
+    - até 5 fotos e 5 MB por foto;
+    - nenhuma migração de dados, porque não há fotos de avaliação em nenhum ambiente;
+    - a metade do cabeleireiro entra, desfazendo a imutabilidade da #104.
+  - Rotas planejadas: RT-90 a RT-93. Decisões planejadas: AD-011 e AD-012, que entram na T15. Os dois números já estão reservados pela nota do AD-013.
+  - A `develop` foi atualizada até `2948100`. As cópias antigas de `.specs/` que estavam no checkout foram para o stash `stale specs before pulling #104/#113/#120 (review-editing planning)`.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Aprovar as tasks.
+  2. Na branch `105-editar-e-excluir-avaliacao`, já criada, confirmar a baseline de 835 testes executados e começar pelo T1.
+
+  São 25 tarefas, então o Execute oferece sub-agentes.
+- **Conflito com a #118**: a T1 renomeia `_delete_stored_files` para `hairmatch.storage.delete_stored_files`. A feature que entrar depois ajusta a referência.
+- **Operacional, antes do deploy**: conferir o limite de corpo do proxy de produção. Um create com 5 fotos pode chegar a cerca de 25 MB.
+
+- **Feature**: `hairdresser-gallery` (issue #118, RF31 e RF32).
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (GAL-01 a GAL-51), `context.md`, `design.md` e `tasks.md` (T1 a T18) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. O Execute não começou e aguarda a aprovação das tasks.
+- **Completed**:
+  - Decisões do usuário:
+    - a chave `hairdresser/gallery/<hairdresser_id>/<uuid>.webp`;
+    - o limite de 30 fotos;
+    - uma tela própria de gestão;
+    - a seleção múltipla com uma requisição por foto.
+  - AD-013: tabela própria, e não JSONB.
+  - Route Table do `api-restful-routes`: RT-94 a RT-96.
+  - Catálogo do `api-problem-details`: o slug `gallery-full`.
+- **Coordenação com `review-editing` (#105)**, especificada em paralelo:
+  - ela reserva AD-011, AD-012 e RT-90 a RT-93, por isso a galeria usa AD-013 e RT-94 a RT-96;
+  - o AD-011 dela (`ReviewPicture` em tabela) repete a regra geral do AD-013, e é preciso decidir qual dos dois fica como canônico;
+  - a #105 move `_delete_stored_files` para `hairmatch.storage`, e quem mesclar depois adapta o T6 e o T7 (risco no `design.md`).
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Aprovar as tasks.
+  2. Criar a branch `118-galeria-de-fotos-do-cabeleireiro` a partir de `develop`.
+  3. Confirmar a baseline de 837 testes (`2948100`).
+  4. Começar pelo T1.
+
+  São 18 tarefas em 3 lotes, então o Execute oferece sub-agentes.
 
 - **Feature**: `external-appointment` (issue #113).
 - **Phase / Task**: Execute de T1 a T12 concluído. O Verificador deu FAIL (`validation.md`, ainda não commitado), e as quatro correções já entraram. Falta rodar o Verificador de novo. T13 (UAT manual no web e no Android) está pendente com o usuário.
