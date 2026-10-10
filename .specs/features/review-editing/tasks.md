@@ -780,11 +780,11 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Com `ratingId` válido, o formulário abre preenchido (REV-76).
-- [ ] Com `ratingId` fora da lista, ou com a busca falhando, aparece o erro, e fechar leva para a agenda (REV-77).
-- [ ] Salvar chama o PUT e volta para a agenda (REV-78). Uma falha mantém o formulário e mostra o `problemMessage` (REV-81).
-- [ ] O reset ao trocar de reserva também zera o modo edição.
-- [ ] Gate App passa.
+- [x] Com `ratingId` válido, o formulário abre preenchido (REV-76).
+- [x] Com `ratingId` fora da lista, ou com a busca falhando, aparece o erro, e fechar leva para a agenda (REV-77).
+- [x] Salvar chama o PUT e volta para a agenda (REV-78). Uma falha mantém o formulário e mostra o `problemMessage` (REV-81).
+- [x] O reset ao trocar de reserva também zera o modo edição.
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app

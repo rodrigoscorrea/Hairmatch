@@ -328,7 +328,7 @@ O usuário também pediu que uma avaliação aceite uma ou mais fotos, gravadas 
 | REV-70 | P1: Cliente pelo app | Tasks | Implemented |
 | REV-75 | P1: Cabeleireiro pelo app | Tasks | Implemented |
 | REV-76 | P1: Cabeleireiro pelo app | Tasks | Implemented |
-| REV-77 | P1: Cabeleireiro pelo app | Tasks | Pending |
+| REV-77 | P1: Cabeleireiro pelo app | Tasks | Implemented |
 | REV-78 | P1: Cabeleireiro pelo app | Tasks | Implemented |
 | REV-79 | P1: Cabeleireiro pelo app | Tasks | Pending |
 | REV-80 | P1: Cabeleireiro pelo app | Tasks | Implemented |
