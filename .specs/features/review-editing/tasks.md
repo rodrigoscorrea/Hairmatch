@@ -809,9 +809,9 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: NONE
 
 **Done when**:
-- [ ] Título, botão e confirmação mudam conforme o modo (REV-76, REV-78).
-- [ ] O texto "não pode ser alterada" sumiu do app (REV-79).
-- [ ] Gate App passa.
+- [x] Título, botão e confirmação mudam conforme o modo (REV-76, REV-78).
+- [x] O texto "não pode ser alterada" sumiu do app (REV-79).
+- [x] Gate App passa.
 
 **Tests**: none
 **Gate**: app
