@@ -1,6 +1,6 @@
 // hooks/hairdresserHooks/useExternalAppointmentForm.ts
 import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import dayjs from 'dayjs';
 import { useAuth } from '@/app/_layout';
@@ -132,7 +132,12 @@ export const useExternalAppointmentForm = () => {
     setIsSaving(true);
     try {
       await createAgendaApointment(body);
-      Alert.alert('Sucesso!', 'Atendimento externo registrado.');
+      // Alert.alert does nothing on react-native-web, so the web shows the browser's own alert.
+      if (Platform.OS === 'web') {
+        window.alert('Sucesso!\nAtendimento externo registrado.');
+      } else {
+        Alert.alert('Sucesso!', 'Atendimento externo registrado.');
+      }
       router.back();
     } catch (error) {
       setErrorModal({
