@@ -400,8 +400,8 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] O slug está na união e no `Record`, e o `tsc` acusaria se faltasse um dos dois.
-- [ ] O gate App passa sem erro novo.
+- [x] O slug está na união e no `Record`, e o `tsc` acusaria se faltasse um dos dois (`Record<ProblemSlug, string>` exige a chave e recusa chave fora da união).
+- [x] O gate App passa sem erro novo (`tsc` exit 0; `eslint` com os mesmos 3 warnings de antes e 0 erro).
 
 **Tests**: none
 **Gate**: app

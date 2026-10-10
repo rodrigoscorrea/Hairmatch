@@ -329,7 +329,7 @@ A issue #104 pede quatro coisas:
 | CRT-45 | P1: Avaliar pelo app, AC7 | Tasks | Pending |
 | CRT-46 | P1: Avaliar pelo app, AC8 | Tasks | Pending |
 | CRT-47 | P1: Avaliar pelo app, AC9 | Tasks | Pending |
-| CRT-48 | P1: Avaliar pelo app, AC10 | Tasks | Pending |
+| CRT-48 | P1: Avaliar pelo app, AC10 | Tasks | Implementing |
 | CRT-49 | P1: Avaliar pelo app, AC11 | Tasks | Pending |
 | CRT-50 | P1: Perfil, AC1 | Tasks | Implementing |
 | CRT-51 | P1: Perfil, AC2 | Tasks | Implementing |
