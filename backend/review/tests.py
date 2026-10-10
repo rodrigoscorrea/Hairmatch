@@ -1242,6 +1242,24 @@ class CreateCustomerRatingTest(ReviewsTestCase):
 
         self.assertEqual(self._pointers(response), ['#/rating'])
 
+    def test_a_reservation_rebooked_after_a_rated_one_was_cancelled_can_be_rated(self):
+        """Edge case of CRT-24: the cancelled reservation's rating keeps no hold on the slot."""
+        self.assertEqual(self._post(self._body(rating=5)).status_code, status.HTTP_201_CREATED)
+        cancelled = self.client.delete(reverse('reservation_detail', args=[self.reserve.id]))
+        self.assertEqual(cancelled.status_code, status.HTTP_204_NO_CONTENT)
+        rebooked = Reserve.objects.create(
+            customer=self.customer, service=self.service, start_time=self.reserve.start_time,
+        )
+
+        response = self._post(self._body(reservation=rebooked.id, rating=3))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            set(CustomerRating.objects.values_list('reservation_id', 'rating')), {(rebooked.id, 3), (None, 5)},
+        )
+        self.customer_user.refresh_from_db()
+        self.assertEqual(self.customer_user.rating, 4.0)
+
     def test_other_methods_answer_405_with_the_allow_header(self):
         """CRT-55"""
         for method in ('get', 'put', 'delete'):
@@ -1371,6 +1389,22 @@ class ListCustomerRatingsTest(ReviewsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'data': {'average': None, 'count': 0, 'ratings': []}})
+
+    def test_a_pending_customer_is_answered_like_any_other(self):
+        """Edge case: a customer who has not confirmed the e-mail is 200 with no ratings for a hairdresser, 403 for another customer."""
+        pending = dict(self.customer2_payload, email='pending@example.com', phone='+5592984507777', cpf='12345678999')
+        self.client.post(self.register_url, data=pending)
+        customer = Customer.objects.get(user__email='pending@example.com')
+        self.assertFalse(customer.user.is_active)
+        url = reverse('customer_ratings_by_customer', args=[customer.id])
+
+        self.login_as_hairdresser()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'data': {'average': None, 'count': 0, 'ratings': []}})
+
+        self.login_as_customer()
+        assert_problem(self.client.get(url), 'forbidden')
 
     def test_the_average_is_the_stored_user_rating(self):
         """CRT-35: a stored value that differs from the rows shows it is read, not recomputed."""

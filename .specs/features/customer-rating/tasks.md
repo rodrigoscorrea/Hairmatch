@@ -282,6 +282,7 @@ T17 → T18
 - [x] `test_routes.py` passa com a RT-86, e a linha está no spec `api-restful-routes` (CRT-54).
 - [x] O gate Full passa.
 - [x] Contagem: `review` ≥ 46 + 20 (69). Suíte: 762 OK.
+- [x] Edge case: avaliar, cancelar a reserva e reservar de novo o mesmo horário deixa avaliar a reserva nova (201), e a média conta as duas (CRT-24). Commit de teste à parte, depois do T7.
 
 **Tests**: integration
 **Gate**: full
@@ -316,6 +317,7 @@ T17 → T18
 - [x] `test_routes.py` passa com a RT-87 (CRT-54).
 - [x] O gate Full passa.
 - [x] Contagem: `review` ≥ 66 + 9 (79). Suíte: 772 OK.
+- [x] Edge case: um cliente pendente (`is_active=False`) recebe 200 `{average: null, count: 0, ratings: []}` para cabeleireiro e 403 para outro cliente. Commit de teste à parte, depois do T7.
 
 **Tests**: integration
 **Gate**: full
