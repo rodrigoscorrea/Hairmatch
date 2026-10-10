@@ -446,8 +446,8 @@ Os estilos `fab` e `externalBadge` entram em `AgendaManagerStyles.ts`.
 
 **Done when**:
 
-- [ ] O AD-009 tem Decision, Reason, Trade-off, Scope, Date e Status
-- [ ] Gate check passes: Build
+- [x] O AD-009 tem Decision, Reason, Trade-off, Scope, Date e Status
+- [x] Gate check passes: Build
 
 **Tests**: none
 **Gate**: build

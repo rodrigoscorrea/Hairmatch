@@ -85,23 +85,39 @@
 - **Date**: 2026-10-04
 - **Status**: active
 
+### AD-009
+- **Decision**: Uma linha de `Agenda` com `service` nulo é um bloqueio externo: um atendimento feito fora do app, identificado pelo `title` (de 1 a 100 caracteres depois de `strip()`). O pareamento Agenda↔Reserve por `(service_id, start_time)` nunca considera essa linha: `ListAgenda` tira os itens sem serviço do `reserve_map`, e `AgendaSerializer.get_customer` devolve `None` cedo. Na listagem, `customer === null` identifica toda entrada que não é reserva do app, e o app mostra o rótulo "Externo". Toda nova escrita na `Agenda` sem reserva usa este formato, sem um campo `kind`.
+- **Reason**: A issue #113 pede para bloquear na agenda um atendimento externo, com ou sem serviço cadastrado. O cálculo de horários livres (app e chatbot) e a checagem de sobreposição da reserva já leem só `start_time` e `end_time` da `Agenda`, então um bloqueio sem serviço sai da oferta sem mudar esse código. `service` nulo mais `title` é a menor mudança de modelo, com uma migração aditiva (`0002_agenda_title_alter_agenda_service`).
+- **Trade-off**:
+  - Um bloqueio com serviço continua pareando com uma `Reserve` de mesmo serviço e início. A checagem de sobreposição impede duas linhas no mesmo início para o mesmo cabeleireiro.
+  - Um segundo tipo de bloqueio (folga, férias) exigiria um campo `kind` e uma migração.
+  - A corrida entre `CreateAgenda` e `CreateReserve` continua sem lock, nos dois caminhos.
+- **Scope**: `backend/agenda` (modelo, migração `0002`, `CreateAgenda`, `ListAgenda`, `AgendaSerializer`) e a agenda do cabeleireiro no `frontend-mobile` (`useAgenda`, `agenda/index.tsx`, `agenda/create.tsx`, `useExternalAppointmentForm`). `reserve/views.py` não muda.
+- **Date**: 2026-10-09
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `email-confirmation` (issue #141).
-- **Phase / Task**: Execute concluído, T1 a T22. `validation.md` com PASS (round 2 de 3). T23 (UAT manual no web e no Android) aberto de propósito: é do usuário.
+- **Feature**: `external-appointment` (issue #113).
+- **Phase / Task**: Execute de T1 a T12 concluído. T13 (UAT manual no web e no Android) está pendente com o usuário. O Verificador da feature ainda não rodou, porque a T13 está aberta.
 - **Completed**:
-  - Backend: cadastro pendente, substituição de conta pendente, confirmação e reenvio de código, login 403, Google sem herdar conta pendente, throttles por IP e por e-mail em `DatabaseCache`, `purge_unconfirmed_users`, listagens sem cabeleireiro pendente. 722 testes. Sensor: todos os mutantes relevantes mortos.
-  - App: tela `confirm-email`, hook, serviço, login de conta pendente. `npx tsc --noEmit` com exit 0 e bundle web gerado.
-  - MiniStack reconciliado pelo init, README e AD-008.
-  - Verificado ao vivo no compose: e-mail no SES do MiniStack, fluxo completo por curl, purge no log do boot, tabela `hairmatch_cache`.
+  - Backend (T1 a T4): `Agenda.service` opcional e `Agenda.title`, migração `backend/agenda/migrations/0002_agenda_title_alter_agenda_service.py`, o contrato novo do `POST /api/agenda` (EXT-01 a EXT-14), a listagem com `title` e `customer: null` (EXT-18, EXT-19) e o teste de aceite em `reserve` (EXT-15 a EXT-17). Gate Full: 744 testes OK, `makemigrations --check` limpo.
+  - App (T5 a T11): tipos do contrato, serviço tipado, sub-stack `agenda/`, hook `useExternalAppointmentForm`, tela `agenda/create.tsx`, `useAgenda` com `useFocusEffect` e abertura pela célula, FAB "+" e rótulo "Externo". `npx tsc --noEmit` com exit 0. Lint sem erro nos arquivos tocados, e o erro `react-hooks/static-components` de `agenda/index.tsx` foi corrigido.
+  - AD-009 registrado (T12).
+- **Notas para o Verificador**:
+  - `title: null` é tratado como título ausente. É uma lacuna de precisão do spec em EXT-05.
+  - A borda de EXT-09 "início igual a agora" não tem teste (comparação estrita `<` com `timezone.now()`).
+  - Os tipos de rota (`.expo/types/router.d.ts`) foram regenerados com o gerador de typed routes do próprio Expo, que dá a mesma saída do Metro, sem subir o Metro.
+- **Riscos para o UAT**:
+  - No web, `Alert.alert` não faz nada no react-native-web. O alerta "Sucesso!" de EXT-31 só aparece no Android. No web, a tela só volta para a agenda.
 - **In-progress** (file:line): none
 - **Next step**:
-  - UAT do T23: cadastro, código em `/_ministack/ses/messages`, confirmação, home sem redigitar a senha; login de conta pendente; reenvio com 60 s; cabeleireiro pendente fora da busca; login Google e do seed; Google com o e-mail de uma conta pendente. Depois marcar EMC-40 a EMC-46 e EMC-51 como Verified.
-  - Produção (operacional, com autorização): `EmailConfiguration` `DEVELOPER`, SES fora do sandbox, template, agendar o purge e conferir o erro de `ResendConfirmationCode` (README).
+  - UAT da T13: os seis passos do roteiro no web (Metro em 8081, aba visível) e os passos 2 e 4 no Android. Depois marcar EXT-20 a EXT-34 como Verified.
+  - Depois do UAT, rodar o Verificador da feature (`validation.md`).
 - **Pendências de features anteriores**:
+  - `email-confirmation` (#141): UAT manual da T23.
   - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
   - `cognito-auth` (#139): sem `validation.md`.
-  - Aceitos pelo Verificador: o autenticador Google sem teste de `is_active` (A02); o `console.error("Full sign-up error:", error)` do wizard, que já existia e pode logar o corpo do cadastro (D5).
 - **Blockers**: none
-- **Uncommitted files**: `frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json` (5 lições candidatas, 4 novas) e `docs/`. Estavam pendentes antes desta feature e ficam fora do PR de propósito.
-- **Branch**: 141-confirmacao-de-email-para-criacao-de-conta-no-sistema
+- **Uncommitted files**: neste worktree, só `frontend-mobile/eslint.config.js` (do usuário, fora do PR). Os arquivos sujos do checkout principal (`frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json`, `docs/`) continuam fora desta feature.
+- **Branch**: 113-adicionar-servico-por-fora-na-agenda
