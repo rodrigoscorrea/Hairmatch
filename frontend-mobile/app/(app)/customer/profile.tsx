@@ -12,6 +12,7 @@ export default function ProfileScreen(){
     const pathname = usePathname();
     const { 
       customer, 
+      ratingLabel,
       isModalVisible, 
       handleLogout, 
       confirmLogout, 
@@ -46,7 +47,7 @@ export default function ProfileScreen(){
                       <Text style={styles.profileName}>{customer?.user?.first_name} {customer?.user?.last_name}</Text>
                       <View style={styles.profileRating}>
                           <Icon name="star" size={16} color="#eab308" />
-                          <Text style={styles.ratingText}>{customer?.user?.rating}</Text>
+                          <Text style={styles.ratingText}>{ratingLabel}</Text>
                       </View>
                   </View>
               </View>
@@ -66,6 +67,13 @@ export default function ProfileScreen(){
             title="Endereço"
             subtitle="Alterar seu endereço"
             onPress={() => handleAddressSettings()}
+          />
+          
+          <MenuItem
+            iconName="star"
+            title="Avaliações recebidas"
+            subtitle="Veja o que os profissionais disseram sobre você"
+            onPress={() => handleMenuPress('Avaliações recebidas')}
           />
           
           <MenuItem

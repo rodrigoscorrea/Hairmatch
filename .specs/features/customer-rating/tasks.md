@@ -572,8 +572,10 @@ Ocultar a rota nas tabs com `href: null` em `app/(app)/hairdresser/_layout.tsx` 
 - Skill: NONE
 
 **Done when**:
-- [ ] Um cliente novo vê "Sem avaliações", e a falha da rota mostra "Nota indisponível" sem quebrar a tela.
-- [ ] O gate App passa sem erro novo.
+- [x] Um cliente novo vê "Sem avaliações" (`formatCustomerRating(null, 0)`), e a falha da rota mostra "Nota indisponível" sem quebrar a tela: o `catch` só troca o rótulo. A conferência na tela fica para o UAT do T18.
+- [x] O `{id}` é `userInfo.customer.id`, o `Customer.id` que `GET /api/users/me` devolve (`CustomerSerializer`), como a RT-87 pede.
+- [x] O item "Avaliações recebidas" entra no menu. A navegação para a lista entra no T16.
+- [x] O gate App passa sem erro novo (`tsc` exit 0; `eslint` com os mesmos 2 warnings de antes no perfil e 0 no hook).
 
 **Tests**: none
 **Gate**: app
