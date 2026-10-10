@@ -855,7 +855,8 @@ class ProfilePictureView(APIView):
             with transaction.atomic():
                 user.profile_picture = picture
                 user.save(update_fields=['profile_picture'])
-                # With S3 overwriting, an equal name is the new file itself.
+                # The storage renames on collision, but if the old object is already gone from the bucket while
+                # the row still names it, the new upload takes that same key: deleting it would delete the new file.
                 if old_name and old_name != user.profile_picture.name:
                     transaction.on_commit(lambda: _delete_stored_files([old_name]))
         except InvalidImage:
