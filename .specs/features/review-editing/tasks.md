@@ -252,9 +252,9 @@ T20 → T23 → T24 → T25
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `GET /api/reservations/{id}` de uma reserva avaliada com 2 fotos traz `review.pictures` com 2 itens (REV-30). O mesmo vale para `GET /api/reservations` e para `GET /api/customers/{id}/reservations`.
-- [ ] Teste: `GET /api/customers/{id}/reservations` mede o mesmo número de queries com 1 e com 3 reservas avaliadas com fotos (REV-32).
-- [ ] Gate Full passa. Contagem: `reserve` ≥ 49 + 3.
+- [x] Teste: `GET /api/reservations/{id}` de uma reserva avaliada com 2 fotos traz `review.pictures` com 2 itens (REV-30). O mesmo vale para `GET /api/reservations` e para `GET /api/customers/{id}/reservations`.
+- [x] Teste: `GET /api/customers/{id}/reservations` mede o mesmo número de queries com 1 e com 3 reservas avaliadas com fotos (REV-32).
+- [x] Gate Full passa. Contagem: `reserve` ≥ 49 + 3.
 
 **Tests**: integration
 **Gate**: full
