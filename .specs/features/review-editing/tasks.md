@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/review-editing/spec.md`
 **Design**: `.specs/features/review-editing/design.md`
-**Status**: Draft (aguardando aprovação para Execute)
+**Status**: Execute concluído (T1 a T24 e o substituto automatizado da T25). UAT manual no web e no Android PENDENTE.
 **Branch**: `105-editar-e-excluir-avaliacao`, criada a partir de `develop` em `2948100`.
 
 **Pré-requisitos do Execute:**
@@ -840,13 +840,16 @@ Os estilos novos vão em `styles/customer/styles/ReviewStyles.ts`.
 - Skill: `run`
 
 **Done when**:
-- [ ] Os 7 passos passam, ou cada falha vira uma task de correção.
-- [ ] Os critérios de app ficam como Verified no spec.
+- [ ] PENDENTE: os 7 passos manuais passam no web e no Android, ou cada falha vira uma task de correção.
+- [ ] PENDENTE: os critérios de app (REV-60 a REV-81) ficam como Verified no spec depois do UAT manual.
+- [x] Substituto automatizado do UAT, feito sem navegador: o script `e2e_review_editing.py` exercitou, com `curl`, todas as rotas novas e alteradas num servidor de dev subido do worktree (porta 8015, banco e bucket próprios). 113 verificações, 0 falhas, e o bucket terminou vazio. O resumo está em `validation.md`; o script e a saída ficaram fora do repositório.
+
+> O UAT manual (web e Android) **não foi feito**. O substituto cobre o backend ponta a ponta (REV-01 a REV-56), não as telas. Os critérios de app só têm `npx tsc --noEmit` e a leitura do código, e continuam "Implemented", não "Verified".
 
 **Tests**: none
 **Gate**: build
 
-**Commit**: `docs(specs): record the review editing UAT`
+**Commit**: `docs(specs): record the review editing api check`
 
 ---
 

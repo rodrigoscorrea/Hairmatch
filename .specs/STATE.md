@@ -162,93 +162,19 @@
 
 ## Handoff
 
-- **Feature**: `review-editing` (issue #105, RF29 e RF30).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (REV-01 a REV-81, 61 critérios), `design.md` e `tasks.md` (T1 a T25, em 5 fases) foram validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Os 11 avisos são `Tests: none` das tasks de app e de documentação, que a matriz prevê. O Execute não começou e aguarda a aprovação das tasks.
+- **Feature**: `review-editing` (issue #105, RF29 e RF30), branch `105-editar-e-excluir-avaliacao`.
+- **Phase / Task**: Execute concluído em 2026-10-10 (T1 a T24, mais o substituto automatizado da T25). A suíte do backend passa, `makemigrations --check` fica limpo e `npx tsc --noEmit` não tem erro. O UAT manual no web e no Android (T25) está **PENDENTE**.
 - **Completed**:
-  - Decisões do usuário:
-    - fotos numa tabela, e não em JSONB, com chave `reviews/<review_id>/<uuid>.webp`;
-    - até 5 fotos e 5 MB por foto;
-    - nenhuma migração de dados, porque não há fotos de avaliação em nenhum ambiente;
-    - a metade do cabeleireiro entra, desfazendo a imutabilidade da #104.
-  - Rotas planejadas: RT-90 a RT-93. Decisões planejadas: AD-011 e AD-012, que entram na T15. Os dois números já estão reservados pela nota do AD-013.
-  - A `develop` foi atualizada até `2948100`. As cópias antigas de `.specs/` que estavam no checkout foram para o stash `stale specs before pulling #104/#113/#120 (review-editing planning)`.
+  - Backend: `ReviewPicture`, `review/pictures.py`, RT-90 a RT-93, média do cliente recalculada na edição e na exclusão (AD-011 e AD-012), `customer_rating.id` na agenda.
+  - App: tela de avaliação com várias fotos e modo edição, detalhe da reserva com as fotos, agenda e tela de nota do cabeleireiro com editar e excluir.
+  - Verificação ponta a ponta por API (curl, servidor do worktree, bucket próprio), registrada em `validation.md`.
 - **In-progress** (file:line): none
 - **Next step**:
-  1. Aprovar as tasks.
-  2. Na branch `105-editar-e-excluir-avaliacao`, já criada, confirmar a baseline de 835 testes executados e começar pelo T1.
-
-  São 25 tarefas, então o Execute oferece sub-agentes.
-- **Conflito com a #118**: a T1 renomeia `_delete_stored_files` para `hairmatch.storage.delete_stored_files`. A feature que entrar depois ajusta a referência.
-- **Operacional, antes do deploy**: conferir o limite de corpo do proxy de produção. Um create com 5 fotos pode chegar a cerca de 25 MB.
-
-- **Feature**: `hairdresser-gallery` (issue #118, RF31 e RF32).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (GAL-01 a GAL-51), `context.md`, `design.md` e `tasks.md` (T1 a T18) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. O Execute não começou e aguarda a aprovação das tasks.
-- **Completed**:
-  - Decisões do usuário:
-    - a chave `hairdresser/gallery/<hairdresser_id>/<uuid>.webp`;
-    - o limite de 30 fotos;
-    - uma tela própria de gestão;
-    - a seleção múltipla com uma requisição por foto.
-  - AD-013: tabela própria, e não JSONB.
-  - Route Table do `api-restful-routes`: RT-94 a RT-96.
-  - Catálogo do `api-problem-details`: o slug `gallery-full`.
-- **Coordenação com `review-editing` (#105)**, especificada em paralelo:
-  - ela reserva AD-011, AD-012 e RT-90 a RT-93, por isso a galeria usa AD-013 e RT-94 a RT-96;
-  - o AD-011 dela (`ReviewPicture` em tabela) repete a regra geral do AD-013, e é preciso decidir qual dos dois fica como canônico;
-  - a #105 move `_delete_stored_files` para `hairmatch.storage`, e quem mesclar depois adapta o T6 e o T7 (risco no `design.md`).
-- **In-progress** (file:line): none
-- **Next step**:
-  1. Aprovar as tasks.
-  2. Criar a branch `118-galeria-de-fotos-do-cabeleireiro` a partir de `develop`.
-  3. Confirmar a baseline de 837 testes (`2948100`).
-  4. Começar pelo T1.
-
-  São 18 tarefas em 3 lotes, então o Execute oferece sub-agentes.
-
-- **Feature**: `external-appointment` (issue #113).
-- **Phase / Task**: Execute de T1 a T12 concluído. O Verificador deu FAIL (`validation.md`, ainda não commitado), e as quatro correções já entraram. Falta rodar o Verificador de novo. T13 (UAT manual no web e no Android) está pendente com o usuário.
-- **Completed**:
-  - Backend (T1 a T4): `Agenda.service` opcional e `Agenda.title`, migração `backend/agenda/migrations/0002_agenda_title_alter_agenda_service.py`, o contrato novo do `POST /api/agenda` (EXT-01 a EXT-14), a listagem com `title` e `customer: null` (EXT-18, EXT-19) e o teste de aceite em `reserve` (EXT-15 a EXT-17). Gate Full: 744 testes OK, `makemigrations --check` limpo.
-  - App (T5 a T11): tipos do contrato, serviço tipado, sub-stack `agenda/`, hook `useExternalAppointmentForm`, tela `agenda/create.tsx`, `useAgenda` com `useFocusEffect` e abertura pela célula, FAB "+" e rótulo "Externo". `npx tsc --noEmit` com exit 0. Lint sem erro nos arquivos tocados, e o erro `react-hooks/static-components` de `agenda/index.tsx` foi corrigido.
-  - AD-009 registrado (T12).
-- **Correções da validação**:
-  - EXT-09: um teste congela `timezone.now` e prova que um início igual a agora é aceito. Ele mata o mutante `<=`.
-  - EXT-05: o spec agora diz que `title: null` conta como ausente, e um teste fixa os dois casos.
-  - EXT-31: no web, o alerta de sucesso usa `window.alert`.
-  - EXT-25: o término é preenchido assim que o início fica completo, sem esperar o blur. Depois de 23:59, o campo é limpo.
-  - Os tipos de rota (`.expo/types/router.d.ts`) foram regenerados com o gerador de typed routes do próprio Expo, que dá a mesma saída do Metro, sem subir o Metro.
-- **Foco do UAT**: o alerta de sucesso no web; e no Android, digitar o início com um serviço escolhido e salvar direto.
-- **In-progress** (file:line): none
-- **Next step**:
-  - UAT da T13: os seis passos do roteiro no web (Metro em 8081, aba visível) e os passos 2 e 4 no Android. Depois marcar EXT-20 a EXT-34 como Verified.
-  - Rodar o Verificador de novo (`validation.md`) e commitar o relatório.
-
-- **Feature**: `customer-rating` (issue #104, RF23).
-- **Phase / Task**: Execute de T1 a T17 concluído. T18 (UAT manual no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na primeira rodada (`validation.md`: 41 de 41 critérios de backend, 21 de 21 mutantes mortos, 777 testes).
-- **Completed**:
-  - Backend (T1 a T7): `User.rating` em `FloatField`, com `null` para cliente sem avaliação; modelo `CustomerRating`; `record_customer_rating` com lock e savepoint (AD-010); slug `service-not-finished`; RT-86 `POST /api/customer-ratings`; RT-87 `GET /api/customers/{id}/ratings`; agenda com `reservation_id`, `customer.user.rating`, `customer.ratings_count` e `customer_rating`. Suíte: 777 testes OK, `makemigrations --check` limpo.
-  - App (T8 a T16): types, service e `formatCustomerRating`; slug no `api-problem.ts`; `StarRating` compartilhado; `useAgenda` com `useFocusEffect` e `canRate`; modal da agenda com o cliente, a nota, "Sua avaliação: N★" e "Avaliar cliente"; tela `hairdresser/rate-customer/[reservationId]`; média no perfil do cliente; tela "Avaliações recebidas". `npx tsc --noEmit` com exit 0, e nenhum erro novo de `eslint` nos arquivos tocados.
-- **Desvios registrados**:
-  - Design: a tela de avaliação vai para a agenda com `router.push` em vez de `router.back()` (`useRateCustomer.ts`, `SPEC_DEVIATION`). O voltar das abas pode cair em outra aba, e um refresh do web não tem histórico.
-  - O exemplo do CRT-56 passou a ser "4.3 (3)", o formato do perfil (CRT-50) que a função compartilhada mostra.
-  - `docs/requisitos-status.md` não está versionado e não existe no worktree. A marcação de RF23 como ✅ e as observações de RF29/RF30 ficam para o usuário fazer no checkout principal, ou para autorizar o versionamento do arquivo.
-- **In-progress** (file:line): none
-- **Next step**:
-  - UAT do T18 (roteiro no `tasks.md`), no web e no Android. Depois, marcar CRT-39 a CRT-52 e CRT-56 a CRT-60 como Verified.
-  - Atualizar RF23 em `docs/requisitos-status.md` (ver desvios).
-
-- **Feature**: `account-settings` (issue #120).
-- **Phase / Task**: Execute de T1 a T20 concluído. T21 (UAT no web e no Android) está aberto de propósito: é do usuário. O Verificador independente deu PASS na segunda rodada (`validation.md`: 28 de 28 critérios de backend, 32 de 33 mutantes mortos e 1 equivalente, 756 testes).
-- **Completed**:
-  - Backend (T1 a T6): `PATCH /api/users/me` valida e normaliza o corpo (ponteiros `#/<campo>`), libera o telefone de conta pendente e responde 409 na corrida de telefone, e grava `User` e perfil numa transação. RT-88 `PUT` e RT-89 `DELETE /api/users/me/profile-picture`. Teste da exclusão de conta Google.
-  - App (T7 a T20): serviço da conta, `clearSession`, guardas de nulo no perfil, `validateAccountUpdate` (só os campos alterados), telas de dados da conta, endereço (CEP com autofill), foto (trocar e remover), exclusão da conta, preferências e resumo do cabeleireiro. `npx tsc --noEmit` com exit 0 e nenhum erro de eslint nos arquivos tocados.
-  - Rodada 1 do Verificador: FAIL por falta de `null` no teste de campo obrigatório (ACC-01, mutante M02). Corrigido, junto com o comentário do guard do PUT e a redação de ACC-20, ACC-24 e dos ponteiros.
-- **In-progress** (file:line): none
-- **Next step**: UAT do T21 (roteiro no `tasks.md`, com os itens extras do `validation.md`: CEP de cidade inteira e troca de foto com edição não salva). Depois, marcar os critérios de app como Verified.
-- **Pendências de features anteriores**:
-  - `email-confirmation` (#141): UAT do T23 e a configuração de produção do SES (README).
-  - `api-restful-routes` (#163): UAT manual (RT-70 a RT-75). A reconfiguração do webhook da Evolution API só acontece com autorização explícita.
-  - `cognito-auth` (#139): sem `validation.md`.
-- **Blockers**: none
-- **Uncommitted files**: neste worktree, só `frontend-mobile/eslint.config.js` (do usuário, fora do PR). Os arquivos sujos do checkout principal (`frontend-mobile/.env.example`, `frontend-mobile/services/axios-instance.ts`, `.specs/LESSONS.md`, `.specs/lessons.json`, `docs/`) continuam fora destas features.
-- **Branch**: `113-adicionar-servico-por-fora-na-agenda` (com a `develop` mesclada, que traz `customer-rating`, #104, e `account-settings`, #120)
+  1. Fazer o UAT manual da T25 (web e Android) e marcar REV-60 a REV-81 como Verified.
+  2. Antes do deploy: conferir o limite de corpo do proxy de produção. Uma criação pode levar 5 fotos de até 5 MB, cerca de 25 MB numa requisição.
+  3. Decidir a canonicidade entre o AD-011 e o AD-013 (as duas decisões tratam de coleções de imagens, em branches diferentes) e tirar do AD-013 a nota que reserva os números AD-011, AD-012 e RT-90 a RT-93.
+- **Blockers**:
+  - A T1 renomeou `_delete_stored_files` para `hairmatch.storage.delete_stored_files`. A branch da `hairdresser-gallery` (#118) ainda usa o nome antigo: quem entrar depois troca a referência.
+  - Os dois PRs editam `test_routes.py` e a Route Table do `api-restful-routes`: o segundo a entrar resolve o conflito.
+- **Uncommitted files**: `.specs/LESSONS.md` e `.specs/lessons.json` (estado local do skill, fora dos commits).
+- **Branch**: `105-editar-e-excluir-avaliacao`
