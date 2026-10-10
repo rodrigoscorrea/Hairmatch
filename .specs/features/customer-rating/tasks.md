@@ -510,10 +510,12 @@ T17 → T18
 - Skill: NONE
 
 **Done when**:
-- [ ] `submit` não roda com `rating === 0` nem com `isSubmitting`.
-- [ ] Sem `customerName` nos params, como num refresh do web, o hook devolve "Cliente" e não quebra.
-- [ ] O erro não limpa a nota nem o comentário.
-- [ ] O gate App passa sem erro novo.
+- [x] `submit` não roda com `rating === 0` nem durante um envio. Um `useRef` barra o segundo toque que chega antes do re-render que desabilita o botão.
+- [x] Sem `customerName` nos params, como num refresh do web, o hook devolve "Cliente" e não quebra. Os params são normalizados para `string`, porque podem chegar como `string[]`.
+- [x] O erro não limpa a nota nem o comentário: só o sucesso zera o formulário.
+- [x] A tela continua montada entre visitas (aba oculta), então o formulário recomeça quando o `reservationId` muda.
+- [x] O gate App passa sem erro novo (`tsc` exit 0, `eslint` sem problema no hook).
+- `SPEC_DEVIATION` (design, não spec): no sucesso, o hook vai para `/(app)/hairdresser/agenda` com `router.push` em vez de `router.back()`. O voltar do navegador de abas pode cair em outra aba, e um refresh do web não deixa histórico. O CRT-47 ("voltar para a agenda") continua atendido, e o `useFocusEffect` da agenda recarrega o item.
 
 **Tests**: none
 **Gate**: app
