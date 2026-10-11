@@ -186,17 +186,17 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes com `Stubber`:
+- [x] Testes com `Stubber`:
   - `create_endpoint` chama `CreatePlatformEndpoint` sem `CustomUserData` e depois `SetEndpointAttributes` com `Enabled='true'` e o token;
   - `publish` envia `MessageStructure='json'` e um `GCM` com `fcmV1Message`, `notification` (título e corpo), `data` só com strings e `android.notification.channel_id == 'default'`.
-- [ ] Testes de erro:
+- [x] Testes de erro:
   - `EndpointDisabled` e `NotFound` viram `EndpointGone`;
   - outro `ClientError`, `EndpointConnectionError` e `ReadTimeoutError` viram `PushUnavailable`;
   - `delete_endpoint` de um ARN inexistente não levanta.
-- [ ] Teste: com a setting vazia, o ARN vem da platform application `hairmatch-dev-fcm`, mesmo na segunda página de `ListPlatformApplications`, e com a setting preenchida o valor dela é usado.
-- [ ] Teste com `assertLogs`: o log de falha tem a operação e o código, e não tem o token nem o ARN.
-- [ ] O `FakeSns` registra criações, publicações e remoções. Ele tem `fail_next(operation, error)` e `disable(arn)`.
-- [ ] Gate check passes: Quick.
+- [x] Teste: com a setting vazia, o ARN vem da platform application `hairmatch-dev-fcm`, mesmo na segunda página de `ListPlatformApplications`, e com a setting preenchida o valor dela é usado.
+- [x] Teste com `assertLogs`: o log de falha tem a operação e o código, e não tem o token nem o ARN.
+- [x] O `FakeSns` registra criações, publicações e remoções. Ele tem `fail_next(operation, error)` e `disable(arn)`.
+- [x] Gate check passes: Quick.
 
 **Tests**: unit
 **Gate**: quick

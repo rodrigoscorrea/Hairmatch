@@ -41,6 +41,11 @@ COGNITO_USER_POOL_ID = os.getenv('COGNITO_USER_POOL_ID', '')
 COGNITO_APP_CLIENT_ID = os.getenv('COGNITO_APP_CLIENT_ID', '')
 # Tests use an in-memory Cognito so they need no emulator.
 COGNITO_USE_FAKE = 'test' in sys.argv
+# AWS SNS platform application (FCM) that push devices are registered in. Empty in dev: the backend looks up hairmatch-dev-fcm by name.
+# The FCM credential lives in the platform application on AWS, never here.
+SNS_PLATFORM_APPLICATION_ARN = os.getenv('SNS_PLATFORM_APPLICATION_ARN', '')
+# Tests use an in-memory SNS so they need no emulator.
+SNS_USE_FAKE = 'test' in sys.argv
 TEST_RUNNER = 'hairmatch.test_runner.HairmatchTestRunner'
 # Base of every problem `type` (RFC 9457). A fixed URI, not an env var; it need not resolve.
 PROBLEM_TYPE_BASE_URI = 'https://hairmatch.app/problems/'

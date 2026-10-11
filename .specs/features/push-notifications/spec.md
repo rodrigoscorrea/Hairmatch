@@ -374,7 +374,7 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-67 | P2: Nota editada ou removida (N14) | T16, T23 | In Tasks |
 | NOTIF-68 | P1: Ambiente local | T4, T19 | In Tasks |
 | NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | In Tasks |
-| NOTIF-70 | P1: Ambiente local | T3 | In Tasks |
+| NOTIF-70 | P1: Ambiente local | T3 | Implemented |
 | NOTIF-71 | P1: Ambiente local | T4, T22 | In Tasks |
 | NOTIF-72 | Edge cases | T6 | In Tasks |
 | NOTIF-73 | Edge cases | T6 | In Tasks |
