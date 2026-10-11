@@ -314,7 +314,7 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes de cada critério:
+- [x] Testes de cada critério:
   - 201 com o `id` e 1 endpoint no fake;
   - 200 com o mesmo `id` e nenhum endpoint novo;
   - 201 ao trocar de conta, e a outra conta fica sem a linha;
@@ -324,9 +324,9 @@ T19 → T23
   - 404 para `id` de outra conta e inexistente;
   - 401 sem sessão, nos dois métodos;
   - 204 mesmo com `delete_endpoint` falhando.
-- [ ] Corrida: dois `POST` simultâneos com o mesmo token deixam 1 linha (`TransactionTestCase` com `threading.Barrier`).
-- [ ] `ROUTE_TABLE` tem RT-100 e RT-101, e o `test_routes` passa.
-- [ ] Gate check passes: Full.
+- [x] Corrida: dois `POST` simultâneos com o mesmo token deixam 1 linha (`TransactionTestCase` com `threading.Barrier`).
+- [x] `ROUTE_TABLE` tem RT-100 e RT-101, e o `test_routes` passa.
+- [x] Gate check passes: Full.
 
 **Tests**: integration
 **Gate**: full

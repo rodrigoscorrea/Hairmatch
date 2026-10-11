@@ -305,16 +305,16 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| NOTIF-01 | P1: Registro do aparelho (backend) | T7, T19 | In Tasks |
-| NOTIF-02 | P1: Registro do aparelho (backend) | T7 | In Tasks |
-| NOTIF-03 | P1: Registro do aparelho (backend) | T7 | In Tasks |
-| NOTIF-04 | P1: Registro do aparelho (backend) | T2, T7 | In Tasks |
-| NOTIF-05 | P1: Registro do aparelho (backend) | T7 | In Tasks |
-| NOTIF-06 | P1: Registro do aparelho (backend) | T1, T3, T7 | In Tasks |
-| NOTIF-07 | P1: Registro do aparelho (backend) | T7, T19 | In Tasks |
-| NOTIF-08 | P1: Registro do aparelho (backend) | T7 | In Tasks |
-| NOTIF-09 | P1: Registro do aparelho (backend) | T7 | In Tasks |
-| NOTIF-10 | P1: Registro do aparelho (backend) | T7 | In Tasks |
+| NOTIF-01 | P1: Registro do aparelho (backend) | T7, T19 | Implemented |
+| NOTIF-02 | P1: Registro do aparelho (backend) | T7 | Implemented |
+| NOTIF-03 | P1: Registro do aparelho (backend) | T7 | Implemented |
+| NOTIF-04 | P1: Registro do aparelho (backend) | T2, T7 | Implemented |
+| NOTIF-05 | P1: Registro do aparelho (backend) | T7 | Implemented |
+| NOTIF-06 | P1: Registro do aparelho (backend) | T1, T3, T7 | Implemented |
+| NOTIF-07 | P1: Registro do aparelho (backend) | T7, T19 | Implemented |
+| NOTIF-08 | P1: Registro do aparelho (backend) | T7 | Implemented |
+| NOTIF-09 | P1: Registro do aparelho (backend) | T7 | Implemented |
+| NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | In Tasks |
 | NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | In Tasks |
 | NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | In Tasks |

@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/', include('agenda.urls')),
     path('api/', include('service.urls')),
     path('api/', include('favorite.urls')),
+    path('api/', include('notifications.urls')),
     path('api/chatbot/', include('chatbot.urls')),
     # Must stay last: a URL under /api/ that no route matched.
     re_path(r'^api(?:/|$)', api_not_found),
