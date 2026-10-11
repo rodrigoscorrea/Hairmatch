@@ -629,11 +629,11 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] O toque no item abre a caixa nos dois papéis.
-- [ ] O número aparece só quando é maior que zero, e "99+" a partir de 100.
-- [ ] O número atualiza no foco e quando um push chega.
-- [ ] O número some sem erro quando o `GET` falha.
-- [ ] Gate check passes: App (fim da Phase 3).
+- [x] O toque no item abre a caixa nos dois papéis.
+- [x] O número aparece só quando é maior que zero, e "99+" a partir de 100.
+- [x] O número atualiza no foco e quando um push chega.
+- [x] O número some sem erro quando o `GET` falha.
+- [x] Gate check passes: App (fim da Phase 3).
 
 **Tests**: none
 **Gate**: build

@@ -10,11 +10,14 @@ import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useHairdresserSettings } from "@/hooks/hairdresserHooks/useHairdresserSettings"; // <-- Our new hook
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useUnreadAlertsCount } from "@/hooks/useUnreadAlertsCount";
+import { HAIRDRESSER_NOTIFICATIONS } from "@/utils/alert-routes";
 
 export default function HairdresserSettingsScreen(){
     const { hairdresser, isModalVisible, handleLogout, confirmLogout, cancelLogout, handleBack, handleAccountSettings, handleAddressSettings } = useHairdresserSettings();
     const router = useRouter();
     const deletion = useDeleteAccount("hairdresser");
+    const unreadBadge = useUnreadAlertsCount();
     // userInfo is null for a moment after the logout or the account deletion.
     if (!hairdresser) return null;
     const hairdresser_image = hairdresser.user.profile_picture;
@@ -85,6 +88,8 @@ export default function HairdresserSettingsScreen(){
             iconName="bell"
             title="Notificações"
             subtitle="Gerenciar suas notificações"
+            badge={unreadBadge}
+            onPress={() => router.push(HAIRDRESSER_NOTIFICATIONS)}
           />
           
           <MenuItem
