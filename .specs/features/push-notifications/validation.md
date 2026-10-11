@@ -203,6 +203,7 @@ Sem teste automatizado, por decisão do spec (o app não tem suíte). O que foi 
 - O corpo do alerta é cortado em 300 caracteres (`messages.py`): um serviço de 200 caracteres e dois nomes longos estourariam a coluna e desfariam a reserva. Não estava no desenho.
 - A platform application local ganhou `PlatformPrincipal: fake`, porque o LocalStack recusa `PlatformCredential` sem ele, e o `--attributes` usa JSON, porque a sintaxe curta do CLI recusa as aspas da credencial.
 - `AlertTap` ficou em `models/Alert.types.ts`, e o union do app é `ProblemSlug` (o `tasks.md` dizia `ApiProblemSlug`).
+- `app.config.js` só define `android.googleServicesFile` quando a variável `GOOGLE_SERVICES_JSON` existe ou o arquivo local existe. A primeira versão sempre apontava para o arquivo, e o `expo prebuild` falhava sem ele (reproduzido numa cópia descartável do app: `Cannot copy google-services.json`). Com a correção, o prebuild termina sem o arquivo, o manifesto sai com o canal `default` (`com.google.firebase.messaging.default_notification_channel_id`) e o build sem Firebase só deixa o app sem token (NOTIF-16). O build com push de verdade continua exigindo a T20.
 - O REV-28 (`review/tests.py:820`) passou a esperar 2 callbacks de commit (a exclusão dos arquivos e o push). Alterado com o aval explícito do usuário.
 
 ---
