@@ -323,14 +323,14 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-16 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
 | NOTIF-17 | P1: Registro do aparelho (app) | T14, T15, T16, T23 | In Tasks |
 | NOTIF-18 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
-| NOTIF-19 | P1: Envio e gravação de alertas | T6 | In Tasks |
-| NOTIF-20 | P1: Envio e gravação de alertas | T6 | In Tasks |
-| NOTIF-21 | P1: Envio e gravação de alertas | T3, T6, T19 | In Tasks |
-| NOTIF-22 | P1: Envio e gravação de alertas | T6 | In Tasks |
-| NOTIF-23 | P1: Envio e gravação de alertas | T6 | In Tasks |
-| NOTIF-24 | P1: Envio e gravação de alertas | T3, T6 | In Tasks |
+| NOTIF-19 | P1: Envio e gravação de alertas | T6 | Implemented |
+| NOTIF-20 | P1: Envio e gravação de alertas | T6 | Implemented |
+| NOTIF-21 | P1: Envio e gravação de alertas | T3, T6, T19 | Implemented |
+| NOTIF-22 | P1: Envio e gravação de alertas | T6 | Implemented |
+| NOTIF-23 | P1: Envio e gravação de alertas | T6 | Implemented |
+| NOTIF-24 | P1: Envio e gravação de alertas | T3, T6 | Implemented |
 | NOTIF-25 | P1: Envio e gravação de alertas | T5 | Implemented |
-| NOTIF-26 | P1: Envio e gravação de alertas | T6 | In Tasks |
+| NOTIF-26 | P1: Envio e gravação de alertas | T6 | Implemented |
 | NOTIF-27 | P1: Envio e gravação de alertas | T5 | Implemented |
 | NOTIF-28 | P1: Nova reserva (N01) | T5, T10, T19 | In Tasks |
 | NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | In Tasks |
@@ -376,12 +376,12 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | Implemented |
 | NOTIF-70 | P1: Ambiente local | T3 | Implemented |
 | NOTIF-71 | P1: Ambiente local | T4, T22 | Implemented |
-| NOTIF-72 | Edge cases | T6 | In Tasks |
-| NOTIF-73 | Edge cases | T6 | In Tasks |
+| NOTIF-72 | Edge cases | T6 | Implemented |
+| NOTIF-73 | Edge cases | T6 | Implemented |
 | NOTIF-74 | Edge cases | T15, T16, T23 | In Tasks |
 | NOTIF-75 | Edge cases | T16, T23 | In Tasks |
 | NOTIF-76 | Edge cases | T16, T23 | In Tasks |
-| NOTIF-77 | Edge cases | T3, T6 | In Tasks |
+| NOTIF-77 | Edge cases | T3, T6 | Implemented |
 
 **Coverage:** 77 total, 77 mapped to tasks, 0 unmapped ✅
 

@@ -279,19 +279,19 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Com `captureOnCommitCallbacks(execute=True)`:
+- [x] Com `captureOnCommitCallbacks(execute=True)`:
   - `notify` grava 1 alerta não lido e publica 1 vez por aparelho do destinatário (2 aparelhos → 2 publicações), com `alert_id` e `kind` como strings;
   - sem aparelho, não publica.
-- [ ] `notify` dentro de um `atomic()` que levanta não deixa alerta, e o fake não registra publicação.
-- [ ] `notify(message, actor=message.recipient)` devolve `None` e não grava nada (NOTIF-26).
-- [ ] Com `fail_next('publish', ...)` no primeiro aparelho:
+- [x] `notify` dentro de um `atomic()` que levanta não deixa alerta, e o fake não registra publicação.
+- [x] `notify(message, actor=message.recipient)` devolve `None` e não grava nada (NOTIF-26).
+- [x] Com `fail_next('publish', ...)` no primeiro aparelho:
   - o segundo recebe;
   - nenhuma exceção sai do bloco de commit;
   - o alerta continua gravado;
   - o log tem a falha.
-- [ ] Com `disable(arn)`, a linha do aparelho é apagada, o fake registra o `delete_endpoint`, e o outro aparelho recebe.
-- [ ] Teste: a publicação vai para o dono do aparelho no momento do commit, e não para o dono no momento do `notify` (NOTIF-73).
-- [ ] Gate check passes: Full (fim da Phase 1).
+- [x] Com `disable(arn)`, a linha do aparelho é apagada, o fake registra o `delete_endpoint`, e o outro aparelho recebe.
+- [x] Teste: a publicação vai para o dono do aparelho no momento do commit, e não para o dono no momento do `notify` (NOTIF-73).
+- [x] Gate check passes: Full (fim da Phase 1).
 
 **Tests**: integration
 **Gate**: full
