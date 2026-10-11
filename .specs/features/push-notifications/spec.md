@@ -315,7 +315,7 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-08 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-09 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | In Tasks |
+| NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | Implemented |
 | NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | In Tasks |
 | NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | In Tasks |
 | NOTIF-14 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
@@ -350,7 +350,7 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-43 | P1: Caixa de alertas (backend) | T9 | In Tasks |
 | NOTIF-44 | P1: Caixa de alertas (backend) | T9 | In Tasks |
 | NOTIF-45 | P1: Caixa de alertas (backend) | T9 | In Tasks |
-| NOTIF-46 | P1: Caixa de alertas (backend) | T2, T8 | In Tasks |
+| NOTIF-46 | P1: Caixa de alertas (backend) | T2, T8 | Implemented |
 | NOTIF-47 | P1: Caixa de alertas (app) | T17, T18, T23 | In Tasks |
 | NOTIF-48 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
 | NOTIF-49 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |

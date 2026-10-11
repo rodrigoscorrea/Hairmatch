@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from .models import User, Customer, Hairdresser, GalleryPhoto, GALLERY_MAX_PHOTOS
 from hairmatch.images import InvalidImage
 from hairmatch.storage import delete_stored_files
+from notifications.dispatch import delete_endpoints
+from notifications.models import PushDevice
 from preferences.models import Preferences
 import json
 import logging
@@ -215,16 +217,18 @@ def _profile_update(user, data):
 def _delete_account(request, user):
     """
     Deletes the user's rows and then the Cognito user (e-mail accounts), all or nothing, and clears the
-    session cookies. The stored pictures go once the deletion is committed.
+    session cookies. The stored pictures and the SNS endpoints of the user's phones go once the deletion is committed.
     """
     email, cognito_sub = user.email, user.cognito_sub
     try:
         with transaction.atomic():
-            pictures = _delete_account_rows(user)
+            pictures, endpoint_arns = _delete_account_rows(user)
             # The foreign keys are checked at commit: check them now, before Cognito is touched.
             connection.check_constraints()
             if cognito_sub:
                 get_cognito().admin_delete_user(email)
+            # First, and robust: nothing that fails later may keep the endpoints of a deleted account alive.
+            transaction.on_commit(lambda: delete_endpoints(endpoint_arns), robust=True)
             transaction.on_commit(lambda: delete_stored_files(pictures))
     except CognitoError as err:
         return _cognito_error_response(request, err)
@@ -233,7 +237,9 @@ def _delete_account(request, user):
 
 def _delete_account_rows(user):
     """
-    Deletes the user and every row that points at them, and returns the storage names of their pictures.
+    Deletes the user and every row that points at them, and returns the storage names of their pictures
+    and the SNS endpoints of their phones. The push devices and the alerts go with the user (CASCADE), but
+    the endpoints live in SNS, so their ARNs are read before the delete.
     Their reservations are cancelled, as a customer and as a hairdresser: the customers of a hairdresser
     who leaves are not notified yet (#171).
     """
@@ -253,8 +259,9 @@ def _delete_account_rows(user):
     pictures.extend(GalleryPhoto.objects.filter(hairdresser__user=user).values_list('image', flat=True))
     if user.profile_picture:
         pictures.append(user.profile_picture.name)
+    endpoint_arns = list(PushDevice.objects.filter(user=user).values_list('endpoint_arn', flat=True))
     user.delete()
-    return pictures
+    return pictures, endpoint_arns
 
 
 # An e-mail account that never confirmed its address: it holds its e-mail and phone for no one.

@@ -347,10 +347,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: um usuário com 2 aparelhos e 3 alertas faz `DELETE /api/users/me`. As linhas somem, o fake registra 2 `delete_endpoint` depois do commit, e os aparelhos e alertas de outro usuário continuam.
-- [ ] Teste: uma falha do Cognito que desfaz a exclusão não apaga nenhum endpoint.
-- [ ] A docstring de `_delete_account_rows` cita os aparelhos.
-- [ ] Gate check passes: Full.
+- [x] Teste: um usuário com 2 aparelhos e 3 alertas faz `DELETE /api/users/me`. As linhas somem, o fake registra 2 `delete_endpoint` depois do commit, e os aparelhos e alertas de outro usuário continuam.
+- [x] Teste: uma falha do Cognito que desfaz a exclusão não apaga nenhum endpoint.
+- [x] A docstring de `_delete_account_rows` cita os aparelhos.
+- [x] Gate check passes: Full.
 
 **Tests**: integration
 **Gate**: full

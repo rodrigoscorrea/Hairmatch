@@ -1,13 +1,16 @@
 import threading
 from unittest.mock import patch
 
+from botocore.exceptions import EndpointConnectionError
 from django.db import connection
 from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 
 from hairmatch.problem_testing import assert_problem
-from notifications.models import PushDevice
+from notifications.models import Alert, PushDevice
 from notifications.sns import SnsService, get_sns
+from users.cognito import get_cognito
+from users.models import User
 
 from .helpers import login, make_user
 
@@ -223,3 +226,71 @@ class SimultaneousRegisterTest(TransactionTestCase):
         self.assertEqual(failures, [])
         self.assertEqual(PushDevice.objects.filter(token=TOKEN).count(), 1)
         self.assertEqual(sorted(statuses), [200, 201])
+
+
+class DeleteAccountTest(PushDeviceTestCase):
+    """DELETE /api/users/me (RT-10) takes the phones and the alerts of the account with it."""
+
+    ACCOUNT_URL = '/api/users/me'
+
+    def alert(self, recipient):
+        return Alert.objects.create(recipient=recipient, kind='reservation-created', title='Nova reserva', body='Corpo.')
+
+    def setUp(self):
+        super().setUp()
+        post(self.client_user, 'token-a')
+        post(self.client_user, 'token-b')
+        post(self.client_other, 'token-c')
+        for _ in range(3):
+            self.alert(self.user)
+        self.kept_alert = self.alert(self.other)
+        self.arns = list(PushDevice.objects.filter(user=self.user).values_list('endpoint_arn', flat=True))
+        self.kept_arn = PushDevice.objects.get(user=self.other).endpoint_arn
+
+    def test_it_removes_the_devices_and_alerts_of_the_account_and_their_endpoints_at_the_commit(self):
+        """NOTIF-11, NOTIF-46"""
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            response = self.client_user.delete(self.ACCOUNT_URL)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(PushDevice.objects.filter(user_id=self.user.id).count(), 0)
+        self.assertEqual(Alert.objects.filter(recipient_id=self.user.id).count(), 0)
+        self.assertEqual(self.fake.deleted, [])
+        for callback in callbacks:
+            callback()
+        self.assertEqual(sorted(self.fake.deleted), sorted(self.arns))
+        self.assertEqual(len(self.fake.deleted), 2)
+
+    def test_the_devices_and_alerts_of_other_accounts_stay(self):
+        """NOTIF-11, NOTIF-46"""
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client_user.delete(self.ACCOUNT_URL)
+
+        self.assertEqual(list(PushDevice.objects.values_list('endpoint_arn', flat=True)), [self.kept_arn])
+        self.assertEqual(list(Alert.objects.all()), [self.kept_alert])
+        self.assertNotIn(self.kept_arn, self.fake.deleted)
+
+    def test_a_failure_to_delete_an_endpoint_does_not_change_the_answer(self):
+        """NOTIF-11, NOTIF-10"""
+        self.fake.fail_next('delete_endpoint', 'InternalError')
+
+        with self.assertLogs('notifications', 'WARNING'):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client_user.delete(self.ACCOUNT_URL)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+        self.assertEqual(len(self.fake.deleted), 1)
+
+    def test_a_deletion_that_cognito_undoes_keeps_the_rows_and_deletes_no_endpoint(self):
+        """NOTIF-11"""
+        get_cognito().client.fail_next('admin_delete_user', EndpointConnectionError(endpoint_url='http://x'))
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            response = self.client_user.delete(self.ACCOUNT_URL)
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(PushDevice.objects.filter(user_id=self.user.id).count(), 2)
+        self.assertEqual(Alert.objects.filter(recipient_id=self.user.id).count(), 3)
+        self.assertEqual(callbacks, [])
+        self.assertEqual(self.fake.deleted, [])
