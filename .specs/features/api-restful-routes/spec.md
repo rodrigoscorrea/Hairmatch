@@ -122,7 +122,7 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-21 | `PUT /api/users/me/preferences/{id}` | `POST /api/preferences/assign/cookie/<id>` | sessão | POST → PUT; sucesso 204 |
 | RT-22 | `DELETE /api/users/me/preferences/{id}` | `POST /api/preferences/unassign/<id>` | sessão | POST → DELETE; sucesso 204 |
 | RT-23 | `POST /api/reviews` | `POST /api/review/register` | cliente | - |
-| RT-24 | `GET /api/hairdressers/{id}/reviews` | `GET /api/review/list/<id>` | nenhuma | - |
+| RT-24 | `GET /api/hairdressers/{id}/reviews` | `GET /api/review/list/<id>` | nenhuma | ordem `created_at` desc, `id` desc no empate (feature `hairdresser-reviews`, #189) |
 | RT-25 | `PUT /api/reviews/{id}` | `PUT /api/review/update/<id>` | cliente | - |
 | RT-26 | `DELETE /api/reviews/{id}` | `DELETE /api/review/remove/<id>` | cliente | - |
 | RT-27 | `POST /api/availabilities` | `POST /api/availability/create` | profissional | - |

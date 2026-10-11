@@ -180,6 +180,22 @@
 
 ## Handoff
 
+- **Feature**: `hairdresser-reviews` (issue #189, épico #188). A P2 depende da #182.
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-11.
+  - `spec.md` (HRV-01 a HRV-30), `context.md`, `design.md` e `tasks.md` (T1 a T8, em 4 fases) validados por `validate_spec.py` e `validate_tasks.py` com exit 0.
+  - Os 7 avisos do `validate_tasks.py` são `Tests: none` de app e do UAT, justificados pela matriz.
+  - O Execute não começou e aguarda a aprovação das tasks.
+- **Completed**:
+  - Decisão do usuário: o toque no alerta ou no push de `review-created` e `review-updated` abre "Minhas avaliações" no topo, sem destacar a review. `review-deleted` fica na caixa.
+  - Sem rota, slug, modelo ou AD novo. A RT-24 passa a ordenar por `-created_at, -id`, com a nota já na Route Table do `api-restful-routes`.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Aprovar as tasks.
+  2. Criar a branch a partir da `develop` e confirmar a baseline de 999 `def test_` com o gate Full.
+  3. Executar as Phases 1 e 2 (T1 a T6).
+
+  O T7 (Phase 3) só começa com a #182 mesclada. Ele também emenda a spec e as tasks da `push-notifications` (catálogo, NOTIF-34, NOTIF-63 e T16).
+
 - **Feature**: `push-notifications` (issue #182, épico #188, itens N01 e N11 a N14 do levantamento da spike #172).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `182-notificacoes-push`: T1 a T19 feitas, com commits atômicos. Restam as tarefas manuais T20 a T22 e o UAT da T23.
   - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (50 critérios Verified), sensor 18/18, E2E de API 48/48 contra o LocalStack real, gate 1118 testes e `tsc` com 0 erros.
