@@ -432,11 +432,11 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: criar, editar e excluir pela rota gravam, cada um, 1 alerta do `kind` certo para o cabeleireiro, com a nota no texto.
-- [ ] Teste: 409 `review-exists`, 403, 404 e 400 não gravam alerta.
-- [ ] Teste: `POST` e `DELETE` de foto (RT-90, RT-91) não gravam alerta.
-- [ ] Teste: o `delete_stored_files` do `RemoveReview` continua rodando quando a publicação falha.
-- [ ] Gate check passes: Full.
+- [x] Teste: criar, editar e excluir pela rota gravam, cada um, 1 alerta do `kind` certo para o cabeleireiro, com a nota no texto.
+- [x] Teste: 409 `review-exists`, 403, 404 e 400 não gravam alerta.
+- [x] Teste: `POST` e `DELETE` de foto (RT-90, RT-91) não gravam alerta.
+- [x] Teste: o `delete_stored_files` do `RemoveReview` continua rodando quando a publicação falha.
+- [x] Gate check passes: Full.
 
 **Tests**: integration
 **Gate**: full

@@ -31,6 +31,8 @@ import re
 import datetime
 from django.conf import settings
 from django.utils import timezone
+from notifications.models import Alert, PushDevice
+from notifications.sns import get_sns
 from users.cognito import get_cognito
 
 def review_keys():
@@ -815,7 +817,8 @@ class RemoveReview(ReviewsTestCase):
             response = self.client.delete(self.delete_url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(len(callbacks), 1)
+        # Two: the push of the "review removed" alert (#182) and the deletion of the objects.
+        self.assertEqual(len(callbacks), 2)
         for name in names:
             with self.subTest(name=name):
                 self.assertTrue(default_storage.exists(name))
@@ -2464,3 +2467,145 @@ class CustomerRatingAtomicityTest(TransactionTestCase):
 
         self.assertTrue(CustomerRating.objects.filter(pk=rating_id).exists())
         self.assertEqual(User.objects.get(pk=self.customer.user_id).rating, 4.0)
+
+
+class ReviewNotificationTest(ReviewsTestCase):
+    """NOTIF-32, NOTIF-33, NOTIF-59 to NOTIF-62: the reviewed hairdresser is told about a review created, edited or deleted."""
+
+    def setUp(self):
+        super().setUp()
+        self.fake = get_sns().client
+        self.device = PushDevice.objects.create(
+            user=self.hairdresser_user, token='hairdresser-phone', endpoint_arn=get_sns().create_endpoint('hairdresser-phone'),
+        )
+        self.login_as_customer()
+
+    def post_review(self, **overrides):
+        data = {'rating': 5, 'comment': 'Great', 'hairdresser': self.hairdresser.id, 'reserve': self.reserve.id}
+        data.update(overrides)
+        return self.client.post(self.create_url, data=data)
+
+    def make_review(self):
+        review = Review.objects.create(rating=3, customer=self.customer, hairdresser=self.hairdresser)
+        self.reserve.review = review
+        self.reserve.save()
+        return review
+
+    def assert_alert_and_push(self, kind, title, body, data):
+        alert = Alert.objects.get()
+        self.assertEqual(
+            (alert.recipient, alert.kind, alert.title, alert.body, alert.data, alert.read_at),
+            (self.hairdresser_user, kind, title, body, data, None),
+        )
+        self.assertEqual(self.fake.published, [{
+            'arn': self.device.endpoint_arn, 'title': title, 'body': body,
+            'data': {'alert_id': str(alert.pk), 'kind': kind},
+        }])
+
+    def test_creating_a_review_notifies_the_hairdresser_with_the_rating(self):
+        """NOTIF-32"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post_review()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assert_alert_and_push(
+            'review-created', 'Nova avaliação', 'Test Customer avaliou seu atendimento com 5 estrelas.',
+            {'review_id': Review.objects.get().pk},
+        )
+
+    def test_editing_a_review_notifies_the_hairdresser_with_the_new_rating(self):
+        """NOTIF-59"""
+        review = self.make_review()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.put(
+                reverse('review_detail', args=[review.id]), data=json.dumps({'rating': 4.5}), content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assert_alert_and_push(
+            'review-updated', 'Avaliação atualizada',
+            'Test Customer atualizou a avaliação do seu atendimento: 4,5 estrelas.', {'review_id': review.pk},
+        )
+
+    def test_deleting_a_review_notifies_the_hairdresser(self):
+        """NOTIF-60"""
+        review = self.make_review()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(reverse('review_detail', args=[review.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Review.objects.count(), 0)
+        self.assert_alert_and_push(
+            'review-deleted', 'Avaliação removida', 'Test Customer removeu a avaliação do seu atendimento.', {},
+        )
+
+    def test_a_review_that_is_not_created_notifies_nobody(self):
+        """NOTIF-33: 409 review-exists, 403, 404 and 400."""
+        self.make_review()
+        other_reserve = Reserve.objects.create(customer=self.customer2, service=self.service)
+        attempts = {
+            'review-exists': lambda: self.post_review(),
+            'forbidden': lambda: self.post_review(reserve=other_reserve.id),
+            'not-found': lambda: self.post_review(reserve=999999),
+            'validation-error': lambda: self.post_review(reserve=self.reserve2.id, rating=0),
+        }
+        for name, attempt in attempts.items():
+            with self.subTest(name):
+                with self.captureOnCommitCallbacks(execute=True):
+                    assert_problem(attempt(), name)
+
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_an_edit_or_a_deletion_that_fails_notifies_nobody(self):
+        """NOTIF-61: 400 and 404."""
+        review = self.make_review()
+        detail = reverse('review_detail', args=[review.id])
+        missing = reverse('review_detail', args=[999999])
+        attempts = {
+            'invalid rating': (lambda: self.client.put(detail, data=json.dumps({'rating': 9}), content_type='application/json'), 'validation-error'),
+            'edit of a missing review': (lambda: self.client.put(missing, data=json.dumps({'rating': 4}), content_type='application/json'), 'not-found'),
+            'deletion of a missing review': (lambda: self.client.delete(missing), 'not-found'),
+        }
+        for name, (attempt, slug) in attempts.items():
+            with self.subTest(name):
+                with self.captureOnCommitCallbacks(execute=True):
+                    assert_problem(attempt(), slug)
+
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_adding_and_removing_a_picture_notifies_nobody(self):
+        """NOTIF-62: RT-90 and RT-91."""
+        review = self.make_review()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            added = self.client.post(
+                reverse('review_pictures', args=[review.id]), data={'pictures': [make_upload('a.png', fmt='PNG')]},
+            )
+            picture = review.pictures.get()
+            removed = self.client.delete(reverse('review_picture_detail', args=[review.id, picture.id]))
+
+        self.assertEqual((added.status_code, removed.status_code), (status.HTTP_201_CREATED, status.HTTP_204_NO_CONTENT))
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_a_failing_sns_does_not_stop_the_pictures_of_a_deleted_review_from_leaving_the_storage(self):
+        """NOTIF-23, NOTIF-60"""
+        review = self.make_review()
+        for _ in range(2):
+            ReviewPicture.objects.create(review=review, picture=make_upload(fmt='PNG'))
+        names = list(review.pictures.values_list('picture', flat=True))
+        self.fake.fail_next('publish', 'InternalError')
+
+        with self.assertLogs('notifications.sns', 'WARNING'):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.delete(reverse('review_detail', args=[review.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Alert.objects.count(), 1)
+        for name in names:
+            with self.subTest(picture=name):
+                self.assertFalse(default_storage.exists(name))

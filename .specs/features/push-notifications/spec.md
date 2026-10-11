@@ -336,8 +336,8 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | Implemented |
 | NOTIF-30 | P1: Nova reserva (N01) | T10 | Implemented |
 | NOTIF-31 | P1: Nova reserva (N01) | T16, T23 | In Tasks |
-| NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | In Tasks |
-| NOTIF-33 | P1: Review recebida (N11) | T11 | In Tasks |
+| NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | Implemented |
+| NOTIF-33 | P1: Review recebida (N11) | T11 | Implemented |
 | NOTIF-34 | P1: Review recebida (N11) | T16, T23 | In Tasks |
 | NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | In Tasks |
 | NOTIF-36 | P1: Nota recebida (N13) | T12 | In Tasks |
@@ -363,10 +363,10 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-56 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |
 | NOTIF-57 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |
 | NOTIF-58 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |
-| NOTIF-59 | P2: Review editada ou excluída (N12) | T5, T11, T19 | In Tasks |
-| NOTIF-60 | P2: Review editada ou excluída (N12) | T5, T11, T19 | In Tasks |
-| NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | In Tasks |
-| NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | In Tasks |
+| NOTIF-59 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Implemented |
+| NOTIF-60 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Implemented |
+| NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | Implemented |
+| NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | Implemented |
 | NOTIF-63 | P2: Review editada ou excluída (N12) | T16, T23 | In Tasks |
 | NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | In Tasks |
 | NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | In Tasks |
