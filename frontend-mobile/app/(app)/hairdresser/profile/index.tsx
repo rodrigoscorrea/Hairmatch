@@ -10,7 +10,7 @@ import { useGalleryPhotos } from '@/hooks/useGalleryPhotos';
 import { GalleryStrip } from '@/components/gallery/GalleryStrip';
 
 export default function HairdresserProfileScreen() {
-  const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability, goToGallery } = useHairdresserProfile();
+  const { hairdresser, preferences, loading, goToSettings, goToServices, goToAvailability, goToGallery, goToReviews } = useHairdresserProfile();
   // Reloads on every focus, so the strip shows what changed in the gallery screen on the way back.
   const { photos } = useGalleryPhotos(hairdresser?.id);
   // userInfo is null for a moment after the logout or the account deletion.
@@ -72,6 +72,10 @@ export default function HairdresserProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.card} onPress={goToGallery}>
             <Text style={styles.cardText}>Minha galeria</Text>
+            <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={16} color="#fff" /></View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.card} onPress={goToReviews}>
+            <Text style={styles.cardText}>Minhas avaliações</Text>
             <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={16} color="#fff" /></View>
         </TouchableOpacity>
       </ScrollView>

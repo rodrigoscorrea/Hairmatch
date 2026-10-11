@@ -248,9 +248,9 @@ Em `hairdresser/profile/_layout.tsx`, registrar `<Stack.Screen name="reviews" />
 - Skill: NONE
 
 **Done when**:
-- [ ] O card aparece abaixo de "Minha galeria", com o mesmo estilo.
-- [ ] O toque abre "Minhas avaliações", e "‹ Voltar" volta ao perfil.
-- [ ] Gate check passes: App.
+- [x] O card aparece abaixo de "Minha galeria", com o mesmo estilo.
+- [x] O toque abre "Minhas avaliações", e "‹ Voltar" volta ao perfil.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
