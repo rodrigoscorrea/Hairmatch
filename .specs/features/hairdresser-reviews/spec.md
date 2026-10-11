@@ -150,11 +150,11 @@ Nenhuma tela do app mostra ao cabeleireiro as reviews que ele recebeu. O backend
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HRV-01 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-02 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-03 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-04 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-05 | P1: Lista de avaliações | Tasks | Pending |
+| HRV-01 | P1: Lista de avaliações | T1 | Verified |
+| HRV-02 | P1: Lista de avaliações | T1 | Verified |
+| HRV-03 | P1: Lista de avaliações | T1 | Verified |
+| HRV-04 | P1: Lista de avaliações | T1 | Verified |
+| HRV-05 | P1: Lista de avaliações | T1 | Verified |
 | HRV-06 | P1: Lista de avaliações | Tasks | Pending |
 | HRV-07 | P1: Lista de avaliações | Tasks | Pending |
 | HRV-08 | P1: Lista de avaliações | Tasks | Pending |

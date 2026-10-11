@@ -11,8 +11,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/hairdresser-reviews/spec.md`
 **Context**: `.specs/features/hairdresser-reviews/context.md`
 **Design**: `.specs/features/hairdresser-reviews/design.md`
-**Status**: Draft. O Execute não começou e aguarda a aprovação das tasks.
-**Branch**: a criar a partir da `develop` (sugestão: `189-tela-de-avaliacoes-recebidas`).
+**Status**: Approved. Execute em andamento.
+**Branch**: `189-avaliacoes-recebidas-cabeleireiro`, criada a partir da `develop` (`23d900a`, com a #182 mesclada).
 
 **Pré-requisitos do Execute:**
 - Os testes do backend rodam dentro do container `hairmatch_backend` (memória `backend-tests-run-in-docker`). Se o `hairmatch_db` estiver parado, rodar `docker start hairmatch_db`.
@@ -56,7 +56,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | App | Tarefas do `frontend-mobile` | `cd frontend-mobile && npx tsc --noEmit`. Rota nova só existe para o `tsc` depois que o Metro regenera os typed routes. O `eslint` só roda se o `eslint.config.js` estiver na branch, e hoje ele é WIP sem commit. |
 | Build | T8 (fim da feature) | Full + App + o roteiro de UAT do T8 |
 
-> **Baseline de testes do backend:** `git grep -c "def test_"` na `develop` (`fb3d11a`) conta **999**, sendo **159** em `review`. Se a #182 entrar antes, a baseline é recontada no início do T1. Nenhuma tarefa reduz esses números. Antes do T1, rodar o gate Full para confirmar a baseline.
+> **Baseline de testes do backend:** `git grep -c "def test_"` na `develop` (`fb3d11a`) contava **999**, sendo **159** em `review`. Com a #182 mesclada (`23d900a`), a baseline recontada no início do T1 é **1120** (171 em `review`), e a suíte roda 1118 testes. Nenhuma tarefa reduz esses números. Antes do T1, rodar o gate Full para confirmar a baseline.
 
 > **Gate do app:** antes do T2, registrar a saída atual de `npx tsc --noEmit` como baseline. O gate passa quando nenhuma tarefa acrescenta um erro novo.
 
@@ -110,17 +110,17 @@ T8
 - Skill: NONE
 
 **Done when**:
-- [ ] O `test_list_reviews` espera a review de nota 5 (a segunda criada) em `data[0]` e a de nota 4 em `data[1]` (HRV-01).
-- [ ] Os testes novos ficam numa classe `ListReviewOrderTest` em `backend/review/tests.py`:
+- [x] O `test_list_reviews` espera a review de nota 5 (a segunda criada) em `data[0]` e a de nota 4 em `data[1]` (HRV-01).
+- [x] Os testes novos ficam numa classe `ListReviewOrderTest` em `backend/review/tests.py`:
   - três reviews do mesmo cabeleireiro com o `created_at` reescrito por `update()` fora da ordem de inserção saem do `created_at` mais recente para o mais antigo (HRV-01, lição L-018);
   - duas reviews com o mesmo `created_at` saem pela de maior `id` primeiro (HRV-02);
   - reviews de dois cabeleireiros: o `GET` de cada um traz só as dele (HRV-04);
   - depois de um `PUT /api/reviews/{id}` na review mais antiga, ela continua na última posição (HRV-05);
   - o item tem exatamente as chaves `id`, `rating`, `comment`, `created_at`, `customer`, `hairdresser` e `pictures`. O `customer` é `{id, user: {id, first_name, last_name}}`, com os valores do cliente (HRV-03).
-- [ ] O `ListReviewPicturesTest` continua passando sem mudança. Ele prova as fotos por `id` crescente (HRV-03).
-- [ ] `makemigrations --check` limpo.
-- [ ] Gate check passes: Full.
-- [ ] Test count: 999 → 1004 (5 testes novos), sem remoção. Se a baseline foi recontada, ela ganha os mesmos 5.
+- [x] O `ListReviewPicturesTest` continua provando as fotos por `id` crescente (HRV-03). O teste de contagem de queries lista 3 reviews com 2, 3 e 1 fotos, então a ordem nova muda o `[2, 3, 1]` esperado para `[1, 3, 2]`. É mudança de spec (HRV-01), não asserção enfraquecida.
+- [x] `makemigrations --check` limpo.
+- [x] Gate check passes: Full.
+- [x] Test count: 1120 → 1125 `def test_` (5 testes novos, baseline recontada com a #182 na `develop`), sem remoção. A suíte roda 1118 → 1123.
 
 **Tests**: integration
 **Gate**: full
