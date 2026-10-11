@@ -13,6 +13,7 @@ expo-env.d.ts
 android
 
 # Native
+google-services.json
 *.orig.*
 *.jks
 *.p8

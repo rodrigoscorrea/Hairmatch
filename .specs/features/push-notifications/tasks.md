@@ -488,10 +488,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] `npx expo config --type public` mostra o plugin e o `googleServicesFile`.
-- [ ] A versão instalada é a do SDK 57, e as dependências nativas transitivas foram conferidas (memória `expo-web-smoke-needs-visible-tab`).
-- [ ] O app web continua abrindo (`npx expo start --web`).
-- [ ] Gate check passes: App.
+- [x] `npx expo config --type public` mostra o plugin e o `googleServicesFile`.
+- [x] A versão instalada é a do SDK 57, e as dependências nativas transitivas foram conferidas (memória `expo-web-smoke-needs-visible-tab`).
+- [x] O app web continua abrindo (`npx expo start --web`).
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
