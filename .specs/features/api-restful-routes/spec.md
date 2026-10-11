@@ -164,6 +164,11 @@ A RFC 3986 define a **sintaxe** de URI. Ela não define nomes de recurso, plural
 | RT-97 | `GET /api/customers/me/favorite-hairdressers` | (nova, feature `favorite-hairdressers`, #115) | cliente | 200 `{data: [{id, user, resume}]}`, do favorito mais recente ao mais antigo; sem cabeleireiro pendente |
 | RT-98 | `PUT /api/customers/me/favorite-hairdressers/{id}` | (nova, feature `favorite-hairdressers`, #115) | cliente | 204, idempotente; 404 se o cabeleireiro não existe ou está pendente |
 | RT-99 | `DELETE /api/customers/me/favorite-hairdressers/{id}` | (nova, feature `favorite-hairdressers`, #115) | cliente | 204, idempotente; 404 se o cabeleireiro não existe |
+| RT-100 | `POST /api/users/me/push-devices` | (nova, feature `push-notifications`, #182) | qualquer usuário | JSON `{token}`; 201 `{data: {id}}` para token novo ou de outra conta, 200 `{data: {id}}` se já é da conta; 503 `push-unavailable` |
+| RT-101 | `DELETE /api/users/me/push-devices/{id}` | (nova, feature `push-notifications`, #182) | dono do aparelho | 204; 404 se não é da conta; o endpoint do SNS sai depois do commit |
+| RT-102 | `GET /api/users/me/alerts` | (nova, feature `push-notifications`, #182) | qualquer usuário | 200 `{data: {alerts: [...], unread_count}}`, os 50 alertas mais recentes |
+| RT-103 | `PATCH /api/users/me/alerts` | (nova, feature `push-notifications`, #182) | qualquer usuário | JSON `{read: true}`; marca todos como lidos; 204 |
+| RT-104 | `PATCH /api/users/me/alerts/{id}` | (nova, feature `push-notifications`, #182) | destinatário | JSON `{read: bool}`; 200 `{data: alerta}`; 404 se não é da conta |
 
 ---
 

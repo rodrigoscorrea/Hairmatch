@@ -118,6 +118,7 @@ Este é o contrato entre backend e app. Cada `type` é `https://hairmatch.app/pr
 | `auth-unavailable` | 503 | Authentication service unavailable | Cognito ou JWKS indisponível | Serviço de autenticação indisponível. Tente novamente em instantes. |
 | `postal-code-service-unavailable` | 503 | Postal code service unavailable | ViaCEP e BrasilAPI indisponíveis | Não foi possível buscar o CEP. Preencha o endereço manualmente. |
 | `ai-service-unavailable` | 503 | AI service unavailable | Gemini sem configuração ou com falha | Não foi possível gerar a descrição agora. Tente novamente. |
+| `push-unavailable` | 503 | Push service unavailable | O SNS falhou ou não respondeu ao registrar o aparelho (feature `push-notifications`, #182) | Não foi possível ativar as notificações agora. |
 
 ---
 
