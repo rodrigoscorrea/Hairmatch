@@ -628,9 +628,10 @@ class ListReviewOrderTest(ReviewsTestCase):
         self.list_url = reverse('list_review', args=[self.hairdresser.id])
         self.noon = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
 
-    def _review(self, rating, created_at, hairdresser=None):
+    def _review(self, rating, created_at, hairdresser=None, customer=None):
         review = Review.objects.create(
-            rating=rating, comment=f'rating {rating}', customer=self.customer, hairdresser=hairdresser or self.hairdresser,
+            rating=rating, comment=f'rating {rating}', customer=customer or self.customer,
+            hairdresser=hairdresser or self.hairdresser,
         )
         Review.objects.filter(id=review.id).update(created_at=created_at)  # `created_at` is auto_now_add
         review.refresh_from_db()
@@ -650,11 +651,11 @@ class ListReviewOrderTest(ReviewsTestCase):
 
     def test_reviews_with_the_same_created_at_are_listed_by_id_descending(self):
         """HRV-02"""
-        first = self._review(3, self.noon)
-        second = self._review(4, self.noon)
-        third = self._review(5, self.noon)
+        # Alternating customers: the joins to the customer and its user must not decide the order of the tie.
+        customers = [self.customer, self.customer2]
+        tied = [self._review(1 + index % 5, self.noon, customer=customers[index % 2]) for index in range(6)]
 
-        self.assertEqual(self._listed_ids(), [third.id, second.id, first.id])
+        self.assertEqual(self._listed_ids(), [review.id for review in reversed(tied)])
 
     def test_each_hairdresser_lists_only_their_own_reviews(self):
         """HRV-04"""
