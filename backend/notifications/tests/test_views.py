@@ -1,9 +1,11 @@
+import datetime
 import threading
 from unittest.mock import patch
 
 from botocore.exceptions import EndpointConnectionError
 from django.db import connection
 from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from hairmatch.problem_testing import assert_problem
@@ -294,3 +296,241 @@ class DeleteAccountTest(PushDeviceTestCase):
         self.assertEqual(Alert.objects.filter(recipient_id=self.user.id).count(), 3)
         self.assertEqual(callbacks, [])
         self.assertEqual(self.fake.deleted, [])
+
+
+ALERTS_URL = '/api/users/me/alerts'
+
+
+def make_alert(recipient, title='Nova reserva', age_minutes=0, read=False):
+    now = timezone.now()
+    alert = Alert.objects.create(
+        recipient=recipient, kind='reservation-created', title=title, body='Ana reservou Corte.', data={'reservation_id': 7},
+    )
+    # created_at is auto_now_add, so the age is written afterwards.
+    Alert.objects.filter(pk=alert.pk).update(
+        created_at=now - datetime.timedelta(minutes=age_minutes), read_at=now if read else None,
+    )
+    return Alert.objects.get(pk=alert.pk)
+
+
+class AlertTestCase(TestCase):
+    def setUp(self):
+        self.user = make_user('user@example.com', '5592900000001')
+        self.other = make_user('other@example.com', '5592900000002', 'hairdresser')
+        self.client_user = login(self.user)
+        self.client_other = login(self.other)
+
+    def patch(self, client, url, body):
+        return client.patch(url, data=body, format='json')
+
+
+class ListAlertsTest(AlertTestCase):
+    def test_it_answers_200_with_the_alerts_in_the_format_of_the_spec(self):
+        """NOTIF-38"""
+        alert = make_alert(self.user)
+
+        response = self.client_user.get(ALERTS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()['data']
+        self.assertEqual(body['unread_count'], 1)
+        self.assertEqual(len(body['alerts']), 1)
+        self.assertEqual(body['alerts'][0], {
+            'id': alert.id, 'kind': 'reservation-created', 'title': 'Nova reserva', 'body': 'Ana reservou Corte.',
+            'data': {'reservation_id': 7}, 'read': False,
+            'created_at': body['alerts'][0]['created_at'],
+        })
+        self.assertEqual(datetime.datetime.fromisoformat(body['alerts'][0]['created_at']), alert.created_at)
+
+    def test_a_read_alert_comes_with_read_true(self):
+        """NOTIF-38"""
+        make_alert(self.user, read=True)
+
+        body = self.client_user.get(ALERTS_URL).json()['data']
+
+        self.assertEqual([alert['read'] for alert in body['alerts']], [True])
+        self.assertEqual(body['unread_count'], 0)
+
+    def test_it_returns_the_50_newest_alerts_newest_first_whatever_the_insertion_order(self):
+        """NOTIF-38, NOTIF-39"""
+        # Inserted oldest-last on purpose: only the ordering can put the newest first.
+        alerts = [make_alert(self.user, title=f'Alerta {minutes}', age_minutes=minutes) for minutes in range(55, 0, -1)]
+        newest_first = sorted(alerts, key=lambda alert: alert.created_at, reverse=True)
+
+        body = self.client_user.get(ALERTS_URL).json()['data']
+
+        self.assertEqual([alert['id'] for alert in body['alerts']], [alert.id for alert in newest_first[:50]])
+        self.assertEqual(len(body['alerts']), 50)
+
+    def test_a_tie_on_created_at_is_broken_by_the_larger_id_first(self):
+        """NOTIF-39"""
+        first = make_alert(self.user)
+        second = make_alert(self.user)
+        Alert.objects.update(created_at=timezone.now())
+
+        body = self.client_user.get(ALERTS_URL).json()['data']
+
+        self.assertEqual([alert['id'] for alert in body['alerts']], [second.id, first.id])
+
+    def test_the_unread_count_counts_every_unread_alert_even_those_beyond_the_50(self):
+        """NOTIF-38"""
+        for minutes in range(1, 56):
+            make_alert(self.user, age_minutes=minutes, read=minutes % 11 == 0)
+        read_alerts = Alert.objects.filter(recipient=self.user, read_at__isnull=False).count()
+
+        body = self.client_user.get(ALERTS_URL).json()['data']
+
+        self.assertEqual(read_alerts, 5)
+        self.assertEqual(body['unread_count'], 50)
+        self.assertEqual(len(body['alerts']), 50)
+
+    def test_it_never_returns_the_alerts_of_another_account(self):
+        """NOTIF-39"""
+        mine = make_alert(self.user)
+        make_alert(self.other)
+        make_alert(self.other)
+
+        body = self.client_user.get(ALERTS_URL).json()['data']
+
+        self.assertEqual([alert['id'] for alert in body['alerts']], [mine.id])
+        self.assertEqual(body['unread_count'], 1)
+
+    def test_without_alerts_it_answers_an_empty_list_and_zero(self):
+        """NOTIF-38"""
+        response = self.client_user.get(ALERTS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'data': {'alerts': [], 'unread_count': 0}})
+
+
+class MarkAlertTest(AlertTestCase):
+    def setUp(self):
+        super().setUp()
+        self.alert = make_alert(self.user)
+
+    def url(self, alert_id=None):
+        return f'{ALERTS_URL}/{alert_id or self.alert.id}'
+
+    def test_read_true_stores_the_moment_and_answers_200_with_the_alert(self):
+        """NOTIF-40"""
+        before = timezone.now()
+
+        response = self.patch(self.client_user, self.url(), {'read': True})
+
+        self.alert.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['id'], self.alert.id)
+        self.assertIs(response.json()['data']['read'], True)
+        self.assertGreaterEqual(self.alert.read_at, before)
+
+    def test_read_false_clears_the_moment_and_answers_200_with_the_alert(self):
+        """NOTIF-40"""
+        Alert.objects.filter(pk=self.alert.pk).update(read_at=timezone.now())
+
+        response = self.patch(self.client_user, self.url(), {'read': False})
+
+        self.alert.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json()['data']['read'], False)
+        self.assertIsNone(self.alert.read_at)
+
+    def test_an_alert_of_another_account_answers_404_and_stays_unread(self):
+        """NOTIF-44"""
+        response = self.patch(self.client_other, self.url(), {'read': True})
+
+        assert_problem(response, 'not-found')
+        self.alert.refresh_from_db()
+        self.assertIsNone(self.alert.read_at)
+
+    def test_an_id_that_does_not_exist_answers_404(self):
+        """NOTIF-44"""
+        response = self.patch(self.client_user, self.url(999999), {'read': True})
+
+        assert_problem(response, 'not-found')
+
+    def test_a_read_that_is_missing_or_not_a_boolean_answers_400_on_the_read_pointer_and_changes_nothing(self):
+        """NOTIF-42"""
+        for name, body in {'missing': {}, 'string': {'read': 'true'}, 'number': {'read': 1}, 'null': {'read': None}}.items():
+            with self.subTest(name):
+                response = self.patch(self.client_user, self.url(), body)
+
+                body = assert_problem(response, 'validation-error')
+                self.assertEqual([error['pointer'] for error in body['errors']], ['#/read'])
+        self.alert.refresh_from_db()
+        self.assertIsNone(self.alert.read_at)
+
+    def test_an_invalid_body_on_a_missing_alert_answers_400_before_the_404(self):
+        """NOTIF-42, NOTIF-44: the body is checked first (L-019)."""
+        response = self.patch(self.client_user, self.url(999999), {'read': 'yes'})
+
+        assert_problem(response, 'validation-error')
+
+    def test_without_a_session_it_answers_401_and_changes_nothing(self):
+        """NOTIF-45"""
+        response = self.patch(APIClient(), self.url(), {'read': True})
+
+        assert_problem(response, 'invalid-session')
+        self.alert.refresh_from_db()
+        self.assertIsNone(self.alert.read_at)
+
+
+class MarkAllAlertsTest(AlertTestCase):
+    def test_read_true_marks_every_alert_of_the_account_and_none_of_another_with_204(self):
+        """NOTIF-41"""
+        mine = [make_alert(self.user), make_alert(self.user, read=True), make_alert(self.user)]
+        theirs = make_alert(self.other)
+
+        response = self.patch(self.client_user, ALERTS_URL, {'read': True})
+
+        self.assertEqual((response.status_code, response.content), (204, b''))
+        self.assertEqual(Alert.objects.filter(pk__in=[alert.pk for alert in mine], read_at__isnull=False).count(), 3)
+        theirs.refresh_from_db()
+        self.assertIsNone(theirs.read_at)
+
+    def test_it_keeps_the_moment_of_an_alert_that_was_already_read(self):
+        """NOTIF-41"""
+        already = make_alert(self.user, read=True)
+        before = already.read_at
+
+        self.patch(self.client_user, ALERTS_URL, {'read': True})
+
+        already.refresh_from_db()
+        self.assertEqual(already.read_at, before)
+
+    def test_read_false_answers_400_on_the_read_pointer_and_changes_nothing(self):
+        """NOTIF-43"""
+        read = make_alert(self.user, read=True)
+        unread = make_alert(self.user)
+
+        response = self.patch(self.client_user, ALERTS_URL, {'read': False})
+
+        body = assert_problem(response, 'validation-error')
+        self.assertEqual([error['pointer'] for error in body['errors']], ['#/read'])
+        read.refresh_from_db()
+        unread.refresh_from_db()
+        self.assertEqual((read.read_at is not None, unread.read_at is None), (True, True))
+
+    def test_a_read_that_is_missing_or_not_a_boolean_answers_400_on_the_read_pointer(self):
+        """NOTIF-42"""
+        make_alert(self.user)
+        for name, body in {'missing': {}, 'string': {'read': 'true'}, 'number': {'read': 1}}.items():
+            with self.subTest(name):
+                response = self.patch(self.client_user, ALERTS_URL, body)
+
+                body = assert_problem(response, 'validation-error')
+                self.assertEqual([error['pointer'] for error in body['errors']], ['#/read'])
+        self.assertEqual(Alert.objects.filter(read_at__isnull=False).count(), 0)
+
+
+class AlertsWithoutSessionTest(AlertTestCase):
+    def test_every_alert_route_answers_401(self):
+        """NOTIF-45"""
+        anonymous = APIClient()
+        calls = {
+            'GET collection': lambda: anonymous.get(ALERTS_URL),
+            'PATCH collection': lambda: self.patch(anonymous, ALERTS_URL, {'read': True}),
+            'PATCH detail': lambda: self.patch(anonymous, f'{ALERTS_URL}/1', {'read': True}),
+        }
+        for name, call in calls.items():
+            with self.subTest(name):
+                assert_problem(call(), 'invalid-session')

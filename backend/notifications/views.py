@@ -1,17 +1,21 @@
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.views import APIView
 
 from hairmatch.problems import Problem, body_error, json_object, problem_response, validation_problem
 from users.authentication import authenticated_user
 
 from .dispatch import delete_endpoints
-from .models import PushDevice
+from .models import Alert, PushDevice
+from .serializers import AlertSerializer
 from .sns import PushUnavailable, get_sns
 
+ALERTS_PAGE_SIZE = 50
 TOKEN_MAX_LENGTH = 1024
 TOKEN_DETAIL = f'The token must be a text of 1 to {TOKEN_MAX_LENGTH} characters.'
 PUSH_UNAVAILABLE_DETAIL = 'The push service is unavailable. Try again shortly.'
+READ_DETAIL = 'The read field must be true or false.'
 # A POST that loses the race for a new token reads the winner's row on the next turn; a few turns are plenty.
 REGISTER_ATTEMPTS = 3
 
@@ -79,3 +83,59 @@ class PushDeviceDetail(APIView):
             transaction.on_commit(lambda: delete_endpoints([arn]), robust=True)
 
         return HttpResponse(status=204)
+
+
+def _read_flag(data):
+    """The `read` of a PATCH body. Raises the 400 on `#/read` when it is missing or not a boolean."""
+    read = data.get('read')
+    if not isinstance(read, bool):
+        raise validation_problem([body_error('read', READ_DETAIL)])
+    return read
+
+
+class AlertCollection(APIView):
+    def get(self, request):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        alerts = Alert.objects.filter(recipient=session.user)
+        unread_count = alerts.filter(read_at__isnull=True).count()
+        return JsonResponse({'data': {
+            'alerts': AlertSerializer(alerts[:ALERTS_PAGE_SIZE], many=True).data,
+            'unread_count': unread_count,
+        }})
+
+    def patch(self, request):
+        """Marks every alert of the session account as read. There is no "unread all": it would hide what was read on purpose."""
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        if not _read_flag(json_object(request)):
+            raise validation_problem([body_error('read', 'Only true is accepted: the alerts are marked as read all at once.')])
+        Alert.objects.filter(recipient=session.user, read_at__isnull=True).update(read_at=timezone.now())
+
+        return HttpResponse(status=204)
+
+
+class AlertDetail(APIView):
+    def patch(self, request, alert_id):
+        session, error = authenticated_user(request)
+        if error:
+            return error
+
+        # The body first (L-019), then the lookup: an invalid body on a missing alert answers 400.
+        read = _read_flag(json_object(request))
+        alert = Alert.objects.filter(pk=alert_id, recipient=session.user).first()
+        if alert is None:
+            return problem_response(request, 'not-found', 'Alert not found.')
+
+        if read and alert.read_at is None:
+            alert.read_at = timezone.now()
+            alert.save(update_fields=['read_at'])
+        elif not read and alert.read_at is not None:
+            alert.read_at = None
+            alert.save(update_fields=['read_at'])
+
+        return JsonResponse({'data': AlertSerializer(alert).data})

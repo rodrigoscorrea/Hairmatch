@@ -371,22 +371,22 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Testes do `GET`:
+- [x] Testes do `GET`:
   - 200 com o formato `{id, kind, title, body, data, read, created_at}`;
   - com 55 alertas, devolve os 50 mais novos na ordem do spec;
   - `unread_count` conta todos os não lidos, inclusive os fora dos 50;
   - nunca traz alertas de outra conta;
   - responde `{"alerts": [], "unread_count": 0}` sem alertas.
-- [ ] Testes do `PATCH /{id}`:
+- [x] Testes do `PATCH /{id}`:
   - `read: true` grava `read_at`, e `read: false` o limpa, com 200 e o alerta;
   - 404 para alerta de outra conta e inexistente;
   - 400 `#/read` para `read` ausente, `"true"` e `1`.
-- [ ] Testes do `PATCH` da coleção:
+- [x] Testes do `PATCH` da coleção:
   - `read: true` marca todos os do usuário e nenhum de outro, com 204;
   - `read: false` dá 400 `#/read` e não muda nada.
-- [ ] 401 sem sessão nas três rotas.
-- [ ] `ROUTE_TABLE` tem RT-102 a RT-104.
-- [ ] Gate check passes: Full.
+- [x] 401 sem sessão nas três rotas.
+- [x] `ROUTE_TABLE` tem RT-102 a RT-104.
+- [x] Gate check passes: Full.
 
 **Tests**: integration
 **Gate**: full
