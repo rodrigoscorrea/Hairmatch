@@ -10,11 +10,14 @@ import {
 } from 'react-native';
 import { styles } from '@/styles/customer/reservation/styles/HairdresserProfileReservationStyle';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { Accordion } from '@/components/Accordion';
 import { formatAvailability } from '@/utils/availability-formater';
 import { useHairdresserProfile } from '@/hooks/customerHooks/useHairdresserReservation';
 import { useGalleryPhotos } from '@/hooks/useGalleryPhotos';
 import { GalleryStrip } from '@/components/gallery/GalleryStrip';
+import { useFavoriteToggle } from '@/hooks/customerHooks/useFavoriteToggle';
+import { ErrorModal } from '@/components/modals/ErrorModal/ErrorModal';
 
 export default function HairdresserProfileReservationScreen() {
   const {
@@ -28,6 +31,11 @@ export default function HairdresserProfileReservationScreen() {
   } = useHairdresserProfile();
 
   const { photos } = useGalleryPhotos(hairdresser?.id);
+
+  // The id comes from the route, not from the loaded hairdresser: the tab keeps this screen mounted, so the
+  // previous hairdresser stays here until the next one loads.
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { isFavorite, disabled: favoriteDisabled, toggle, errorModal, closeError } = useFavoriteToggle(Number(id) || undefined);
 
   const hairdresser_source = hairdresser?.user.profile_picture;
 
@@ -48,11 +56,23 @@ export default function HairdresserProfileReservationScreen() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={toggle}
+          disabled={favoriteDisabled}
+          accessibilityLabel={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        >
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={24}
+            color={isFavorite ? '#D32F2F' : 'black'}
+          />
         </TouchableOpacity>
       </View>
 
@@ -122,5 +142,8 @@ export default function HairdresserProfileReservationScreen() {
         ))}
       </Accordion>
     </ScrollView>
+
+    <ErrorModal visible={errorModal.visible} message={errorModal.message} onClose={closeError} />
+    </>
   );
 }

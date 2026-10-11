@@ -1,0 +1,387 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 22,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::a rollback test asserting zero x rows does not prove x rows get created on the happy path pair every such rollback assertion with a happy path test that asserts the actual created linked values",
+      "text": "A rollback test asserting 'zero X rows' does not prove X rows get created on the happy path — pair every such rollback assertion with a happy-path test that asserts the actual created/linked values.",
+      "signal": "surviving_mutant",
+      "scope": "backend/users/tests.py",
+      "status": "candidate",
+      "features": [
+        "google-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M14b (backend/users/tests.py)"
+      ],
+      "created": "2026-09-27T21:37:43Z",
+      "last_seen": "2026-09-27T21:37:43Z"
+    },
+    {
+      "id": "L-002",
+      "key": "surviving_mutant::when an ac defines a state by two conditions together test the case where only one holds",
+      "text": "When an AC defines a state by two conditions together, test the case where only one holds.",
+      "signal": "surviving_mutant",
+      "scope": "backend/users/tests.py",
+      "status": "candidate",
+      "features": [
+        "email-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "R15 (users/views.py _PENDING_ACCOUNT) (backend/users/tests.py)"
+      ],
+      "created": "2026-10-04T21:00:59Z",
+      "last_seen": "2026-10-04T21:00:59Z"
+    },
+    {
+      "id": "L-003",
+      "key": "surviving_mutant::a no secret in logs check must watch every logger the route can write to not only the service logger",
+      "text": "A 'no secret in logs' check must watch every logger the route can write to, not only the service logger.",
+      "signal": "surviving_mutant",
+      "scope": "backend/users/tests.py",
+      "status": "candidate",
+      "features": [
+        "email-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "E14 (EMC-49) (backend/users/tests.py)"
+      ],
+      "created": "2026-10-04T21:00:59Z",
+      "last_seen": "2026-10-04T21:00:59Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::a case insensitive lookup needs a different case test on every path that uses it login included",
+      "text": "A case-insensitive lookup needs a different-case test on every path that uses it, login included.",
+      "signal": "surviving_mutant",
+      "scope": "backend/users/tests.py",
+      "status": "candidate",
+      "features": [
+        "email-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "L04 (EMC-25) (backend/users/tests.py)"
+      ],
+      "created": "2026-10-04T21:00:59Z",
+      "last_seen": "2026-10-04T21:00:59Z"
+    },
+    {
+      "id": "L-005",
+      "key": "spec_precision_gap::when an ac lists the surfaces a rule covers grep every query of that model for the same exposure before closing the ac",
+      "text": "When an AC lists the surfaces a rule covers, grep every query of that model for the same exposure before closing the AC.",
+      "signal": "spec_precision_gap",
+      "scope": "backend/users/tests.py",
+      "status": "candidate",
+      "features": [
+        "email-confirmation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "EMC-39 (backend/users/tests.py)"
+      ],
+      "created": "2026-10-04T21:00:59Z",
+      "last_seen": "2026-10-04T21:00:59Z"
+    },
+    {
+      "id": "L-006",
+      "key": "surviving_mutant::test the exact boundary value the spec accepts or refuses freezing the clock for time comparisons not only one unit on each side",
+      "text": "Test the exact boundary value the spec accepts or refuses, freezing the clock for time comparisons, not only one unit on each side.",
+      "signal": "surviving_mutant",
+      "scope": "backend,validation,time",
+      "status": "candidate",
+      "features": [
+        "external-appointment"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M3; backend/agenda/views.py:48 (backend,validation,time)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-007",
+      "key": "spec_precision_gap::for every optional body field state in the spec whether json null counts as absent or as a wrong type and pin it with a test",
+      "text": "For every optional body field, state in the spec whether JSON null counts as absent or as a wrong type, and pin it with a test.",
+      "signal": "spec_precision_gap",
+      "scope": "backend,api-contract",
+      "status": "candidate",
+      "features": [
+        "external-appointment"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "EXT-05; backend/agenda/views.py:58 (backend,api-contract)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-008",
+      "key": "ac_gap::alert alert is a no op on react native web so feedback the spec requires on web needs another mechanism",
+      "text": "Alert.alert is a no-op on react-native-web, so feedback the spec requires on web needs another mechanism.",
+      "signal": "ac_gap",
+      "scope": "frontend-mobile,web",
+      "status": "candidate",
+      "features": [
+        "external-appointment"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "EXT-31; frontend-mobile/node_modules/react-native-web/dist/exports/Alert/index.js:11 (frontend-mobile,web)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-009",
+      "key": "spec_precision_gap::keep display format examples identical across acs that share one formatter or state the per screen variant explicitly",
+      "text": "Keep display-format examples identical across ACs that share one formatter, or state the per-screen variant explicitly",
+      "signal": "spec_precision_gap",
+      "scope": "frontend-mobile",
+      "status": "candidate",
+      "features": [
+        "customer-rating"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CRT-56 vs CRT-50 (frontend-mobile/app/(app)/hairdresser/agenda.tsx:154) (frontend-mobile)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-010",
+      "key": "spec_deviation::in tab navigator screens specify navigation to an explicit tab route instead of router back since back history is unreliable across tabs and web refresh",
+      "text": "In tab-navigator screens specify navigation to an explicit tab route instead of router.back, since back history is unreliable across tabs and web refresh",
+      "signal": "spec_deviation",
+      "scope": "frontend-mobile",
+      "status": "candidate",
+      "features": [
+        "customer-rating"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPEC_DEVIATION frontend-mobile/hooks/hairdresserHooks/useRateCustomer.ts:53-55 (frontend-mobile)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-011",
+      "key": "surviving_mutant::include json null among the non string values in every required field validation test",
+      "text": "Include JSON null among the non-string values in every required-field validation test.",
+      "signal": "surviving_mutant",
+      "scope": "backend,validation",
+      "status": "candidate",
+      "features": [
+        "account-settings"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M02; backend/users/tests.py:5957 (backend,validation)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-012",
+      "key": "spec_precision_gap::state in the ac whether client side validation covers every field on the screen or only the changed ones",
+      "text": "State in the AC whether client-side validation covers every field on the screen or only the changed ones.",
+      "signal": "spec_precision_gap",
+      "scope": "frontend-mobile,forms",
+      "status": "candidate",
+      "features": [
+        "account-settings"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ACC-20; frontend-mobile/hooks/accountHooks/useAccountForm.ts:81 (frontend-mobile,forms)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-013",
+      "key": "spec_precision_gap::define what autofill does with fields the lookup response omits",
+      "text": "Define what autofill does with fields the lookup response omits.",
+      "signal": "spec_precision_gap",
+      "scope": "frontend-mobile,cep",
+      "status": "candidate",
+      "features": [
+        "account-settings"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ACC-24; frontend-mobile/hooks/accountHooks/useAddressForm.ts:88-91 (frontend-mobile,cep)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-014",
+      "key": "spec_precision_gap::write error pointers in acs in the exact form the problem helper emits",
+      "text": "Write error pointers in ACs in the exact form the problem helper emits.",
+      "signal": "spec_precision_gap",
+      "scope": "specs,problem-details",
+      "status": "candidate",
+      "features": [
+        "account-settings"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ACC-01..07; backend/hairmatch/problems.py:99-101 (specs,problem-details)"
+      ],
+      "created": "2026-10-10T04:13:11Z",
+      "last_seen": "2026-10-10T04:13:11Z"
+    },
+    {
+      "id": "L-015",
+      "key": "surviving_mutant::test the unexpected exception cleanup path of every endpoint that stores files before a later step not only the invalid input path",
+      "text": "Test the unexpected-exception cleanup path of every endpoint that stores files before a later step, not only the invalid-input path.",
+      "signal": "surviving_mutant",
+      "scope": "tests,storage",
+      "status": "candidate",
+      "features": [
+        "review-editing"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M05 backend/review/views.py:231 (tests,storage)"
+      ],
+      "created": "2026-10-10T18:14:39Z",
+      "last_seen": "2026-10-10T18:14:39Z"
+    },
+    {
+      "id": "L-016",
+      "key": "surviving_mutant::test the atomic block of a lock and write helper under transactiontestcase because testcase wraps every test in a transaction and hides a missing atomic",
+      "text": "Test the atomic block of a lock-and-write helper under TransactionTestCase, because TestCase wraps every test in a transaction and hides a missing atomic.",
+      "signal": "surviving_mutant",
+      "scope": "tests,transactions",
+      "status": "candidate",
+      "features": [
+        "review-editing"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M46 backend/review/customer_ratings.py:60 (tests,transactions)"
+      ],
+      "created": "2026-10-10T18:14:39Z",
+      "last_seen": "2026-10-10T18:14:39Z"
+    },
+    {
+      "id": "L-017",
+      "key": "surviving_mutant::assert at each call site that a failing storage delete still returns success not only on the shared delete helper",
+      "text": "Assert at each call site that a failing storage delete still returns success, not only on the shared delete helper.",
+      "signal": "surviving_mutant",
+      "scope": "tests,storage",
+      "status": "candidate",
+      "features": [
+        "review-editing"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M29 backend/review/views.py:194 (tests,storage)"
+      ],
+      "created": "2026-10-10T18:14:39Z",
+      "last_seen": "2026-10-10T18:14:39Z"
+    },
+    {
+      "id": "L-018",
+      "key": "surviving_mutant::pin a declared default ordering by updating a row to move it before reading because insertion order hides a missing meta ordering",
+      "text": "Pin a declared default ordering by updating a row to move it before reading, because insertion order hides a missing Meta ordering.",
+      "signal": "surviving_mutant",
+      "scope": "tests,models",
+      "status": "candidate",
+      "features": [
+        "review-editing"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M42 backend/review/models.py:30 (tests,models)"
+      ],
+      "created": "2026-10-10T18:14:39Z",
+      "last_seen": "2026-10-10T18:14:39Z"
+    },
+    {
+      "id": "L-019",
+      "key": "spec_precision_gap::state in the spec whether body validation runs before the parent lookup for every new route because an invalid body on a missing parent is otherwise undefined",
+      "text": "State in the spec whether body validation runs before the parent lookup for every new route, because an invalid body on a missing parent is otherwise undefined.",
+      "signal": "spec_precision_gap",
+      "scope": "specs,routes",
+      "status": "candidate",
+      "features": [
+        "review-editing"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REV-11 REV-17 validation.md G5 (specs,routes)"
+      ],
+      "created": "2026-10-10T18:14:39Z",
+      "last_seen": "2026-10-10T18:14:39Z"
+    },
+    {
+      "id": "L-020",
+      "key": "surviving_mutant::when a test checks that an existing storage key is not rewritten also list the directory django storages save a duplicate under another name so reading the original back proves nothing",
+      "text": "When a test checks that an existing storage key is not rewritten, also list the directory: Django storages save a duplicate under another name, so reading the original back proves nothing.",
+      "signal": "surviving_mutant",
+      "scope": "backend/tests",
+      "status": "candidate",
+      "features": [
+        "hairdresser-gallery"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M21 populate_hairdressers.py:70 (backend/tests)"
+      ],
+      "created": "2026-10-10T16:09:46Z",
+      "last_seen": "2026-10-10T16:09:46Z"
+    },
+    {
+      "id": "L-021",
+      "key": "surviving_mutant::a test of a deterministic choice among n options needs many inputs not one key and two options or a random pick passes about half of the runs",
+      "text": "A test of a deterministic choice among N options needs many inputs (not one key and two options), or a random pick passes about half of the runs.",
+      "signal": "surviving_mutant",
+      "scope": "backend/tests",
+      "status": "candidate",
+      "features": [
+        "hairdresser-gallery"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M27 populate_hairdressers.py:72 (backend/tests)"
+      ],
+      "created": "2026-10-10T16:09:46Z",
+      "last_seen": "2026-10-10T16:09:46Z"
+    }
+  ]
+}
