@@ -66,6 +66,8 @@ services:
       # Empty in dev: the backend looks up the hairmatch-dev pool and hairmatch-backend client by name.
       - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
       - COGNITO_APP_CLIENT_ID=${COGNITO_APP_CLIENT_ID:-}
+      # Empty in dev: the backend looks up the hairmatch-dev-fcm platform application by name.
+      - SNS_PLATFORM_APPLICATION_ARN=${SNS_PLATFORM_APPLICATION_ARN:-}
     restart: always
     networks:
       - app_network
@@ -107,7 +109,7 @@ services:
       - "4566:4566"
     environment:
       LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:?Set LOCALSTACK_AUTH_TOKEN in .env (get it at app.localstack.cloud)}
-      SERVICES: s3,ses
+      SERVICES: s3,ses,sns
       PERSISTENCE: 0
       DEBUG: ${LOCALSTACK_DEBUG:-0}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-2}

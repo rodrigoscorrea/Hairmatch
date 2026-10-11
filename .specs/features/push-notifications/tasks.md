@@ -222,15 +222,15 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] `docker compose up -d localstack` sobe saudável, e o log mostra a platform application criada.
-- [ ] **Go/no-go:**
+- [x] `docker compose up -d localstack` sobe saudável, e o log mostra a platform application criada.
+- [x] **Go/no-go:**
   1. `awslocal sns list-platform-applications --region us-east-2` lista `hairmatch-dev-fcm`;
   2. um `create-platform-endpoint` com um token falso devolve um ARN;
   3. um `publish --message-structure json` para ele é aceito;
   4. `curl "http://localhost:4566/_aws/sns/platform-endpoint-messages?region=us-east-2"` mostra a mensagem.
 
   Se algum passo falhar (licença sem SNS ou credencial recusada), PARAR e decidir com o usuário (design, Risks & Concerns).
-- [ ] O backend no compose, com a variável vazia, resolve o ARN pelo nome. Conferir com `python manage.py shell -c "from notifications.sns import get_sns; print(get_sns().platform_application_arn)"`.
+- [x] O backend no compose, com a variável vazia, resolve o ARN pelo nome. Conferir com `python manage.py shell -c "from notifications.sns import get_sns; print(get_sns().platform_application_arn)"`.
 
 **Tests**: none
 **Gate**: build
