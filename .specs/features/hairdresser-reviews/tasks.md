@@ -169,10 +169,10 @@ T8
 - Skill: NONE
 
 **Done when**:
-- [ ] Sem `userInfo.hairdresser.id`, o hook não chama o serviço.
-- [ ] Cada foco chama `getHairdresserReviews` de novo, e uma resposta que chega depois de perder o foco é descartada.
-- [ ] Na falha, `isLoaded` continua `false`, e o `errorModal` usa `problemMessage`.
-- [ ] Gate check passes: App.
+- [x] Sem `userInfo.hairdresser.id`, o hook não chama o serviço.
+- [x] Cada foco chama `getHairdresserReviews` de novo, e uma resposta que chega depois de perder o foco é descartada.
+- [x] Na falha, `isLoaded` continua `false`, e o `errorModal` usa `problemMessage`.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
