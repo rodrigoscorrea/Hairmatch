@@ -457,10 +457,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `POST`, `PUT` e `DELETE /api/customer-ratings...` gravam, cada um, 1 alerta para o cliente, com o nome do cabeleireiro e a nota.
-- [ ] Teste: 409 `review-exists`, 409 `service-not-finished`, 403, 404 e 400 não gravam alerta.
-- [ ] Teste: a média do cliente (AD-010, AD-012) continua certa nos três casos.
-- [ ] Gate check passes: Full (fim da Phase 2).
+- [x] Teste: `POST`, `PUT` e `DELETE /api/customer-ratings...` gravam, cada um, 1 alerta para o cliente, com o nome do cabeleireiro e a nota.
+- [x] Teste: 409 `review-exists`, 409 `service-not-finished`, 403, 404 e 400 não gravam alerta.
+- [x] Teste: a média do cliente (AD-010, AD-012) continua certa nos três casos.
+- [x] Gate check passes: Full (fim da Phase 2).
 
 **Tests**: integration
 **Gate**: full

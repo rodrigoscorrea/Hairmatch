@@ -339,8 +339,8 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | Implemented |
 | NOTIF-33 | P1: Review recebida (N11) | T11 | Implemented |
 | NOTIF-34 | P1: Review recebida (N11) | T16, T23 | In Tasks |
-| NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | In Tasks |
-| NOTIF-36 | P1: Nota recebida (N13) | T12 | In Tasks |
+| NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | Implemented |
+| NOTIF-36 | P1: Nota recebida (N13) | T12 | Implemented |
 | NOTIF-37 | P1: Nota recebida (N13) | T16, T23 | In Tasks |
 | NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | In Tasks |
 | NOTIF-39 | P1: Caixa de alertas (backend) | T2, T9 | Implemented |
@@ -368,9 +368,9 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | Implemented |
 | NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | Implemented |
 | NOTIF-63 | P2: Review editada ou excluída (N12) | T16, T23 | In Tasks |
-| NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | In Tasks |
-| NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | In Tasks |
-| NOTIF-66 | P2: Nota editada ou removida (N14) | T12 | In Tasks |
+| NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
+| NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
+| NOTIF-66 | P2: Nota editada ou removida (N14) | T12 | Implemented |
 | NOTIF-67 | P2: Nota editada ou removida (N14) | T16, T23 | In Tasks |
 | NOTIF-68 | P1: Ambiente local | T4, T19 | Implemented |
 | NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | Implemented |

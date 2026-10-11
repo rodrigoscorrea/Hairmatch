@@ -6,6 +6,8 @@ from django.db import IntegrityError, transaction
 from django.db.models import Avg
 
 from hairmatch.problems import Problem
+from notifications.dispatch import notify
+from notifications.messages import customer_rating_created, customer_rating_deleted, customer_rating_updated
 from users.models import User
 
 from .models import CustomerRating
@@ -52,6 +54,7 @@ def record_customer_rating(hairdresser, reservation, rating, comment):
             raise Problem('review-exists', ALREADY_RATED_DETAIL)
 
         _store_average(user, reservation.customer)
+        notify(customer_rating_created(customer_rating), actor=hairdresser.user)
     return customer_rating
 
 
@@ -63,6 +66,7 @@ def update_customer_rating(customer_rating, rating, comment):
         customer_rating.comment = comment
         customer_rating.save(update_fields=['rating', 'comment'])
         _store_average(user, customer_rating.customer)
+        notify(customer_rating_updated(customer_rating), actor=customer_rating.hairdresser.user)
     return customer_rating
 
 
@@ -70,5 +74,9 @@ def delete_customer_rating(customer_rating):
     """Deletes `customer_rating` and stores the average of the ratings left, or None when it was the only one."""
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=customer_rating.customer.user_id)
+        # The text names the hairdresser, so it is built while the rating still exists.
+        message = customer_rating_deleted(customer_rating)
+        actor = customer_rating.hairdresser.user
         customer_rating.delete()
         _store_average(user, customer_rating.customer)
+        notify(message, actor=actor)

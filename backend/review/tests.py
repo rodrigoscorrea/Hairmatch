@@ -2609,3 +2609,116 @@ class ReviewNotificationTest(ReviewsTestCase):
         for name in names:
             with self.subTest(picture=name):
                 self.assertFalse(default_storage.exists(name))
+
+
+class CustomerRatingNotificationTest(CustomerRatingEditingTestCase):
+    """NOTIF-35, NOTIF-36, NOTIF-64 to NOTIF-66: the customer is told about a rating given, edited or removed."""
+
+    def setUp(self):
+        super().setUp()
+        self.fake = get_sns().client
+        self.device = PushDevice.objects.create(
+            user=self.customer_user, token='customer-phone', endpoint_arn=get_sns().create_endpoint('customer-phone'),
+        )
+        # The two ratings of the base class notified too; the tests count only what they do themselves.
+        Alert.objects.all().delete()
+        self.fake.published.clear()
+        self.collection = reverse('customer_ratings')
+
+    def ended_reservation(self):
+        start = timezone.now() - datetime.timedelta(hours=2)
+        return Reserve.objects.create(customer=self.customer, service=self.service, start_time=start)
+
+    def assert_alert_and_push(self, kind, title, body, data):
+        alert = Alert.objects.get()
+        self.assertEqual(
+            (alert.recipient, alert.kind, alert.title, alert.body, alert.data, alert.read_at),
+            (self.customer_user, kind, title, body, data, None),
+        )
+        self.assertEqual(self.fake.published, [{
+            'arn': self.device.endpoint_arn, 'title': title, 'body': body,
+            'data': {'alert_id': str(alert.pk), 'kind': kind},
+        }])
+
+    def post(self, **fields):
+        body = {'reservation': self.ended_reservation().id, 'rating': 4, 'comment': 'Pontual', **fields}
+        return self.client.post(self.collection, data=json.dumps(body), content_type='application/json')
+
+    def put(self, body, url=None):
+        return self.client.put(url or self.url, data=json.dumps(body), content_type='application/json')
+
+    def test_giving_a_rating_notifies_the_customer_with_the_hairdresser_and_the_rating(self):
+        """NOTIF-35"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assert_alert_and_push(
+            'customer-rating-created', 'Você foi avaliado', 'Test Hairdresser deu nota 4 para você.',
+            {'customer_rating_id': response.json()['data']['id']},
+        )
+        self.assertEqual(self._average(), 4.0)
+
+    def test_editing_a_rating_notifies_the_customer_with_the_new_rating(self):
+        """NOTIF-64"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.put({'rating': 1})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assert_alert_and_push(
+            'customer-rating-updated', 'Avaliação atualizada', 'Test Hairdresser mudou sua nota para 1.',
+            {'customer_rating_id': self.three.id},
+        )
+        self.assertEqual(self._average(), 3.0)
+
+    def test_removing_a_rating_notifies_the_customer(self):
+        """NOTIF-65"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assert_alert_and_push(
+            'customer-rating-deleted', 'Avaliação removida', 'Test Hairdresser removeu a nota que deu a você.', {},
+        )
+        self.assertEqual(self._average(), 5.0)
+
+    def test_a_rating_that_is_not_given_notifies_nobody(self):
+        """NOTIF-36: 409 review-exists, 409 service-not-finished, 403, 404 and 400."""
+        future = Reserve.objects.create(
+            customer=self.customer, service=self.service, start_time=timezone.now() + datetime.timedelta(days=1),
+        )
+        attempts = {
+            'review-exists': lambda: self.client.post(
+                self.collection, data=json.dumps({'reservation': self.reserve.id, 'rating': 4}), content_type='application/json',
+            ),
+            'service-not-finished': lambda: self.client.post(
+                self.collection, data=json.dumps({'reservation': future.id, 'rating': 4}), content_type='application/json',
+            ),
+            'not-found': lambda: self.post(reservation=999999),
+            'validation-error': lambda: self.post(rating=9),
+        }
+        for name, attempt in attempts.items():
+            with self.subTest(name):
+                with self.captureOnCommitCallbacks(execute=True):
+                    assert_problem(attempt(), name)
+        self._login_as_other_hairdresser()
+        with self.captureOnCommitCallbacks(execute=True):
+            assert_problem(self.post(), 'forbidden')
+
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_an_edit_or_a_removal_that_fails_notifies_nobody(self):
+        """NOTIF-66: 400, 403 and 404."""
+        missing = reverse('customer_rating_detail', args=[999999])
+        with self.captureOnCommitCallbacks(execute=True):
+            assert_problem(self.put({'rating': 9}), 'validation-error')
+            assert_problem(self.put({'rating': 4}, missing), 'not-found')
+            assert_problem(self.client.delete(missing), 'not-found')
+            self._login_as_other_hairdresser()
+            assert_problem(self.put({'rating': 4}), 'forbidden')
+            assert_problem(self.client.delete(self.url), 'forbidden')
+
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+        self._assert_untouched()
