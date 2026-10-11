@@ -316,13 +316,13 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-09 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | Implemented |
-| NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | In Tasks |
+| NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | Implemented |
 | NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | In Tasks |
-| NOTIF-14 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
-| NOTIF-15 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
-| NOTIF-16 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
+| NOTIF-14 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
+| NOTIF-15 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
+| NOTIF-16 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-17 | P1: Registro do aparelho (app) | T14, T15, T16, T23 | In Tasks |
-| NOTIF-18 | P1: Registro do aparelho (app) | T15, T23 | In Tasks |
+| NOTIF-18 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-19 | P1: Envio e gravação de alertas | T6 | Implemented |
 | NOTIF-20 | P1: Envio e gravação de alertas | T6 | Implemented |
 | NOTIF-21 | P1: Envio e gravação de alertas | T3, T6, T19 | Implemented |

@@ -540,12 +540,12 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] A permissão só é pedida quando o status é `undetermined`.
-- [ ] O canal é criado antes de `getDevicePushTokenAsync`.
-- [ ] Qualquer erro é engolido.
-- [ ] `onAlertTap` lê `content.data`, com fallback para `trigger.remoteMessage.data`, e também consulta `getLastNotificationResponseAsync`.
-- [ ] O build web não importa `expo-notifications`: o bundle web abre sem erro.
-- [ ] Gate check passes: App.
+- [x] A permissão só é pedida quando o status é `undetermined`.
+- [x] O canal é criado antes de `getDevicePushTokenAsync`.
+- [x] Qualquer erro é engolido.
+- [x] `onAlertTap` lê `content.data`, com fallback para `trigger.remoteMessage.data`, e também consulta `getLastNotificationResponseAsync`.
+- [x] O build web não importa `expo-notifications`: o bundle web abre sem erro.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build

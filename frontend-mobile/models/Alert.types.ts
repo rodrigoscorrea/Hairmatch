@@ -24,3 +24,9 @@ export interface AlertList {
   alerts: Alert[];
   unreadCount: number;
 }
+
+/** What a tap on a push carries: the alert it opened and its kind. */
+export interface AlertTap {
+  alertId: number;
+  kind: string;
+}
