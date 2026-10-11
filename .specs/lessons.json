@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 22,
+  "next_id": 23,
   "lessons": [
     {
       "id": "L-001",
@@ -335,17 +335,19 @@
       "text": "State in the spec whether body validation runs before the parent lookup for every new route, because an invalid body on a missing parent is otherwise undefined.",
       "signal": "spec_precision_gap",
       "scope": "specs,routes",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "review-editing"
+        "review-editing",
+        "push-notifications"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "REV-11 REV-17 validation.md G5 (specs,routes)"
+        "REV-11 REV-17 validation.md G5 (specs,routes)",
+        "NOTIF-42 NOTIF-44 validation.md gap 1 (backend/notifications/tests/test_views.py:462) (specs,routes)"
       ],
       "created": "2026-10-10T18:14:39Z",
-      "last_seen": "2026-10-10T18:14:39Z"
+      "last_seen": "2026-10-11T14:13:12Z"
     },
     {
       "id": "L-020",
@@ -382,6 +384,24 @@
       ],
       "created": "2026-10-10T16:09:46Z",
       "last_seen": "2026-10-10T16:09:46Z"
+    },
+    {
+      "id": "L-022",
+      "key": "ac_gap::check the exact error the emulator returns for every failure the code branches on because it can differ from the real service s error code",
+      "text": "Check the exact error the emulator returns for every failure the code branches on, because it can differ from the real service's error code.",
+      "signal": "ac_gap",
+      "scope": "external-services,e2e",
+      "status": "candidate",
+      "features": [
+        "push-notifications"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "NOTIF-24 E2E phase 3 N-24 (backend/notifications/sns.py) (external-services,e2e)"
+      ],
+      "created": "2026-10-11T14:13:12Z",
+      "last_seen": "2026-10-11T14:13:12Z"
     }
   ]
 }

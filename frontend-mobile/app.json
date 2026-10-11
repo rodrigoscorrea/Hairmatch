@@ -34,6 +34,13 @@
         }
       ],
       [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "color": "#ffffff"
+        }
+      ],
+      [
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.ios-not-used-placeholder"

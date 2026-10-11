@@ -160,7 +160,52 @@
 - **Date**: 2026-10-10
 - **Status**: active
 
+### AD-014
+- **Decision**: Toda notificação a um usuário passa por `notifications.dispatch.notify(message, actor)`.
+  - A função grava um `Alert` (tabela de alertas do usuário) na transação da ação que gerou o evento.
+  - Ela agenda a publicação no AWS SNS (Mobile Push, FCM HTTP v1) com `transaction.on_commit(..., robust=True)`.
+  - O publicador nunca propaga exceção: loga a operação e o código do erro, sem token nem ARN.
+  - Num `EndpointDisabled` ou `NotFound`, ele apaga a linha do aparelho e o endpoint.
+
+  Os textos do catálogo saem de `notifications/messages.py`. Nenhuma view chama o SNS direto: todo acesso passa por `notifications/sns.py` (`get_sns()`, com um fake nos testes). Em dev, o SNS roda no LocalStack, e o ARN da platform application vem de `SNS_PLATFORM_APPLICATION_ARN` ou, vazia, da busca pelo nome `hairmatch-dev-fcm`.
+- **Reason**: A spike #172 escolheu push via SNS e FCM, só no Android. O usuário pediu que toda notificação também fique gravada numa tabela de alertas. Gravar na mesma transação garante que só existe alerta de ação confirmada. Publicar depois do commit evita push de ação desfeita. Não deixar a falha subir impede que uma reserva gravada responda 500 ou que o chatbot diga ao cliente que ela falhou.
+- **Trade-off**:
+  - O envio é síncrono no thread da requisição, sem fila. Cada aparelho soma latência à resposta, limitada pelos timeouts do client (2 s + 3 s, 2 tentativas).
+  - Um push que falha se perde, sem retentativa. O alerta fica na caixa.
+  - A fila assíncrona fica para a #185, que traz o scheduler.
+  - As novas env vars deste épico são uma exceção aceita pelo usuário à regra de não criar variáveis.
+- **Scope**: `backend/notifications`, os pontos de evento em `backend/reserve` e `backend/review`, `backend/users` (exclusão da conta), `docker/` e o app (`expo-notifications`, caixa de alertas). Todo evento novo do épico #188 (#171, #183, #184, #185, #186, #187) usa `notify()` e acrescenta o seu `kind` ao catálogo.
+- **Date**: 2026-10-11
+- **Status**: active
+
 ## Handoff
+
+- **Feature**: `push-notifications` (issue #182, épico #188, itens N01 e N11 a N14 do levantamento da spike #172).
+- **Phase / Task**: Execute concluído em 2026-10-11, na branch `182-notificacoes-push`: T1 a T19 feitas, com commits atômicos. Restam as tarefas manuais T20 a T22 e o UAT da T23.
+  - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (50 critérios Verified), sensor 18/18, E2E de API 48/48 contra o LocalStack real, gate 1118 testes e `tsc` com 0 erros.
+  - O app (27 requisitos) está Implemented, não Verified, até o UAT em aparelho.
+- **Completed**:
+  - Decisões do usuário:
+    - só Android;
+    - alertas gravados numa tabela nova;
+    - o menu "Notificações" abre a caixa, com contador de não lidos e "Marcar todas como lidas";
+    - opt-in pela permissão do Android;
+    - novas env vars aceitas;
+    - WhatsApp fora;
+    - o toque no alerta de review espera a tela da #189;
+    - o projeto Firebase é tarefa manual (T20).
+  - Route Table do `api-restful-routes`: RT-100 a RT-104.
+  - Catálogo do `api-problem-details`: slug `push-unavailable` (503).
+  - AD-014.
+  - Cards criados: épico #188 e #182 a #187 e #189. A #172 foi fechada, e a #171 foi pendurada no épico.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Revisar e mesclar o PR da #182 na `develop`.
+  2. O usuário faz a T20 (projeto Firebase, `google-services.json` no EAS, chave da service account) e a T22 (platform application FCM na AWS real, permissões do Render, `SNS_PLATFORM_APPLICATION_ARN`).
+  3. Gerar o dev build (T21) e rodar o UAT no preview (T23). O deploy da branch no preview exige o aval do usuário.
+  4. Confirmar na AWS real o código que o SNS devolve para um endpoint apagado (o LocalStack devolve `InvalidParameter`; o código trata os dois).
+  5. O T7 da #189 só começa com a #182 mesclada.
+- **Fora do repositório**: o levantamento está no Claude Doc "Notificações Push — Hairmatch". O WIP do `frontend-mobile` (`.env.example`, `package.json`, `package-lock.json`, `services/axios-instance.ts`, `eslint.config.js`) e as pastas `docs/` não commitadas não são desta feature.
 
 - **Feature**: `favorite-hairdressers` (issue #115, RF25), branch `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 - **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-10. `spec.md` (FAV-01 a FAV-43), `context.md`, `design.md` e `tasks.md` (T1 a T11, em 4 fases) validados por `validate_spec.py` e `validate_tasks.py` com exit 0. Os 13 avisos são `Tests: none` das tasks de app e `Where` com vários arquivos, justificados na Task Granularity Check. O Execute não começou e aguarda a aprovação das tasks.

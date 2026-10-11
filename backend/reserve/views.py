@@ -18,6 +18,8 @@ from django.utils.dateparse import parse_datetime
 from hairmatch.problems import body_error, json_object, missing_field_errors, problem_response, query_error, validation_problem
 from users.authentication import authenticated_user, authenticated_customer, forbidden
 from hairmatch.local_time import LOCAL_TIMEZONE, make_local_aware, local_day_bounds, local_today
+from notifications.dispatch import notify
+from notifications.messages import reservation_created
 
 # Create your views here.
 # What the API answers, in English, and what the WhatsApp chatbot tells the customer, in Portuguese.
@@ -134,7 +136,7 @@ class CreateReserve(APIView):
 
         # A failure here is unexpected: the transaction rolls back and the central handler answers 500.
         with transaction.atomic():
-            Reserve.objects.create(
+            reserve = Reserve.objects.create(
                 start_time=start_time,
                 customer=customer_instance,
                 service=service_instance,
@@ -146,6 +148,7 @@ class CreateReserve(APIView):
                 hairdresser=hairdresser_instance,
                 service=service_instance
             )
+            notify(reservation_created(reserve), actor=session.user)
 
         return JsonResponse({'message': 'Reserve created successfully'}, status=201)
 
@@ -405,6 +408,7 @@ def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
                 hairdresser=hairdresser_instance,
                 service=service_instance
             )
+            notify(reservation_created(reserve), actor=customer_instance.user)
 
         return {'success': True, 'reserve': reserve}
     except Customer.DoesNotExist:

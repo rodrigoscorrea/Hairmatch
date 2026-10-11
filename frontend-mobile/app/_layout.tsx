@@ -7,6 +7,7 @@ import axiosInstance, { setSessionExpiredHandler } from '../services/axios-insta
 import { REFRESH_PATH } from '../services/auth-routes';
 import { UserInfo } from '../models/User.types';
 import { homeRouteFor } from '../utils/routes';
+import { discardPendingAlertTap, unregisterForPush } from '../utils/push-registration';
 import { Preference } from '../models/Preferences.types';
 import { ApiConnectionError, ApiProblem, problemMessage, toApiProblem } from '../utils/api-problem';
 import * as WebBrowser from 'expo-web-browser';
@@ -126,6 +127,9 @@ export default function RootLayout() {
   },
   signOut: async () => {
     setIsLoading(true);
+    // First: the logout does not say whose phone it is, so the phone leaves the account while the session still stands.
+    // Never throws; a failure only means the next account to log in on this phone takes the token over.
+    await unregisterForPush();
     try {
       await axiosInstance.post(`${API_BACKEND_URL}/api/auth/logout`, {}, { withCredentials: true });
     } catch (error) {
@@ -171,6 +175,8 @@ export default function RootLayout() {
             // No valid refresh token: stay on the login screen.
           }
         }
+        // A push that opened the app without a session opens the login, not an alert after a later login.
+        if (!session.success) discardPendingAlertTap();
       } finally {
         setIsLoading(false);
       }

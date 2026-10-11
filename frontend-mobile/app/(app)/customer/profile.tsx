@@ -9,6 +9,8 @@ import { ErrorModal } from "@/components/modals/ErrorModal/ErrorModal";
 import { useDeleteAccount } from "@/hooks/accountHooks/useDeleteAccount";
 import { useCustomerProfile } from "@/hooks/customerHooks/useCustomerProfile"; // <-- Our new hook
 import { usePathname, useRouter } from 'expo-router'; // Adjust path if needed
+import { useUnreadAlertsCount } from "@/hooks/useUnreadAlertsCount";
+import { CUSTOMER_NOTIFICATIONS } from "@/utils/alert-routes";
 
 export default function ProfileScreen(){
     const pathname = usePathname();
@@ -30,6 +32,7 @@ export default function ProfileScreen(){
 
     const router = useRouter();
     const deletion = useDeleteAccount("customer");
+    const unreadBadge = useUnreadAlertsCount();
 
     // userInfo is null for a moment after the logout or the account deletion.
     if (!customer) return null;
@@ -104,7 +107,8 @@ export default function ProfileScreen(){
             iconName="bell"
             title="Notificações"
             subtitle="Gerenciar suas notificações"
-            onPress={() => handleMenuPress('Notificações')}
+            badge={unreadBadge}
+            onPress={() => router.push(CUSTOMER_NOTIFICATIONS)}
           />
           
           <MenuItem

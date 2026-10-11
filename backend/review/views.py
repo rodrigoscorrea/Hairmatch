@@ -16,6 +16,8 @@ from hairmatch.problems import (
     validation_problem,
 )
 from hairmatch.storage import delete_stored_files
+from notifications.dispatch import notify
+from notifications.messages import review_created, review_deleted, review_updated
 from reserve.models import Reserve
 from users.authentication import authenticated_customer, authenticated_hairdresser, authenticated_user, forbidden
 from users.models import Customer, Hairdresser
@@ -127,6 +129,7 @@ class CreateReview(APIView):
                 add_review_pictures(new_review, files, saved_names)
                 reserve.review = new_review
                 reserve.save()
+                notify(review_created(new_review), actor=session.user)
         except InvalidImage:
             delete_stored_files(saved_names)
             return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
@@ -169,7 +172,9 @@ class UpdateReview(APIView):
         review.rating = _parse_rating(data['rating'])
         review.comment = data.get('comment', review.comment)
         # The picture only arrives as an upload on create: a JSON string here would become an arbitrary storage key.
-        review.save()
+        with transaction.atomic():
+            review.save()
+            notify(review_updated(review), actor=session.user)
         return JsonResponse({'message': "Review updated successfully"}, status=200)
     
 class RemoveReview(APIView):
@@ -190,7 +195,10 @@ class RemoveReview(APIView):
 
             # The CASCADE removes the rows but not the objects: they go after the commit, never on a rollback.
             names = picture_names(review.pictures.all())
+            # The text names the customer and the rating, so it is built while the review still exists.
+            message = review_deleted(review)
             review.delete()
+            notify(message, actor=session.user)
             transaction.on_commit(lambda: delete_stored_files(names))
         return HttpResponse(status=204)
 

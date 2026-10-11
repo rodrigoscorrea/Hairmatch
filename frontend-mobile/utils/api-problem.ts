@@ -45,7 +45,8 @@ export type ProblemSlug =
   | 'internal-error'
   | 'auth-unavailable'
   | 'postal-code-service-unavailable'
-  | 'ai-service-unavailable';
+  | 'ai-service-unavailable'
+  | 'push-unavailable';
 
 export interface ApiProblemError {
   pointer?: string;
@@ -109,6 +110,7 @@ export const PROBLEM_MESSAGES: Record<ProblemSlug, string> = {
   'auth-unavailable': 'Serviço de autenticação indisponível. Tente novamente em instantes.',
   'postal-code-service-unavailable': ERROR_MESSAGES.cep_lookup_failed,
   'ai-service-unavailable': 'Não foi possível gerar a descrição agora. Tente novamente.',
+  'push-unavailable': 'Não foi possível ativar as notificações agora.',
 };
 
 // Thrown by the native sign-up when the request never reached the backend (fetch rejects instead of answering).
