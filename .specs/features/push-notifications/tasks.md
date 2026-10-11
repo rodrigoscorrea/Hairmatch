@@ -251,10 +251,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Um teste por `kind`: destinatário, `kind`, título e corpo **literais** do spec, e os `data`.
-- [ ] Teste: uma reserva às 13:00 UTC sai como "09:00" (Manaus, UTC−4), e uma às 03:30 UTC do dia 2 sai como o dia 1 às "23:30".
-- [ ] Teste: as notas 5.0, 4.5 e 1.0 saem como "5", "4,5" e "1", e 1 usa "estrela".
-- [ ] Gate check passes: Quick.
+- [x] Um teste por `kind`: destinatário, `kind`, título e corpo **literais** do spec, e os `data`.
+- [x] Teste: uma reserva às 13:00 UTC sai como "09:00" (Manaus, UTC−4), e uma às 03:30 UTC do dia 2 sai como o dia 1 às "23:30".
+- [x] Teste: as notas 5.0, 4.5 e 1.0 saem como "5", "4,5" e "1", e 1 usa "estrela".
+- [x] Gate check passes: Quick.
 
 **Tests**: unit
 **Gate**: quick

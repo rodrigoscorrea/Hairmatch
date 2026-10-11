@@ -329,9 +329,9 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-22 | P1: Envio e gravação de alertas | T6 | In Tasks |
 | NOTIF-23 | P1: Envio e gravação de alertas | T6 | In Tasks |
 | NOTIF-24 | P1: Envio e gravação de alertas | T3, T6 | In Tasks |
-| NOTIF-25 | P1: Envio e gravação de alertas | T5 | In Tasks |
+| NOTIF-25 | P1: Envio e gravação de alertas | T5 | Implemented |
 | NOTIF-26 | P1: Envio e gravação de alertas | T6 | In Tasks |
-| NOTIF-27 | P1: Envio e gravação de alertas | T5 | In Tasks |
+| NOTIF-27 | P1: Envio e gravação de alertas | T5 | Implemented |
 | NOTIF-28 | P1: Nova reserva (N01) | T5, T10, T19 | In Tasks |
 | NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | In Tasks |
 | NOTIF-30 | P1: Nova reserva (N01) | T10 | In Tasks |
