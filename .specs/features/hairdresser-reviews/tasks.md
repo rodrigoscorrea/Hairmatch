@@ -146,9 +146,9 @@ T8
 - Skill: NONE
 
 **Done when**:
-- [ ] `ReceivedReview` declara `customer: { id; user: { id; first_name; last_name } }`, e o tipo `Review` existente não muda.
-- [ ] `getHairdresserReviews` devolve `Promise<ReceivedReview[]>` e deixa o erro subir.
-- [ ] Gate check passes: App.
+- [x] `ReceivedReview` declara `customer: { id; user: { id; first_name; last_name } }`, e o tipo `Review` existente não muda.
+- [x] `getHairdresserReviews` devolve `Promise<ReceivedReview[]>` e deixa o erro subir.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
