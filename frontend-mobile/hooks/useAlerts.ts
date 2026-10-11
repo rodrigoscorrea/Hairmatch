@@ -73,7 +73,7 @@ export const useAlerts = () => {
       () => markAlertRead(alert.id, true)
     );
     if (!marked) return;
-    // A review alert has no destination yet: the user stays on the inbox, with the alert read.
+    // An alert without a destination (review-deleted) leaves the user on the inbox, with the alert read.
     const destination = alertRoute(alert.kind);
     if (destination) router.push(destination);
   };

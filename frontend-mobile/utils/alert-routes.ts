@@ -6,6 +6,7 @@ import { HAIRDRESSER_HOME } from '@/utils/routes';
 // change would not type-check yet.
 export const CUSTOMER_NOTIFICATIONS = '/(app)/customer/notifications' as Href;
 export const HAIRDRESSER_NOTIFICATIONS = '/(app)/hairdresser/profile/notifications' as Href;
+export const HAIRDRESSER_REVIEWS = '/(app)/hairdresser/profile/reviews' as Href;
 
 /** The inbox of the logged user's role, or null while there is no user info. */
 export const inboxRoute = (userInfo: UserInfo | null | undefined): Href | null => {
@@ -15,12 +16,13 @@ export const inboxRoute = (userInfo: UserInfo | null | undefined): Href | null =
 };
 
 /**
- * Where a tap on an alert goes, or null to stay on the inbox. A review alert has no destination until the
- * hairdresser has a screen for the reviews they received (#189).
+ * Where a tap on an alert goes, or null to stay on the inbox. A review that was created or edited opens the
+ * reviews the hairdresser received; a removed one is no longer on that list, so `review-deleted` stays on the inbox.
  */
 export const alertRoute = (kind: string): Href | null => {
   if (kind === 'reservation-created') return HAIRDRESSER_HOME;
   if (kind.startsWith('customer-rating-')) return '/(app)/customer/ratings';
+  if (kind === 'review-created' || kind === 'review-updated') return HAIRDRESSER_REVIEWS;
   return null;
 };
 

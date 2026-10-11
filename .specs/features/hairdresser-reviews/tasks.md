@@ -278,11 +278,11 @@ Em `hairdresser/profile/_layout.tsx`, registrar `<Stack.Screen name="reviews" />
 - Skill: NONE
 
 **Done when**:
-- [ ] `alertRoute('review-created', ...)` e `alertRoute('review-updated', ...)` devolvem `'/(app)/hairdresser/profile/reviews'`.
-- [ ] `alertRoute('review-deleted', ...)` devolve `null`.
-- [ ] `alertRoute` de `reservation-created` e `customer-rating-*` devolve o mesmo destino de antes.
-- [ ] O catálogo, o NOTIF-34, o NOTIF-63 e o T16 da `push-notifications` descrevem o destino novo, e `validate_spec.py .specs/features/push-notifications` sai com exit 0.
-- [ ] Gate check passes: App.
+- [x] `alertRoute('review-created', ...)` e `alertRoute('review-updated', ...)` devolvem `'/(app)/hairdresser/profile/reviews'`.
+- [x] `alertRoute('review-deleted', ...)` devolve `null`.
+- [x] `alertRoute` de `reservation-created` e `customer-rating-*` devolve o mesmo destino de antes.
+- [x] O catálogo, o NOTIF-34, o NOTIF-63 e o T16 da `push-notifications` descrevem o destino novo, e `validate_spec.py .specs/features/push-notifications` sai com exit 0.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
