@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/favorite-hairdressers/spec.md`
 **Context**: `.specs/features/favorite-hairdressers/context.md`
 **Design**: `.specs/features/favorite-hairdressers/design.md`
-**Status**: Execute: T1 a T10 concluídas. T11 (UAT) em andamento.
+**Status**: Execute: T1 a T10 concluídas. T11: a parte automatizada (E2E de API e bundle do Metro, no lugar do UAT em navegador) foi feita; o UAT manual no web e no Android está PENDENTE com o usuário.
 **Branch**: `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.
 
 **Pré-requisitos do Execute:**
@@ -410,6 +410,12 @@ Roteiro:
 - [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção.
 - [ ] Os critérios de app do spec ficam Verified.
 - [ ] Gate check passes: Build.
+
+**Status (Execute)**: PARCIAL. O UAT manual no web e no Android está PENDENTE e não foi feito (o usuário proibiu o Claude in Chrome, e o Android depende dele). No lugar do roteiro em navegador:
+- **E2E de API** contra um servidor Django real do worktree (porta 8001, banco descartável `hairmatch_e2e_fav`, MiniStack para o Cognito): 46 de 46 verificações passam. Cobrem as três rotas (RT-97 a RT-99) com cookies reais, 401 e 403, o formato público do item, a ordem do mais recente ao mais antigo, o `PUT` repetido que mantém linha e `created_at`, 6 `PUT` simultâneos que deixam uma linha, 404 para `{id}` desconhecido, pendente e `abc`, 405 no path da lista, o isolamento entre clientes, o cabeleireiro pendente que sai da lista e volta, o preflight de CORS de `PUT` e `DELETE` a partir do `:8081`, e a exclusão da conta do cabeleireiro e do cliente. O servidor, o banco e os usuários do Cognito foram removidos depois.
+- **Bundle do Metro**: o app compila com as telas novas (`Web Bundled … 2400 modules`, sem erro), e `npx tsc --noEmit` fecha com 0 erros depois que o Metro regenerou o `.expo/types/router.d.ts`.
+
+Os itens do roteiro que dependem da tela (1 a 6, e o 7 no app) seguem sem prova e continuam no UAT manual. Os critérios de app (FAV-12 a FAV-17, FAV-25 a FAV-35 e FAV-41) ficam como Implemented até esse UAT.
 
 **Tests**: none
 **Gate**: build
