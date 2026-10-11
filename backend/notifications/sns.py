@@ -28,6 +28,9 @@ class PushUnavailable(SnsError):
 
 
 _GONE_CODES = {'EndpointDisabled', 'NotFound'}
+# LocalStack answers a publish to a deleted endpoint with InvalidParameter and this text, where SNS answers NotFound.
+# Any other InvalidParameter (a malformed message, say) is our bug, and must not delete the phone of a user.
+_NO_ENDPOINT_MESSAGE = 'No endpoint found for the target arn'
 
 
 class SnsService:
@@ -103,9 +106,11 @@ class SnsService:
         try:
             return getattr(self.client, operation)(**kwargs)
         except ClientError as exc:
-            code = exc.response.get('Error', {}).get('Code', '')
+            error = exc.response.get('Error', {})
+            code = error.get('Code', '')
             self._log(operation, code)
-            raise (EndpointGone if code in _GONE_CODES else PushUnavailable)(code) from exc
+            gone = code in _GONE_CODES or (code == 'InvalidParameter' and _NO_ENDPOINT_MESSAGE in error.get('Message', ''))
+            raise (EndpointGone if gone else PushUnavailable)(code) from exc
         except BotoCoreError as exc:
             code = type(exc).__name__
             self._log(operation, code)

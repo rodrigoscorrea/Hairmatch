@@ -122,6 +122,27 @@ class PublishTest(StubbedSnsTest):
         with self.assertRaises(EndpointGone):
             self.service.publish(ENDPOINT_ARN, 't', 'b', {})
 
+    def test_localstack_answer_for_a_deleted_endpoint_is_endpoint_gone(self):
+        """NOTIF-24: the emulator says InvalidParameter where SNS says NotFound."""
+        self.stubber.add_client_error(
+            'publish', service_error_code='InvalidParameter',
+            service_message='Invalid parameter: TargetArn Reason: No endpoint found for the target arn specified',
+        )
+
+        with self.assertRaises(EndpointGone):
+            self.service.publish(ENDPOINT_ARN, 't', 'b', {})
+
+    def test_any_other_invalid_parameter_is_push_unavailable_and_keeps_the_device(self):
+        """NOTIF-23: a message that SNS refuses is a bug of ours, not a dead phone."""
+        self.stubber.add_client_error(
+            'publish', service_error_code='InvalidParameter', service_message='Invalid parameter: Message Reason: bad json',
+        )
+
+        with self.assertRaises(PushUnavailable) as raised:
+            self.service.publish(ENDPOINT_ARN, 't', 'b', {})
+
+        self.assertNotIsInstance(raised.exception, EndpointGone)
+
     def test_any_other_client_error_is_push_unavailable(self):
         """NOTIF-23"""
         self.stubber.add_client_error('publish', service_error_code='InternalError')
