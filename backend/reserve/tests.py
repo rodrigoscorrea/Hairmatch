@@ -18,6 +18,8 @@ from hairmatch.image_fixtures import make_upload
 from django.core.files.storage import default_storage
 from agenda.models import Agenda
 from availability.models import Availability
+from notifications.models import Alert, PushDevice
+from notifications.sns import get_sns
 from users.cognito import get_cognito
 from hairmatch.local_time import make_local_aware
 from hairmatch.problem_testing import assert_problem
@@ -859,3 +861,105 @@ class ReservationReviewPicturesTest(ReserveTestCase):
 
         self.assertEqual([len(r['review']['pictures']) for r in data], [2, 2, 2])
         self.assertEqual(len(three), len(one))
+
+
+class ReservationNotificationTest(ReserveTestCase):
+    """NOTIF-28 to NOTIF-30: the hairdresser of the service is told about a new reservation, by the app and by the chatbot."""
+
+    START = datetime(2030, 3, 4, 14, 0, tzinfo=dt_timezone.utc)  # 10:00 on 04/03 in Manaus
+    BODY = 'Test Customer reservou Haircut para 04/03 às 10:00.'
+
+    def setUp(self):
+        super().setUp()
+        self.fake = get_sns().client
+        token = 'hairdresser-phone'
+        self.device = PushDevice.objects.create(
+            user=self.hairdresser_user, token=token, endpoint_arn=get_sns().create_endpoint(token),
+        )
+        self.login(self.customer_user)
+
+    def post(self, **overrides):
+        body = {'hairdresser': self.hairdresser.id, 'service': self.service.id, 'start_time': self.START.isoformat()}
+        body.update(overrides)
+        return self.client.post(self.create_url, data=json.dumps(body), content_type='application/json')
+
+    def assert_one_alert_and_push(self, reserve_id):
+        alert = Alert.objects.get()
+        self.assertEqual(
+            (alert.recipient, alert.kind, alert.title, alert.body, alert.data, alert.read_at),
+            (self.hairdresser_user, 'reservation-created', 'Nova reserva', self.BODY, {'reservation_id': reserve_id}, None),
+        )
+        self.assertEqual(self.fake.published, [{
+            'arn': self.device.endpoint_arn, 'title': 'Nova reserva', 'body': self.BODY,
+            'data': {'alert_id': str(alert.pk), 'kind': 'reservation-created'},
+        }])
+
+    def test_a_reservation_by_the_app_notifies_the_hairdresser_with_an_alert_and_a_push(self):
+        """NOTIF-28"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assert_one_alert_and_push(Reserve.objects.get(start_time=self.START).pk)
+
+    def test_a_reservation_by_the_chatbot_notifies_the_hairdresser_the_same_way(self):
+        """NOTIF-29"""
+        with self.captureOnCommitCallbacks(execute=True):
+            result = reserve_views().create_new_reserve(self.customer.id, self.service.id, self.hairdresser.id, self.START)
+
+        self.assertTrue(result.get('success'))
+        self.assert_one_alert_and_push(result['reserve'].pk)
+
+    def test_a_reservation_that_is_not_created_notifies_nobody(self):
+        """NOTIF-30: 409 slot-unavailable, 409 customer-schedule-conflict, 400 and 404."""
+        clash = self.reserve_start_time.isoformat()
+        customer_clash = (self.reserve_start_time + timedelta(minutes=30)).isoformat()
+        attempts = {
+            'slot-unavailable': lambda: self.post(start_time=clash),
+            'customer-schedule-conflict': lambda: self.post(
+                hairdresser=self.other_hairdresser.id, service=self.other_service.id, start_time=customer_clash,
+            ),
+            'validation-error': lambda: self.post(start_time='tomorrow at 3pm'),
+            'not-found': lambda: self.post(service=999999),
+        }
+        for name, attempt in attempts.items():
+            with self.subTest(name):
+                with self.captureOnCommitCallbacks(execute=True):
+                    assert_problem(attempt(), name)
+
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_a_chatbot_reservation_that_is_not_created_notifies_nobody(self):
+        """NOTIF-30"""
+        with self.captureOnCommitCallbacks(execute=True):
+            result = reserve_views().create_new_reserve(
+                self.customer.id, self.service.id, self.hairdresser.id, self.reserve_start_time,
+            )
+
+        self.assertIn('error', result)
+        self.assertEqual(Alert.objects.count(), 0)
+        self.assertEqual(self.fake.published, [])
+
+    def test_a_failing_sns_keeps_the_201_of_the_app(self):
+        """NOTIF-23, NOTIF-28"""
+        self.fake.fail_next('publish', 'InternalError')
+
+        with self.assertLogs('notifications.sns', 'WARNING'):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.post()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Reserve.objects.filter(start_time=self.START).count(), 1)
+        self.assertEqual(Alert.objects.count(), 1)
+
+    def test_a_failing_sns_keeps_the_success_of_the_chatbot(self):
+        """NOTIF-23, NOTIF-29"""
+        self.fake.fail_next('publish', 'InternalError')
+
+        with self.assertLogs('notifications.sns', 'WARNING'):
+            with self.captureOnCommitCallbacks(execute=True):
+                result = reserve_views().create_new_reserve(self.customer.id, self.service.id, self.hairdresser.id, self.START)
+
+        self.assertTrue(result.get('success'))
+        self.assertEqual(Alert.objects.count(), 1)

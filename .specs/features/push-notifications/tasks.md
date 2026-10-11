@@ -407,11 +407,11 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Teste: `POST /api/reservations` com sucesso grava 1 alerta `reservation-created` para o usuário do cabeleireiro, com o texto do spec, e publica no aparelho dele.
-- [ ] Teste: `create_new_reserve` faz o mesmo.
-- [ ] Teste: 409 `slot-unavailable`, 409 `customer-schedule-conflict`, 400 e 404 não gravam alerta.
-- [ ] Teste: com o fake do SNS falhando, o `POST` responde 201 e `create_new_reserve` devolve `success`.
-- [ ] Gate check passes: Full.
+- [x] Teste: `POST /api/reservations` com sucesso grava 1 alerta `reservation-created` para o usuário do cabeleireiro, com o texto do spec, e publica no aparelho dele.
+- [x] Teste: `create_new_reserve` faz o mesmo.
+- [x] Teste: 409 `slot-unavailable`, 409 `customer-schedule-conflict`, 400 e 404 não gravam alerta.
+- [x] Teste: com o fake do SNS falhando, o `POST` responde 201 e `create_new_reserve` devolve `success`.
+- [x] Gate check passes: Full.
 
 **Tests**: integration
 **Gate**: full
