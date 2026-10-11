@@ -318,7 +318,7 @@ Roteiro:
 - Skill: `run`
 
 **Done when**:
-- [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção. **Pendente com o usuário.** Sem o Chrome, os itens 1 a 5 foram cobertos pelo E2E de API (22 de 22: lista vazia, ordem 5 antes de 4, 2 fotos, comentário vazio, edição mantém a posição, exclusão some, alertas) e por checagens de render descartáveis; o item 6 e a abertura de foto da galeria (T4) não foram vistos em tela.
+- [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção. **Pendente com o usuário.** Sem o Chrome, os itens 1 a 5 foram cobertos pelo E2E de API (21 checagens: lista vazia, ordem 5 antes de 4, 2 fotos, comentário vazio, edição mantém a posição, exclusão some, alertas) e por checagens de render descartáveis; o item 6 e a abertura de foto da galeria (T4) não foram vistos em tela.
 - [ ] Os critérios de app do spec ficam Verified. **Ficam Implemented até o UAT em tela.**
 - [x] Gate check passes: Build (Full do backend, `tsc` 0 erros e bundle web 200).
 

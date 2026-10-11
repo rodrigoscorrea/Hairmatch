@@ -182,7 +182,7 @@
 
 - **Feature**: `hairdresser-reviews` (issue #189, épico #188). A #182 já está na `develop` (PR #190).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `189-avaliacoes-recebidas-cabeleireiro`: T1 a T7 feitas, com commits atômicos. O T8 (UAT) está parcial.
-  - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (HRV-01 a HRV-05), sensor por mutação (4 de 5 mortos; o `order_by('-created_at')` sem desempate sobrevive porque o Postgres já devolve os empates por `id` decrescente), E2E de API 22/22 contra o LocalStack real, gate Full 1123 testes, `tsc` com 0 erros e bundle web 200.
+  - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (HRV-01 a HRV-05), sensor por mutação (5 de 5 mortos; o teste do empate alterna o cliente das reviews, porque o `JOIN` imitava o `-id`), E2E de API de 21 checagens contra o LocalStack real, gate Full 1123 testes, `tsc` com 0 erros e bundle web 200.
   - Os critérios de app (HRV-06 a HRV-30) estão Implemented, não Verified.
 - **Completed**:
   - Decisão do usuário: o toque no alerta ou no push de `review-created` e `review-updated` abre "Minhas avaliações" no topo, sem destacar a review. `review-deleted` fica na caixa.

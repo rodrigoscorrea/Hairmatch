@@ -150,11 +150,11 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: tasks.md T1 done-when / backend/review/tests.py:1840 (specs,tests,ordering)
 - last seen: 2026-10-11T15:07:27Z
 
-### L-024 - A tie-break column cannot be proved by a test when Postgres already returns ties in that order, so cover it with the opposite-direction mutant and keep the column as a guarantee, not as tested behavior.
+### L-025 - When a tie-break mutant survives, vary the joined parent of the tied rows (alternate the customer) before calling it untestable, because the join order can mimic the tie-break.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `backend,ordering` · harmful: 0
 - features: hairdresser-reviews
-- evidence: mutant order_by('-created_at') without the id tie-break (backend,ordering)
-- last seen: 2026-10-11T15:07:27Z
+- evidence: mutant order_by('-created_at') without the id tie-break, killed by alternating the customer of the tied rows (backend/review/tests.py) (backend,ordering)
+- last seen: 2026-10-11T15:09:39Z
 
 ## Quarantined (failed when applied - ignore)
 

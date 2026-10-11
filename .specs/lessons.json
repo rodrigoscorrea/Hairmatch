@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 25,
+  "next_id": 26,
   "lessons": [
     {
       "id": "L-001",
@@ -422,9 +422,9 @@
       "last_seen": "2026-10-11T15:07:27Z"
     },
     {
-      "id": "L-024",
-      "key": "surviving_mutant::a tie break column cannot be proved by a test when postgres already returns ties in that order so cover it with the opposite direction mutant and keep the column as a guarantee not as tested behavior",
-      "text": "A tie-break column cannot be proved by a test when Postgres already returns ties in that order, so cover it with the opposite-direction mutant and keep the column as a guarantee, not as tested behavior.",
+      "id": "L-025",
+      "key": "surviving_mutant::when a tie break mutant survives vary the joined parent of the tied rows alternate the customer before calling it untestable because the join order can mimic the tie break",
+      "text": "When a tie-break mutant survives, vary the joined parent of the tied rows (alternate the customer) before calling it untestable, because the join order can mimic the tie-break.",
       "signal": "surviving_mutant",
       "scope": "backend,ordering",
       "status": "candidate",
@@ -434,10 +434,10 @@
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
-        "mutant order_by('-created_at') without the id tie-break (backend,ordering)"
+        "mutant order_by('-created_at') without the id tie-break, killed by alternating the customer of the tied rows (backend/review/tests.py) (backend,ordering)"
       ],
-      "created": "2026-10-11T15:07:27Z",
-      "last_seen": "2026-10-11T15:07:27Z"
+      "created": "2026-10-11T15:09:39Z",
+      "last_seen": "2026-10-11T15:09:39Z"
     }
   ]
 }

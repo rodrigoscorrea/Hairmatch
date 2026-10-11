@@ -20,7 +20,7 @@
 | T5 | ✅ Done | Tela `reviews.tsx`, `Stack.Screen` e `unstable_settings` |
 | T6 | ✅ Done | Card "Minhas avaliações" e `goToReviews` |
 | T7 | ✅ Done | `alertRoute` e a emenda da spec e das tasks da #182 |
-| T8 | ⚠️ Parcial | E2E de API 22/22 e checagens de render descartáveis passaram; UAT em tela (web) e push (Android) pendentes com o usuário |
+| T8 | ⚠️ Parcial | E2E de API (21 checagens) e checagens de render descartáveis passaram; UAT em tela (web) e push (Android) pendentes com o usuário |
 
 ---
 
@@ -30,11 +30,11 @@ Arquivo de teste: `backend/review/tests.py`.
 
 | Criterion | Spec-defined outcome | `file:line` + assertion | Result |
 | --------- | -------------------- | ----------------------- | ------ |
-| HRV-01 ordem por `created_at` desc | `created_at` reescrito fora da ordem de inserção sai do mais recente ao mais antigo | `tests.py:649` `assertEqual(self._listed_ids(), [newest.id, middle.id, oldest.id])`; `tests.py:617` `assertEqual(reviews[0]['rating'], 5)` (a segunda criada vem primeiro); `tests.py:1840` `[1, 3, 2]` | ✅ PASS |
-| HRV-02 empate por `id` desc | mesmo `created_at` lista a de maior `id` primeiro | `tests.py:657` `assertEqual(self._listed_ids(), [third.id, second.id, first.id])` | ✅ PASS (ver sensor: o desempate não é discriminável) |
-| HRV-03 formato do item | 7 chaves, `customer` aninhado, fotos por `id` crescente | `tests.py:696` `assertEqual(sorted(item), ['comment', 'created_at', 'customer', 'hairdresser', 'id', 'pictures', 'rating'])`; `tests.py:697-709` valores e `customer == {'id', 'user': {'id', 'first_name', 'last_name'}}`; fotos por `id`: `ListReviewPicturesTest` sem mudança nas asserções de formato | ✅ PASS |
-| HRV-04 só as do cabeleireiro | cada `GET` traz só as dele | `tests.py:668` `[mine[1].id, mine[0].id]`; `tests.py:669` `[theirs.id]` | ✅ PASS |
-| HRV-05 edição não muda a posição | a mais antiga continua por último, com o valor novo | `tests.py:675` ordem antes; `tests.py:685-687` ordem depois, `data[1]['rating'] == 1` (`:686`) e `comment` novo (`:687`) | ✅ PASS |
+| HRV-01 ordem por `created_at` desc | `created_at` reescrito fora da ordem de inserção sai do mais recente ao mais antigo | `tests.py:650` `assertEqual(self._listed_ids(), [newest.id, middle.id, oldest.id])`; `tests.py:617` `assertEqual(reviews[0]['rating'], 5)` (a segunda criada vem primeiro); `tests.py:1841` `[1, 3, 2]` | ✅ PASS |
+| HRV-02 empate por `id` desc | mesmo `created_at` lista a de maior `id` primeiro | `tests.py:658` `assertEqual(self._listed_ids(), [review.id for review in reversed(tied)])`, com 6 reviews empatadas de dois clientes | ✅ PASS |
+| HRV-03 formato do item | 7 chaves, `customer` aninhado, fotos por `id` crescente | `tests.py:697` `assertEqual(sorted(item), ['comment', 'created_at', 'customer', 'hairdresser', 'id', 'pictures', 'rating'])`; `tests.py:698-710` valores e `customer == {'id', 'user': {'id', 'first_name', 'last_name'}}`; fotos por `id`: `ListReviewPicturesTest` sem mudança nas asserções de formato | ✅ PASS |
+| HRV-04 só as do cabeleireiro | cada `GET` traz só as dele | `tests.py:669` `[mine[1].id, mine[0].id]`; `tests.py:670` `[theirs.id]` | ✅ PASS |
+| HRV-05 edição não muda a posição | a mais antiga continua por último, com o valor novo | `tests.py:676` ordem antes; `tests.py:687` ordem depois, `data[1]['rating'] == 1` (`:688`) e `comment` novo (`:689`) | ✅ PASS |
 
 **Gate Full**: `makemigrations --check` limpo; 1123 testes passam (baseline 1118, +5); `review/views.py` 100% de cobertura; `def test_` 1120 → 1125. `test_routes.py` não mudou.
 
@@ -56,7 +56,7 @@ Arquivo de teste: `backend/review/tests.py`.
 | HRV-25 lista desde o topo, recarregada | `useHairdresserReviews.ts` (`useFocusEffect`) | `router.push` cria a tela nova; E2E de API mostra o `GET` seguinte trazendo a review | ⚠️ Implemented |
 | HRV-28 review excluída some no próximo foco | `useHairdresserReviews.ts:26` | E2E de API: depois do `DELETE`, o `GET` lista só a restante | ⚠️ Implemented |
 
-**E2E de API** (servidor da branch num banco descartável, LocalStack/MiniStack reais, 22/22 passaram): lista vazia pública e com cookie; `POST` com 2 fotos (4, sem comentário) e `POST` (5, com comentário) → `GET` `[5, 4]`; 7 chaves e `customer` aninhado; comentário vazio e 2 fotos por `id` crescente; as 2 URLs de miniatura respondem 200; `PUT` 4→3 mantém `[5, 3]`; outro cabeleireiro lista `[]`; alertas `review-created` ×2 e `review-updated`, `PATCH` de leitura 200; `DELETE` → só a restante e alerta `review-deleted`. Servidor, banco e usuários do Cognito removidos depois.
+**E2E de API** (servidor da branch num banco descartável, LocalStack/MiniStack reais, 21 checagens passaram; uma 22ª, a da data de hoje, terminava em `or True` e foi descartada por não provar nada): lista vazia pública e com cookie; `POST` com 2 fotos (4, sem comentário) e `POST` (5, com comentário) → `GET` `[5, 4]`; 7 chaves e `customer` aninhado; comentário vazio e 2 fotos por `id` crescente; as 2 URLs de miniatura respondem 200; `PUT` 4→3 mantém `[5, 3]`; outro cabeleireiro lista `[]`; alertas `review-created` ×2 e `review-updated`, `PATCH` de leitura 200; `DELETE` → só a restante e alerta `review-deleted`. Servidor, banco e usuários do Cognito removidos depois.
 
 ---
 
@@ -70,16 +70,15 @@ Mutantes aplicados em `backend/review/views.py` com cópia de segurança restaur
 | `order_by('-id')` | ☠️ morto (`test_reviews_are_listed_by_created_at_descending_whatever_the_insertion_order`) |
 | `order_by('created_at', '-id')` | ☠️ morto (6 testes) |
 | `order_by('-created_at', 'id')` | ☠️ morto (`test_reviews_with_the_same_created_at_are_listed_by_id_descending`) |
-| `order_by('-created_at')` (sem desempate) | 🧟 **sobrevive** |
+| `order_by('-created_at')` (sem desempate) | ☠️ morto (`test_reviews_with_the_same_created_at_are_listed_by_id_descending`), depois de alternar o cliente das reviews empatadas |
 
-O sobrevivente é uma limitação, não um teste fraco: com `created_at` igual, o Postgres deste plano devolve as linhas por `id` decrescente por conta própria, mesmo com 12 linhas empatadas e com o `UPDATE` em uma única instrução. Tentei dois formatos mais fortes do teste e nenhum o matou, então voltei ao de 3 linhas. O `-id` no `order_by` garante o determinismo que o plano não garante; o HRV-02 é provado pelo mutante `'id'` crescente, que morre.
+O mutante sem desempate sobreviveu enquanto as reviews empatadas eram do mesmo cliente (3 linhas, 12 linhas, `UPDATE` único): o `JOIN` com o cliente e o usuário decidia a ordem do empate e imitava o `-id`. O teste do HRV-02 passou a alternar `customer` e `customer2` em 6 reviews empatadas, e o mutante morre. Sensor do backend: 5 de 5 mortos (lição L-025).
 
 Sensor do app: não há suíte no app (decisão herdada do #106, #115, #118 e #120). As checagens de render e de `alertRoute` foram descartáveis (`__tmp_hrv__/`, removidas), então não há mutante de app.
 
 ## Gaps
 
 1. **HRV-18** (voltar sem histórico) e **HRV-24** (push no Android) dependem do UAT do usuário. O design registra o fallback se o `initialRouteName` não montar o perfil por baixo: `handleGoBack` passa a `router.replace('/(app)/hairdresser/profile')` quando `router.canGoBack()` é falso.
-2. O sobrevivente do desempate acima.
 
 ## Verdict
 
