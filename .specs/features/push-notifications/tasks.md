@@ -656,16 +656,16 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] Com um cliente e um cabeleireiro do seed, cada um com um token falso registrado:
+- [x] Com um cliente e um cabeleireiro do seed, cada um com um token falso registrado:
   1. reservar;
   2. avaliar (depois do horário);
   3. editar a review e excluí-la;
   4. dar nota, editar a nota e removê-la.
 
   Cada passo grava o alerta certo, e `/_aws/sns/platform-endpoint-messages?region=us-east-2` mostra a mensagem no endpoint do destinatário.
-- [ ] Com o LocalStack parado, a reserva responde 201, e o alerta é gravado.
-- [ ] O logout com `DELETE` do aparelho remove o endpoint do LocalStack.
-- [ ] Gate check passes: Build (Full + App).
+- [x] Com o LocalStack parado, a reserva responde 201, e o alerta é gravado.
+- [x] O logout com `DELETE` do aparelho remove o endpoint do LocalStack.
+- [x] Gate check passes: Build (Full + App).
 
 **Tests**: none
 **Gate**: build

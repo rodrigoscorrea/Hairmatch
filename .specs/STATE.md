@@ -181,10 +181,9 @@
 ## Handoff
 
 - **Feature**: `push-notifications` (issue #182, épico #188, itens N01 e N11 a N14 do levantamento da spike #172).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-11.
-  - `spec.md` (NOTIF-01 a NOTIF-77) e `tasks.md` (T1 a T23, em 4 fases) validados por `validate_spec.py` e `validate_tasks.py` com exit 0.
-  - Os 12 avisos do `validate_tasks.py` são `Tests: none` de app, infra e tarefas manuais, justificados pela matriz.
-  - O Execute não começou e aguarda a aprovação das tasks.
+- **Phase / Task**: Execute concluído em 2026-10-11, na branch `182-notificacoes-push`: T1 a T19 feitas, com commits atômicos. Restam as tarefas manuais T20 a T22 e o UAT da T23.
+  - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (50 critérios Verified), sensor 18/18, E2E de API 48/48 contra o LocalStack real, gate 1118 testes e `tsc` com 0 erros.
+  - O app (27 requisitos) está Implemented, não Verified, até o UAT em aparelho.
 - **Completed**:
   - Decisões do usuário:
     - só Android;
@@ -201,12 +200,11 @@
   - Cards criados: épico #188 e #182 a #187 e #189. A #172 foi fechada, e a #171 foi pendurada no épico.
 - **In-progress** (file:line): none
 - **Next step**:
-  1. Aprovar as tasks.
-  2. Criar a branch `182-notificacoes-push` a partir de `develop`.
-  3. Confirmar a baseline de 999 `def test_` com o gate Full e começar pela T1.
-  4. A T4 é um go/no-go do SNS no LocalStack.
-
-  A T20 (Firebase) pode ser feita pelo usuário em paralelo.
+  1. Revisar e mesclar o PR da #182 na `develop`.
+  2. O usuário faz a T20 (projeto Firebase, `google-services.json` no EAS, chave da service account) e a T22 (platform application FCM na AWS real, permissões do Render, `SNS_PLATFORM_APPLICATION_ARN`).
+  3. Gerar o dev build (T21) e rodar o UAT no preview (T23). O deploy da branch no preview exige o aval do usuário.
+  4. Confirmar na AWS real o código que o SNS devolve para um endpoint apagado (o LocalStack devolve `InvalidParameter`; o código trata os dois).
+  5. O T7 da #189 só começa com a #182 mesclada.
 - **Fora do repositório**: o levantamento está no Claude Doc "Notificações Push — Hairmatch". O WIP do `frontend-mobile` (`.env.example`, `package.json`, `package-lock.json`, `services/axios-instance.ts`, `eslint.config.js`) e as pastas `docs/` não commitadas não são desta feature.
 
 - **Feature**: `favorite-hairdressers` (issue #115, RF25), branch `115-marcar-cabeleireiro-como-favorito`, criada a partir de `develop` em `c5d5242`.

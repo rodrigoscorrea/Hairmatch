@@ -8,7 +8,11 @@
 
 Corroborated across multiple features. Safe to apply as guidance.
 
-_none_
+### L-019 - State in the spec whether body validation runs before the parent lookup for every new route, because an invalid body on a missing parent is otherwise undefined.
+- signal: `spec_precision_gap` · recurrence: 2 feature(s) · scope: `specs,routes` · harmful: 0
+- features: review-editing, push-notifications
+- evidence: REV-11 REV-17 validation.md G5 (specs,routes) (+1 more)
+- last seen: 2026-10-11T14:13:12Z
 
 ## Candidates (under observation - do NOT load as guidance yet)
 
@@ -122,12 +126,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M42 backend/review/models.py:30 (tests,models)
 - last seen: 2026-10-10T18:14:39Z
 
-### L-019 - State in the spec whether body validation runs before the parent lookup for every new route, because an invalid body on a missing parent is otherwise undefined.
-- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs,routes` · harmful: 0
-- features: review-editing
-- evidence: REV-11 REV-17 validation.md G5 (specs,routes)
-- last seen: 2026-10-10T18:14:39Z
-
 ### L-020 - When a test checks that an existing storage key is not rewritten, also list the directory: Django storages save a duplicate under another name, so reading the original back proves nothing.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `backend/tests` · harmful: 0
 - features: hairdresser-gallery
@@ -139,6 +137,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: hairdresser-gallery
 - evidence: M27 populate_hairdressers.py:72 (backend/tests)
 - last seen: 2026-10-10T16:09:46Z
+
+### L-022 - Check the exact error the emulator returns for every failure the code branches on, because it can differ from the real service's error code.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `external-services,e2e` · harmful: 0
+- features: push-notifications
+- evidence: NOTIF-24 E2E phase 3 N-24 (backend/notifications/sns.py) (external-services,e2e)
+- last seen: 2026-10-11T14:13:12Z
 
 ## Quarantined (failed when applied - ignore)
 

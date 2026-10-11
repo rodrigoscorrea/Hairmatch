@@ -305,17 +305,17 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| NOTIF-01 | P1: Registro do aparelho (backend) | T7, T19 | Implemented |
-| NOTIF-02 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-03 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-04 | P1: Registro do aparelho (backend) | T2, T7 | Implemented |
-| NOTIF-05 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-06 | P1: Registro do aparelho (backend) | T1, T3, T7 | Implemented |
-| NOTIF-07 | P1: Registro do aparelho (backend) | T7, T19 | Implemented |
-| NOTIF-08 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-09 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Implemented |
-| NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | Implemented |
+| NOTIF-01 | P1: Registro do aparelho (backend) | T7, T19 | Verified |
+| NOTIF-02 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-03 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-04 | P1: Registro do aparelho (backend) | T2, T7 | Verified |
+| NOTIF-05 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-06 | P1: Registro do aparelho (backend) | T1, T3, T7 | Verified |
+| NOTIF-07 | P1: Registro do aparelho (backend) | T7, T19 | Verified |
+| NOTIF-08 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-09 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Verified |
+| NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | Verified |
 | NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | Implemented |
 | NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | Implemented |
 | NOTIF-14 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
@@ -323,34 +323,34 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-16 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-17 | P1: Registro do aparelho (app) | T14, T15, T16, T23 | Implemented |
 | NOTIF-18 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
-| NOTIF-19 | P1: Envio e gravação de alertas | T6 | Implemented |
-| NOTIF-20 | P1: Envio e gravação de alertas | T6 | Implemented |
-| NOTIF-21 | P1: Envio e gravação de alertas | T3, T6, T19 | Implemented |
-| NOTIF-22 | P1: Envio e gravação de alertas | T6 | Implemented |
-| NOTIF-23 | P1: Envio e gravação de alertas | T6 | Implemented |
-| NOTIF-24 | P1: Envio e gravação de alertas | T3, T6 | Implemented |
-| NOTIF-25 | P1: Envio e gravação de alertas | T5 | Implemented |
-| NOTIF-26 | P1: Envio e gravação de alertas | T6 | Implemented |
-| NOTIF-27 | P1: Envio e gravação de alertas | T5 | Implemented |
-| NOTIF-28 | P1: Nova reserva (N01) | T5, T10, T19 | Implemented |
-| NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | Implemented |
-| NOTIF-30 | P1: Nova reserva (N01) | T10 | Implemented |
+| NOTIF-19 | P1: Envio e gravação de alertas | T6 | Verified |
+| NOTIF-20 | P1: Envio e gravação de alertas | T6 | Verified |
+| NOTIF-21 | P1: Envio e gravação de alertas | T3, T6, T19 | Verified |
+| NOTIF-22 | P1: Envio e gravação de alertas | T6 | Verified |
+| NOTIF-23 | P1: Envio e gravação de alertas | T6 | Verified |
+| NOTIF-24 | P1: Envio e gravação de alertas | T3, T6 | Verified |
+| NOTIF-25 | P1: Envio e gravação de alertas | T5 | Verified |
+| NOTIF-26 | P1: Envio e gravação de alertas | T6 | Verified |
+| NOTIF-27 | P1: Envio e gravação de alertas | T5 | Verified |
+| NOTIF-28 | P1: Nova reserva (N01) | T5, T10, T19 | Verified |
+| NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | Verified |
+| NOTIF-30 | P1: Nova reserva (N01) | T10 | Verified |
 | NOTIF-31 | P1: Nova reserva (N01) | T16, T23 | Implemented |
-| NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | Implemented |
-| NOTIF-33 | P1: Review recebida (N11) | T11 | Implemented |
+| NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | Verified |
+| NOTIF-33 | P1: Review recebida (N11) | T11 | Verified |
 | NOTIF-34 | P1: Review recebida (N11) | T16, T23 | Implemented |
-| NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | Implemented |
-| NOTIF-36 | P1: Nota recebida (N13) | T12 | Implemented |
+| NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | Verified |
+| NOTIF-36 | P1: Nota recebida (N13) | T12 | Verified |
 | NOTIF-37 | P1: Nota recebida (N13) | T16, T23 | Implemented |
-| NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | Implemented |
-| NOTIF-39 | P1: Caixa de alertas (backend) | T2, T9 | Implemented |
-| NOTIF-40 | P1: Caixa de alertas (backend) | T9, T14 | Implemented |
-| NOTIF-41 | P1: Caixa de alertas (backend) | T9, T14, T19 | Implemented |
-| NOTIF-42 | P1: Caixa de alertas (backend) | T9 | Implemented |
-| NOTIF-43 | P1: Caixa de alertas (backend) | T9 | Implemented |
-| NOTIF-44 | P1: Caixa de alertas (backend) | T9 | Implemented |
-| NOTIF-45 | P1: Caixa de alertas (backend) | T9 | Implemented |
-| NOTIF-46 | P1: Caixa de alertas (backend) | T2, T8 | Implemented |
+| NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | Verified |
+| NOTIF-39 | P1: Caixa de alertas (backend) | T2, T9 | Verified |
+| NOTIF-40 | P1: Caixa de alertas (backend) | T9, T14 | Verified |
+| NOTIF-41 | P1: Caixa de alertas (backend) | T9, T14, T19 | Verified |
+| NOTIF-42 | P1: Caixa de alertas (backend) | T9 | Verified |
+| NOTIF-43 | P1: Caixa de alertas (backend) | T9 | Verified |
+| NOTIF-44 | P1: Caixa de alertas (backend) | T9 | Verified |
+| NOTIF-45 | P1: Caixa de alertas (backend) | T9 | Verified |
+| NOTIF-46 | P1: Caixa de alertas (backend) | T2, T8 | Verified |
 | NOTIF-47 | P1: Caixa de alertas (app) | T17, T18, T23 | Implemented |
 | NOTIF-48 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
 | NOTIF-49 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
@@ -363,25 +363,25 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-56 | P1: Caixa de alertas (app) | T18, T23 | Implemented |
 | NOTIF-57 | P1: Caixa de alertas (app) | T18, T23 | Implemented |
 | NOTIF-58 | P1: Caixa de alertas (app) | T18, T23 | Implemented |
-| NOTIF-59 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Implemented |
-| NOTIF-60 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Implemented |
-| NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | Implemented |
-| NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | Implemented |
+| NOTIF-59 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Verified |
+| NOTIF-60 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Verified |
+| NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | Verified |
+| NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | Verified |
 | NOTIF-63 | P2: Review editada ou excluída (N12) | T16, T23 | Implemented |
-| NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
-| NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
-| NOTIF-66 | P2: Nota editada ou removida (N14) | T12 | Implemented |
+| NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Verified |
+| NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Verified |
+| NOTIF-66 | P2: Nota editada ou removida (N14) | T12 | Verified |
 | NOTIF-67 | P2: Nota editada ou removida (N14) | T16, T23 | Implemented |
-| NOTIF-68 | P1: Ambiente local | T4, T19 | Implemented |
-| NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | Implemented |
-| NOTIF-70 | P1: Ambiente local | T3 | Implemented |
-| NOTIF-71 | P1: Ambiente local | T4, T22 | Implemented |
-| NOTIF-72 | Edge cases | T6 | Implemented |
-| NOTIF-73 | Edge cases | T6 | Implemented |
+| NOTIF-68 | P1: Ambiente local | T4, T19 | Verified |
+| NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | Verified |
+| NOTIF-70 | P1: Ambiente local | T3 | Verified |
+| NOTIF-71 | P1: Ambiente local | T4, T22 | Verified |
+| NOTIF-72 | Edge cases | T6 | Verified |
+| NOTIF-73 | Edge cases | T6 | Verified |
 | NOTIF-74 | Edge cases | T15, T16, T23 | Implemented |
 | NOTIF-75 | Edge cases | T16, T23 | Implemented |
 | NOTIF-76 | Edge cases | T16, T23 | Implemented |
-| NOTIF-77 | Edge cases | T3, T6 | Implemented |
+| NOTIF-77 | Edge cases | T3, T6 | Verified |
 
 **Coverage:** 77 total, 77 mapped to tasks, 0 unmapped ✅
 
