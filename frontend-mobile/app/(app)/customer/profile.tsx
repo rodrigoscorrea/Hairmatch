@@ -21,7 +21,8 @@ export default function ProfileScreen(){
       cancelLogout, 
       handleAccountSettings,
       handleAddressSettings,
-      handleReceivedRatings
+      handleReceivedRatings,
+      handleFavorites
     } = useCustomerProfile();
 
     const handleMenuPress = (item: string) => {
@@ -96,7 +97,7 @@ export default function ProfileScreen(){
             iconName="heart"
             title="Favoritos"
             subtitle="Veja seus profissionais favoritos"
-            onPress={() => handleMenuPress('Favoritos')}
+            onPress={() => handleFavorites()}
           />
           
           <MenuItem

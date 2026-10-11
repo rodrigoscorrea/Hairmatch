@@ -55,6 +55,10 @@ export const useCustomerProfile = () => {
     router.push('/(app)/customer/ratings');
   };
 
+  const handleFavorites = () => {
+    router.push('/(app)/customer/favorites');
+  };
+
   const handleGoBack = () => {
     router.push('/(app)/customer/profile');
   };
@@ -69,6 +73,7 @@ export const useCustomerProfile = () => {
     handleAccountSettings,
     handleGoBack,
     handleAddressSettings,
-    handleReceivedRatings
+    handleReceivedRatings,
+    handleFavorites
   };
 };
