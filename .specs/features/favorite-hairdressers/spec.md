@@ -174,30 +174,30 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FAV-01 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-02 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-03 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-04 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-05 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-06 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-07 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-08 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-09 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-10 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-11 | P1: Favoritar pelo perfil | Tasks | Implemented |
+| FAV-01 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-02 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-03 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-04 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-05 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-06 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-07 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-08 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-09 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-10 | P1: Favoritar pelo perfil | Tasks | Verified |
+| FAV-11 | P1: Favoritar pelo perfil | Tasks | Verified |
 | FAV-12 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-13 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-14 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-15 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-16 | P1: Favoritar pelo perfil | Tasks | Implemented |
 | FAV-17 | P1: Favoritar pelo perfil | Tasks | Implemented |
-| FAV-18 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-19 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-20 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-21 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-22 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-23 | P1: Lista de favoritos | Tasks | Implemented |
-| FAV-24 | P1: Lista de favoritos | Tasks | Implemented |
+| FAV-18 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-19 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-20 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-21 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-22 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-23 | P1: Lista de favoritos | Tasks | Verified |
+| FAV-24 | P1: Lista de favoritos | Tasks | Verified |
 | FAV-25 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-26 | P1: Lista de favoritos | Tasks | Implemented |
 | FAV-27 | P1: Lista de favoritos | Tasks | Implemented |
@@ -209,14 +209,14 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 | FAV-33 | P1: Desfavoritar pela lista | Tasks | Implemented |
 | FAV-34 | P1: Desfavoritar pela lista | Tasks | Implemented |
 | FAV-35 | P1: Desfavoritar pela lista | Tasks | Implemented |
-| FAV-36 | P1: Ciclo de vida | Tasks | Implemented |
-| FAV-37 | P1: Ciclo de vida | Tasks | Implemented |
-| FAV-38 | P1: Ciclo de vida | Tasks | Implemented |
-| FAV-39 | Edge Cases | Tasks | Implemented |
-| FAV-40 | Edge Cases | Tasks | Implemented |
+| FAV-36 | P1: Ciclo de vida | Tasks | Verified |
+| FAV-37 | P1: Ciclo de vida | Tasks | Verified |
+| FAV-38 | P1: Ciclo de vida | Tasks | Verified |
+| FAV-39 | Edge Cases | Tasks | Verified |
+| FAV-40 | Edge Cases | Tasks | Verified |
 | FAV-41 | Edge Cases | Tasks | Implemented |
-| FAV-42 | Edge Cases | Tasks | Implemented |
-| FAV-43 | P1: Ciclo de vida | Tasks | Implemented |
+| FAV-42 | Edge Cases | Tasks | Verified |
+| FAV-43 | P1: Ciclo de vida | Tasks | Verified |
 
 **ID format:** `FAV-NN`.
 
@@ -227,5 +227,5 @@ O cliente não tem como guardar os cabeleireiros de que gostou. Para voltar a um
 ## Success Criteria
 
 - [ ] O critério de aceite da issue passa no web e no Android: o cliente favorita e desfavorita e vê os favoritos listados em "Favoritos".
-- [ ] Todos os critérios de backend (FAV-01 a FAV-11, FAV-18 a FAV-24, FAV-36 a FAV-40, FAV-42 e FAV-43) têm teste automatizado, e a suíte do backend passa sem perder nenhum teste da baseline.
-- [ ] O `test_routes.py` aceita RT-97 a RT-99, e nenhuma rota entra sem estar na Route Table.
+- [x] Todos os critérios de backend (FAV-01 a FAV-11, FAV-18 a FAV-24, FAV-36 a FAV-40, FAV-42 e FAV-43) têm teste automatizado, e a suíte do backend passa sem perder nenhum teste da baseline.
+- [x] O `test_routes.py` aceita RT-97 a RT-99, e nenhuma rota entra sem estar na Route Table.
