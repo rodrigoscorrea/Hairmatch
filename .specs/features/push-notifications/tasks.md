@@ -570,10 +570,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] `alertRoute` devolve a agenda para `reservation-created`, `/(app)/customer/ratings` para `customer-rating-*` e `null` para `review-*`.
-- [ ] O toque chama `PATCH /api/users/me/alerts/{id}` com `read: true`. Com 200, navega por `alertRoute`; com 404 (alerta de outra conta), abre a caixa.
-- [ ] O `signOut` conclui o logout mesmo com o `DELETE` falhando.
-- [ ] Gate check passes: App.
+- [x] `alertRoute` devolve a agenda para `reservation-created`, `/(app)/customer/ratings` para `customer-rating-*` e `null` para `review-*`.
+- [x] O toque chama `PATCH /api/users/me/alerts/{id}` com `read: true`. Com 200, navega por `alertRoute`; com 404 (alerta de outra conta), abre a caixa.
+- [x] O `signOut` conclui o logout mesmo com o `DELETE` falhando.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build

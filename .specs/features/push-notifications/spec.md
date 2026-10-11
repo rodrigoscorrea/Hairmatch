@@ -317,11 +317,11 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-10 | P1: Registro do aparelho (backend) | T7 | Implemented |
 | NOTIF-11 | P1: Registro do aparelho (backend) | T2, T8 | Implemented |
 | NOTIF-12 | P1: Registro do aparelho (app) | T15, T21, T23 | Implemented |
-| NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | In Tasks |
+| NOTIF-13 | P1: Registro do aparelho (app) | T13, T14, T15, T16, T20, T21, T23 | Implemented |
 | NOTIF-14 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-15 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-16 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
-| NOTIF-17 | P1: Registro do aparelho (app) | T14, T15, T16, T23 | In Tasks |
+| NOTIF-17 | P1: Registro do aparelho (app) | T14, T15, T16, T23 | Implemented |
 | NOTIF-18 | P1: Registro do aparelho (app) | T15, T23 | Implemented |
 | NOTIF-19 | P1: Envio e gravação de alertas | T6 | Implemented |
 | NOTIF-20 | P1: Envio e gravação de alertas | T6 | Implemented |
@@ -335,13 +335,13 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-28 | P1: Nova reserva (N01) | T5, T10, T19 | Implemented |
 | NOTIF-29 | P1: Nova reserva (N01) | T10, T19 | Implemented |
 | NOTIF-30 | P1: Nova reserva (N01) | T10 | Implemented |
-| NOTIF-31 | P1: Nova reserva (N01) | T16, T23 | In Tasks |
+| NOTIF-31 | P1: Nova reserva (N01) | T16, T23 | Implemented |
 | NOTIF-32 | P1: Review recebida (N11) | T5, T11, T19 | Implemented |
 | NOTIF-33 | P1: Review recebida (N11) | T11 | Implemented |
-| NOTIF-34 | P1: Review recebida (N11) | T16, T23 | In Tasks |
+| NOTIF-34 | P1: Review recebida (N11) | T16, T23 | Implemented |
 | NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | Implemented |
 | NOTIF-36 | P1: Nota recebida (N13) | T12 | Implemented |
-| NOTIF-37 | P1: Nota recebida (N13) | T16, T23 | In Tasks |
+| NOTIF-37 | P1: Nota recebida (N13) | T16, T23 | Implemented |
 | NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | Implemented |
 | NOTIF-39 | P1: Caixa de alertas (backend) | T2, T9 | Implemented |
 | NOTIF-40 | P1: Caixa de alertas (backend) | T9, T14 | Implemented |
@@ -367,20 +367,20 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-60 | P2: Review editada ou excluída (N12) | T5, T11, T19 | Implemented |
 | NOTIF-61 | P2: Review editada ou excluída (N12) | T11 | Implemented |
 | NOTIF-62 | P2: Review editada ou excluída (N12) | T11 | Implemented |
-| NOTIF-63 | P2: Review editada ou excluída (N12) | T16, T23 | In Tasks |
+| NOTIF-63 | P2: Review editada ou excluída (N12) | T16, T23 | Implemented |
 | NOTIF-64 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
 | NOTIF-65 | P2: Nota editada ou removida (N14) | T5, T12, T19 | Implemented |
 | NOTIF-66 | P2: Nota editada ou removida (N14) | T12 | Implemented |
-| NOTIF-67 | P2: Nota editada ou removida (N14) | T16, T23 | In Tasks |
+| NOTIF-67 | P2: Nota editada ou removida (N14) | T16, T23 | Implemented |
 | NOTIF-68 | P1: Ambiente local | T4, T19 | Implemented |
 | NOTIF-69 | P1: Ambiente local | T3, T4, T19, T22 | Implemented |
 | NOTIF-70 | P1: Ambiente local | T3 | Implemented |
 | NOTIF-71 | P1: Ambiente local | T4, T22 | Implemented |
 | NOTIF-72 | Edge cases | T6 | Implemented |
 | NOTIF-73 | Edge cases | T6 | Implemented |
-| NOTIF-74 | Edge cases | T15, T16, T23 | In Tasks |
-| NOTIF-75 | Edge cases | T16, T23 | In Tasks |
-| NOTIF-76 | Edge cases | T16, T23 | In Tasks |
+| NOTIF-74 | Edge cases | T15, T16, T23 | Implemented |
+| NOTIF-75 | Edge cases | T16, T23 | Implemented |
+| NOTIF-76 | Edge cases | T16, T23 | Implemented |
 | NOTIF-77 | Edge cases | T3, T6 | Implemented |
 
 **Coverage:** 77 total, 77 mapped to tasks, 0 unmapped ✅
