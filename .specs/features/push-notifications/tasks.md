@@ -136,10 +136,10 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] `CATALOG` tem 42 slugs, e `test_catalog_has_the_42_slugs_of_the_spec` passa.
-- [ ] Um teste chama `problem_response(..., 'push-unavailable', ...)` e confere status 503, `title` e o `type` terminando em `/push-unavailable`.
-- [ ] Gate check passes: Quick.
-- [ ] Test count: baseline + 1 em `hairmatch`.
+- [x] `CATALOG` tem 42 slugs, e `test_catalog_has_the_42_slugs_of_the_spec` passa.
+- [x] Um teste chama `problem_response(..., 'push-unavailable', ...)` e confere status 503, `title` e o `type` terminando em `/push-unavailable`.
+- [x] Gate check passes: Quick.
+- [x] Test count: baseline + 1 em `hairmatch`.
 
 **Tests**: unit
 **Gate**: quick

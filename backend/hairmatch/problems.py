@@ -63,6 +63,7 @@ CATALOG = {
     'auth-unavailable': (503, 'Authentication service unavailable'),
     'postal-code-service-unavailable': (503, 'Postal code service unavailable'),
     'ai-service-unavailable': (503, 'AI service unavailable'),
+    'push-unavailable': (503, 'Push service unavailable'),
 }
 
 

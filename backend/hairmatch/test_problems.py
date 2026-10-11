@@ -34,8 +34,16 @@ def handle(exc, path='/api/anything', method='GET'):
 class CatalogTest(TestCase):
     """PD-01 to PD-05: the shape every problem shares."""
 
-    def test_catalog_has_the_41_slugs_of_the_spec(self):
-        self.assertEqual(len(CATALOG), 41)
+    def test_catalog_has_the_42_slugs_of_the_spec(self):
+        self.assertEqual(len(CATALOG), 42)
+
+    def test_push_unavailable_is_a_503_with_the_title_of_the_spec(self):
+        """NOTIF-06"""
+        response = problem_response(RequestFactory().post('/api/users/me/push-devices'), 'push-unavailable', 'Down.')
+
+        body = assert_problem(response, 'push-unavailable', detail='Down.')
+        self.assertEqual((response.status_code, body['title']), (503, 'Push service unavailable'))
+        self.assertTrue(body['type'].endswith('/push-unavailable'))
 
     def test_service_not_finished_is_a_409_with_the_title_of_the_spec(self):
         """CRT-53"""
