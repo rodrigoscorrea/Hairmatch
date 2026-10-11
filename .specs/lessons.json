@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 25,
   "lessons": [
     {
       "id": "L-001",
@@ -402,6 +402,42 @@
       ],
       "created": "2026-10-11T14:13:12Z",
       "last_seen": "2026-10-11T14:13:12Z"
+    },
+    {
+      "id": "L-023",
+      "key": "spec_precision_gap::when a task changes the default order of a list view grep every test that reads that list not only the one named and list the new expected values in done when because a query count test with a fixed 2 3 1 broke silently",
+      "text": "When a task changes the default order of a list view, grep every test that reads that list (not only the one named) and list the new expected values in done-when, because a query-count test with a fixed [2, 3, 1] broke silently.",
+      "signal": "spec_precision_gap",
+      "scope": "specs,tests,ordering",
+      "status": "candidate",
+      "features": [
+        "hairdresser-reviews"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "tasks.md T1 done-when / backend/review/tests.py:1840 (specs,tests,ordering)"
+      ],
+      "created": "2026-10-11T15:07:27Z",
+      "last_seen": "2026-10-11T15:07:27Z"
+    },
+    {
+      "id": "L-024",
+      "key": "surviving_mutant::a tie break column cannot be proved by a test when postgres already returns ties in that order so cover it with the opposite direction mutant and keep the column as a guarantee not as tested behavior",
+      "text": "A tie-break column cannot be proved by a test when Postgres already returns ties in that order, so cover it with the opposite-direction mutant and keep the column as a guarantee, not as tested behavior.",
+      "signal": "surviving_mutant",
+      "scope": "backend,ordering",
+      "status": "candidate",
+      "features": [
+        "hairdresser-reviews"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant order_by('-created_at') without the id tie-break (backend,ordering)"
+      ],
+      "created": "2026-10-11T15:07:27Z",
+      "last_seen": "2026-10-11T15:07:27Z"
     }
   ]
 }

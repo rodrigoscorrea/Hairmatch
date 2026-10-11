@@ -180,21 +180,19 @@
 
 ## Handoff
 
-- **Feature**: `hairdresser-reviews` (issue #189, épico #188). A P2 depende da #182.
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-10-11.
-  - `spec.md` (HRV-01 a HRV-30), `context.md`, `design.md` e `tasks.md` (T1 a T8, em 4 fases) validados por `validate_spec.py` e `validate_tasks.py` com exit 0.
-  - Os 7 avisos do `validate_tasks.py` são `Tests: none` de app e do UAT, justificados pela matriz.
-  - O Execute não começou e aguarda a aprovação das tasks.
+- **Feature**: `hairdresser-reviews` (issue #189, épico #188). A #182 já está na `develop` (PR #190).
+- **Phase / Task**: Execute concluído em 2026-10-11, na branch `189-avaliacoes-recebidas-cabeleireiro`: T1 a T7 feitas, com commits atômicos. O T8 (UAT) está parcial.
+  - O Verifier rodou em passada independente, sem sub-agente. `validation.md`: backend ✅ PASS (HRV-01 a HRV-05), sensor por mutação (4 de 5 mortos; o `order_by('-created_at')` sem desempate sobrevive porque o Postgres já devolve os empates por `id` decrescente), E2E de API 22/22 contra o LocalStack real, gate Full 1123 testes, `tsc` com 0 erros e bundle web 200.
+  - Os critérios de app (HRV-06 a HRV-30) estão Implemented, não Verified.
 - **Completed**:
   - Decisão do usuário: o toque no alerta ou no push de `review-created` e `review-updated` abre "Minhas avaliações" no topo, sem destacar a review. `review-deleted` fica na caixa.
-  - Sem rota, slug, modelo ou AD novo. A RT-24 passa a ordenar por `-created_at, -id`, com a nota já na Route Table do `api-restful-routes`.
+  - O `ListReviewPicturesTest` mudou de `[2, 3, 1]` para `[1, 3, 2]`, porque a ordem nova inverte as reviews. A done-when do T1 dizia "sem mudança" e foi corrigida.
+  - A spec e as tasks da `push-notifications` foram emendadas (catálogo, NOTIF-34, NOTIF-63, Out of Scope, assumption e T16).
 - **In-progress** (file:line): none
 - **Next step**:
-  1. Aprovar as tasks.
-  2. Criar a branch a partir da `develop` e confirmar a baseline de 999 `def test_` com o gate Full.
-  3. Executar as Phases 1 e 2 (T1 a T6).
-
-  O T7 (Phase 3) só começa com a #182 mesclada. Ele também emenda a spec e as tasks da `push-notifications` (catálogo, NOTIF-34, NOTIF-63 e T16).
+  1. O usuário roda o roteiro do T8 em tela: lista vazia, ordem, foto, edição, falha de rede e, no Android, o toque no push com o app fechado.
+  2. O HRV-18 (voltar sem histórico) depende do passo 6. Se o expo-router 57 não montar o perfil por baixo, `handleGoBack` passa a `router.replace('/(app)/hairdresser/profile')` quando `router.canGoBack()` é falso.
+  3. Depois do UAT, marcar HRV-06 a HRV-30 como Verified no `spec.md`.
 
 - **Feature**: `push-notifications` (issue #182, épico #188, itens N01 e N11 a N14 do levantamento da spike #172).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `182-notificacoes-push`: T1 a T19 feitas, com commits atômicos. Restam as tarefas manuais T20 a T22 e o UAT da T23.

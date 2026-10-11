@@ -144,6 +144,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: NOTIF-24 E2E phase 3 N-24 (backend/notifications/sns.py) (external-services,e2e)
 - last seen: 2026-10-11T14:13:12Z
 
+### L-023 - When a task changes the default order of a list view, grep every test that reads that list (not only the one named) and list the new expected values in done-when, because a query-count test with a fixed [2, 3, 1] broke silently.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs,tests,ordering` · harmful: 0
+- features: hairdresser-reviews
+- evidence: tasks.md T1 done-when / backend/review/tests.py:1840 (specs,tests,ordering)
+- last seen: 2026-10-11T15:07:27Z
+
+### L-024 - A tie-break column cannot be proved by a test when Postgres already returns ties in that order, so cover it with the opposite-direction mutant and keep the column as a guarantee, not as tested behavior.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `backend,ordering` · harmful: 0
+- features: hairdresser-reviews
+- evidence: mutant order_by('-created_at') without the id tie-break (backend,ordering)
+- last seen: 2026-10-11T15:07:27Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

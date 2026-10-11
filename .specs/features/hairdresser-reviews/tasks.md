@@ -11,7 +11,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Spec**: `.specs/features/hairdresser-reviews/spec.md`
 **Context**: `.specs/features/hairdresser-reviews/context.md`
 **Design**: `.specs/features/hairdresser-reviews/design.md`
-**Status**: Approved. Execute em andamento.
+**Status**: Execute concluído (T1 a T7). O T8 está parcial: o E2E de API e as checagens de render passaram, e o UAT em tela (web) e o push no Android ficam com o usuário. Ver `validation.md`.
 **Branch**: `189-avaliacoes-recebidas-cabeleireiro`, criada a partir da `develop` (`23d900a`, com a #182 mesclada).
 
 **Pré-requisitos do Execute:**
@@ -318,9 +318,9 @@ Roteiro:
 - Skill: `run`
 
 **Done when**:
-- [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção.
-- [ ] Os critérios de app do spec ficam Verified.
-- [ ] Gate check passes: Build.
+- [ ] Cada item do roteiro passa no web e no Android, ou vira uma tarefa de correção. **Pendente com o usuário.** Sem o Chrome, os itens 1 a 5 foram cobertos pelo E2E de API (22 de 22: lista vazia, ordem 5 antes de 4, 2 fotos, comentário vazio, edição mantém a posição, exclusão some, alertas) e por checagens de render descartáveis; o item 6 e a abertura de foto da galeria (T4) não foram vistos em tela.
+- [ ] Os critérios de app do spec ficam Verified. **Ficam Implemented até o UAT em tela.**
+- [x] Gate check passes: Build (Full do backend, `tsc` 0 erros e bundle web 200).
 
 **Tests**: none
 **Gate**: build

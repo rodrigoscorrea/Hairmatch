@@ -155,31 +155,31 @@ Nenhuma tela do app mostra ao cabeleireiro as reviews que ele recebeu. O backend
 | HRV-03 | P1: Lista de avaliações | T1 | Verified |
 | HRV-04 | P1: Lista de avaliações | T1 | Verified |
 | HRV-05 | P1: Lista de avaliações | T1 | Verified |
-| HRV-06 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-07 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-08 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-09 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-10 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-11 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-12 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-13 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-14 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-15 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-16 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-17 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-18 | P1: Lista de avaliações | Tasks | Pending |
-| HRV-19 | P1: Acesso pelo perfil | Tasks | Pending |
-| HRV-20 | P1: Acesso pelo perfil | Tasks | Pending |
-| HRV-21 | P1: Acesso pelo perfil | Tasks | Pending |
-| HRV-22 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-23 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-24 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-25 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-26 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-27 | P2: Toque no alerta ou no push | Tasks | Pending |
-| HRV-28 | Edge Cases | Tasks | Pending |
-| HRV-29 | Edge Cases | Tasks | Pending |
-| HRV-30 | Edge Cases | Tasks | Pending |
+| HRV-06 | P1: Lista de avaliações | T3, T5 | Implemented |
+| HRV-07 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-08 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-09 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-10 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-11 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-12 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-13 | P1: Lista de avaliações | T5 | Implemented |
+| HRV-14 | P1: Lista de avaliações | T4, T5 | Implemented |
+| HRV-15 | P1: Lista de avaliações | T3, T5 | Implemented |
+| HRV-16 | P1: Lista de avaliações | T3, T5 | Implemented |
+| HRV-17 | P1: Lista de avaliações | T3, T5 | Implemented |
+| HRV-18 | P1: Lista de avaliações | T5 | Pending UAT |
+| HRV-19 | P1: Acesso pelo perfil | T6 | Implemented |
+| HRV-20 | P1: Acesso pelo perfil | T6 | Implemented |
+| HRV-21 | P1: Acesso pelo perfil | T3, T5 | Implemented |
+| HRV-22 | P2: Toque no alerta ou no push | T7 | Implemented |
+| HRV-23 | P2: Toque no alerta ou no push | T7 | Implemented |
+| HRV-24 | P2: Toque no alerta ou no push | T7 | Implemented |
+| HRV-25 | P2: Toque no alerta ou no push | T5 | Implemented |
+| HRV-26 | P2: Toque no alerta ou no push | T7 | Implemented |
+| HRV-27 | P2: Toque no alerta ou no push | T7 | Implemented |
+| HRV-28 | Edge Cases | T3, T5 | Implemented |
+| HRV-29 | Edge Cases | T5 | Implemented |
+| HRV-30 | Edge Cases | T3, T5 | Implemented |
 
 **ID format:** `HRV-NN`. O prefixo `REV-` é da feature `review-editing`.
 
@@ -190,6 +190,6 @@ Nenhuma tela do app mostra ao cabeleireiro as reviews que ele recebeu. O backend
 ## Success Criteria
 
 - [ ] Os dois critérios de aceite da issue passam no web e no Android. O cabeleireiro vê as reviews com cliente, nota, data, comentário e fotos, e o toque no alerta ou no push de review recebida ou editada abre a tela.
-- [ ] Os critérios de backend (HRV-01 a HRV-05) têm teste automatizado, e a suíte do backend passa sem perder nenhum teste da baseline.
-- [ ] O `test_routes.py` não muda, porque nenhuma rota entra nem sai.
-- [ ] `npx tsc --noEmit` não ganha erro novo.
+- [x] Os critérios de backend (HRV-01 a HRV-05) têm teste automatizado, e a suíte do backend passa sem perder nenhum teste da baseline.
+- [x] O `test_routes.py` não muda, porque nenhuma rota entra nem sai.
+- [x] `npx tsc --noEmit` não ganha erro novo.
