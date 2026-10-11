@@ -160,12 +160,12 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] `apps.py`, `models.py`, `migrations/0001_initial.py` (gerada) e o pacote `tests/` existem, e `notifications` está em `INSTALLED_APPS`.
-- [ ] Teste: um segundo `PushDevice` com o mesmo token levanta `IntegrityError`.
-- [ ] Teste: a ordem padrão de `Alert` é `-created_at, -id`, provada com um alerta antigo inserido depois de um novo.
-- [ ] Teste: apagar o `User` apaga os aparelhos e os alertas dele, e só os dele.
-- [ ] `makemigrations --check` limpo, e o gate Full passa.
-- [ ] Test count: baseline + os testes novos de `notifications`.
+- [x] `apps.py`, `models.py`, `migrations/0001_initial.py` (gerada) e o pacote `tests/` existem, e `notifications` está em `INSTALLED_APPS`.
+- [x] Teste: um segundo `PushDevice` com o mesmo token levanta `IntegrityError`.
+- [x] Teste: a ordem padrão de `Alert` é `-created_at, -id`, provada com um alerta antigo inserido depois de um novo.
+- [x] Teste: apagar o `User` apaga os aparelhos e os alertas dele, e só os dele.
+- [x] `makemigrations --check` limpo, e o gate Full passa.
+- [x] Test count: baseline + os testes novos de `notifications`.
 
 **Tests**: integration
 **Gate**: full

@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'agenda',
     'chatbot',
     'favorite',
+    'notifications',
     'rest_framework',
     'corsheaders',
     'django.contrib.admin',
