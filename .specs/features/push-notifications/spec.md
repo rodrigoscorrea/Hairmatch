@@ -342,10 +342,10 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-35 | P1: Nota recebida (N13) | T5, T12, T19 | Implemented |
 | NOTIF-36 | P1: Nota recebida (N13) | T12 | Implemented |
 | NOTIF-37 | P1: Nota recebida (N13) | T16, T23 | In Tasks |
-| NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | In Tasks |
+| NOTIF-38 | P1: Caixa de alertas (backend) | T9, T14, T19 | Implemented |
 | NOTIF-39 | P1: Caixa de alertas (backend) | T2, T9 | Implemented |
-| NOTIF-40 | P1: Caixa de alertas (backend) | T9, T14 | In Tasks |
-| NOTIF-41 | P1: Caixa de alertas (backend) | T9, T14, T19 | In Tasks |
+| NOTIF-40 | P1: Caixa de alertas (backend) | T9, T14 | Implemented |
+| NOTIF-41 | P1: Caixa de alertas (backend) | T9, T14, T19 | Implemented |
 | NOTIF-42 | P1: Caixa de alertas (backend) | T9 | Implemented |
 | NOTIF-43 | P1: Caixa de alertas (backend) | T9 | Implemented |
 | NOTIF-44 | P1: Caixa de alertas (backend) | T9 | Implemented |

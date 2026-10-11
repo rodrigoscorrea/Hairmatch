@@ -517,9 +517,9 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] As funções do design existem com os paths do RT-100 a RT-104.
-- [ ] O union `ApiProblemSlug` tem `push-unavailable`.
-- [ ] Gate check passes: App.
+- [x] As funções do design existem com os paths do RT-100 a RT-104.
+- [x] O union `ApiProblemSlug` tem `push-unavailable`.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build
