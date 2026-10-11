@@ -193,9 +193,9 @@ T8
 - Skill: NONE
 
 **Done when**:
-- [ ] O `PhotoViewer` fica visível enquanto `uri !== null`, e o botão de fechar tem `accessibilityLabel="Fechar foto"`.
-- [ ] O `GalleryStrip` não tem mais `Modal` próprio e continua abrindo e fechando a foto como antes. O T8 confere isso.
-- [ ] Gate check passes: App.
+- [x] O `PhotoViewer` fica visível enquanto `uri !== null`, e o botão de fechar tem `accessibilityLabel="Fechar foto"`.
+- [x] O `GalleryStrip` não tem mais `Modal` próprio e continua abrindo e fechando a foto como antes. O T8 confere isso.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build

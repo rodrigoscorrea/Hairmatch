@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GalleryPhoto } from '@/models/Gallery.types';
+import { PhotoViewer } from '@/components/PhotoViewer';
 
 interface Props {
   photos: GalleryPhoto[];
@@ -29,19 +29,7 @@ export const GalleryStrip: React.FC<Props> = ({ photos }) => {
         )}
       />
 
-      <Modal visible={opened !== null} transparent animationType="fade" onRequestClose={() => setOpened(null)}>
-        <View style={styles.viewer}>
-          {opened && <Image source={{ uri: opened.image }} style={styles.fullImage} resizeMode="contain" />}
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setOpened(null)}
-            accessibilityRole="button"
-            accessibilityLabel="Fechar foto"
-          >
-            <Ionicons name="close" size={28} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      <PhotoViewer uri={opened?.image ?? null} onClose={() => setOpened(null)} />
     </View>
   );
 };
@@ -62,26 +50,5 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 12,
     marginRight: 8,
-  },
-  viewer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullImage: {
-    width: '100%',
-    height: '100%',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 48,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
