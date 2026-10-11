@@ -598,13 +598,13 @@ T19 → T23
 - Skill: NONE
 
 **Done when**:
-- [ ] As telas mostram o título "Notificações" e o "‹ Voltar".
-- [ ] A lista vem na ordem da API, com destaque nos não lidos e data relativa.
-- [ ] Tocar num alerta marca como lido na hora e segue `alertRoute`.
-- [ ] "Marcar todas como lidas" fica desabilitado sem não lidos.
-- [ ] Sem alertas, a tela mostra "Você ainda não tem notificações.".
-- [ ] Os `ErrorModal` usam os textos de fallback do spec.
-- [ ] Gate check passes: App.
+- [x] As telas mostram o título "Notificações" e o "‹ Voltar".
+- [x] A lista vem na ordem da API, com destaque nos não lidos e data relativa.
+- [x] Tocar num alerta marca como lido na hora e segue `alertRoute`.
+- [x] "Marcar todas como lidas" fica desabilitado sem não lidos.
+- [x] Sem alertas, a tela mostra "Você ainda não tem notificações.".
+- [x] Os `ErrorModal` usam os textos de fallback do spec.
+- [x] Gate check passes: App.
 
 **Tests**: none
 **Gate**: build

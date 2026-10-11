@@ -352,14 +352,14 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | NOTIF-45 | P1: Caixa de alertas (backend) | T9 | Implemented |
 | NOTIF-46 | P1: Caixa de alertas (backend) | T2, T8 | Implemented |
 | NOTIF-47 | P1: Caixa de alertas (app) | T17, T18, T23 | In Tasks |
-| NOTIF-48 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-49 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-50 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-51 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-52 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-53 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-54 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
-| NOTIF-55 | P1: Caixa de alertas (app) | T17, T23 | In Tasks |
+| NOTIF-48 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-49 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-50 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-51 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-52 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-53 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-54 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
+| NOTIF-55 | P1: Caixa de alertas (app) | T17, T23 | Implemented |
 | NOTIF-56 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |
 | NOTIF-57 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |
 | NOTIF-58 | P1: Caixa de alertas (app) | T18, T23 | In Tasks |

@@ -32,6 +32,7 @@ export default function CustomerTabLayout() {
       <Tabs.Screen name="review/[id]" options={{ href: null }} />
       <Tabs.Screen name="ratings" options={{ href: null }} />
       <Tabs.Screen name="favorites" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }
