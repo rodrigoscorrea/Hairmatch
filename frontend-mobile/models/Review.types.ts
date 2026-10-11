@@ -13,3 +13,11 @@ export interface Review {
     hairdresser: number;
     pictures: ReviewPicture[];
 }
+
+/** A review as `GET /api/hairdressers/{id}/reviews` returns it: the customer comes nested with the name. */
+export interface ReceivedReview extends Omit<Review, 'customer'> {
+    customer: {
+        id: number;
+        user: { id: number; first_name: string; last_name: string };
+    };
+}

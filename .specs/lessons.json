@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 26,
   "lessons": [
     {
       "id": "L-001",
@@ -402,6 +402,42 @@
       ],
       "created": "2026-10-11T14:13:12Z",
       "last_seen": "2026-10-11T14:13:12Z"
+    },
+    {
+      "id": "L-023",
+      "key": "spec_precision_gap::when a task changes the default order of a list view grep every test that reads that list not only the one named and list the new expected values in done when because a query count test with a fixed 2 3 1 broke silently",
+      "text": "When a task changes the default order of a list view, grep every test that reads that list (not only the one named) and list the new expected values in done-when, because a query-count test with a fixed [2, 3, 1] broke silently.",
+      "signal": "spec_precision_gap",
+      "scope": "specs,tests,ordering",
+      "status": "candidate",
+      "features": [
+        "hairdresser-reviews"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "tasks.md T1 done-when / backend/review/tests.py:1840 (specs,tests,ordering)"
+      ],
+      "created": "2026-10-11T15:07:27Z",
+      "last_seen": "2026-10-11T15:07:27Z"
+    },
+    {
+      "id": "L-025",
+      "key": "surviving_mutant::when a tie break mutant survives vary the joined parent of the tied rows alternate the customer before calling it untestable because the join order can mimic the tie break",
+      "text": "When a tie-break mutant survives, vary the joined parent of the tied rows (alternate the customer) before calling it untestable, because the join order can mimic the tie-break.",
+      "signal": "surviving_mutant",
+      "scope": "backend,ordering",
+      "status": "candidate",
+      "features": [
+        "hairdresser-reviews"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant order_by('-created_at') without the id tie-break, killed by alternating the customer of the tied rows (backend/review/tests.py) (backend,ordering)"
+      ],
+      "created": "2026-10-11T15:09:39Z",
+      "last_seen": "2026-10-11T15:09:39Z"
     }
   ]
 }

@@ -36,7 +36,6 @@ Hoje o único aviso que o sistema manda é o e-mail de cadastro do Cognito. O ap
 | Lembretes e pedidos de avaliação agendados (N07 a N10) | Card #185. Precisam de scheduler, que ainda será refinado. |
 | Confirmação e recusa de reserva (N05, N06) | Spike #187. |
 | Engajamento para quem favoritou (N17 a N20) | Spike #186. |
-| Tela de reviews recebidas pelo cabeleireiro | Card #189. O toque no alerta de review só passa a abrir essa tela quando ela existir. |
 | Chaves de opt-in por categoria | Decisão do usuário: o opt-in é a permissão de notificação do Android. |
 | Notificar fotos de review adicionadas ou removidas | Decisão do levantamento. A edição pelo app sempre chama o `PUT /api/reviews/{id}` primeiro (`useReviewForm.ts:135`), e esse `PUT` já notifica. |
 | Expurgo de alertas antigos | Exige um job periódico (#185). |
@@ -54,7 +53,7 @@ Hoje o único aviso que o sistema manda é o e-mail de cadastro do Cognito. O ap
 | Histórico | Toda notificação vira uma linha da tabela nova de alertas, com ou sem aparelho registrado. | Decisão do usuário: "gravar em uma nova tabela de alertas". | y |
 | Para onde o menu leva | O item "Notificações" (cliente e cabeleireiro) abre a caixa de alertas. | Decisão do usuário. | y |
 | Lido e não lido | Um alerta fica não lido até ser tocado. O item do menu mostra o número de não lidos, e a caixa tem "Marcar todas como lidas". | Decisão do usuário. | y |
-| Toque no alerta de review (N11, N12) | Marca o alerta como lido e fica na caixa. A navegação para a tela de reviews recebidas entra no card #189. | Decisão do usuário: a tela ainda será criada (#189). | y |
+| Toque no alerta de review (N11, N12) | `review-created` e `review-updated` marcam o alerta como lido e abrem "Minhas avaliações" (`/(app)/hairdresser/profile/reviews`, card #189). `review-deleted` marca como lido e fica na caixa. | Decisão do usuário. A tela nasceu no card #189, e a review excluída não está mais na lista. | y |
 | Projeto Firebase | Ainda não existe. Criá-lo, gerar o `google-services.json` e a chave da service account do FCM é tarefa manual do usuário. | Resposta do usuário. | y |
 | Configuração nova | Uma env var, `SNS_PLATFORM_APPLICATION_ARN`. Vazia em dev, quando o backend busca pelo nome a platform application `hairmatch-dev-fcm` que o init do LocalStack cria. A credencial do FCM fica na platform application da AWS, nunca no backend. | O usuário aceita env vars novas neste épico. Buscar pelo nome em dev segue o padrão do Cognito (AD-005). | y |
 | Opt-in | A permissão do Android. O app pede uma vez, depois do login. Com a permissão negada, o app não registra token, e os alertas continuam na caixa. | Decisão do usuário: sem chaves por categoria. O Android 13+ exige a permissão `POST_NOTIFICATIONS`. | y |
@@ -91,8 +90,8 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 | `kind` | Item | Gatilho | Destinatário | Título | Corpo | Toque |
 | --- | --- | --- | --- | --- | --- | --- |
 | `reservation-created` | N01 | Commit de `CreateReserve` (`reserve/views.py:85`) ou de `create_new_reserve` (`reserve/views.py:377`) | Cabeleireiro do serviço | Nova reserva | `{cliente} reservou {serviço} para {data} às {hora}.` | Agenda do cabeleireiro (`/(app)/hairdresser/agenda`) |
-| `review-created` | N11 | Commit de `CreateReview` (`review/views.py:74`) | Cabeleireiro avaliado | Nova avaliação | `{cliente} avaliou seu atendimento com {nota} {estrelas}.` | Marca como lido, sem navegar (#189) |
-| `review-updated` | N12 | Commit de `UpdateReview` (`review/views.py:153`) | Cabeleireiro avaliado | Avaliação atualizada | `{cliente} atualizou a avaliação do seu atendimento: {nota} {estrelas}.` | Marca como lido, sem navegar (#189) |
+| `review-created` | N11 | Commit de `CreateReview` (`review/views.py:74`) | Cabeleireiro avaliado | Nova avaliação | `{cliente} avaliou seu atendimento com {nota} {estrelas}.` | Marca como lido e abre "Minhas avaliações" (`/(app)/hairdresser/profile/reviews`, #189) |
+| `review-updated` | N12 | Commit de `UpdateReview` (`review/views.py:153`) | Cabeleireiro avaliado | Avaliação atualizada | `{cliente} atualizou a avaliação do seu atendimento: {nota} {estrelas}.` | Marca como lido e abre "Minhas avaliações" (`/(app)/hairdresser/profile/reviews`, #189) |
 | `review-deleted` | N12 | Commit de `RemoveReview` (`review/views.py:176`) | Cabeleireiro avaliado | Avaliação removida | `{cliente} removeu a avaliação do seu atendimento.` | Marca como lido, sem navegar |
 | `customer-rating-created` | N13 | Commit de `record_customer_rating` (`review/customer_ratings.py`) | Cliente avaliado | Você foi avaliado | `{cabeleireiro} deu nota {nota} para você.` | Avaliações recebidas (`/(app)/customer/ratings`) |
 | `customer-rating-updated` | N14 | Commit de `update_customer_rating` | Cliente avaliado | Avaliação atualizada | `{cabeleireiro} mudou sua nota para {nota}.` | Avaliações recebidas |
@@ -182,7 +181,7 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 
 1. **NOTIF-32** WHEN um cliente cria uma review pelo `POST /api/reviews` THEN o backend SHALL notificar o cabeleireiro da review com `review-created` e a nota da review.
 2. **NOTIF-33** IF a review não é criada (400, 403, 404, 409 `review-exists` ou `invalid-image`) THEN o backend SHALL não notificar.
-3. **NOTIF-34** WHEN o cabeleireiro toca no push ou no alerta `review-created` THEN o app SHALL marcar o alerta como lido e manter a caixa de alertas aberta.
+3. **NOTIF-34** WHEN o cabeleireiro toca no push ou no alerta `review-created` THEN o app SHALL marcar o alerta como lido e abrir "Minhas avaliações" (`/(app)/hairdresser/profile/reviews`, #189).
 
 **Independent Test**: como cliente, avaliar uma reserva já passada. O cabeleireiro recebe "Nova avaliação" com a nota.
 
@@ -250,7 +249,7 @@ Toda notificação tem um `kind`, um destinatário, um título, um corpo e um de
 2. **NOTIF-60** WHEN o cliente exclui a review pelo `DELETE /api/reviews/{id}` THEN o backend SHALL notificar o cabeleireiro com `review-deleted`.
 3. **NOTIF-61** IF a edição ou a exclusão falha (400 ou 404) THEN o backend SHALL não notificar.
 4. **NOTIF-62** WHEN o cliente adiciona ou remove uma foto da review (`POST` ou `DELETE /api/reviews/{id}/pictures...`) THEN o backend SHALL não notificar.
-5. **NOTIF-63** WHEN o cabeleireiro toca no push ou no alerta `review-updated` ou `review-deleted` THEN o app SHALL marcar o alerta como lido e manter a caixa aberta.
+5. **NOTIF-63** WHEN o cabeleireiro toca no push ou no alerta `review-updated` THEN o app SHALL marcar o alerta como lido e abrir "Minhas avaliações" (`/(app)/hairdresser/profile/reviews`, #189). WHEN toca no push ou no alerta `review-deleted` THEN o app SHALL marcar o alerta como lido e manter a caixa aberta.
 
 **Independent Test**: como cliente, editar a nota de uma review e depois excluí-la. O cabeleireiro recebe "Avaliação atualizada" e "Avaliação removida".
 

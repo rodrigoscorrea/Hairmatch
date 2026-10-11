@@ -34,6 +34,7 @@ export const useHairdresserProfile = () => {
   const goToServices = () => router.push('/(app)/hairdresser/services'); // Navigates to the services tab
   const goToAvailability = () => router.push('/(app)/hairdresser/availability'); // You'll create this screen
   const goToGallery = () => router.push('/(app)/hairdresser/profile/gallery');
+  const goToReviews = () => router.push('/(app)/hairdresser/profile/reviews');
   const handleGoBack = () => {
     router.push('/(app)/hairdresser/profile/settings');
   };
@@ -46,6 +47,7 @@ export const useHairdresserProfile = () => {
     goToServices,
     goToAvailability,
     goToGallery,
+    goToReviews,
     handleGoBack
   };
 };

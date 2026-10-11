@@ -614,10 +614,100 @@ class ListReviewTest(ReviewsTestCase):
         
         # Verify review data
         reviews = response_data['data']
-        self.assertEqual(reviews[0]['rating'], 4)
-        self.assertEqual(reviews[0]['comment'], 'Great service!')
-        self.assertEqual(reviews[1]['rating'], 5)
-        self.assertEqual(reviews[1]['comment'], 'Excellent work!')
+        self.assertEqual(reviews[0]['rating'], 5)
+        self.assertEqual(reviews[0]['comment'], 'Excellent work!')
+        self.assertEqual(reviews[1]['rating'], 4)
+        self.assertEqual(reviews[1]['comment'], 'Great service!')
+
+
+class ListReviewOrderTest(ReviewsTestCase):
+    """HRV-01 to HRV-05 for GET /api/hairdressers/{id}/reviews: newest first, and the item as it was."""
+
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse('list_review', args=[self.hairdresser.id])
+        self.noon = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+
+    def _review(self, rating, created_at, hairdresser=None, customer=None):
+        review = Review.objects.create(
+            rating=rating, comment=f'rating {rating}', customer=customer or self.customer,
+            hairdresser=hairdresser or self.hairdresser,
+        )
+        Review.objects.filter(id=review.id).update(created_at=created_at)  # `created_at` is auto_now_add
+        review.refresh_from_db()
+        return review
+
+    def _listed_ids(self, url=None):
+        return [review['id'] for review in self.client.get(url or self.list_url).json()['data']]
+
+    def test_reviews_are_listed_by_created_at_descending_whatever_the_insertion_order(self):
+        """HRV-01"""
+        newest = self._review(5, self.noon + datetime.timedelta(days=2))
+        oldest = self._review(3, self.noon)
+        middle = self._review(4, self.noon + datetime.timedelta(days=1))
+
+        self.assertLess(newest.id, oldest.id)  # the insertion order is neither `id` nor `-id` of the expected order
+        self.assertEqual(self._listed_ids(), [newest.id, middle.id, oldest.id])
+
+    def test_reviews_with_the_same_created_at_are_listed_by_id_descending(self):
+        """HRV-02"""
+        # Alternating customers: the joins to the customer and its user must not decide the order of the tie.
+        customers = [self.customer, self.customer2]
+        tied = [self._review(1 + index % 5, self.noon, customer=customers[index % 2]) for index in range(6)]
+
+        self.assertEqual(self._listed_ids(), [review.id for review in reversed(tied)])
+
+    def test_each_hairdresser_lists_only_their_own_reviews(self):
+        """HRV-04"""
+        other_payload = dict(self.hairdresser_payload, email='other.hairdresser@example.com', phone='+5592984509999')
+        self.client.post(self.register_url, data=other_payload)
+        activate_account(other_payload['email'])
+        other = Hairdresser.objects.get(user__email=other_payload['email'])
+        mine = [self._review(4, self.noon), self._review(5, self.noon + datetime.timedelta(days=1))]
+        theirs = self._review(2, self.noon + datetime.timedelta(days=2), hairdresser=other)
+
+        self.assertEqual(self._listed_ids(), [mine[1].id, mine[0].id])
+        self.assertEqual(self._listed_ids(reverse('list_review', args=[other.id])), [theirs.id])
+
+    def test_editing_a_review_does_not_change_its_position(self):
+        """HRV-05"""
+        oldest = self._review(3, self.noon)
+        newest = self._review(5, self.noon + datetime.timedelta(days=1))
+        self.assertEqual(self._listed_ids(), [newest.id, oldest.id])
+        self.login_as_customer()
+
+        response = self.client.put(
+            reverse('review_detail', args=[oldest.id]),
+            data=json.dumps({'rating': 1, 'comment': 'changed my mind'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = self.client.get(self.list_url).json()['data']
+        self.assertEqual([review['id'] for review in data], [newest.id, oldest.id])
+        self.assertEqual(data[1]['rating'], 1)
+        self.assertEqual(data[1]['comment'], 'changed my mind')
+
+    def test_an_item_keeps_the_keys_and_the_customer_name_the_app_reads(self):
+        """HRV-03"""
+        review = self._review(4.5, self.noon)
+
+        item = self.client.get(self.list_url).json()['data'][0]
+
+        self.assertEqual(sorted(item), ['comment', 'created_at', 'customer', 'hairdresser', 'id', 'pictures', 'rating'])
+        self.assertEqual(item['id'], review.id)
+        self.assertEqual(item['rating'], 4.5)
+        self.assertEqual(item['comment'], 'rating 4.5')
+        self.assertEqual(item['hairdresser'], self.hairdresser.id)
+        self.assertEqual(item['pictures'], [])
+        self.assertEqual(item['customer'], {
+            'id': self.customer.id,
+            'user': {
+                'id': self.customer_user.id,
+                'first_name': self.customer_user.first_name,
+                'last_name': self.customer_user.last_name,
+            },
+        })
 
 class UpdateReviewTest(ReviewsTestCase):
     def setUp(self):
@@ -1748,7 +1838,7 @@ class ListReviewPicturesTest(ReviewsTestCase):
         with CaptureQueriesContext(connection) as three:
             data = self.client.get(self.list_url).json()['data']
 
-        self.assertEqual([len(review['pictures']) for review in data], [2, 3, 1])
+        self.assertEqual([len(review['pictures']) for review in data], [1, 3, 2])  # newest first (HRV-01)
         self.assertEqual(len(three), len(one))
 
 

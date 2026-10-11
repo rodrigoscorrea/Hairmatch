@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { ReviewPicture } from '@/models/Review.types';
+import { ReceivedReview, ReviewPicture } from '@/models/Review.types';
 import axiosInstance from "./axios-instance";
 import { PickedImage } from './account.service';
 
@@ -71,3 +71,9 @@ export const deleteReview = async (reviewId: string | number) => {
         throw error;
     }
 }
+
+/** GET /api/hairdressers/{id}/reviews: the reviews the hairdresser received, newest first. */
+export const getHairdresserReviews = async (hairdresserId: number): Promise<ReceivedReview[]> => {
+    const response = await axiosInstance.get(`/api/hairdressers/${hairdresserId}/reviews`, { withCredentials: true });
+    return response.data.data;
+};
