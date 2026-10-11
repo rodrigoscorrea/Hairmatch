@@ -222,12 +222,12 @@ Em `hairdresser/profile/_layout.tsx`, registrar `<Stack.Screen name="reviews" />
 - Skill: NONE
 
 **Done when**:
-- [ ] `formatRating(4)` dá `"4"`, e `formatRating(4.5)` dá `"4,5"`.
-- [ ] Uma review com `comment` `null`, `""` ou `"   "` não ganha área de comentário.
-- [ ] As miniaturas seguem a ordem de `pictures`, cada uma com `accessibilityLabel="Abrir foto"`, e 5 delas rolam na horizontal sem alargar o card.
-- [ ] A mensagem de lista vazia é "Você ainda não recebeu avaliações." e só aparece com `isLoaded`.
-- [ ] A rota `/(app)/hairdresser/profile/reviews` abre no web. Aberta direto pela URL, "‹ Voltar" leva ao perfil (HRV-18).
-- [ ] Gate check passes: App, com os typed routes regenerados.
+- [x] `formatRating(4)` dá `"4"`, e `formatRating(4.5)` dá `"4,5"`.
+- [x] Uma review com `comment` `null`, `""` ou `"   "` não ganha área de comentário.
+- [x] As miniaturas seguem a ordem de `pictures`, cada uma com `accessibilityLabel="Abrir foto"`, e 5 delas rolam na horizontal sem alargar o card.
+- [x] A mensagem de lista vazia é "Você ainda não recebeu avaliações." e só aparece com `isLoaded`.
+- [x] A rota `/(app)/hairdresser/profile/reviews` abre no web. Aberta direto pela URL, "‹ Voltar" leva ao perfil (HRV-18).
+- [x] Gate check passes: App, com os typed routes regenerados.
 
 **Tests**: none
 **Gate**: build
