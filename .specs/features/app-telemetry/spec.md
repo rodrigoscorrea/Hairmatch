@@ -14,11 +14,11 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 
 ## Goals
 
-- [ ] Uma reserva criada pelo app gera um trace único: a requisição, as queries e o publish do SNS. Os logs da requisição trazem o mesmo `trace_id`.
-- [ ] Um upload de foto gera um trace com a conversão para WebP e o `PutObject` do S3.
-- [ ] Com o Collector parado, ou sem o endpoint configurado, toda rota responde com o mesmo status e o mesmo corpo. O p95 sobe no máximo 50 ms.
-- [ ] Nenhum e-mail, CPF, CNPJ, nome, telefone, CEP, endereço ou token aparece em log, span ou atributo dos fluxos cobertos.
-- [ ] Nove contadores de negócio, com rótulos fechados, chegam ao Prometheus.
+- [x] Uma reserva criada pelo app gera um trace único: a requisição, as queries e o publish do SNS. Os logs da requisição trazem o mesmo `trace_id`.
+- [x] Um upload de foto gera um trace com a conversão para WebP e o `PutObject` do S3.
+- [x] Com o Collector parado, ou sem o endpoint configurado, toda rota responde com o mesmo status e o mesmo corpo. O p95 sobe no máximo 50 ms.
+- [x] Nenhum e-mail, CPF, CNPJ, nome, telefone, CEP, endereço ou token aparece em log, span ou atributo dos fluxos cobertos.
+- [x] Nove contadores de negócio, com rótulos fechados, chegam ao Prometheus.
 - [ ] O app abre e navega igual com a telemetria ligada, desligada ou com o Collector fora do ar.
 
 ## Out of Scope
@@ -316,7 +316,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-36 | P1: Logs em JSON | Execute | Done |
 | TEL-37 | P1: Logs em JSON | Execute | Done |
 | TEL-38 | P1: Logs em JSON | Execute | Done |
-| TEL-39 | P1: Logs em JSON | Specify | Pending |
+| TEL-39 | P1: Logs em JSON | Execute | Done |
 | TEL-40 | P1: Logs em JSON | Execute | Done |
 | TEL-41 | P1: Logs em JSON | Execute | Done |
 | TEL-42 | P1: Logs em JSON | Execute | Done |
@@ -358,7 +358,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-78 | P2: Configuração e documentação | Execute | Done |
 | TEL-79 | P2: Configuração e documentação | Execute | Done |
 | TEL-80 | P2: Configuração e documentação | Execute | Done |
-| TEL-81 | P2: Configuração e documentação | Specify | Pending |
+| TEL-81 | P2: Configuração e documentação | Execute | Done |
 | TEL-82 | Edge Cases | Execute | Done |
 | TEL-83 | Edge Cases | Execute | Done |
 | TEL-84 | Edge Cases | Execute | Done |
@@ -387,8 +387,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 
 ## Success Criteria
 
-- [ ] A suíte de resiliência passa nos três modos de Collector fora do ar, com o p95 dentro do limite de TEL-10.
-- [ ] No Tempo, o trace de uma reserva criada pelo app tem o `trace_id` do header do app, e "Logs for this span" mostra os logs dela.
-- [ ] Nenhum valor de dado pessoal usado nos testes aparece no exporter em memória, no stdout, no Loki ou no Tempo.
-- [ ] O dashboard `api-red.json` da #193 mostra taxa, erros e duração do `hairmatch-api` sem nenhuma mudança no dashboard.
-- [ ] `grep -rn "print(" backend --include=*.py`, sem os testes e o `.venv`, não devolve nada.
+- [x] A suíte de resiliência passa nos três modos de Collector fora do ar, com o p95 dentro do limite de TEL-10.
+- [x] No Tempo, o trace de uma reserva criada pelo app tem o `trace_id` do header do app, e "Logs for this span" mostra os logs dela.
+- [x] Nenhum valor de dado pessoal usado nos testes aparece no exporter em memória, no stdout, no Loki ou no Tempo.
+- [x] O dashboard `api-red.json` da #193 mostra taxa, erros e duração do `hairmatch-api` sem nenhuma mudança no dashboard.
+- [x] `grep -rn "print(" backend --include=*.py`, sem os testes e o `.venv`, não devolve nada.

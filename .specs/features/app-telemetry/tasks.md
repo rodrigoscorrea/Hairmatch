@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/app-telemetry/design.md`
-**Status**: In Progress
+**Status**: Execute concluído (T1 a T32); falta o aval do usuário, o Verifier independente e o teste no Android
 
 ---
 
@@ -862,8 +862,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Passo a passo para ligar backend e app e achar o trace e os logs de uma reserva
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Passo a passo para ligar backend e app e achar o trace e os logs de uma reserva
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: none
 **Gate**: build
@@ -885,9 +885,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Trace da reserva no Tempo com o `trace_id` do header, logs do span no Loki, contadores no Prometheus, dashboard `api-red.json` sem mudança
-- [ ] AD-016 registrado e Handoff atualizado
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Trace da reserva no Tempo com o `trace_id` do header, logs do span no Loki, contadores no Prometheus, dashboard `api-red.json` sem mudança
+- [x] AD-016 registrado e Handoff atualizado
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: none
 **Gate**: build

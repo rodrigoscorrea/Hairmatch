@@ -223,30 +223,30 @@
 ## Handoff
 
 - **Feature**: `app-telemetry` (issue #194, depende da #193).
-- **Phase / Task**: Specify concluído em 2026-11-07, na branch `194-integracao-telemetria`. A branch saiu de `193-infra-de-observabilidade` em `b2145f4` (PR #195, ainda fora da `develop`).
-  - Arquivos: `spec.md` (TEL-01 a TEL-86) e `context.md`. `validate_spec.py` com exit 0.
-  - Design e Tasks não começaram.
+- **Phase / Task**: Execute: T1 a T32 implementadas em 2026-11-07, com commits atômicos, na branch `194-integracao-telemetria` (saiu de `193-infra-de-observabilidade` em `b2145f4`; o PR #195 da #193 ainda está fora da `develop`). **Falta a validação**: o Verifier independente não rodou e não há `validation.md` (`validate_state.py app-telemetry` falha por isso). A branch **não foi enviada** ao remoto.
+  - Gates em 2026-11-07: suíte do backend 1352 testes OK; `npx tsc --noEmit` com 0 erros; Jest do app 20 testes OK; `docker compose config` e `lint_compose.py` (12 PASS) OK; `grep print(` no backend, sem testes, vazio.
+  - E2E contra a stack real (T32), com o backend em `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` no modo combinado, um cliente descartável e um cabeleireiro do seed com aparelho de push:
+    - `POST /api/reservations` com `traceparent` próprio gerou, no Tempo, o trace com o mesmo `trace_id`: span SERVER `POST api/reservations` (pai = o span do cliente), queries sem valores (`%s`), `hairmatch.reserve_id` e `hairmatch.hairdresser_id`, e `SNS.Publish` filho da requisição.
+    - Com o `endpoint_arn` do aparelho quebrado, o log `sns publish failed` saiu com o `trace_id` da requisição e o Loki o devolveu em `| trace_id="<id>"`; o Tempo mostrou `SNS.DeleteEndpoint` no mesmo trace.
+    - Prometheus: `hairmatch_reserves_created_total{channel="app"}`, `hairmatch_push_results_total`, `hairmatch_problems_total` e o histograma `http_server_request_duration_seconds` com exemplares que apontam para um `trace_id`.
+    - Dashboard `api-red.json` sem mudança no Git, e as três consultas dele devolveram séries do `job="hairmatch-api"`.
+    - Nenhum valor de teste (e-mail, telefone, CPF, token, ARN) apareceu no Tempo, no Loki nem nas séries do Prometheus.
+    - Os dados do E2E foram apagados (conta de teste pela API, aparelhos e alertas).
 - **Completed**:
-  - Decisões do usuário:
-    - 9 contadores de negócio, os 10 do estudo menos `chatbot.messages` (chatbot deprecado);
-    - `traceparent` na web e no Android, atrás de `EXPO_PUBLIC_TRACE_PROPAGATION`, com `traceparent` no `CORS_ALLOW_HEADERS`.
-  - Divergências entre a issue e o código, registradas em Assumptions:
-    - a reserva não toca o S3, e o S3 é provado pelo upload de foto;
-    - o Gemini usa `google.generativeai`, sem httpx, então o span é manual.
+  - AD-016 registrado. Seção "Ligar o backend e o app (#194)" no `docs/observability/README.md` (TEL-81), com a trilha do trace e dos logs de uma reserva.
+  - TEL-39 e TEL-81 viraram Done no `spec.md`, e os Success Criteria foram marcados.
+  - Decisões do usuário: 9 contadores de negócio (sem `chatbot.messages`); `traceparent` na web e no Android atrás de `EXPO_PUBLIC_TRACE_PROPAGATION`.
+  - Achados do E2E, já na documentação do README:
+    - o log de acesso (`django.server`) e o `django.request` são escritos depois que o span fecha, então não têm `trace_id`;
+    - uma reserva bem-sucedida não escreve log nenhum;
+    - a stack sozinha e a combinada não se alcançam: com a stack no modo sozinho, o backend não resolve `otel-collector` e só avisa em log.
 - **In-progress** (file:line): none
 - **Next step**:
-  1. O usuário revisa e aprova o `spec.md`. Os arquivos de `.specs/features/app-telemetry/` e este `STATE.md` ainda não foram commitados.
-  2. No Design:
-     - fixar as versões do OpenTelemetry compatíveis com o Django 5.2, o Python 3.12 e o psycopg2;
-     - escolher o gancho de inicialização no `runserver`, respeitando TEL-04 e TEL-05;
-     - conferir se o span do `on_commit` cai no trace da requisição;
-     - conferir que atributos a instrumentação do botocore põe no span do SNS (TEL-48);
-     - conferir que nome a instrumentação do Django dá a um preflight `OPTIONS` sem rota resolvida (TEL-49);
-     - conferir na versão fixada que o histograma HTTP do Django recebe exemplar (TEL-33). Se não receber, o TEL-33 sai do P1 e vira Assumption, nunca uma meia implementação;
-     - planejar um gate de Jest que rode uma vez só. O script atual é `jest --watchAll`, e o app ainda não tem testes;
-     - registrar o AD-016.
-  3. Quando o PR #195 entrar na `develop`, rebasear a 194 sobre a `develop`.
-  4. As mudanças não commitadas de `frontend-mobile/` (eslint, log do refresh no `axios-instance.ts`) vieram da sessão anterior e não entram nos commits da 194.
+  1. O usuário revisa os commits da 194 e autoriza o `git push` (a branch não tem upstream).
+  2. **Pendente, do usuário**: rodar o app no Android com `EXPO_PUBLIC_TRACE_PROPAGATION=true` e o Collector ligado e desligado (TEL-76 segue Partial). Nesta sessão só a API, o Jest e o `tsc` foram provados.
+  3. Rodar o Verifier independente (autor ≠ verificador) e gerar o `validation.md`; o E2E acima foi feito por quem implementou. Só então a feature conta como concluída.
+  4. Quando o PR #195 entrar na `develop`, rebasear a 194 sobre a `develop`.
+  5. As mudanças não commitadas de `frontend-mobile/` (eslint, `package-lock.json`, `.env.example`, log do refresh no `axios-instance.ts`) e os docs soltos (`docs/google-calendar`, `docs/security-audit`, `docs/timezone`, `docs/requisitos-status.md`) vieram de outras sessões e não entram nos commits da 194.
 
 - **Feature**: `observability-stack` (issue #193, bloqueia a #194).
 - **Phase / Task**: Execute concluído em 2026-11-07, na branch `193-infra-de-observabilidade`: T1 a T16 feitas, com commits atômicos, e duas correções da rodada 1 do Verifier.
