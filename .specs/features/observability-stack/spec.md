@@ -57,7 +57,7 @@ A #194 vai instrumentar o backend com OpenTelemetry e precisa de um destino loca
 | Onde ficam os padrões locais do destino | Na interpolação do compose (`${OBS_TRACES_ENDPOINT:-http://tempo:4318/v1/traces}`), que trata variável vazia como ausente. O `config.yaml` lê `${env:OBS_TRACES_ENDPOINT}` sem padrão. | O compose e o `docker/.env` repassam as variáveis vazias ao container. Um padrão só no `config.yaml` talvez não valha para variável definida e vazia: isso não foi verificado no Collector 0.164. | n |
 | OTLP só por HTTP | O Collector escuta só `4318` (OTLP/HTTP). Sem gRPC. | A issue pede "receiver OTLP HTTP", e o estudo usa só HTTP. | n |
 | Marcadores de redação | `[email]`, `[jwt]`, `[cpf]`, `[cnpj]`, `[telefone]`. | Legíveis no Loki e fáceis de procurar. | n |
-| Ordem das regras de redação | JWT → e-mail → CNPJ → CPF → telefone. | O JWT carrega trechos que parecem e-mail e números. O CNPJ antes do CPF impede que um CNPJ de 14 dígitos sem máscara perca só 11 dígitos e deixe 3 à mostra. | n |
+| Ordem das regras de redação | JWT → e-mail → CNPJ → CPF → telefone. | O JWT carrega trechos que parecem e-mail e números. A ordem é a da spec. Os `\b` do padrão de CPF já impedem que um CNPJ de 14 dígitos sem máscara perca só 11 dígitos, então trocar CNPJ e CPF não muda o resultado (verificado por mutação). | n |
 | Número de 11 dígitos sem máscara | É redigido como `[cpf]`, seja CPF ou celular. O critério é que os dígitos originais nunca apareçam, e não o rótulo. | Sem máscara, os dois são indistinguíveis. | n |
 | Falsos positivos aceitos | Uma sequência de 10 a 14 dígitos numa string é redigida, mesmo quando não é dado pessoal. Exemplos: o ID de conta da AWS (12 dígitos) dentro de um ARN e um timestamp em ms (13 dígitos). | Redigir a mais é o lado seguro. Esses valores raramente importam para o debug, e a #194 manda IDs internos como atributos inteiros, que a redação não toca. | n |
 | Onde a redação atua | No corpo de log string, nos valores string do primeiro nível de um corpo de log map, nos atributos string de logs e spans e nos atributos de resource. Valores não string (int, double, bool) e mapas aninhados não são redigidos. | Os logs do Python chegam com corpo string. Redigir mapas aninhados exige OTTL recursivo, e a #194 proíbe dado pessoal na origem. | n |
@@ -254,66 +254,66 @@ Os exemplos usam os valores da tabela de entradas abaixo. "Gravado" é o que o L
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| OBS-01 | P1: Stack isolada | Tasks | Pending |
-| OBS-02 | P1: Stack isolada | Tasks | Pending |
-| OBS-03 | P1: Stack isolada | Tasks | Pending |
-| OBS-04 | P1: Stack isolada | Tasks | Pending |
-| OBS-05 | P1: Stack isolada | Tasks | Pending |
-| OBS-06 | P1: Stack isolada | Tasks | Pending |
-| OBS-07 | P1: Stack isolada | Tasks | Pending |
-| OBS-08 | P1: Stack isolada | Tasks | Pending |
-| OBS-09 | P1: Stack isolada | Tasks | Pending |
-| OBS-10 | P1: Stack isolada | Tasks | Pending |
-| OBS-11 | P1: Stack isolada | Tasks | Pending |
-| OBS-12 | P1: Stack isolada | Tasks | Pending |
-| OBS-13 | P1: Três sinais | Tasks | Pending |
-| OBS-14 | P1: Três sinais | Tasks | Pending |
-| OBS-15 | P1: Três sinais | Tasks | Pending |
-| OBS-16 | P1: Três sinais | Tasks | Pending |
-| OBS-17 | P1: Três sinais | Tasks | Pending |
-| OBS-18 | P1: Três sinais | Tasks | Pending |
-| OBS-19 | P1: Três sinais | Tasks | Pending |
-| OBS-20 | P1: Três sinais | Tasks | Pending |
-| OBS-21 | P1: Três sinais | Tasks | Pending |
-| OBS-22 | P1: Redação | Tasks | Pending |
-| OBS-23 | P1: Redação | Tasks | Pending |
-| OBS-24 | P1: Redação | Tasks | Pending |
-| OBS-25 | P1: Redação | Tasks | Pending |
-| OBS-26 | P1: Redação | Tasks | Pending |
-| OBS-27 | P1: Redação | Tasks | Pending |
-| OBS-28 | P1: Redação | Tasks | Pending |
-| OBS-29 | P1: Redação | Tasks | Pending |
-| OBS-30 | P1: Redação | Tasks | Pending |
-| OBS-31 | P1: Redação | Tasks | Pending |
-| OBS-32 | P1: Redação | Tasks | Pending |
-| OBS-33 | P2: Destino trocável | Tasks | Pending |
-| OBS-34 | P2: Destino trocável | Tasks | Pending |
-| OBS-35 | P2: Destino trocável | Tasks | Pending |
-| OBS-36 | P2: Destino trocável | Tasks | Pending |
-| OBS-37 | P2: Destino trocável | Tasks | Pending |
-| OBS-38 | P2: Grafana provisionado | Tasks | Pending |
-| OBS-39 | P2: Grafana provisionado | Tasks | Pending |
-| OBS-40 | P2: Grafana provisionado | Tasks | Pending |
-| OBS-41 | P2: Grafana provisionado | Tasks | Pending |
-| OBS-42 | P2: Grafana provisionado | Tasks | Pending |
-| OBS-43 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-44 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-45 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-46 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-47 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-48 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-49 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-50 | P2: Pyroscope, Faro e infra | Tasks | Pending |
-| OBS-51 | P3: Documentação | Tasks | Pending |
-| OBS-52 | P3: Documentação | Tasks | Pending |
-| OBS-53 | P3: Documentação | Tasks | Pending |
-| OBS-54 | P3: Documentação | Tasks | Pending |
-| OBS-55 | P3: Documentação | Tasks | Pending |
-| OBS-56 | P3: Documentação | Tasks | Pending |
-| OBS-57 | Edge cases | Tasks | Pending |
-| OBS-58 | Edge cases | Tasks | Pending |
-| OBS-59 | Edge cases | Tasks | Pending |
-| OBS-60 | Edge cases | Tasks | Pending |
+| OBS-01 | P1: Stack isolada | Tasks | Verified |
+| OBS-02 | P1: Stack isolada | Tasks | Verified |
+| OBS-03 | P1: Stack isolada | Tasks | Verified |
+| OBS-04 | P1: Stack isolada | Tasks | Verified |
+| OBS-05 | P1: Stack isolada | Tasks | Verified |
+| OBS-06 | P1: Stack isolada | Tasks | Verified |
+| OBS-07 | P1: Stack isolada | Tasks | Verified |
+| OBS-08 | P1: Stack isolada | Tasks | Verified |
+| OBS-09 | P1: Stack isolada | Tasks | Verified |
+| OBS-10 | P1: Stack isolada | Tasks | Verified |
+| OBS-11 | P1: Stack isolada | Tasks | Verified |
+| OBS-12 | P1: Stack isolada | Tasks | Verified |
+| OBS-13 | P1: Três sinais | Tasks | Verified |
+| OBS-14 | P1: Três sinais | Tasks | Verified |
+| OBS-15 | P1: Três sinais | Tasks | Verified |
+| OBS-16 | P1: Três sinais | Tasks | Verified |
+| OBS-17 | P1: Três sinais | Tasks | Verified |
+| OBS-18 | P1: Três sinais | Tasks | Verified |
+| OBS-19 | P1: Três sinais | Tasks | Verified |
+| OBS-20 | P1: Três sinais | Tasks | Verified |
+| OBS-21 | P1: Três sinais | Tasks | Verified |
+| OBS-22 | P1: Redação | Tasks | Verified |
+| OBS-23 | P1: Redação | Tasks | Verified |
+| OBS-24 | P1: Redação | Tasks | Verified |
+| OBS-25 | P1: Redação | Tasks | Verified |
+| OBS-26 | P1: Redação | Tasks | Verified |
+| OBS-27 | P1: Redação | Tasks | Verified |
+| OBS-28 | P1: Redação | Tasks | Verified |
+| OBS-29 | P1: Redação | Tasks | Verified |
+| OBS-30 | P1: Redação | Tasks | Verified |
+| OBS-31 | P1: Redação | Tasks | Verified |
+| OBS-32 | P1: Redação | Tasks | Verified |
+| OBS-33 | P2: Destino trocável | Tasks | Verified |
+| OBS-34 | P2: Destino trocável | Tasks | Verified |
+| OBS-35 | P2: Destino trocável | Tasks | Verified |
+| OBS-36 | P2: Destino trocável | Tasks | Verified |
+| OBS-37 | P2: Destino trocável | Tasks | Verified |
+| OBS-38 | P2: Grafana provisionado | Tasks | Verified |
+| OBS-39 | P2: Grafana provisionado | Tasks | Verified |
+| OBS-40 | P2: Grafana provisionado | Tasks | Verified |
+| OBS-41 | P2: Grafana provisionado | Tasks | Verified |
+| OBS-42 | P2: Grafana provisionado | Tasks | Verified |
+| OBS-43 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-44 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-45 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-46 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-47 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-48 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-49 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-50 | P2: Pyroscope, Faro e infra | Tasks | Verified |
+| OBS-51 | P3: Documentação | Tasks | Verified |
+| OBS-52 | P3: Documentação | Tasks | Verified |
+| OBS-53 | P3: Documentação | Tasks | Verified |
+| OBS-54 | P3: Documentação | Tasks | Verified |
+| OBS-55 | P3: Documentação | Tasks | Verified |
+| OBS-56 | P3: Documentação | Tasks | Verified |
+| OBS-57 | Edge cases | Tasks | Verified |
+| OBS-58 | Edge cases | Tasks | Verified |
+| OBS-59 | Edge cases | Tasks | Verified |
+| OBS-60 | Edge cases | Tasks | Verified |
 
 **ID format:** `OBS-NN`.
 

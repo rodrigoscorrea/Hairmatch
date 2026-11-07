@@ -207,23 +207,17 @@
 ## Handoff
 
 - **Feature**: `observability-stack` (issue #193, bloqueia a #194).
-- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-11-07, na branch `193-infra-de-observabilidade`, criada a partir de `origin/develop` em `7f004d9`.
-  - Arquivos: `spec.md` (OBS-01 a OBS-60), `context.md`, `design.md` e `tasks.md` (T1 a T16, em 4 fases).
-  - `validate_spec.py` com exit 0. `validate_tasks.py` com exit 0 e 6 avisos, justificados na Task Granularity Check: `Where` com o teste co-locado e `Tests: none` do README.
-  - O Execute não começou e aguarda a aprovação das tasks.
+- **Phase / Task**: Execute concluído em 2026-11-07, na branch `193-infra-de-observabilidade`: T1 a T16 feitas, com commits atômicos, e duas correções da rodada 1 do Verifier.
+  - O Verifier independente rodou duas vezes. Rodada 1: FAIL (a redação não cobria os atributos de resource das métricas, e 6 mutantes sobreviveram). Rodada 2: PASS, 15 mutantes injetados e 15 mortos. `validation.md` e `validate_state.py` com exit 0.
+  - Gates: lint 12 PASS (19 no `--self-test`), `smoke.py` 128 PASS (standalone) e 127 (combined), `check_destination.sh` 19 PASS, `check_modes.sh` 20 PASS. Do zero (volumes `hairmatch_obs_*` apagados), o smoke passa em 104 s.
 - **Completed**:
-  - Decisões do usuário:
-    - só Prometheus (sem Mimir);
-    - Faro via Alloy;
-    - sem Synthetic Monitoring local;
-    - postgres-exporter, `hostmetrics` e `docker_stats` incluídos.
-  - O estudo "Observabilidade Hairmatch" (artifact GFDsHBv9zK8q3jDtJyu2tu) foi atualizado: Mimir virou Prometheus no diagrama, no chip e no card de sinal.
-  - AD-015.
+  - Stack em `docker/observability/`, variáveis `OBS_*` no `docker/.env.example`, `docs/observability/README.md`.
+  - Fatos de API conferidos e registrados no `design.md`: nomes `otlp_http` e `host_metrics` no Collector 0.164, exemplars via OTLP no Prometheus 3.15.1, plugins do Grafana 13 instalados na primeira subida.
 - **In-progress** (file:line): none
 - **Next step**:
-  1. O usuário revisa e aprova as specs. Os arquivos de `.specs/features/observability-stack/` e o `STATE.md` ainda não foram commitados.
-  2. No Execute, oferecer sub-agentes (3 lotes). O T14 e o T15 param o compose principal e só rodam com o aval do usuário.
-  3. Conferir no Execute os fatos marcados como não verificados no `design.md` (Risks & Concerns).
+  1. Decidir se a redação passa a cobrir eventos de span (`exception.message`), nome e `status.message` do span, atributos de escopo e valores em arrays ou mapas aninhados. É o vazamento mais provável quando a #194 ligar a instrumentação Django (ver `context.md`, Deferred Ideas).
+  2. A #194 aponta o SDK para `http://otel-collector:4318` no modo combinado.
+  3. O `docker/.env` de cada pessoa precisa de `OBS_DIR=./observability`.
 
 - **Feature**: `hairdresser-reviews` (issue #189, épico #188). A #182 já está na `develop` (PR #190).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `189-avaliacoes-recebidas-cabeleireiro`: T1 a T7 feitas, com commits atômicos. O T8 (UAT) está parcial.

@@ -81,3 +81,4 @@ Não houve "você decide" explícito. As escolhas técnicas abaixo estão regist
 - `filelog` do Nginx e do Postgres: ficam para a VPS.
 - Regras de alerta, SLOs e `tail_sampling`: fases 1 e 2 do estudo.
 - Checks com script (k6) no Synthetic Monitoring: fase 2 do estudo.
+- Redação de eventos de span (`exception.message`), nome e `status.message` do span, atributos de escopo, `severityText` e valores em arrays ou mapas aninhados. Apontado pelo Verifier como o vazamento mais provável quando a #194 ligar a instrumentação Django. Exige decidir se amplia a OBS-28.
