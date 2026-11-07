@@ -1,0 +1,26 @@
+# Local observability stack (issue #193). Everything the app sends goes to the OTel Collector over OTLP/HTTP.
+#
+# Two ways to bring it up (one at a time, both publish the same host ports):
+#   Standalone: docker compose -f docker/observability/docker-compose.observability.yml up -d
+#   Combined:   docker compose -f docker/docker-compose.yml -f docker/observability/docker-compose.observability.yml up -d
+#
+# Rules this file keeps (checked by docker/observability/scripts/lint_compose.py):
+#   - No top-level `name:`. In the combined mode the last file's name wins and would rename the app project.
+#   - Every bind mount starts with ${OBS_DIR:-.}/. In the combined mode Compose resolves relative paths from
+#     docker/, so docker/.env sets OBS_DIR=./observability; standalone, the default "." applies.
+#   - Every image has an exact version tag, every published port is bound to 127.0.0.1,
+#     every service rotates its logs, and every volume has a fixed name shared by both modes.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services: {}
+
+networks:
+  # Standalone this is observability_app_network; combined it is the app's hairmatch_app_network.
+  app_network: {}
+
+volumes: {}

@@ -114,10 +114,10 @@ O `lint_compose.py` checa OBS-02, OBS-06, OBS-07, OBS-08, OBS-09 e o prefixo `${
 - Skill: NONE
 
 **Done when**:
-- [ ] O `lint_compose.py` imprime uma linha `PASS`/`FAIL <OBS-NN>` por checagem e sai com código 1 em qualquer `FAIL`.
-- [ ] Prova de que o lint discrimina: numa cópia temporária do compose com `name: x`, com `image: foo:latest`, com uma porta `"3000:3000"` e com um serviço sem `logging`, o lint falha em cada caso (e o arquivo real passa).
-- [ ] Gate check passes: Quick.
-- [ ] Test count: registrar o número de `PASS` do lint.
+- [x] O `lint_compose.py` imprime uma linha `PASS`/`FAIL <OBS-NN>` por checagem e sai com código 1 em qualquer `FAIL`.
+- [x] Prova de que o lint discrimina: numa cópia temporária do compose com `name: x`, com `image: foo:latest`, com uma porta `"3000:3000"` e com um serviço sem `logging`, o lint falha em cada caso (e o arquivo real passa).
+- [x] Gate check passes: Quick.
+- [x] Test count: 6 `PASS` do lint (OBS-06, 07, 08, 09, 12, 02) e 8 do `--self-test`.
 
 **Tests**: unit
 **Gate**: quick
