@@ -243,9 +243,9 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 - Skill: NONE
 
 **Done when**:
-- [ ] `GET /ready` do Pyroscope responde 200 no smoke.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + 1.
+- [x] `GET /ready` do Pyroscope responde 200 no smoke.
+- [x] Gate check passes: Full.
+- [x] Test count: 12 `PASS` do `smoke.py --only ready` (11 anteriores + 1 do Pyroscope) e 10 do lint.
 
 **Tests**: integration
 **Gate**: full

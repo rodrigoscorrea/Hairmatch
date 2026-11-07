@@ -123,6 +123,9 @@ def section_ready(args):
     check("container.name" in yaml_cfg and "service.instance.id" in yaml_cfg and "host.name" in yaml_cfg, "OBS-46",
           "Prometheus promotes container.name, host.name and service.instance.id to labels")
 
+    # Pyroscope holds /ready at 503 for ~15 s after start (metastore min-ready-duration).
+    wait_ready("Pyroscope", f"{PYROSCOPE}/ready", "OBS-47")
+
 
 SECTIONS = {
     "ready": section_ready,
