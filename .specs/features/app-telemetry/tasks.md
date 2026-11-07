@@ -560,10 +560,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Span `gemini generate_content` com modelo e `hairmatch.ai.feature`, sem prompt nem resposta
-- [ ] Tokens no span e em `ai.tokens` quando a resposta os traz
-- [ ] Exceção: span com erro e tipo; a exceção segue para o tratamento existente; `ai.requests` `error`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Span `gemini generate_content` com modelo e `hairmatch.ai.feature`, sem prompt nem resposta
+- [x] Tokens no span e em `ai.tokens` quando a resposta os traz
+- [x] Exceção: span com erro e tipo; a exceção segue para o tratamento existente; `ai.requests` `error`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
