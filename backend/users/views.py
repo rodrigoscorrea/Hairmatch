@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import User, Customer, Hairdresser, GalleryPhoto, GALLERY_MAX_PHOTOS
+from hairmatch import telemetry
 from hairmatch.images import InvalidImage
 from hairmatch.storage import delete_stored_files
 from notifications.dispatch import delete_endpoints
@@ -318,7 +319,15 @@ class LoginThrottle(AnonRateThrottle):
 
 
 # 1 - The following views are related to user authentication procedures
-class RegisterView(APIView):
+class CountsThrottledSignupStep:
+    """Counts the 429 of a sign-up route (TEL-55); DRF calls `throttled` when one of the throttle classes refuses."""
+
+    def throttled(self, request, wait):
+        telemetry.count_signup('throttled')
+        super().throttled(request, wait)
+
+
+class RegisterView(CountsThrottledSignupStep, APIView):
     parser_classes = (MultiPartParser, FormParser)
     # Per IP against sweeps, per e-mail against spam to one inbox: each sign-up sends a verification e-mail.
     throttle_classes = [RegisterThrottle, RegisterEmailThrottle]
@@ -392,6 +401,7 @@ class RegisterView(APIView):
             logger.exception('E-mail sign-up failed')
             failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
+            telemetry.count_signup('created')
             return JsonResponse(
                 {'message': f"{role} user registered successfully", 'confirmation_required': True}, status=201
             )
@@ -571,7 +581,7 @@ class LoginView(APIView):
         return response
 
 
-class EmailConfirmationView(APIView):
+class EmailConfirmationView(CountsThrottledSignupStep, APIView):
     throttle_classes = [ConfirmIpThrottle, ConfirmEmailThrottle]
 
     def post(self, request):
@@ -607,10 +617,11 @@ class EmailConfirmationView(APIView):
 
         user.is_active = True
         user.save(update_fields=['is_active'])
+        telemetry.count_signup('confirmed')
         return confirmed
 
 
-class ConfirmationCodeView(APIView):
+class ConfirmationCodeView(CountsThrottledSignupStep, APIView):
     throttle_classes = [ResendCodeIpThrottle, ResendCodeEmailThrottle]
 
     def post(self, request):
@@ -637,6 +648,8 @@ class ConfirmationCodeView(APIView):
                     raise CognitoUnavailable('ResendRejected')
                 user.is_active = True
                 user.save(update_fields=['is_active'])
+            else:
+                telemetry.count_signup('resent')
         except CognitoError as err:
             return _cognito_error_response(request, err)
         return accepted

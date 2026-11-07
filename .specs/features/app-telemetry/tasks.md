@@ -466,8 +466,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `signup.events` com `created`, `confirmed`, `resent` e `throttled`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `signup.events` com `created`, `confirmed`, `resent` e `throttled`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
