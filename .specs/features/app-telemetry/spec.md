@@ -333,7 +333,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-53 | P1: Métricas de negócio | Execute | Done |
 | TEL-54 | P1: Métricas de negócio | Execute | Done |
 | TEL-55 | P1: Métricas de negócio | Execute | Done |
-| TEL-56 | P1: Métricas de negócio | Specify | Pending |
+| TEL-56 | P1: Métricas de negócio | Execute | Done |
 | TEL-57 | P1: Métricas de negócio | Specify | Pending |
 | TEL-58 | P1: Métricas de negócio | Specify | Pending |
 | TEL-59 | P1: Métricas de negócio | Specify | Pending |

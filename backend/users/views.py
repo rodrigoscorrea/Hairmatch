@@ -867,6 +867,7 @@ class ProfilePictureView(APIView):
             raise validation_problem([body_error('profile_picture', 'This field is required.')])
         # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
         if picture.size > IMAGE_UPLOAD_MAX_SIZE:
+            telemetry.count_upload('profile', 'invalid_image')
             raise validation_problem([body_error('profile_picture', 'The profile picture must have at most 5 MB.')])
 
         user = session.user
@@ -881,8 +882,13 @@ class ProfilePictureView(APIView):
                     transaction.on_commit(lambda: delete_stored_files([old_name]))
         except InvalidImage:
             # The conversion fails before the upload, so the old picture and its file are untouched.
+            telemetry.count_upload('profile', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Exception:
+            telemetry.count_upload('profile', 'failed')
+            raise
 
+        telemetry.count_upload('profile', 'stored')
         return JsonResponse({'profile_picture': UserSerializer(user).data['profile_picture']}, status=200)
 
     def delete(self, request):
@@ -920,6 +926,7 @@ class GalleryPhotoCollection(APIView):
             raise validation_problem([body_error('image', 'This field is required.')])
         # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
         if image.size > IMAGE_UPLOAD_MAX_SIZE:
+            telemetry.count_upload('gallery', 'invalid_image')
             raise validation_problem([body_error('image', 'The photo must have at most 5 MB.')])
 
         try:
@@ -937,8 +944,15 @@ class GalleryPhotoCollection(APIView):
                     delete_stored_files([photo.image.name])
                     raise
         except InvalidImage:
+            telemetry.count_upload('gallery', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_GALLERY_PHOTO_DETAIL)
+        except Problem:
+            raise  # a full gallery is a refusal by the rules, not an upload that failed: it shows in hairmatch.problems
+        except Exception:
+            telemetry.count_upload('gallery', 'failed')
+            raise
 
+        telemetry.count_upload('gallery', 'stored')
         return JsonResponse({'data': GalleryPhotoSerializer(photo).data}, status=201)
 
 

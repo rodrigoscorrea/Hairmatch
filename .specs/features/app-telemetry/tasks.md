@@ -489,8 +489,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `uploads` com `kind` `profile`/`gallery` e `outcome` `stored`/`invalid_image`/`failed`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `uploads` com `kind` `profile`/`gallery` e `outcome` `stored`/`invalid_image`/`failed`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
