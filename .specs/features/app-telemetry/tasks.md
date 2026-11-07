@@ -609,9 +609,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Três chamadas do chatbot com span e contador
-- [ ] Zero `print()` e nenhum número, texto ou resposta nos logs
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Três chamadas do chatbot com span e contador
+- [x] Zero `print()` e nenhum número, texto ou resposta nos logs
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
