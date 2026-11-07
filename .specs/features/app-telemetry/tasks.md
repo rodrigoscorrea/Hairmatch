@@ -155,13 +155,13 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Linha JSON com `ts`, `level`, `name`, `message`
-- [ ] `trace_id`/`span_id` só dentro de span válido; ausentes sem span
-- [ ] Traceback em `exc_info` na mesma linha, redigido; `stack_info` redigido
-- [ ] `RedactionFilter` devolve cópia (o outro handler vê o original)
-- [ ] Limite de 1 linha por 60 s por logger `opentelemetry.*`
-- [ ] Access log sem query string
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Linha JSON com `ts`, `level`, `name`, `message`
+- [x] `trace_id`/`span_id` só dentro de span válido; ausentes sem span
+- [x] Traceback em `exc_info` na mesma linha, redigido; `stack_info` redigido
+- [x] `RedactionFilter` devolve cópia (o outro handler vê o original)
+- [x] Limite de 1 linha por 60 s por logger `opentelemetry.*`
+- [x] Access log sem query string
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick

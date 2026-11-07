@@ -292,7 +292,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-12 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-13 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-14 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-15 | P1: Não depende da telemetria | Specify | Pending |
+| TEL-15 | P1: Não depende da telemetria | Execute | Done |
 | TEL-16 | P1: Requisição vira trace | Specify | Pending |
 | TEL-17 | P1: Requisição vira trace | Specify | Pending |
 | TEL-18 | P1: Requisição vira trace | Specify | Pending |
@@ -313,17 +313,17 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-33 | P1: Requisição vira trace | Specify | Pending |
 | TEL-34 | P1: Requisição vira trace | Specify | Pending |
 | TEL-35 | P1: Requisição vira trace | Specify | Pending |
-| TEL-36 | P1: Logs em JSON | Specify | Pending |
-| TEL-37 | P1: Logs em JSON | Specify | Pending |
-| TEL-38 | P1: Logs em JSON | Specify | Pending |
+| TEL-36 | P1: Logs em JSON | Execute | Done |
+| TEL-37 | P1: Logs em JSON | Execute | Done |
+| TEL-38 | P1: Logs em JSON | Execute | Done |
 | TEL-39 | P1: Logs em JSON | Specify | Pending |
-| TEL-40 | P1: Logs em JSON | Specify | Pending |
+| TEL-40 | P1: Logs em JSON | Execute | Done |
 | TEL-41 | P1: Logs em JSON | Specify | Pending |
 | TEL-42 | P1: Logs em JSON | Specify | Pending |
-| TEL-43 | P1: Logs em JSON | Specify | Pending |
+| TEL-43 | P1: Logs em JSON | Execute | Done |
 | TEL-44 | P1: Sem dado pessoal | Execute | Done |
 | TEL-45 | P1: Sem dado pessoal | Execute | Done |
-| TEL-46 | P1: Sem dado pessoal | Specify | Pending |
+| TEL-46 | P1: Sem dado pessoal | Execute | Done |
 | TEL-47 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-48 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-49 | P1: Sem dado pessoal | Specify | Pending |
