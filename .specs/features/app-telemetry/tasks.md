@@ -263,13 +263,13 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Endpoint vazio: providers continuam no-op, sem rede e sem log
-- [ ] Exceção na inicialização: um `WARNING` com o tipo e o app segue
-- [ ] Segunda chamada é no-op
-- [ ] Exportadores com timeout de 2 s, fila 2048, métricas a cada 15 s
-- [ ] Sampler parent-based, flag `00` não exporta
-- [ ] Comandos do `manage.py` e testes não iniciam o SDK
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Endpoint vazio: providers continuam no-op, sem rede e sem log
+- [x] Exceção na inicialização: um `WARNING` com o tipo e o app segue
+- [x] Segunda chamada é no-op
+- [x] Exportadores com timeout de 2 s, fila 2048, métricas a cada 15 s
+- [x] Sampler parent-based, flag `00` não exporta
+- [x] Comandos do `manage.py` e testes não iniciam o SDK
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

@@ -114,6 +114,25 @@ class RedactionFilterTests(SimpleTestCase):
         self.assertEqual(RedactionFilter().filter(record).exc_text, 'Traceback ... [email]')
 
 
+class ExtraFieldsTests(SimpleTestCase):
+    """The `extra` of a record is redacted too: Django puts the request, with its path and query string, there."""
+
+    def test_text_extras_are_redacted_and_objects_are_dropped(self):
+        logger, stream = make_logger('t.extra', RedactionFilter())
+        logger.info('hello', extra={'who': 'ana@example.com', 'count': 3, 'request': object(), 'flag': True})
+        (line,) = lines(stream)
+        self.assertEqual((line['who'], line['count'], line['flag']), ('[email]', 3, True))
+        self.assertNotIn('request', line)
+
+    def test_original_record_keeps_its_extras(self):
+        record = logging.LogRecord('t', logging.INFO, __file__, 1, 'm', (), None)
+        record.who = 'ana@example.com'
+        record.request = object()
+        RedactionFilter().filter(record)
+        self.assertEqual(record.who, 'ana@example.com')
+        self.assertTrue(hasattr(record, 'request'))
+
+
 class ExportErrorRateLimitTests(SimpleTestCase):
     """TEL-15: at most one error line per signal every 60 s."""
 

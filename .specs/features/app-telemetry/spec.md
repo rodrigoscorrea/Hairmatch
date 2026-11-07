@@ -278,14 +278,14 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TEL-01 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-02 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-03 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-04 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-05 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-06 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-07 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-08 | P1: Não depende da telemetria | Specify | Pending |
+| TEL-01 | P1: Não depende da telemetria | Execute | Done |
+| TEL-02 | P1: Não depende da telemetria | Execute | Done |
+| TEL-03 | P1: Não depende da telemetria | Execute | Done |
+| TEL-04 | P1: Não depende da telemetria | Execute | Done |
+| TEL-05 | P1: Não depende da telemetria | Execute | Done |
+| TEL-06 | P1: Não depende da telemetria | Execute | Done |
+| TEL-07 | P1: Não depende da telemetria | Execute | Done |
+| TEL-08 | P1: Não depende da telemetria | Execute | Done |
 | TEL-09 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-10 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-11 | P1: Não depende da telemetria | Specify | Pending |
@@ -312,7 +312,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-32 | P1: Requisição vira trace | Specify | Pending |
 | TEL-33 | P1: Requisição vira trace | Specify | Pending |
 | TEL-34 | P1: Requisição vira trace | Specify | Pending |
-| TEL-35 | P1: Requisição vira trace | Specify | Pending |
+| TEL-35 | P1: Requisição vira trace | Execute | Done |
 | TEL-36 | P1: Logs em JSON | Execute | Done |
 | TEL-37 | P1: Logs em JSON | Execute | Done |
 | TEL-38 | P1: Logs em JSON | Execute | Done |
@@ -359,7 +359,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-79 | P2: Configuração e documentação | Specify | Pending |
 | TEL-80 | P2: Configuração e documentação | Execute | Done |
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |
-| TEL-82 | Edge Cases | Specify | Pending |
+| TEL-82 | Edge Cases | Execute | Done |
 | TEL-83 | Edge Cases | Specify | Pending |
 | TEL-84 | Edge Cases | Specify | Pending |
 | TEL-85 | Edge Cases | Specify | Pending |

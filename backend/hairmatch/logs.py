@@ -5,6 +5,7 @@ same with the telemetry off.
 """
 import copy
 import logging
+import sys
 import threading
 import time
 
@@ -13,6 +14,7 @@ from pythonjsonlogger.json import JsonFormatter as BaseJsonFormatter
 from .redaction import redact
 
 _EXPORT_ERROR_WINDOW_SECONDS = 60
+_STANDARD_FIELDS = frozenset(vars(logging.LogRecord('', 0, '', 0, '', (), None))) | {'message', 'asctime', 'taskName'}
 
 
 class JsonFormatter(BaseJsonFormatter):
@@ -62,6 +64,14 @@ class RedactionFilter(logging.Filter):
             clean.exc_text = redact(clean.exc_text)
         if record.stack_info:
             clean.stack_info = redact(record.stack_info)
+        # `extra` fields: text is redacted, and an object (Django puts the request, whose repr has the path and the
+        # query string, in `extra`) is dropped.
+        for key in set(vars(record)) - _STANDARD_FIELDS:
+            value = vars(record)[key]
+            if isinstance(value, str):
+                setattr(clean, key, redact(value))
+            elif not (value is None or isinstance(value, (int, float, bool))):
+                delattr(clean, key)
         return clean
 
 
@@ -109,3 +119,15 @@ class StripQueryString(logging.Filter):
                 parts[1] = parts[1].split('?', 1)[0]
                 clean.args = (' '.join(parts),) + args[1:]
         return clean
+
+
+def otlp_handler():
+    """
+    The handler `LOGGING` puts on the root logger: the OTLP one when the telemetry is on, a null handler otherwise
+    (TEL-39). Django applies `LOGGING` inside `django.setup()`, after `hairmatch.wsgi` started the SDK, and that
+    replaces the handlers of the root logger, so the handler has to come from the configuration itself. This
+    never imports the SDK: with the telemetry off, `hairmatch.otel` is not in `sys.modules`.
+    """
+    otel = sys.modules.get('hairmatch.otel')
+    pipeline = getattr(otel, '_state', {}).get('pipeline') if otel is not None else None
+    return pipeline.log_handler() if pipeline is not None else logging.NullHandler()

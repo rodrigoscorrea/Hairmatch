@@ -256,6 +256,9 @@ LOGGING = {
             'formatter': 'json',
             'filters': ['trace_context', 'redact'],
         },
+        # Records to the Collector (TEL-39): an OTLP handler when the telemetry is on, a null handler otherwise.
+        # The filter redacts before the record leaves the process (TEL-46).
+        'otlp': {'()': 'hairmatch.logs.otlp_handler', 'filters': ['redact']},
         # The loggers of the OpenTelemetry SDK and of the HTTP client under it go only here, never to the OTLP handler:
         # a failed export that is logged and exported again would feed itself.
         'telemetry_stdout': {
@@ -265,7 +268,7 @@ LOGGING = {
             'filters': ['export_rate_limit', 'trace_context', 'redact'],
         },
     },
-    'root': {'handlers': ['stdout'], 'level': 'INFO'},
+    'root': {'handlers': ['stdout', 'otlp'], 'level': 'INFO'},
     'loggers': {
         'opentelemetry': {'handlers': ['telemetry_stdout'], 'level': 'INFO', 'propagate': False},
         'urllib3': {'handlers': ['telemetry_stdout'], 'level': 'WARNING', 'propagate': False},

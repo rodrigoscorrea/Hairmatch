@@ -43,8 +43,50 @@ COUNTERS = {
 }
 
 _counters = {}
-_lock = threading.Lock()
+_lock = threading.RLock()
 _warned = set()
+_init = {'done': False, 'enabled': False, 'failure': None, 'logged': False}
+
+
+def init_telemetry(environ=None):
+    """
+    Starts the SDK once per process, only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (TEL-01, TEL-04). Without it
+    nothing is imported, opened or logged (TEL-02). A failure logs one WARNING with the exception type and the
+    app goes on without telemetry (TEL-03). Never raises. Gunicorn's `post_fork` can call it later.
+    """
+    import os
+
+    environ = os.environ if environ is None else environ
+    with _lock:
+        if _init['done']:
+            return _init['enabled']
+        _init['done'] = True
+        if not (environ.get('OTEL_EXPORTER_OTLP_ENDPOINT') or '').strip():
+            return False
+        try:
+            from hairmatch import otel
+
+            _init['enabled'] = bool(otel.start(environ))
+        except BaseException as exc:
+            if isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                raise
+            # The type only: the message of an SDK error can carry the endpoint or a header.
+            _init['failure'] = type(exc).__name__
+            _init['enabled'] = False
+        # From `hairmatch.wsgi` Django has not configured the logging yet; it calls log_init_failure() afterwards.
+        if logging.getLogger().handlers:
+            log_init_failure()
+        return _init['enabled']
+
+
+def log_init_failure():
+    """Logs the one WARNING of a failed start (TEL-03), the first time it is called after the failure."""
+    with _lock:
+        failure = _init['failure']
+        if failure is None or _init['logged']:
+            return
+        _init['logged'] = True
+    logger.warning('telemetry disabled, the SDK failed to start: %s', failure)
 
 
 def _meter():
