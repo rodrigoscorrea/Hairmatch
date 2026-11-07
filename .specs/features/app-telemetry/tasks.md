@@ -758,8 +758,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Teste varre o AST do backend sem testes e falha em qualquer `print(`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Teste varre o AST do backend sem testes e falha em qualquer `print(`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
