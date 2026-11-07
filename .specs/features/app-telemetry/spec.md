@@ -305,7 +305,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-25 | P1: Requisição vira trace | Specify | Pending |
 | TEL-26 | P1: Requisição vira trace | Specify | Pending |
 | TEL-27 | P1: Requisição vira trace | Specify | Pending |
-| TEL-28 | P1: Requisição vira trace | Specify | Pending |
+| TEL-28 | P1: Requisição vira trace | Execute | Done |
 | TEL-29 | P1: Requisição vira trace | Execute | Done |
 | TEL-30 | P1: Requisição vira trace | Execute | Done |
 | TEL-31 | P1: Requisição vira trace | Execute | Done |
@@ -318,8 +318,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-38 | P1: Logs em JSON | Execute | Done |
 | TEL-39 | P1: Logs em JSON | Specify | Pending |
 | TEL-40 | P1: Logs em JSON | Execute | Done |
-| TEL-41 | P1: Logs em JSON | Specify | Pending |
-| TEL-42 | P1: Logs em JSON | Specify | Pending |
+| TEL-41 | P1: Logs em JSON | Execute | Done |
+| TEL-42 | P1: Logs em JSON | Execute | Done |
 | TEL-43 | P1: Logs em JSON | Execute | Done |
 | TEL-44 | P1: Sem dado pessoal | Execute | Done |
 | TEL-45 | P1: Sem dado pessoal | Execute | Done |
@@ -328,7 +328,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-48 | P1: Sem dado pessoal | Execute | Done |
 | TEL-49 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-50 | P1: Métricas de negócio | Specify | Pending |
-| TEL-51 | P1: Métricas de negócio | Specify | Pending |
+| TEL-51 | P1: Métricas de negócio | Execute | Done |
 | TEL-52 | P1: Métricas de negócio | Execute | Done |
 | TEL-53 | P1: Métricas de negócio | Execute | Done |
 | TEL-54 | P1: Métricas de negócio | Specify | Pending |

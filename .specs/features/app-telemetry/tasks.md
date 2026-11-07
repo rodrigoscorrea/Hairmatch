@@ -394,10 +394,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `hairmatch.reserve_id` e `hairmatch.hairdresser_id` inteiros no span
-- [ ] `reserves.created` com `app` e `whatsapp` só depois do commit
-- [ ] `print()` trocado por log sem texto livre
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `hairmatch.reserve_id` e `hairmatch.hairdresser_id` inteiros no span
+- [x] `reserves.created` com `app` e `whatsapp` só depois do commit
+- [x] `print()` trocado por log sem texto livre
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

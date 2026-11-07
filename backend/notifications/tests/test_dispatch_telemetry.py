@@ -98,19 +98,16 @@ class PushCounterTests(testing_telemetry.TelemetryMixin, TestCase):
         self.assertEqual(self.results(), [])
 
 
-class ReserveTraceTests(testing_telemetry.TelemetryMixin, TransactionTestCase):
-    """TEL-22: request, queries and SNS.Publish of a reservation share one trace_id.
-
-    A TransactionTestCase because the push goes out in `on_commit`: in a TestCase it would only run after the response,
-    outside the request, and would prove nothing about the trace.
-    """
+class ReserveFixture(testing_telemetry.TelemetryMixin):
+    """A customer, a hairdresser with a service, a phone and a stubbed SNS. For a TransactionTestCase: the push goes out in
+    `on_commit`, and in a TestCase it would only run after the response, outside the request, proving nothing about the trace."""
 
     START = datetime(2030, 3, 4, 14, 0, tzinfo=dt_timezone.utc)
 
     def setUp(self):
         super().setUp()
         self.customer_user = make_user('customer@example.com', '5592900000011', 'customer')
-        Customer.objects.create(user=self.customer_user, cpf='12345678901')
+        self.customer = Customer.objects.create(user=self.customer_user, cpf='12345678901')
         hairdresser_user = make_user('hairdresser@example.com', '5592900000012', 'hairdresser')
         hairdresser = Hairdresser.objects.create(user=hairdresser_user, cnpj='12345678901212')
         self.service = Service.objects.create(name='Corte', description='Corte', price=50, duration=60, hairdresser=hairdresser)
@@ -125,18 +122,25 @@ class ReserveTraceTests(testing_telemetry.TelemetryMixin, TransactionTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    def post_reservation(self):
+        return login(self.customer_user).post(
+            reverse('reservation_collection'),
+            data=json.dumps({
+                'hairdresser': self.hairdresser.id, 'service': self.service.id, 'start_time': self.START.isoformat(),
+            }),
+            content_type='application/json',
+        )
+
+
+class ReserveTraceTests(ReserveFixture, TransactionTestCase):
+    """TEL-22: request, queries and SNS.Publish of a reservation share one trace_id."""
+
     def test_the_reservation_request_its_queries_and_the_sns_publish_share_the_trace(self):
         self.stubber.add_response('publish', {'MessageId': 'm-1'})
         testing_telemetry.clear()
 
         with self.stubber:
-            response = login(self.customer_user).post(
-                reverse('reservation_collection'),
-                data=json.dumps({
-                    'hairdresser': self.hairdresser.id, 'service': self.service.id, 'start_time': self.START.isoformat(),
-                }),
-                content_type='application/json',
-            )
+            response = self.post_reservation()
 
         # Read before any other query of the test, which would be a trace of its own.
         recorded = self.spans()
