@@ -61,6 +61,29 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  grafana:
+    image: grafana/grafana:13.2.5
+    container_name: hairmatch_obs_grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Local only: anonymous Admin, no login screen. Never carry this to a server (see docs/observability).
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ${OBS_DIR:-.}/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+      - pyroscope
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
   tempo:
     image: grafana/tempo:2.10.10
     container_name: hairmatch_obs_tempo
@@ -123,3 +146,5 @@ volumes:
     name: hairmatch_obs_pyroscope
   otel_queue:
     name: hairmatch_obs_otel_queue
+  grafana_data:
+    name: hairmatch_obs_grafana

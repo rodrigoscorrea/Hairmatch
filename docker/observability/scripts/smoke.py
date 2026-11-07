@@ -464,10 +464,80 @@ def section_redaction(args):
     check(pipes == want, "OBS-31", "attributes/pii and transform/pii run between memory_limiter and batch", f"pipelines: {pipes}")
 
 
+# ---------------------------------------------------------------------------
+# grafana
+# ---------------------------------------------------------------------------
+
+DATASOURCE_UIDS = ["prometheus", "loki", "tempo", "pyroscope"]
+
+
+def grafana_ds(uid):
+    _, body = get_json(f"{GRAFANA}/api/datasources/uid/{uid}")
+    return body or {}
+
+
+def section_grafana(args):
+    ensure_signals()
+    # OBS-42: open without login, as an anonymous Admin.
+    wait_ready("Grafana", f"{GRAFANA}/api/health", "OBS-42")
+    try:
+        with urllib.request.urlopen(f"{GRAFANA}/", timeout=10) as resp:
+            landed = resp.geturl()
+    except Exception as e:
+        landed = f"error: {e}"
+    status, _ = http("GET", f"{GRAFANA}/api/org/users")  # Admin-only endpoint
+    check("/login" not in landed and status == 200, "OBS-42",
+          "Grafana opens without a login screen, with anonymous Admin", f"landed on {landed}, /api/org/users={status}")
+
+    # OBS-38: four provisioned, read-only data sources with fixed UIDs.
+    _, listed = get_json(f"{GRAFANA}/api/datasources")
+    by_uid = {d["uid"]: d for d in listed or []}
+    check(sorted(by_uid) == sorted(DATASOURCE_UIDS), "OBS-38", "the data source UIDs are prometheus, loki, tempo and pyroscope",
+          f"got {sorted(by_uid)}")
+    check(all(by_uid.get(u, {}).get("readOnly") is True for u in DATASOURCE_UIDS), "OBS-38",
+          "every data source is provisioned (readOnly)")
+
+    # OBS-39: health of each data source. Grafana 13 installs its core data source plugins in the background on the
+    # first start, so Prometheus can answer "Plugin not registered" for a while.
+    for uid in DATASOURCE_UIDS:
+        def health(uid=uid):
+            _, body = get_json(f"{GRAFANA}/api/datasources/uid/{uid}/health", timeout=20)
+            return body if (body or {}).get("status") == "OK" else None
+        ok = wait_for(health, timeout=120, interval=3)
+        check(ok is not None, "OBS-39", f"data source {uid} health is OK", f"last: {get_json(f'{GRAFANA}/api/datasources/uid/{uid}/health')[1]}")
+
+    # OBS-21 / OBS-20 / OBS-19: the links between signals are in the provisioned configuration.
+    dests = grafana_ds("prometheus").get("jsonData", {}).get("exemplarTraceIdDestinations", [])
+    check(any(d.get("name") == "trace_id" and d.get("datasourceUid") == "tempo" for d in dests), "OBS-21",
+          "Prometheus exemplar trace_id opens in Tempo", f"got {dests}")
+    fields = grafana_ds("loki").get("jsonData", {}).get("derivedFields", [])
+    check(any(f.get("name") == "trace_id" and f.get("datasourceUid") == "tempo" and f.get("matcherRegex") == "trace_id"
+              and f.get("matcherType") == "label" for f in fields), "OBS-20",
+          "Loki derived field turns trace_id into a Tempo link", f"got {fields}")
+    tempo_cfg = grafana_ds("tempo").get("jsonData", {}).get("tracesToLogsV2", {})
+    query = tempo_cfg.get("query", "")
+    check(tempo_cfg.get("datasourceUid") == "loki" and "service_name" in query and "trace_id" in query, "OBS-19",
+          "Tempo trace-to-logs points at Loki, filtering by service_name and trace_id", f"got {tempo_cfg}")
+
+    # OBS-17: run the LogQL that Tempo generates, with the placeholders filled by the smoke span.
+    logql = query.replace('${__span.tags["service.name"]}', SERVICE).replace("${__trace.traceId}", TRACE_ID)
+
+    def trace_logs():
+        now = time.time_ns()
+        qs = urllib.parse.urlencode({"query": logql, "start": now - 3_600_000_000_000, "end": now + 60_000_000_000})
+        _, body = get_json(f"{GRAFANA}/api/datasources/proxy/uid/loki/loki/api/v1/query_range?{qs}")
+        lines = [v[1] for s in (body or {}).get("data", {}).get("result", []) for v in s["values"]]
+        return lines or None
+    lines = wait_for(trace_logs, timeout=30)
+    check(lines is not None and SMOKE_LOG in lines, "OBS-17", "the trace-to-logs query returns the log of the trace",
+          f"query {logql!r} -> {lines}")
+
+
 SECTIONS = {
     "ready": section_ready,
     "signals": section_signals,
     "redaction": section_redaction,
+    "grafana": section_grafana,
 }
 
 

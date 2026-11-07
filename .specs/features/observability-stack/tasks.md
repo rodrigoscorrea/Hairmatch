@@ -342,12 +342,12 @@ O `datasources.yaml` traz os quatro data sources com UIDs fixos, `editable: fals
 - Skill: NONE
 
 **Done when**:
-- [ ] `/api/health` do Grafana responde sem autenticação, e `/api/datasources` lista os quatro UIDs, com `readOnly: true`.
-- [ ] O health de cada data source responde `OK`.
-- [ ] A LogQL derivada do `tracesToLogsV2` devolve o log do smoke.
-- [ ] O derived field e o destino de exemplar apontam para o UID `tempo`.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] `/api/health` do Grafana responde sem autenticação, e `/api/datasources` lista os quatro UIDs, com `readOnly: true`.
+- [x] O health de cada data source responde `OK`.
+- [x] A LogQL derivada do `tracesToLogsV2` devolve o log do smoke.
+- [x] O derived field e o destino de exemplar apontam para o UID `tempo`.
+- [x] Gate check passes: Full.
+- [x] Test count: 97 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`, 12 de `grafana`) e 10 do lint. O Grafana 13 instala os plugins centrais em segundo plano na primeira subida; o smoke espera até 120 s pelo health.
 
 **Tests**: integration
 **Gate**: full
