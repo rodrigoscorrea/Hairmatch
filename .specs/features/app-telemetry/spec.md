@@ -321,8 +321,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica√
 | TEL-41 | P1: Logs em JSON | Specify | Pending |
 | TEL-42 | P1: Logs em JSON | Specify | Pending |
 | TEL-43 | P1: Logs em JSON | Specify | Pending |
-| TEL-44 | P1: Sem dado pessoal | Specify | Pending |
-| TEL-45 | P1: Sem dado pessoal | Specify | Pending |
+| TEL-44 | P1: Sem dado pessoal | Execute | Done |
+| TEL-45 | P1: Sem dado pessoal | Execute | Done |
 | TEL-46 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-47 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-48 | P1: Sem dado pessoal | Specify | Pending |

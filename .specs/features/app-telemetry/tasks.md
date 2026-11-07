@@ -129,11 +129,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `redact()` troca JWT, e-mail, CNPJ, CPF e telefone, nessa ordem, e o JID do WhatsApp
-- [ ] Tabela de entradas com e sem máscara, falsos positivos documentados
-- [ ] Um teste lê o `config.yaml` e prova que as cinco expressões são as mesmas
-- [ ] `scrub_urls()` mantém esquema e host e troca o path
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `redact()` troca JWT, e-mail, CNPJ, CPF e telefone, nessa ordem, e o JID do WhatsApp
+- [x] Tabela de entradas com e sem máscara, falsos positivos documentados
+- [x] Um teste lê o `config.yaml` e prova que as cinco expressões são as mesmas
+- [x] `scrub_urls()` mantém esquema e host e troca o path
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
