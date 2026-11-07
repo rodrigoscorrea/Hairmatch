@@ -306,9 +306,9 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-26 | P1: Requisição vira trace | Specify | Pending |
 | TEL-27 | P1: Requisição vira trace | Specify | Pending |
 | TEL-28 | P1: Requisição vira trace | Specify | Pending |
-| TEL-29 | P1: Requisição vira trace | Specify | Pending |
-| TEL-30 | P1: Requisição vira trace | Specify | Pending |
-| TEL-31 | P1: Requisição vira trace | Specify | Pending |
+| TEL-29 | P1: Requisição vira trace | Execute | Done |
+| TEL-30 | P1: Requisição vira trace | Execute | Done |
+| TEL-31 | P1: Requisição vira trace | Execute | Done |
 | TEL-32 | P1: Requisição vira trace | Specify | Pending |
 | TEL-33 | P1: Requisição vira trace | Specify | Pending |
 | TEL-34 | P1: Requisição vira trace | Specify | Pending |
@@ -324,8 +324,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-44 | P1: Sem dado pessoal | Execute | Done |
 | TEL-45 | P1: Sem dado pessoal | Execute | Done |
 | TEL-46 | P1: Sem dado pessoal | Execute | Done |
-| TEL-47 | P1: Sem dado pessoal | Specify | Pending |
-| TEL-48 | P1: Sem dado pessoal | Specify | Pending |
+| TEL-47 | P1: Sem dado pessoal | Execute | Done |
+| TEL-48 | P1: Sem dado pessoal | Execute | Done |
 | TEL-49 | P1: Sem dado pessoal | Specify | Pending |
 | TEL-50 | P1: Métricas de negócio | Specify | Pending |
 | TEL-51 | P1: Métricas de negócio | Specify | Pending |
@@ -363,7 +363,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-83 | Edge Cases | Specify | Pending |
 | TEL-84 | Edge Cases | Specify | Pending |
 | TEL-85 | Edge Cases | Specify | Pending |
-| TEL-86 | P1: Sem dado pessoal | Specify | Pending |
+| TEL-86 | P1: Sem dado pessoal | Execute | Done |
 
 **Coverage:** 86 total, nenhum mapeado para tasks ainda (o `tasks.md` sai depois do Design).
 

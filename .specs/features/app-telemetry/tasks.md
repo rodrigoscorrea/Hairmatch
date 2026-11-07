@@ -237,11 +237,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Atributos proibidos removidos (lista de TEL-47, `messaging.*`)
-- [ ] Span `aws-api` vira `<Serviço>.<Operação>`, `CLIENT`, sem ARN
-- [ ] `exception.message`, `exception.stacktrace` e status redigidos
-- [ ] Resource com `service.name`, `service.version`, `deployment.environment.name` e `service.instance.id` único
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Atributos proibidos removidos (lista de TEL-47, `messaging.*`)
+- [x] Span `aws-api` vira `<Serviço>.<Operação>`, `CLIENT`, sem ARN
+- [x] `exception.message`, `exception.stacktrace` e status redigidos
+- [x] Resource com `service.name`, `service.version`, `deployment.environment.name` e `service.instance.id` único
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
