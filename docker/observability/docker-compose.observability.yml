@@ -124,6 +124,19 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # Test double for the destination: logs the path and Authorization of each request. Only starts with
+  # `--profile verify` (check_destination.sh); it is never part of the stack.
+  otlp-capture:
+    image: python:3.12.15-alpine
+    container_name: hairmatch_obs_otlp_capture
+    profiles: [verify]
+    command: python /capture/otlp_capture.py 8080
+    volumes:
+      - ${OBS_DIR:-.}/scripts/otlp_capture.py:/capture/otlp_capture.py:ro
+    networks:
+      - app_network
+    logging: *default-logging
+
   tempo:
     image: grafana/tempo:2.10.10
     container_name: hairmatch_obs_tempo

@@ -46,7 +46,7 @@ def load_services(path):
     """Return (services dict, error). Ports come back as dicts when Compose resolved them."""
     if shutil.which("docker"):
         proc = subprocess.run(
-            ["docker", "compose", "-f", str(path), "config", "--format", "json"],
+            ["docker", "compose", "-f", str(path), "--profile", "*", "config", "--format", "json"],
             capture_output=True, text=True, cwd=str(path.parent),
         )
         if proc.returncode == 0:

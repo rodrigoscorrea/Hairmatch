@@ -516,13 +516,13 @@ Acrescentar ao `config.yaml` o receiver `prometheus` (job `postgres`, alvo `post
 - Skill: NONE
 
 **Done when**:
-- [ ] O capture registra `/v1/traces`, `/v1/metrics` e `/v1/logs` nos endpoints configurados, cada um com `Authorization: Basic dGVzdDp0ZXN0`.
-- [ ] O `config.yaml` não muda entre os cenários: o script compara o sha256 antes e depois (OBS-35).
-- [ ] Com o destino `http://nao-existe.invalid`, o Collector segue `running` por 60 s, sem reinícios.
-- [ ] Com o Loki parado, um span novo chega ao Tempo.
-- [ ] O `smoke.py --mode standalone` passa de novo depois da restauração.
-- [ ] Gate check passes: Build.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] O capture registra `/v1/traces`, `/v1/metrics` e `/v1/logs` nos endpoints configurados, cada um com `Authorization: Basic dGVzdDp0ZXN0`.
+- [x] O `config.yaml` não muda entre os cenários: o script compara o sha256 antes e depois (OBS-35).
+- [x] Com o destino `http://nao-existe.invalid`, o Collector segue `running` por 60 s, sem reinícios.
+- [x] Com o Loki parado, um span novo chega ao Tempo.
+- [x] O `smoke.py --mode standalone` passa de novo depois da restauração.
+- [x] Gate check passes: Build.
+- [x] Test count: 12 `PASS` do `check_destination.sh` (OBS-33, 34 x4, 35, 36 x2, 57 x3 e a restauração, que reroda o smoke com 115 `PASS`) e 114 do `smoke.py --mode combined` do T14, mais 18 do `check_modes.sh`. O `config.yaml` mantém o mesmo sha256 em todos os cenários.
 
 **Tests**: integration
 **Gate**: build
