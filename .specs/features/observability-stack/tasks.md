@@ -491,10 +491,10 @@ Acrescentar ao `config.yaml` o receiver `prometheus` (job `postgres`, alvo `post
 - Skill: NONE
 
 **Done when**:
-- [ ] O script roda até o fim com o aval do usuário e imprime `PASS` para cada requisito listado.
-- [ ] O compose principal termina no mesmo estado (`docker compose ps`) em que começou.
-- [ ] Gate check passes: Build (sem o `check_destination.sh`, que é do T15).
-- [ ] Test count: registrar os `PASS` do script.
+- [x] O script roda até o fim com o aval do usuário e imprime `PASS` para cada requisito listado.
+- [x] O compose principal termina no mesmo estado (`docker compose ps`) em que começou.
+- [x] Gate check passes: Build (sem o `check_destination.sh`, que é do T15).
+- [x] Test count: 18 `PASS` do `check_modes.sh` (OBS-01, 03, 04, 05, 10, 12, 13, 43, 60 e a restauração), mais 114 `PASS` do `smoke.py --mode combined` que ele roda. O compose principal terminou no estado inicial (db parado, o resto no ar), conferido por `docker compose ps -a`. Rodado com o aval do usuário.
 
 **Tests**: e2e
 **Gate**: build
