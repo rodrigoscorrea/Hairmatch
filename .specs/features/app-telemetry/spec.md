@@ -353,9 +353,9 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-73 | P2: App propaga o trace | Execute | Done |
 | TEL-74 | P2: App propaga o trace | Execute | Done |
 | TEL-75 | P2: App propaga o trace | Execute | Done |
-| TEL-76 | P2: App propaga o trace | Execute | Done |
-| TEL-77 | P2: Configuração e documentação | Specify | Pending |
-| TEL-78 | P2: Configuração e documentação | Specify | Pending |
+| TEL-76 | P2: App propaga o trace | Execute | Partial: API and jest proved, Android not run |
+| TEL-77 | P2: Configuração e documentação | Execute | Done |
+| TEL-78 | P2: Configuração e documentação | Execute | Done |
 | TEL-79 | P2: Configuração e documentação | Execute | Done |
 | TEL-80 | P2: Configuração e documentação | Execute | Done |
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |

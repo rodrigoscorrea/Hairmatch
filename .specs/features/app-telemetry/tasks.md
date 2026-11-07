@@ -837,10 +837,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Serviço `django` recebe as três, vazias por padrão
-- [ ] `docker/.env.example` lista as três com o comentário do modo combinado
-- [ ] Compose sobe sem `docker/.env` com a telemetria desligada
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Serviço `django` recebe as três, vazias por padrão
+- [x] `docker/.env.example` lista as três com o comentário do modo combinado
+- [x] Compose sobe sem `docker/.env` com a telemetria desligada
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: none
 **Gate**: build
