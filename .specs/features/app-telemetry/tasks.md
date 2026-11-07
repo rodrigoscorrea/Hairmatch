@@ -512,8 +512,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `uploads` com `kind=review` e os três resultados
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `uploads` com `kind=review` e os três resultados
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

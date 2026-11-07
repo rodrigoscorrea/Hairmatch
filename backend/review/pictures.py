@@ -3,6 +3,7 @@ The pictures of a review (#105): the limits and the writes, shared by the review
 `POST /api/reviews/{id}/pictures`. Every picture is a `ReviewPicture` row whose `WebPImageField` converts the
 upload to WebP and stores it under `reviews/<review_id>/` (AD-003).
 """
+from hairmatch import telemetry
 from hairmatch.problems import body_error
 
 from .models import ReviewPicture
@@ -22,6 +23,8 @@ def picture_errors(files, existing=0, required=False):
     if existing + len(files) > MAX_REVIEW_PICTURES:
         return [body_error('pictures', f'A review can have at most {MAX_REVIEW_PICTURES} pictures.')]
     if any(file.size > REVIEW_PICTURE_MAX_SIZE for file in files):
+        # One count per request: a request that gets here is refused and never reaches the second check.
+        telemetry.count_upload('review', 'invalid_image')
         return [body_error('pictures', 'Each picture must have at most 5 MB.')]
     return []
 
