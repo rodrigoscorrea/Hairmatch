@@ -12,3 +12,22 @@ google-auth>=2.14.1,<3
 requests>=2.33,<3
 boto3
 sqlparse>=0.6.0
+# Telemetry (issue #194). Every OpenTelemetry package is pinned: the instrumentation (0.x beta) only works with the SDK it was released with.
+opentelemetry-api==1.45.2
+opentelemetry-sdk==1.45.2
+opentelemetry-proto==1.45.2
+opentelemetry-exporter-otlp-proto-common==1.45.2
+opentelemetry-exporter-otlp-proto-http==1.45.2
+opentelemetry-exporter-otlp-common==0.66b2
+opentelemetry-exporter-http-transport==0.66b2
+opentelemetry-semantic-conventions==0.66b2
+opentelemetry-util-http==0.66b2
+opentelemetry-instrumentation==0.66b2
+opentelemetry-instrumentation-dbapi==0.66b2
+opentelemetry-instrumentation-wsgi==0.66b2
+opentelemetry-instrumentation-django==0.66b2
+opentelemetry-instrumentation-psycopg2==0.66b2
+opentelemetry-instrumentation-botocore==0.66b2
+opentelemetry-instrumentation-requests==0.66b2
+opentelemetry-propagator-aws-xray==1.0.2
+python-json-logger==4.2.0

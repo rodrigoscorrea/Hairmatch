@@ -104,10 +104,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Todo pacote `opentelemetry-*` e `python-json-logger` com `==`
-- [ ] Imagem reconstruída e container recriado; `pip check` sem conflito
-- [ ] Suíte inteira igual ao baseline (1123 testes)
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Todo pacote `opentelemetry-*` e `python-json-logger` com `==`
+- [x] Imagem reconstruída e container recriado; `pip check` sem conflito
+- [x] Suíte inteira igual ao baseline (1123 testes)
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: none
 **Gate**: build

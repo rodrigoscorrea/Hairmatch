@@ -357,7 +357,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-77 | P2: Configuração e documentação | Specify | Pending |
 | TEL-78 | P2: Configuração e documentação | Specify | Pending |
 | TEL-79 | P2: Configuração e documentação | Specify | Pending |
-| TEL-80 | P2: Configuração e documentação | Specify | Pending |
+| TEL-80 | P2: Configuração e documentação | Execute | Done |
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |
 | TEL-82 | Edge Cases | Specify | Pending |
 | TEL-83 | Edge Cases | Specify | Pending |
