@@ -218,10 +218,10 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 - Skill: NONE
 
 **Done when**:
-- [ ] `smoke.py --only ready` passa para o Prometheus.
-- [ ] `GET /api/v1/status/flags` mostra a retenção de 7d, o receiver OTLP e o `exemplar-storage`.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] `smoke.py --only ready` passa para o Prometheus.
+- [x] `GET /api/v1/status/flags` mostra a retenção de 7d, o receiver OTLP e o `exemplar-storage`.
+- [x] Gate check passes: Full.
+- [x] Test count: 11 `PASS` do `smoke.py --only ready` (5 anteriores + 6 do Prometheus) e 10 do lint. O Prometheus imprime `7d` como `1w`; o smoke aceita as duas formas.
 
 **Tests**: integration
 **Gate**: full

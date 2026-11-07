@@ -46,6 +46,26 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: hairmatch_obs_prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      # OTLP in, as the Collector sends it; exemplars keep the trace_id of a metric point.
+      - --web.enable-otlp-receiver
+      - --enable-feature=exemplar-storage
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ${OBS_DIR:-.}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
 networks:
   # Standalone this is observability_app_network; combined it is the app's hairmatch_app_network.
   app_network: {}
@@ -55,3 +75,5 @@ volumes:
     name: hairmatch_obs_loki
   tempo_data:
     name: hairmatch_obs_tempo
+  prometheus_data:
+    name: hairmatch_obs_prometheus

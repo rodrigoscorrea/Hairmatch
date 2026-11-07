@@ -109,6 +109,20 @@ def section_ready(args):
     check(m is not None and m.group(1) == "168h0m0s", "OBS-11", "Tempo compactor block_retention is 168h",
           f"got {m.group(1) if m else None}")
 
+    wait_ready("Prometheus", f"{PROM}/-/ready", "OBS-11")
+    _, flags = get_json(f"{PROM}/api/v1/status/flags")
+    flags = (flags or {}).get("data", {})
+    # Prometheus prints 7d back as 1w.
+    check(flags.get("storage.tsdb.retention.time") in ("7d", "1w"), "OBS-11", "Prometheus retention is 7 days",
+          f"got {flags.get('storage.tsdb.retention.time')}")
+    check(flags.get("web.enable-otlp-receiver") == "true", "OBS-16", "Prometheus has the OTLP receiver enabled")
+    check("exemplar-storage" in flags.get("enable-feature", ""), "OBS-18", "Prometheus has exemplar-storage enabled")
+    _, cfg = get_json(f"{PROM}/api/v1/status/config")
+    yaml_cfg = (cfg or {}).get("data", {}).get("yaml", "")
+    check("out_of_order_time_window: 30m" in yaml_cfg, "OBS-16", "Prometheus accepts out-of-order samples for 30m")
+    check("container.name" in yaml_cfg and "service.instance.id" in yaml_cfg and "host.name" in yaml_cfg, "OBS-46",
+          "Prometheus promotes container.name, host.name and service.instance.id to labels")
+
 
 SECTIONS = {
     "ready": section_ready,
