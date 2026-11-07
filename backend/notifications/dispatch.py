@@ -6,6 +6,8 @@ import logging
 
 from django.db import transaction
 
+from hairmatch import telemetry
+
 from .models import Alert, PushDevice
 from .sns import EndpointGone, get_sns
 
@@ -38,13 +40,17 @@ def publish_alert(alert_id):
         for device in PushDevice.objects.filter(user_id=alert.recipient_id):
             try:
                 get_sns().publish(device.endpoint_arn, alert.title, alert.body, data)
+                telemetry.count_push('published')
             except EndpointGone:
+                telemetry.count_push('endpoint_gone')
                 device.delete()
                 delete_endpoints([device.endpoint_arn])
             except Exception as exc:
+                telemetry.count_push('unavailable')
                 # The token and the ARN stay out of the log. SNS errors were already logged with the operation and the code.
                 logger.warning('push to a device failed: %s', type(exc).__name__)
     except Exception as exc:
+        telemetry.count_push('error')
         logger.warning('push of alert %s failed: %s', alert_id, type(exc).__name__)
 
 

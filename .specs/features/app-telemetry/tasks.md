@@ -369,10 +369,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `push.results` com `published`, `endpoint_gone`, `unavailable` por aparelho e `error` fora do laço
-- [ ] Pedido ao SNS idêntico ao de antes (sem `MessageAttributes`) e span `SNS.Publish` sem ARN, token nem corpo
-- [ ] `POST /api/reservations` com aparelho gera requisição, queries e `SNS.Publish` no mesmo `trace_id`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `push.results` com `published`, `endpoint_gone`, `unavailable` por aparelho e `error` fora do laço
+- [x] Pedido ao SNS idêntico ao de antes (sem `MessageAttributes`) e span `SNS.Publish` sem ARN, token nem corpo
+- [x] `POST /api/reservations` com aparelho gera requisição, queries e `SNS.Publish` no mesmo `trace_id`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
