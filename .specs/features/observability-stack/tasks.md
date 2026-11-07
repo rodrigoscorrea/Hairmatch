@@ -553,9 +553,9 @@ Acrescentar ao `config.yaml` o receiver `prometheus` (job `postgres`, alvo `post
 - Skill: NONE
 
 **Done when**:
-- [ ] Cada item da OBS-51 a OBS-56 e a OBS-59 tem uma seção ou uma tabela no README, conferido pelo checklist do Verifier.
-- [ ] Os comandos do README são os mesmos que os scripts usam (copiados, não reescritos).
-- [ ] Gate check passes: Quick.
+- [x] Cada item da OBS-51 a OBS-56 e a OBS-59 tem uma seção ou uma tabela no README, conferido pelo checklist do Verifier.
+- [x] Os comandos do README são os mesmos que os scripts usam (copiados, não reescritos).
+- [x] Gate check passes: Quick.
 
 **Tests**: none
 **Gate**: quick
