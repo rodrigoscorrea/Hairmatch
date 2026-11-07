@@ -3,7 +3,8 @@ Redaction of personal data in free text (#194, TEL-44, TEL-45, TEL-86).
 
 The patterns and their order are the ones the OTel Collector applies (docker/observability/otel/config.yaml,
 #193), so the same data is masked the same way at both barriers and is searched by the same marker in Loki.
-The app adds one rule the Collector lacks: the WhatsApp identifier (`<digits>@s.whatsapp.net`).
+The app adds two rules the Collector lacks: the WhatsApp identifier (`<digits>@s.whatsapp.net`) and the CEP in the
+path of the postal-code lookup, which Django writes in the log of every 4xx and 5xx (`Not Found: /api/postal-codes/69000000`).
 A digit sequence shaped like a phone, CPF or CNPJ is masked even when it is not personal data: the safe side.
 """
 import re
@@ -23,6 +24,7 @@ REPLACEMENTS = tuple(
     )
 )
 
+_CEP_PATH = re.compile(r'(/postal-codes/)[^\s/?#\'"<>]+')
 _URL = re.compile(r'(https?://[^/\s\'"<>]+)(/[^\s\'"<>]*)?')
 # urllib3 words a connection error as "... Max retries exceeded with url: /ws/69000000/json/ (Caused by ...)": a bare path.
 _URL_PATH = re.compile(r'(\burl: )(/[^\s\'"<>)]*)')
@@ -33,7 +35,7 @@ def redact(text):
     """`text` with the JWT, e-mail, CNPJ, CPF, phone and WhatsApp number replaced by their markers."""
     for pattern, marker in REPLACEMENTS:
         text = pattern.sub(marker, text)
-    return text
+    return _CEP_PATH.sub(r'\1{cep}', text)
 
 
 def scrub_urls(text):

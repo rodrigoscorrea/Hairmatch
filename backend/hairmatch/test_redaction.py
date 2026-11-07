@@ -70,6 +70,21 @@ class CollectorParityTests(SimpleTestCase):
         self.assertEqual(app, collector)
 
 
+class CepPathTests(SimpleTestCase):
+    def test_the_cep_of_the_postal_code_path_is_masked_in_every_form_django_logs_it(self):
+        for text, expected in (
+            ('Not Found: /api/postal-codes/69000000', 'Not Found: /api/postal-codes/{cep}'),
+            ('Service Unavailable: /api/postal-codes/69000-000', 'Service Unavailable: /api/postal-codes/{cep}'),
+            ('"GET /api/postal-codes/69000000 HTTP/1.1" 200', '"GET /api/postal-codes/{cep} HTTP/1.1" 200'),
+            ('Bad Request: /api/postal-codes/abc', 'Bad Request: /api/postal-codes/{cep}'),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(redact(text), expected)
+
+    def test_other_paths_are_left_alone(self):
+        self.assertEqual(redact('Conflict: /api/hairdressers/12/gallery-photos'), 'Conflict: /api/hairdressers/12/gallery-photos')
+
+
 class ScrubTests(SimpleTestCase):
     def test_url_keeps_scheme_and_host_and_drops_path_and_query(self):
         self.assertEqual(

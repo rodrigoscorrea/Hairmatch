@@ -709,8 +709,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Cadastro, login, CEP, preflight do CEP, reserva com push, upload e Gemini: nenhum valor de teste em span, evento, resource nem log
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Cadastro, login, CEP, preflight do CEP, reserva com push, upload e Gemini: nenhum valor de teste em span, evento, resource nem log
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

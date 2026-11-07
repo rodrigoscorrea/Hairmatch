@@ -132,3 +132,28 @@ def stubbed_client(service, **kwargs):
         endpoint_url='http://localhost:4566', **kwargs,
     )
     return client, Stubber(client)
+
+
+def corpus():
+    """
+    Every string a backend could send out since the last `clear`, as one text: span names, status descriptions, attributes,
+    events and resources, log records with their attributes and resources, and the attributes of the metric points.
+    A privacy test searches this text for the personal data it fed in (TEL-49).
+    """
+    parts = []
+    for span in spans():
+        parts += [span.name, span.status.description or '', repr(dict(span.attributes or {})), repr(dict(span.resource.attributes))]
+        for event in span.events:
+            parts += [event.name, repr(dict(event.attributes or {}))]
+    for item in log_exporter.get_finished_logs():
+        record = item.log_record
+        parts += [str(record.body), str(record.severity_text), repr(dict(record.attributes or {}))]
+        resource = getattr(item, 'resource', None)
+        parts.append(repr(dict(resource.attributes)) if resource else '')
+    _collect()
+    for items in _state.collected.values():
+        for item in items:
+            parts.append(item.name)
+            for point in item.data.data_points:
+                parts.append(repr(dict(point.attributes)))
+    return '\n'.join(parts)

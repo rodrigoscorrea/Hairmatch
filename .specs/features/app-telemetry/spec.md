@@ -326,7 +326,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-46 | P1: Sem dado pessoal | Execute | Done |
 | TEL-47 | P1: Sem dado pessoal | Execute | Done |
 | TEL-48 | P1: Sem dado pessoal | Execute | Done |
-| TEL-49 | P1: Sem dado pessoal | Specify | Pending |
+| TEL-49 | P1: Sem dado pessoal | Execute | Done |
 | TEL-50 | P1: Métricas de negócio | Execute | Done |
 | TEL-51 | P1: Métricas de negócio | Execute | Done |
 | TEL-52 | P1: Métricas de negócio | Execute | Done |
