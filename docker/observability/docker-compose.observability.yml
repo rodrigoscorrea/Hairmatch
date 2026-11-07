@@ -52,6 +52,10 @@ services:
     volumes:
       - ${OBS_DIR:-.}/otel/config.yaml:/etc/otelcol/config.yaml:ro
       - otel_queue:/var/lib/otelcol/queue
+      # hostmetrics reads the host through /hostfs; docker_stats talks to the Docker API. Both read-only.
+      # The socket gives this container control of the host's Docker, so it is a local-only convenience.
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - loki
       - tempo

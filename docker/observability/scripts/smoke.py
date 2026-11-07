@@ -10,6 +10,7 @@ Prints `PASS <OBS-NN>: ...` or `FAIL <OBS-NN>: <reason>` per check, then a count
 import argparse
 import json
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -98,6 +99,12 @@ def wait_for(fn, timeout=30, interval=1.0):
         if time.time() >= deadline:
             return None
         time.sleep(interval)
+
+
+def docker(*args):
+    """Run the docker CLI; return (exit code, stdout+stderr)."""
+    proc = subprocess.run(["docker", *args], capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
 def wait_ready(name, url, req, timeout=60):
@@ -619,11 +626,39 @@ def section_faro(args):
           "the preflight from another origin does not get its origin allowed", f"status {status}, allow-origin {allow!r}")
 
 
+# ---------------------------------------------------------------------------
+# infra
+# ---------------------------------------------------------------------------
+
+COLLECTOR_CONTAINER = "hairmatch_obs_otel_collector"
+
+
+def section_infra(args):
+    # OBS-45: host memory and disk, within 60 s of the stack coming up.
+    for metric in ("system_memory_usage_bytes", "system_filesystem_usage_bytes"):
+        series = wait_for(lambda m=metric: prom_query(m), timeout=60, interval=3)
+        check(bool(series), "OBS-45", f"Prometheus has {metric}")
+
+    # OBS-46: a memory series per container, labelled with the container name, the Collector's included.
+    def container_names():
+        names = {r["metric"].get("container_name") for r in prom_query("container_memory_usage_total_bytes")}
+        return names if COLLECTOR_CONTAINER in names else None
+    names = wait_for(container_names, timeout=60, interval=3)
+    check(names is not None, "OBS-46", f"container_memory_usage_total_bytes{{container_name={COLLECTOR_CONTAINER!r}}} exists",
+          f"got {sorted(n for n in (names or set()) if n)}")
+
+    # The Docker API version must be accepted (Docker Engine 29 refuses anything below 1.44).
+    code, logs = docker("logs", COLLECTOR_CONTAINER, "--since", "5m")
+    bad = [l for l in logs.splitlines() if re.search(r"(client version|API version|too old)", l, re.I) and re.search(r"error|fail", l, re.I)]
+    check(code == 0 and not bad, "OBS-46", "the Collector log has no Docker API version error", f"{bad[:2]}")
+
+
 SECTIONS = {
     "ready": section_ready,
     "signals": section_signals,
     "redaction": section_redaction,
     "grafana": section_grafana,
+    "infra": section_infra,
     "faro": section_faro,
 }
 

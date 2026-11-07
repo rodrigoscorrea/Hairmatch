@@ -11,6 +11,23 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+  # Host CPU, memory, load, disk and network. The container sees the host through /hostfs (mounted read-only).
+  host_metrics:
+    root_path: /hostfs
+    collection_interval: 30s
+    scrapers:
+      cpu: {}
+      memory: {}
+      load: {}
+      filesystem: {}
+      network: {}
+  # One set of metrics per running container, read from the Docker API (docker.sock, read-only).
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    # Docker Engine 29 refuses API versions below 1.44, and the receiver's default is older.
+    api_version: "1.44"
+    collection_interval: 30s
+
 processors:
   # Must stay first in every pipeline: it refuses new data before the process hits the container limit.
   memory_limiter:
@@ -106,7 +123,7 @@ service:
       processors: [memory_limiter, attributes/pii, transform/pii, batch]
       exporters: [otlp_http]
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, host_metrics, docker_stats]
       processors: [memory_limiter, attributes/pii, batch]
       exporters: [otlp_http]
     logs:

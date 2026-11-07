@@ -427,11 +427,11 @@ Acrescentar ao smoke a seção `faro`. Ela faz um `POST /collect` com um log e u
 - Skill: NONE
 
 **Done when**:
-- [ ] `system_memory_usage_bytes` e `system_filesystem_usage_bytes` aparecem em até 60 s.
-- [ ] Uma série de memória por container aparece com o rótulo do nome do container, incluindo o do Collector.
-- [ ] O log do Collector não tem erro de versão da API do Docker.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] `system_memory_usage_bytes` e `system_filesystem_usage_bytes` aparecem em até 60 s.
+- [x] Uma série de memória por container aparece com o rótulo do nome do container, incluindo o do Collector.
+- [x] O log do Collector não tem erro de versão da API do Docker.
+- [x] Gate check passes: Full.
+- [x] Test count: 113 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`, 19 de `grafana`, 4 de `infra`, 5 de `faro`) e 10 do lint. O nome real do receiver no 0.164 é `host_metrics`.
 
 **Tests**: integration
 **Gate**: full

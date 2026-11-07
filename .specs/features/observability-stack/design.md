@@ -337,6 +337,7 @@ N/A: não há modelo de dados. Os "contratos" são os nomes de métrica e de ró
 - **Pyroscope 2.4.3.** Responde 503 em `/ready` por cerca de 15 s depois de subir.
 - **Grafana 13.2.5.** Instala os plugins dos data sources centrais em segundo plano na primeira subida, com acesso à internet. Nessa janela, o health do Prometheus responde `Plugin not registered`. O volume `hairmatch_obs_grafana` guarda os plugins. Os placeholders do `tracesToLogsV2` (`${__span.tags["service.name"]}` e `${__trace.traceId}`) funcionam, desde que o provisionamento os escape com `$$`.
 - **Faro no Alloy 1.21.3.** O payload segue as structs de `internal/component/faro/receiver/internal/payload/payload.go` (só `timestamp` é obrigatório). Log e exceção chegam ao Loki como linhas logfmt (`kind=log` e `kind=exception`), sem `service.name`, então a consulta usa `{service_name=~".+"} |= "<marcador>"`. O preflight de uma origem fora da lista não recebe `Access-Control-Allow-Origin`.
+- **Receivers de infra no 0.164.** O receiver se chama `host_metrics` (`hostmetrics` é um alias obsoleto). Com `api_version: "1.44"`, o `docker_stats` funciona com o Docker 29.1.3. A série de memória é `container_memory_usage_total_bytes{container_name=…}`, sem rótulo `job`, e o nome do container do Collector é `hairmatch_obs_otel_collector`.
 - **Variável vazia.** As `OBS_*` definidas e vazias resolvem para o mesmo ambiente que as ausentes, e o Compose nem recria o container.
 
 > Decisão de projeto registrada como **AD-015** em `.specs/STATE.md`.
