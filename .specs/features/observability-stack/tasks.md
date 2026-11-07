@@ -144,10 +144,10 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 - Skill: NONE
 
 **Done when**:
-- [ ] O lint falha se uma das variáveis faltar ou se `OBS_OTLP_AUTH_HEADER` tiver valor (prova numa cópia temporária).
-- [ ] O `docker/.env` local do usuário ganha `OBS_DIR=./observability`. O arquivo não é versionado, e o passo fica registrado no README (T16).
-- [ ] Gate check passes: Quick.
-- [ ] Test count: os `PASS` do T1 + 1.
+- [x] O lint falha se uma das variáveis faltar ou se `OBS_OTLP_AUTH_HEADER` tiver valor (prova numa cópia temporária).
+- [x] O `docker/.env` local do usuário ganha `OBS_DIR=./observability`. O arquivo não é versionado, e o passo fica registrado no README (T16).
+- [x] Gate check passes: Quick.
+- [x] Test count: 10 `PASS` do lint (os 6 do T1 + 4 de OBS-37) e 16 do `--self-test`. O `docker/.env` local ganhou `OBS_DIR=./observability`.
 
 **Tests**: unit
 **Gate**: quick

@@ -22,6 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 OBS_COMPOSE = ROOT / "docker/observability/docker-compose.observability.yml"
 MAIN_COMPOSE = ROOT / "docker/docker-compose.yml"
+ENV_EXAMPLE = ROOT / "docker/.env.example"
+OBS_DIR = ROOT / "docker/observability"
 
 # Names the main compose must never mention (OBS-02).
 STACK_NAMES = [
@@ -115,6 +117,42 @@ def lint_main_compose(path):
            + (f"; found: {', '.join(hits)}" if hits else ""))
 
 
+OBS_VARS = ["OBS_DIR", "OBS_TRACES_ENDPOINT", "OBS_METRICS_ENDPOINT", "OBS_LOGS_ENDPOINT", "OBS_OTLP_AUTH_HEADER"]
+# Base64 of "test:test", the dummy credential check_destination.sh sends to the local capture server.
+DUMMY_BASIC = "dGVzdDp0ZXN0"
+
+
+def lint_env_example(path, obs_dir):
+    """OBS-37: the five OBS_* variables are documented and empty (except OBS_DIR), and no credential is committed."""
+    lines = path.read_text().splitlines()
+    values = {}
+    uncommented = []
+    for i, line in enumerate(lines):
+        m = re.match(r"([A-Z_]+)=(.*)$", line)
+        if m and m.group(1) in OBS_VARS:
+            values[m.group(1)] = m.group(2).strip()
+            if not (i > 0 and lines[i - 1].startswith("#")):
+                uncommented.append(m.group(1))
+    missing = [v for v in OBS_VARS if v not in values]
+    filled = [v for v, val in values.items() if (val != "./observability" if v == "OBS_DIR" else val != "")]
+    report(not missing, "OBS-37", "docker/.env.example lists all five OBS_* variables" + (f"; missing: {', '.join(missing)}" if missing else ""))
+    report(not filled, "OBS-37", "only OBS_DIR has a value (./observability); the others are empty" + (f"; filled: {', '.join(filled)}" if filled else ""))
+    report(not uncommented, "OBS-37", "every OBS_* variable has a comment line above it" + (f"; without: {', '.join(uncommented)}" if uncommented else ""))
+
+    # The scan skips this file: it has to spell the patterns it looks for.
+    leaks = []
+    for f in sorted(obs_dir.rglob("*")):
+        if not f.is_file() or f.name == Path(__file__).name or "__pycache__" in f.parts:
+            continue
+        text = f.read_text(errors="ignore")
+        if re.search(r"glc_[A-Za-z0-9]", text):
+            leaks.append(f"{f.relative_to(obs_dir)} (glc_ token)")
+        for m in re.finditer(r"Basic\s+([A-Za-z0-9+/=]{8,})", text):
+            if m.group(1) != DUMMY_BASIC:
+                leaks.append(f"{f.relative_to(obs_dir)} (Basic {m.group(1)[:4]}...)")
+    report(not leaks, "OBS-37", "no Grafana Cloud credential under docker/observability/" + (f"; found: {', '.join(leaks)}" if leaks else ""))
+
+
 SELF_TEST_BASE = """\
 x-logging: &l
   driver: json-file
@@ -140,6 +178,27 @@ SELF_TEST_MUTATIONS = [
 ]
 
 
+SELF_TEST_ENV = """\
+# dir
+OBS_DIR=./observability
+# t
+OBS_TRACES_ENDPOINT=
+# m
+OBS_METRICS_ENDPOINT=
+# l
+OBS_LOGS_ENDPOINT=
+# a
+OBS_OTLP_AUTH_HEADER=
+"""
+
+SELF_TEST_ENV_MUTATIONS = [
+    ("a missing variable", lambda t: t.replace("# l\nOBS_LOGS_ENDPOINT=\n", ""), "OBS-37"),
+    ("a filled auth header", lambda t: t.replace("OBS_OTLP_AUTH_HEADER=", "OBS_OTLP_AUTH_HEADER=Basic abc"), "OBS-37"),
+    ("a variable without comment", lambda t: t.replace("# m\n", ""), "OBS-37"),
+    ("a filled endpoint", lambda t: t.replace("OBS_LOGS_ENDPOINT=", "OBS_LOGS_ENDPOINT=http://x"), "OBS-37"),
+]
+
+
 def self_test():
     """Prove the lint discriminates: the base passes, each mutation fails the expected check."""
     ok_all = True
@@ -159,6 +218,30 @@ def self_test():
             good = req in failed_checks(mutate(SELF_TEST_BASE))
             ok_all &= good
             print(f"{'PASS' if good else 'FAIL'} self-test: {label} makes {req} fail")
+
+        def env_failures(text, credential=None):
+            results.clear()
+            (Path(tmp) / ".env.example").write_text(text)
+            scan = Path(tmp) / "scan"
+            scan.mkdir(exist_ok=True)
+            (scan / "f.txt").write_text(credential or "nothing here\n")
+            lint_env_example(Path(tmp) / ".env.example", scan)
+            return [req for ok, req, _ in results if not ok]
+
+        base_failed = env_failures(SELF_TEST_ENV)
+        ok_all &= not base_failed
+        print(f"{'PASS' if not base_failed else 'FAIL'} self-test: the valid .env.example passes OBS-37")
+        for label, mutate, req in SELF_TEST_ENV_MUTATIONS:
+            good = req in env_failures(mutate(SELF_TEST_ENV))
+            ok_all &= good
+            print(f"{'PASS' if good else 'FAIL'} self-test: {label} makes {req} fail")
+        for label, content in [("a glc_ token", "token glc_abcdef123456"), ("a Basic header", "Basic QWxhZGRpbjpvcGVuc2VzYW1l")]:
+            good = "OBS-37" in env_failures(SELF_TEST_ENV, content)
+            ok_all &= good
+            print(f"{'PASS' if good else 'FAIL'} self-test: {label} in docker/observability/ makes OBS-37 fail")
+        good = "OBS-37" not in env_failures(SELF_TEST_ENV, "Basic " + DUMMY_BASIC)
+        ok_all &= good
+        print(f"{'PASS' if good else 'FAIL'} self-test: the dummy test:test header is allowed")
     return 0 if ok_all else 1
 
 
@@ -166,6 +249,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--compose", type=Path, default=OBS_COMPOSE)
     parser.add_argument("--main", type=Path, default=MAIN_COMPOSE)
+    parser.add_argument("--env-example", type=Path, default=ENV_EXAMPLE)
+    parser.add_argument("--obs-dir", type=Path, default=OBS_DIR)
     parser.add_argument("--self-test", action="store_true", help="mutate a valid compose and expect each mutation to fail")
     args = parser.parse_args()
 
@@ -174,6 +259,7 @@ def main():
 
     lint_obs_compose(args.compose)
     lint_main_compose(args.main)
+    lint_env_example(args.env_example, args.obs_dir)
     for ok, req, message in results:
         print(f"{'PASS' if ok else 'FAIL'} {req}: {message}")
     failures = sum(1 for ok, _, _ in results if not ok)
