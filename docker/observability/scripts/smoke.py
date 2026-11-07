@@ -68,6 +68,18 @@ def http(method, url, body=None, headers=None, timeout=10):
         return 0, str(e)
 
 
+def http_headers(method, url, headers=None, timeout=10):
+    """Return (status, response headers as a lowercase dict)."""
+    req = urllib.request.Request(url, method=method, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, {k.lower(): v for k, v in resp.headers.items()}
+    except urllib.error.HTTPError as e:
+        return e.code, {k.lower(): v for k, v in e.headers.items()}
+    except Exception as e:
+        return 0, {"error": str(e)}
+
+
 def get_json(url, timeout=10):
     status, text = http("GET", url, timeout=timeout)
     try:
@@ -560,11 +572,59 @@ def section_grafana(args):
         check(bool(result), "OBS-41", f"panel {panel['title']!r} returns a series for {SERVICE}", f"expr {expr}")
 
 
+# ---------------------------------------------------------------------------
+# faro
+# ---------------------------------------------------------------------------
+
+# Payload shape: the Go structs in grafana/alloy v1.21.3,
+# internal/component/faro/receiver/internal/payload/payload.go (Payload, Meta, App, Log, Exception, Stacktrace).
+# Only `timestamp` is always serialized there; the rest is optional.
+FARO_ORIGIN = "http://localhost:8081"
+
+
+def section_faro(args):
+    marker = f"faro-{RUN_ID}"
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+    payload = {
+        "meta": {"sdk": {"name": "obs-smoke", "version": "0.0.0"},
+                 "app": {"name": "hairmatch-web-smoke", "version": "0.0.0", "environment": "dev"},
+                 "page": {"url": "http://localhost:8081/"}},
+        "logs": [{"message": f"{marker} login by maria.souza@example.com", "level": "info", "timestamp": stamp}],
+        "exceptions": [{"type": "Error", "value": f"{marker}-exc failed for maria.souza@example.com", "timestamp": stamp,
+                        "stacktrace": {"frames": [{"filename": "app.js", "function": "login", "lineno": 1, "colno": 2}]}}],
+    }
+    status, body = http("POST", f"{FARO}/collect", payload, headers={"Origin": FARO_ORIGIN})
+    check(status in (200, 202, 204), "OBS-48", "the Faro receiver accepts a payload with a log and an exception",
+          f"status {status}: {body[:200]}")
+
+    def stored():
+        found = loki_lines(f'{{service_name=~".+"}} |= "{marker}"')
+        return found or None
+    lines = wait_for(stored, timeout=30) or []
+    texts = [x[0] for x in lines]
+    log_line = next((x for x in texts if f"{marker} login" in x), None)
+    check(log_line is not None and "[email]" in log_line and "maria.souza@example.com" not in log_line, "OBS-48",
+          "the Faro log reaches Loki through the Collector, with the e-mail replaced by [email]", f"stored {texts}")
+    check(not any("maria.souza@example.com" in x for x in texts), "OBS-48",
+          "no stored Faro line keeps the e-mail", f"stored {texts}")
+
+    # OBS-49 / OBS-50: CORS preflight.
+    preflight = {"Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"}
+    status, hdrs = http_headers("OPTIONS", f"{FARO}/collect", {**preflight, "Origin": FARO_ORIGIN})
+    check(hdrs.get("access-control-allow-origin") == FARO_ORIGIN, "OBS-49",
+          f"the preflight from {FARO_ORIGIN} gets that Access-Control-Allow-Origin", f"status {status}, headers {hdrs}")
+    status, hdrs = http_headers("OPTIONS", f"{FARO}/collect", {**preflight, "Origin": "http://evil.example"})
+    allow = hdrs.get("access-control-allow-origin")
+    check(allow not in ("http://evil.example", "*"), "OBS-50",
+          "the preflight from another origin does not get its origin allowed", f"status {status}, allow-origin {allow!r}")
+
+
 SECTIONS = {
     "ready": section_ready,
     "signals": section_signals,
     "redaction": section_redaction,
     "grafana": section_grafana,
+    "faro": section_faro,
 }
 
 

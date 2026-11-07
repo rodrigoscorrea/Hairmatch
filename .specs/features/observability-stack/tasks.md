@@ -401,11 +401,11 @@ Acrescentar ao smoke a seção `faro`. Ela faz um `POST /collect` com um log e u
 - Skill: NONE
 
 **Done when**:
-- [ ] O log com o marcador aparece no Loki em até 30 s, com o e-mail trocado por `[email]`.
-- [ ] O preflight com `Origin: http://localhost:8081` devolve esse `Access-Control-Allow-Origin`, e o preflight com `Origin: http://evil.example` não devolve essa origem.
-- [ ] O schema do payload foi conferido na doc do Alloy 1.21, e a fonte está citada num comentário do smoke.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] O log com o marcador aparece no Loki em até 30 s, com o e-mail trocado por `[email]`.
+- [x] O preflight com `Origin: http://localhost:8081` devolve esse `Access-Control-Allow-Origin`, e o preflight com `Origin: http://evil.example` não devolve essa origem.
+- [x] O schema do payload foi conferido na doc do Alloy 1.21, e a fonte está citada num comentário do smoke.
+- [x] Gate check passes: Full.
+- [x] Test count: 109 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`, 19 de `grafana`, 5 de `faro`) e 10 do lint. O schema do payload veio das structs do Alloy v1.21.3, citadas no smoke.
 
 **Tests**: integration
 **Gate**: full

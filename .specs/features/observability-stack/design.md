@@ -336,6 +336,7 @@ N/A: não há modelo de dados. Os "contratos" são os nomes de métrica e de ró
 - **Tempo 2.10.10.** `/status/config` também mostra `block_retention: 336h` para `backend_scheduler` e `backend_worker`, que não são usados. Vale o da seção `compactor`.
 - **Pyroscope 2.4.3.** Responde 503 em `/ready` por cerca de 15 s depois de subir.
 - **Grafana 13.2.5.** Instala os plugins dos data sources centrais em segundo plano na primeira subida, com acesso à internet. Nessa janela, o health do Prometheus responde `Plugin not registered`. O volume `hairmatch_obs_grafana` guarda os plugins. Os placeholders do `tracesToLogsV2` (`${__span.tags["service.name"]}` e `${__trace.traceId}`) funcionam, desde que o provisionamento os escape com `$$`.
+- **Faro no Alloy 1.21.3.** O payload segue as structs de `internal/component/faro/receiver/internal/payload/payload.go` (só `timestamp` é obrigatório). Log e exceção chegam ao Loki como linhas logfmt (`kind=log` e `kind=exception`), sem `service.name`, então a consulta usa `{service_name=~".+"} |= "<marcador>"`. O preflight de uma origem fora da lista não recebe `Access-Control-Allow-Origin`.
 - **Variável vazia.** As `OBS_*` definidas e vazias resolvem para o mesmo ambiente que as ausentes, e o Compose nem recria o container.
 
 > Decisão de projeto registrada como **AD-015** em `.specs/STATE.md`.

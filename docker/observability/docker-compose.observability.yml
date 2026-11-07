@@ -85,6 +85,26 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # Faro receiver for the browser. Only /collect is published; Alloy's own UI (12345) stays inside the network.
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: hairmatch_obs_alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:12347:12347"
+    volumes:
+      - ${OBS_DIR:-.}/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    depends_on:
+      - otel-collector
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
   tempo:
     image: grafana/tempo:2.10.10
     container_name: hairmatch_obs_tempo
