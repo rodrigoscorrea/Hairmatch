@@ -16,6 +16,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+COLLECTOR_CONFIG = ROOT / "docker/observability/otel/config.yaml"
 
 LOKI = "http://127.0.0.1:3100"
 TEMPO = "http://127.0.0.1:3200"
@@ -27,6 +31,10 @@ FARO = "http://127.0.0.1:12347"
 
 RUN_ID = uuid.uuid4().hex[:8]
 SERVICE = f"obs-smoke-{RUN_ID}"
+# Shared by every section: the span, the log and the metric exemplar carry the same trace.
+TRACE_ID = uuid.uuid4().hex
+SPAN_ID = uuid.uuid4().hex[:16]
+ROUTE = "/api/smoke"
 
 passes = 0
 failures = 0
@@ -127,8 +135,187 @@ def section_ready(args):
     wait_ready("Pyroscope", f"{PYROSCOPE}/ready", "OBS-47")
 
 
+# ---------------------------------------------------------------------------
+# OTLP/JSON senders (OTLP/JSON encodes trace and span ids as hex strings)
+# ---------------------------------------------------------------------------
+
+def kv(key, value):
+    if isinstance(value, bool):
+        v = {"boolValue": value}
+    elif isinstance(value, int):
+        v = {"intValue": str(value)}
+    elif isinstance(value, float):
+        v = {"doubleValue": value}
+    elif isinstance(value, dict):
+        v = {"kvlistValue": {"values": [kv(k, x) for k, x in value.items()]}}
+    else:
+        v = {"stringValue": str(value)}
+    return {"key": key, "value": v}
+
+
+def kvs(d):
+    return [kv(k, v) for k, v in (d or {}).items()]
+
+
+def resource(service, extra=None):
+    return {"attributes": kvs({"service.name": service, **(extra or {})})}
+
+
+def send_traces(service=None, trace_id=None, span_id=None, name="smoke span", span_attrs=None,
+                resource_attrs=None, base=COLLECTOR):
+    now = time.time_ns()
+    payload = {"resourceSpans": [{
+        "resource": resource(service or SERVICE, resource_attrs),
+        "scopeSpans": [{"scope": {"name": "obs-smoke"}, "spans": [{
+            "traceId": trace_id or TRACE_ID, "spanId": span_id or SPAN_ID, "name": name, "kind": 2,
+            "startTimeUnixNano": str(now - 50_000_000), "endTimeUnixNano": str(now),
+            "attributes": kvs(span_attrs),
+        }]}],
+    }]}
+    return http("POST", f"{base}/v1/traces", payload)
+
+
+def send_logs(records, service=None, resource_attrs=None, base=COLLECTOR):
+    """records: list of dicts with body (str or dict), attributes, trace_id, span_id."""
+    now = time.time_ns()
+    log_records = []
+    for i, r in enumerate(records):
+        body = r["body"]
+        rec = {
+            "timeUnixNano": str(now + i), "severityNumber": 9, "severityText": "INFO",
+            "body": kv("b", body)["value"], "attributes": kvs(r.get("attributes")),
+        }
+        if r.get("trace_id"):
+            rec["traceId"], rec["spanId"] = r["trace_id"], r.get("span_id", SPAN_ID)
+        log_records.append(rec)
+    payload = {"resourceLogs": [{
+        "resource": resource(service or SERVICE, resource_attrs),
+        "scopeLogs": [{"scope": {"name": "obs-smoke"}, "logRecords": log_records}],
+    }]}
+    return http("POST", f"{base}/v1/logs", payload)
+
+
+def send_histogram(service=None, route=ROUTE, status=200, count=1, trace_id=None, at_ns=None,
+                   point_attrs=None, resource_attrs=None, base=COLLECTOR):
+    """One cumulative http.server.request.duration point. Rates need two points, so callers send it twice."""
+    at = at_ns or time.time_ns()
+    point = {
+        "startTimeUnixNano": str(at - 600_000_000_000), "timeUnixNano": str(at),
+        "count": str(count), "sum": 0.05 * count,
+        "explicitBounds": [0.05, 0.1, 0.5, 1.0],
+        "bucketCounts": [str(count), "0", "0", "0", "0"],
+        "attributes": kvs({"http.route": route, "http.response.status_code": status, **(point_attrs or {})}),
+    }
+    if trace_id:
+        point["exemplars"] = [{"timeUnixNano": str(at), "asDouble": 0.04, "traceId": trace_id, "spanId": SPAN_ID}]
+    payload = {"resourceMetrics": [{
+        "resource": resource(service or SERVICE, resource_attrs),
+        "scopeMetrics": [{"scope": {"name": "obs-smoke"}, "metrics": [{
+            "name": "http.server.request.duration", "unit": "s",
+            "histogram": {"aggregationTemporality": 2, "dataPoints": [point]},
+        }]}],
+    }]}
+    return http("POST", f"{base}/v1/metrics", payload)
+
+
+_signals_sent = False
+SMOKE_LOG = f"smoke log {RUN_ID} linked to its trace"
+
+
+def ensure_signals():
+    """Send the span, the log and the metric once per run, all on the same service and trace."""
+    global _signals_sent
+    if _signals_sent:
+        return []
+    _signals_sent = True
+    results = [
+        send_traces(span_attrs={"smoke.run": RUN_ID}),
+        send_logs([{"body": SMOKE_LOG, "trace_id": TRACE_ID, "attributes": {"smoke.run": RUN_ID}}]),
+    ]
+    now = time.time_ns()
+    for status in (200, 500):
+        # Two points per series: the first 30 s back, the second now (the exemplar rides on the 200 series).
+        results.append(send_histogram(status=status, count=1, at_ns=now - 30_000_000_000))
+        results.append(send_histogram(status=status, count=3, at_ns=now, trace_id=TRACE_ID if status == 200 else None))
+    return results
+
+
+def prom_query(expr):
+    status, body = get_json(f"{PROM}/api/v1/query?" + urllib.parse.urlencode({"query": expr}))
+    return (body or {}).get("data", {}).get("result", [])
+
+
+def loki_query(expr, limit=100):
+    now = time.time_ns()
+    qs = urllib.parse.urlencode({"query": expr, "start": now - 3_600_000_000_000, "end": now + 60_000_000_000,
+                                 "limit": limit, "direction": "forward"})
+    _, body = get_json(f"{LOKI}/loki/api/v1/query_range?{qs}")
+    return (body or {}).get("data", {}).get("result", [])
+
+
+def loki_lines(expr):
+    """Flat list of (line, labels, structured_metadata) for a LogQL stream selector."""
+    out = []
+    for stream in loki_query(expr):
+        for value in stream["values"]:
+            meta = value[2].get("structuredMetadata", value[2]) if len(value) > 2 else {}
+            out.append((value[1], stream["stream"], meta))
+    return out
+
+
+def tempo_trace(trace_id):
+    status, body = http("GET", f"{TEMPO}/api/traces/{trace_id}", headers={"Accept": "application/json"})
+    return json.loads(body) if status == 200 else None
+
+
+# ---------------------------------------------------------------------------
+# signals
+# ---------------------------------------------------------------------------
+
+def collector_pipelines():
+    """{pipeline: [processors]} read from the Collector config (flow-style lists), without a YAML library."""
+    text = COLLECTOR_CONFIG.read_text()
+    service = text.split("\nservice:", 1)[1]
+    pipes = {}
+    for m in re.finditer(r"^    (\w+):\n(?:      \w+: .*\n)*?      processors: \[(.*?)\]", service, re.M):
+        pipes[m.group(1)] = [p.strip() for p in m.group(2).split(",")]
+    return pipes
+
+
+def section_signals(args):
+    results = ensure_signals()
+    check(all(s == 200 for s, _ in results), "OBS-13", "the Collector accepts OTLP/HTTP on 127.0.0.1:4318",
+          f"statuses: {[s for s, _ in results]}")
+
+    trace = wait_for(lambda: tempo_trace(TRACE_ID), timeout=30)
+    spans = [s for rs in (trace or {}).get("batches", []) for ss in rs.get("scopeSpans", []) for s in ss.get("spans", [])]
+    check(any(s.get("spanId") for s in spans), "OBS-14", "Tempo returns the span by trace_id", f"trace_id={TRACE_ID}")
+
+    line = wait_for(lambda: next((x for x in loki_lines(f'{{service_name="{SERVICE}"}}') if x[0] == SMOKE_LOG), None), timeout=30)
+    check(line is not None, "OBS-15", f'Loki returns the log for {{service_name="{SERVICE}"}}')
+
+    series = wait_for(lambda: prom_query(f'http_server_request_duration_seconds_count{{job="{SERVICE}"}}'), timeout=30)
+    check(bool(series), "OBS-16", f'Prometheus returns http_server_request_duration_seconds_count{{job="{SERVICE}"}}')
+
+    def exemplar_trace_ids():
+        now = time.time()
+        qs = urllib.parse.urlencode({"query": f'http_server_request_duration_seconds_bucket{{job="{SERVICE}"}}',
+                                     "start": now - 3600, "end": now + 60})
+        _, body = get_json(f"{PROM}/api/v1/query_exemplars?{qs}")
+        return {e["labels"].get("trace_id") for r in (body or {}).get("data", []) for e in r.get("exemplars", [])}
+
+    ids = wait_for(exemplar_trace_ids, timeout=30)
+    check(TRACE_ID in (ids or set()), "OBS-18", "Prometheus query_exemplars returns the trace_id", f"got {ids}")
+
+    pipes = collector_pipelines()
+    ok = bool(pipes) and all(p[0] == "memory_limiter" and p[-1] == "batch" for p in pipes.values())
+    check(ok, "OBS-32", "every pipeline starts with memory_limiter and ends with batch", f"pipelines: {pipes}")
+    check(len(pipes) == 3, "OBS-32", "the Collector has traces, metrics and logs pipelines", f"pipelines: {sorted(pipes)}")
+
+
 SECTIONS = {
     "ready": section_ready,
+    "signals": section_signals,
 }
 
 

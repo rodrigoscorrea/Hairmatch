@@ -32,6 +32,35 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.164.0
+    container_name: hairmatch_obs_otel_collector
+    command: --config=/etc/otelcol/config.yaml
+    # Root, so it can write the disk queue volume (and, later, read docker.sock and the host filesystem).
+    user: "0:0"
+    # memory_limiter stops at 200 MiB; this is the hard ceiling above it.
+    mem_limit: 300m
+    ports:
+      - "127.0.0.1:4318:4318"
+    environment:
+      # Local defaults live here, not in config.yaml: Compose treats an empty variable as unset, so an
+      # empty OBS_* in docker/.env still lands on the local backends.
+      OBS_TRACES_ENDPOINT: ${OBS_TRACES_ENDPOINT:-http://tempo:4318/v1/traces}
+      OBS_METRICS_ENDPOINT: ${OBS_METRICS_ENDPOINT:-http://prometheus:9090/api/v1/otlp/v1/metrics}
+      OBS_LOGS_ENDPOINT: ${OBS_LOGS_ENDPOINT:-http://loki:3100/otlp/v1/logs}
+      OBS_OTLP_AUTH_HEADER: ${OBS_OTLP_AUTH_HEADER:-}
+    volumes:
+      - ${OBS_DIR:-.}/otel/config.yaml:/etc/otelcol/config.yaml:ro
+      - otel_queue:/var/lib/otelcol/queue
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
   tempo:
     image: grafana/tempo:2.10.10
     container_name: hairmatch_obs_tempo
@@ -92,3 +121,5 @@ volumes:
     name: hairmatch_obs_prometheus
   pyroscope_data:
     name: hairmatch_obs_pyroscope
+  otel_queue:
+    name: hairmatch_obs_otel_queue

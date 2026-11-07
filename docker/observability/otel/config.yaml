@@ -1,0 +1,55 @@
+# OTel Collector: the single entry point for telemetry. The same file serves the local stack and Grafana Cloud;
+# only the OBS_* environment variables change the destination (the compose file sets the local defaults).
+extensions:
+  # Keeps the exporter queue on disk, so a restart or a long outage does not lose queued data.
+  file_storage:
+    directory: /var/lib/otelcol/queue
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Must stay first in every pipeline: it refuses new data before the process hits the container limit.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+    spike_limit_mib: 50
+  # Must stay last in every pipeline.
+  batch: {}
+
+exporters:
+  # One exporter, one endpoint per signal. Grafana Cloud's gateway and the local backends use different paths.
+  otlphttp:
+    traces_endpoint: ${env:OBS_TRACES_ENDPOINT}
+    metrics_endpoint: ${env:OBS_METRICS_ENDPOINT}
+    logs_endpoint: ${env:OBS_LOGS_ENDPOINT}
+    headers:
+      Authorization: ${env:OBS_OTLP_AUTH_HEADER}
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp]

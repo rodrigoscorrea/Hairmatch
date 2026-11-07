@@ -282,12 +282,12 @@ Acrescentar ao smoke a seção `signals`. Ela manda um span, um log com o mesmo 
 - Skill: NONE
 
 **Done when**:
-- [ ] As checagens da seção `signals` passam: o span no Tempo, o log no Loki por `service_name`, a série `_count` com `job` e o exemplar em `query_exemplars`, cada uma em até 30 s.
-- [ ] O smoke confere no `config.yaml` (parse do YAML) a ordem `memory_limiter` primeiro e `batch` por último em toda pipeline (OBS-32).
-- [ ] Se o Prometheus 3.15 não gravar exemplars vindos de OTLP, a task para e leva a decisão ao usuário, em vez de enfraquecer a OBS-18.
-- [ ] O destino local vale com as `OBS_*` ausentes (stack sozinha) e com as `OBS_*` definidas e vazias (`OBS_TRACES_ENDPOINT= … up -d`). Os padrões ficam na interpolação do Compose, como manda o design.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] As checagens da seção `signals` passam: o span no Tempo, o log no Loki por `service_name`, a série `_count` com `job` e o exemplar em `query_exemplars`, cada uma em até 30 s.
+- [x] O smoke confere no `config.yaml` (parse do YAML) a ordem `memory_limiter` primeiro e `batch` por último em toda pipeline (OBS-32).
+- [x] Se o Prometheus 3.15 não gravar exemplars vindos de OTLP, a task para e leva a decisão ao usuário, em vez de enfraquecer a OBS-18.
+- [x] O destino local vale com as `OBS_*` ausentes (stack sozinha) e com as `OBS_*` definidas e vazias (`OBS_TRACES_ENDPOINT= … up -d`). Os padrões ficam na interpolação do Compose, como manda o design.
+- [x] Gate check passes: Full.
+- [x] Test count: 19 `PASS` do smoke (12 de `ready` + 7 de `signals`) e 10 do lint. Fatos verificados: o Prometheus 3.15.1 grava exemplars vindos de OTLP (OBS-18 passa); o destino local vale com as `OBS_*` ausentes e com as quatro definidas e vazias (o Compose resolve as duas formas para o mesmo ambiente e não recria o container).
 
 **Tests**: integration
 **Gate**: full
