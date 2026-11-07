@@ -635,11 +635,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] 200 `{"status": "ok"}`; 503 problem+json `service-unavailable` com a conexão quebrada
-- [ ] Sem sessão e sem throttle
-- [ ] POST responde 405 com `Allow` contendo GET
-- [ ] Sem span e sem ponto de métrica HTTP
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] 200 `{"status": "ok"}`; 503 problem+json `service-unavailable` com a conexão quebrada
+- [x] Sem sessão e sem throttle
+- [x] POST responde 405 com `Allow` contendo GET
+- [x] Sem span e sem ponto de métrica HTTP
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
@@ -669,9 +669,9 @@ T30 → T31 → T32
 
 ---
 
-### T24: Rota RT-100 na tabela de rotas
+### T24: Rota RT-105 na tabela de rotas
 
-**What**: Rota RT-100 na tabela de rotas.
+**What**: Rota RT-105 na tabela de rotas.
 **Where**: `backend/hairmatch/test_routes.py`
 **Depends on**: T23
 **Reuses**: `ROUTE_TABLE`
@@ -684,7 +684,7 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `GET health` no `ROUTE_TABLE` e RT-100 no spec `api-restful-routes`
+- [ ] `GET health` no `ROUTE_TABLE` e RT-105 no spec `api-restful-routes`
 - [ ] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration

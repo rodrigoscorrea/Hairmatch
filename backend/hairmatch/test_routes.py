@@ -81,13 +81,14 @@ ROUTE_TABLE = {
     ('GET', 'users/me/alerts'),                                   # RT-102
     ('PATCH', 'users/me/alerts'),                                 # RT-103
     ('PATCH', 'users/me/alerts/{id}'),                            # RT-104
+    ('GET', 'health'),                                            # RT-105
 }
 
 # RT-54: the only singular or non-plural segments the table allows.
 SINGULAR_SEGMENTS = {
     'agenda', 'home', 'search', 'me', 'password', 'profile-picture', 'session', 'chatbot', 'webhook',
     'auth', 'login', 'logout', 'refresh', 'google',
-    'description-drafts', 'available-slots', 'postal-codes',
+    'description-drafts', 'available-slots', 'postal-codes', 'health',
 }
 
 

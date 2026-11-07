@@ -66,7 +66,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | Rótulo `source` do CEP | `cache`, `viacep`, `brasilapi`, `not_found` ou `unavailable`. | O `none` do estudo junta dois casos com ações diferentes: o CEP que não existe e os dois provedores fora. | n |
 | Rótulo `reason` da sessão recusada | `missing` (sem cookie), `expired`, `invalid` (assinatura, emissor ou formato) e `unavailable` (JWKS do Cognito fora). | Uma onda de `invalid` aponta rotação de chave. Uma de `expired` aponta o refresh do app. | n |
 | Rótulo `feature` do Gemini | `profile` (`hairdresser_profile_ai_completion`) e `chatbot` (as três chamadas do chatbot). | O chatbot está deprecado, mas ainda chama o Gemini e gasta tokens. | n |
-| `GET /api/health` | Anônima e sem throttle. Checa só o Postgres (`SELECT 1`). Fica fora da instrumentação. O 503 usa o slug novo `service-unavailable`. A rota vira RT-100. | A issue pede "checa o Postgres" e "excluído da instrumentação". O Synthetic Monitoring chama a rota a cada minuto. Nenhum slug do catálogo (AD-006) descreve "o serviço não está pronto". | n |
+| `GET /api/health` | Anônima e sem throttle. Checa só o Postgres (`SELECT 1`). Fica fora da instrumentação. O 503 usa o slug novo `service-unavailable`. A rota vira RT-105. | A issue pede "checa o Postgres" e "excluído da instrumentação". O Synthetic Monitoring chama a rota a cada minuto. Nenhum slug do catálogo (AD-006) descreve "o serviço não está pronto". | n |
 | Validação de corpo × busca do pai (L-019) | N/A para a única rota nova. | `GET /api/health` não tem corpo nem recurso pai. | n |
 | Gerador do `traceparent` no app | Na web, `crypto.getRandomValues`. No Android, um gerador que não exige pacote nativo novo. | Um ID de trace não é segredo. Evitar o `expo-crypto` dispensa rebuild do Android. O Hermes não garante `crypto.getRandomValues`. | n |
 | Testes dos modos de Collector fora do ar | TEL-09 a TEL-11 rodam cada modo num processo separado (um subprocesso do servidor ou do Python por modo), e não dentro do processo do test runner. | Os providers globais e a inserção do middleware do Django não voltam atrás dentro de um processo. Com TEL-04, uma segunda inicialização é no-op. | n |
@@ -218,7 +218,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 3. **TEL-63** The rota `GET /api/health` SHALL responder sem sessão e sem throttle.
 4. **TEL-64** The resposta de `GET /api/health` SHALL não depender do Collector, da AWS nem de provedor externo.
 5. **TEL-65** IF a rota recebe um método diferente de `GET`, `HEAD` ou `OPTIONS` THEN the backend SHALL responder 405 `method-not-allowed`, com `GET` no header `Allow`.
-6. **TEL-66** The rota SHALL entrar como RT-100 na Route Table do spec `api-restful-routes` e no `ROUTE_TABLE` de `hairmatch/test_routes.py`.
+6. **TEL-66** The rota SHALL entrar como RT-105 na Route Table do spec `api-restful-routes` e no `ROUTE_TABLE` de `hairmatch/test_routes.py`.
 7. **TEL-67** The slug `service-unavailable` (503, `Service unavailable`) SHALL entrar no catálogo do spec `api-problem-details`, no `CATALOG` de `hairmatch/problems.py` e no catálogo do app (`frontend-mobile/utils/api-problem.ts`).
 
 **Independent Test**: chamar `GET /api/health` com o banco de pé e com a conexão quebrada no teste. Rodar `test_routes.py`.
@@ -311,7 +311,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-31 | P1: Requisição vira trace | Execute | Done |
 | TEL-32 | P1: Requisição vira trace | Execute | Done |
 | TEL-33 | P1: Requisição vira trace | Execute | Done |
-| TEL-34 | P1: Requisição vira trace | Specify | Pending |
+| TEL-34 | P1: Requisição vira trace | Execute | Done |
 | TEL-35 | P1: Requisição vira trace | Execute | Done |
 | TEL-36 | P1: Logs em JSON | Execute | Done |
 | TEL-37 | P1: Logs em JSON | Execute | Done |
@@ -338,11 +338,11 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-58 | P1: Métricas de negócio | Execute | Done |
 | TEL-59 | P1: Métricas de negócio | Execute | Done |
 | TEL-60 | P1: Métricas de negócio | Execute | Done |
-| TEL-61 | P2: Rota de saúde | Specify | Pending |
-| TEL-62 | P2: Rota de saúde | Specify | Pending |
-| TEL-63 | P2: Rota de saúde | Specify | Pending |
-| TEL-64 | P2: Rota de saúde | Specify | Pending |
-| TEL-65 | P2: Rota de saúde | Specify | Pending |
+| TEL-61 | P2: Rota de saúde | Execute | Done |
+| TEL-62 | P2: Rota de saúde | Execute | Done |
+| TEL-63 | P2: Rota de saúde | Execute | Done |
+| TEL-64 | P2: Rota de saúde | Execute | Done |
+| TEL-65 | P2: Rota de saúde | Execute | Done |
 | TEL-66 | P2: Rota de saúde | Specify | Pending |
 | TEL-67 | P2: Rota de saúde | Execute | Done |
 | TEL-68 | P2: App propaga o trace | Specify | Pending |

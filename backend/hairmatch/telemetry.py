@@ -245,6 +245,23 @@ class GeminiCall:
 
 
 @contextmanager
+def untraced():
+    """
+    No span for what runs inside: a probe (the health check) is not a request, and its query would otherwise
+    start a trace of one span every few seconds. Without the instrumentation package it changes nothing.
+    """
+    try:
+        from opentelemetry.instrumentation.utils import suppress_instrumentation
+    except Exception:
+        suppress_instrumentation = None
+    if suppress_instrumentation is None:
+        yield
+        return
+    with suppress_instrumentation():
+        yield
+
+
+@contextmanager
 def gemini_call(feature, model):
     """
     Span `gemini generate_content` and the `ai.requests` counter around one call to Gemini. The prompt and
