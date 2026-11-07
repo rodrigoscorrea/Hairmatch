@@ -443,8 +443,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `auth.rejections` com `missing`, `expired`, `invalid` e `unavailable`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `auth.rejections` com `missing`, `expired`, `invalid` e `unavailable`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick

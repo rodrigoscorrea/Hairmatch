@@ -5,6 +5,7 @@ import jwt
 from django.conf import settings
 from jwt.algorithms import RSAAlgorithm
 
+from hairmatch import telemetry
 from hairmatch.problems import problem_response
 
 from .cognito import CognitoUnavailable, get_cognito
@@ -37,29 +38,36 @@ def authenticate_request(request):
 
 def authenticate_token(token):
     """Same as authenticate_request, for a token that did not come from the cookie."""
+    return _authenticate(token)[0]
+
+
+def _authenticate(token):
+    """(SessionUser, None) or (None, reason): `missing`, `expired` (a signed session past its time) or `invalid`."""
     if not token:
-        return None
+        return None, 'missing'
     try:
         header = jwt.get_unverified_header(token)
         claims = jwt.decode(token, options={'verify_signature': False})
     except jwt.InvalidTokenError:
-        return None
+        return None, 'invalid'
 
     issuer = claims.get('iss')
     if issuer == SESSION_ISSUER:
         return _authenticate_google(token, header)
     if isinstance(issuer, str) and issuer == get_cognito().issuer:
         return _authenticate_cognito(token, header)
-    return None
+    return None, 'invalid'
 
 
 def authenticated_user(request):
     """Returns (SessionUser, None) or (None, problem response) with the 401/503 to send back."""
     try:
-        session = authenticate_request(request)
+        session, reason = _authenticate(request.COOKIES.get('jwt'))
     except CognitoUnavailable:
+        telemetry.count_auth_rejection('unavailable')
         return None, problem_response(request, 'auth-unavailable', AUTH_UNAVAILABLE_DETAIL)
     if session is None:
+        telemetry.count_auth_rejection(reason)
         return None, problem_response(request, 'invalid-session', INVALID_SESSION_DETAIL)
     return session, None
 
@@ -91,10 +99,10 @@ def _authenticated_profile(request, model, slug, detail):
 
 def _authenticate_cognito(token, header):
     if header.get('alg') != 'RS256':
-        return None
+        return None, 'invalid'
     key = _signing_key(header.get('kid'))
     if key is None:
-        return None
+        return None, 'invalid'
     cognito = get_cognito()
     try:
         claims = jwt.decode(
@@ -104,17 +112,20 @@ def _authenticate_cognito(token, header):
             issuer=cognito.issuer,
             options={'require': ['exp', 'iss', 'sub', 'token_use', 'client_id']},
         )
+    except jwt.ExpiredSignatureError:
+        # The signature is checked before the expiry, so only a token we signed or Cognito signed gets here.
+        return None, 'expired'
     except jwt.InvalidTokenError:
-        return None
+        return None, 'invalid'
     if claims['token_use'] != 'access' or claims['client_id'] != cognito.client_id:
-        return None
+        return None, 'invalid'
     user = User.objects.filter(cognito_sub=claims['sub'], is_active=True).first()
-    return SessionUser(user, 'cognito', token) if user else None
+    return (SessionUser(user, 'cognito', token), None) if user else (None, 'invalid')
 
 
 def _authenticate_google(token, header):
     if header.get('alg') != 'HS256':
-        return None
+        return None, 'invalid'
     try:
         claims = jwt.decode(
             token,
@@ -123,12 +134,14 @@ def _authenticate_google(token, header):
             issuer=SESSION_ISSUER,
             options={'require': ['exp', 'iss', 'token_use', 'id']},
         )
+    except jwt.ExpiredSignatureError:
+        return None, 'expired'
     except jwt.InvalidTokenError:
-        return None
+        return None, 'invalid'
     if claims['token_use'] != 'session' or not isinstance(claims['id'], int):
-        return None
+        return None, 'invalid'
     user = User.objects.filter(id=claims['id'], is_active=True).first()
-    return SessionUser(user, 'google', token) if user else None
+    return (SessionUser(user, 'google', token), None) if user else (None, 'invalid')
 
 
 def _signing_key(kid):
