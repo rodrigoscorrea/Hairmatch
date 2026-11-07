@@ -101,6 +101,14 @@ def section_ready(args):
           "Loki limits_config.retention_period is 7 days", f"got {m.group(1) if m else None}")
     check("retention_enabled: true" in cfg, "OBS-11", "Loki compactor has retention enabled")
 
+    wait_ready("Tempo", f"{TEMPO}/ready", "OBS-11")
+    # Tempo also prints a 336h default for its unused backend_scheduler/backend_worker; only the compactor counts.
+    _, cfg = http("GET", f"{TEMPO}/status/config")
+    compactor = re.search(r"^compactor:\n(.*?)(?=^\S)", cfg, re.M | re.S)
+    m = re.search(r"^\s+block_retention: (\S+)", compactor.group(1), re.M) if compactor else None
+    check(m is not None and m.group(1) == "168h0m0s", "OBS-11", "Tempo compactor block_retention is 168h",
+          f"got {m.group(1) if m else None}")
+
 
 SECTIONS = {
     "ready": section_ready,

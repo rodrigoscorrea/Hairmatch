@@ -32,6 +32,20 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  tempo:
+    image: grafana/tempo:2.10.10
+    container_name: hairmatch_obs_tempo
+    command: -config.file=/etc/tempo/config.yaml
+    ports:
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - ${OBS_DIR:-.}/tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/var/tempo
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
 networks:
   # Standalone this is observability_app_network; combined it is the app's hairmatch_app_network.
   app_network: {}
@@ -39,3 +53,5 @@ networks:
 volumes:
   loki_data:
     name: hairmatch_obs_loki
+  tempo_data:
+    name: hairmatch_obs_tempo

@@ -194,9 +194,9 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 - Skill: NONE
 
 **Done when**:
-- [ ] `smoke.py --only ready` passa para o Tempo, e `GET /status/config` mostra `block_retention: 168h`.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] `smoke.py --only ready` passa para o Tempo, e `GET /status/config` mostra `block_retention: 168h`.
+- [x] Gate check passes: Full.
+- [x] Test count: 5 `PASS` do `smoke.py --only ready` (3 do Loki + 2 do Tempo) e 10 do lint. O `/status/config` do Tempo também imprime 336h para o `backend_scheduler` e o `backend_worker`, que não são usados; o smoke lê só a seção `compactor`.
 
 **Tests**: integration
 **Gate**: full
