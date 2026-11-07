@@ -1,3 +1,4 @@
+import logging
 import requests
 import json
 import re
@@ -6,10 +7,16 @@ from datetime import datetime, date, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from hairmatch import telemetry
 from users.models import User
 from users.serializers import UserFullInfoSerializer
 from .prompts import Prompts
 from .templates import Templates
+
+logger = logging.getLogger(__name__)
+
+GEMINI_MODEL = 'gemini-2.0-flash'
+
 
 class AiUtils():
     @staticmethod
@@ -23,7 +30,7 @@ class AiUtils():
             extraction_prompt = Prompts.EXTRACTION_PROMPT
             
             extraction_model = genai.GenerativeModel(
-                'gemini-2.0-flash',
+                GEMINI_MODEL,
                 system_instruction=extraction_prompt
             )
             
@@ -34,9 +41,11 @@ class AiUtils():
                     for part in message.parts:
                         conversation_text += f"{part.text}\n"
             
-            response = extraction_model.generate_content(
-                f"Conversa para análise:\n{conversation_text}"
-            )
+            with telemetry.gemini_call('chatbot', GEMINI_MODEL) as call:
+                response = extraction_model.generate_content(
+                    f"Conversa para análise:\n{conversation_text}"
+                )
+                call.record_usage(response)
             
             # Parse the response to extract preferences
             preferences = []
@@ -50,7 +59,8 @@ class AiUtils():
             return preferences[:10]  # Limit to 10 preferences max
             
         except Exception as e:
-            print(f"Error extracting preferences: {e}")
+            # Only the type: the exception text can quote the conversation.
+            logger.warning('preference extraction failed: %s', type(e).__name__)
             return []
 
     @staticmethod
@@ -89,7 +99,7 @@ class AiUtils():
             
             matching_preferences = Preferences.objects.filter(preference_queries)
             if not matching_preferences.exists():
-                print("No matching preferences found, returning top-rated hairdressers")
+                logger.info('no preference matched, offering the top-rated hairdressers')
                 return UserFullInfoSerializer(
                     User.objects.filter(role='hairdresser', is_active=True).order_by('-rating')[:limit], 
                     many=True
@@ -115,7 +125,7 @@ class AiUtils():
     def create_gemini_model_for_preference_collection():
         """Create Gemini model for collecting user preferences"""
         return genai.GenerativeModel(
-            'gemini-2.0-flash',
+            GEMINI_MODEL,
             system_instruction=Prompts.PREFERENCE_COLLECTION_PROMPT,
             generation_config={
                 "temperature": 0.7,
@@ -132,7 +142,7 @@ class AiUtils():
         """
 
         return genai.GenerativeModel(
-            'gemini-2.0-flash',
+            GEMINI_MODEL,
             system_instruction=system_instruction,
             generation_config={
                 "temperature": 0.65,
@@ -153,7 +163,8 @@ class AiUtils():
             response.raise_for_status()
 
         except requests.exceptions.RequestException as e:
-            print(f"Error sending message via Evolution API: {e}")
+            # Only the type: the text of the error carries the URL and the number it was sent to.
+            logger.warning('sending a WhatsApp message failed: %s', type(e).__name__)
 
     @staticmethod
     def format_hairdresser(text):
@@ -191,10 +202,10 @@ class AiUtils():
             return UserFullInfoSerializer(hairdresser).data
             
         except ObjectDoesNotExist:
-            print(f"No hairdresser found with ID: {hairdresser_id}")
+            logger.info('hairdresser %s not found', hairdresser_id)
             return None
         except Exception as e:
-            print(f"An error occurred while fetching the hairdresser: {e}")
+            logger.warning('fetching hairdresser %s failed: %s', hairdresser_id, type(e).__name__)
             return None
     
     @staticmethod

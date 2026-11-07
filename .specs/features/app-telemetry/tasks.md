@@ -585,9 +585,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Chamadas do Gemini com `feature=chatbot`
-- [ ] `print()` trocado por log com evento, IDs e tipo da exceção
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Chamadas do Gemini com `feature=chatbot`
+- [x] `print()` trocado por log com evento, IDs e tipo da exceção
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
