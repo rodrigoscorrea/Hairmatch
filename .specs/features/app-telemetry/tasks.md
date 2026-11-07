@@ -809,11 +809,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Variável `true`: toda requisição leva `traceparent`; ausente ou outro valor: nenhum
-- [ ] Refresh (401, refresh, nova tentativa) leva três `traceparent` distintos
-- [ ] `.env.example` lista `EXPO_PUBLIC_TRACE_PROPAGATION` vazia
-- [ ] `npx tsc --noEmit` sem erro novo
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Variável `true`: toda requisição leva `traceparent`; ausente ou outro valor: nenhum
+- [x] Refresh (401, refresh, nova tentativa) leva três `traceparent` distintos
+- [x] `.env.example` lista `EXPO_PUBLIC_TRACE_PROPAGATION` vazia
+- [x] `npx tsc --noEmit` sem erro novo
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick

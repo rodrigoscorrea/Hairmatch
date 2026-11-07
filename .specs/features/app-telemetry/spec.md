@@ -345,24 +345,24 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-65 | P2: Rota de saúde | Execute | Done |
 | TEL-66 | P2: Rota de saúde | Execute | Done |
 | TEL-67 | P2: Rota de saúde | Execute | Done |
-| TEL-68 | P2: App propaga o trace | Specify | Pending |
+| TEL-68 | P2: App propaga o trace | Execute | Done |
 | TEL-69 | P2: App propaga o trace | Execute | Done |
 | TEL-70 | P2: App propaga o trace | Execute | Done |
-| TEL-71 | P2: App propaga o trace | Specify | Pending |
+| TEL-71 | P2: App propaga o trace | Execute | Done |
 | TEL-72 | P2: App propaga o trace | Execute | Done |
 | TEL-73 | P2: App propaga o trace | Execute | Done |
 | TEL-74 | P2: App propaga o trace | Execute | Done |
 | TEL-75 | P2: App propaga o trace | Execute | Done |
-| TEL-76 | P2: App propaga o trace | Specify | Pending |
+| TEL-76 | P2: App propaga o trace | Execute | Done |
 | TEL-77 | P2: Configuração e documentação | Specify | Pending |
 | TEL-78 | P2: Configuração e documentação | Specify | Pending |
-| TEL-79 | P2: Configuração e documentação | Specify | Pending |
+| TEL-79 | P2: Configuração e documentação | Execute | Done |
 | TEL-80 | P2: Configuração e documentação | Execute | Done |
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |
 | TEL-82 | Edge Cases | Execute | Done |
 | TEL-83 | Edge Cases | Execute | Done |
 | TEL-84 | Edge Cases | Execute | Done |
-| TEL-85 | Edge Cases | Specify | Pending |
+| TEL-85 | Edge Cases | Execute | Done |
 | TEL-86 | P1: Sem dado pessoal | Execute | Done |
 
 **Coverage:** 86 total, nenhum mapeado para tasks ainda (o `tasks.md` sai depois do Design).
