@@ -419,9 +419,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `problems` soma 1 com `slug` e `status` da resposta
-- [ ] Slug fora do catálogo não gera rótulo novo
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `problems` soma 1 com `slug` e `status` da resposta
+- [x] Slug fora do catálogo não gera rótulo novo
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
