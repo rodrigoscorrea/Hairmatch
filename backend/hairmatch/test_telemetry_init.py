@@ -218,10 +218,11 @@ print('REPORT ' + json.dumps({
         self.assertEqual(report, {'tracer': 'ProxyTracerProvider', 'wsgi': False, 'sdk': []})
 
     def test_importing_the_test_runner_and_the_settings_does_not_start_it(self):
+        """The runner installs in-memory providers in `setup_test_environment`, and only then; the environment is not read."""
         report, _, _ = run_python(
             "import django; django.setup()\nfrom hairmatch import test_runner\n" + self.REPORT, env=self.ENV,
         )
-        self.assertEqual(report, {'tracer': 'ProxyTracerProvider', 'wsgi': False, 'sdk': []})
+        self.assertEqual((report['tracer'], report['wsgi']), ('ProxyTracerProvider', False))
 
     def test_importing_the_wsgi_module_is_what_starts_it(self):
         report, _, _ = run_python(

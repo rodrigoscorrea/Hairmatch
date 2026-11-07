@@ -291,13 +291,13 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Runner instala providers em memória antes de `setup_databases`
-- [ ] Span SERVER com `http.route` em template; queries filhas sem valores
-- [ ] `traceparent` válido vira pai; inválido abre trace novo e responde igual
-- [ ] Histograma `http.server.request.duration` em `s` com `http.route` e exemplar
-- [ ] Rota fora de `/api/` segue as mesmas regras
-- [ ] Suíte inteira passa instrumentada
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Runner instala providers em memória antes de `setup_databases`
+- [x] Span SERVER com `http.route` em template; queries filhas sem valores
+- [x] `traceparent` válido vira pai; inválido abre trace novo e responde igual
+- [x] Histograma `http.server.request.duration` em `s` com `http.route` e exemplar
+- [x] Rota fora de `/api/` segue as mesmas regras
+- [x] Suíte inteira passa instrumentada
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

@@ -293,12 +293,12 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-13 | P1: Não depende da telemetria | Execute | Done |
 | TEL-14 | P1: Não depende da telemetria | Execute | Done |
 | TEL-15 | P1: Não depende da telemetria | Execute | Done |
-| TEL-16 | P1: Requisição vira trace | Specify | Pending |
-| TEL-17 | P1: Requisição vira trace | Specify | Pending |
+| TEL-16 | P1: Requisição vira trace | Execute | Done |
+| TEL-17 | P1: Requisição vira trace | Execute | Done |
 | TEL-18 | P1: Requisição vira trace | Specify | Pending |
 | TEL-19 | P1: Requisição vira trace | Specify | Pending |
-| TEL-20 | P1: Requisição vira trace | Specify | Pending |
-| TEL-21 | P1: Requisição vira trace | Specify | Pending |
+| TEL-20 | P1: Requisição vira trace | Execute | Done |
+| TEL-21 | P1: Requisição vira trace | Execute | Done |
 | TEL-22 | P1: Requisição vira trace | Specify | Pending |
 | TEL-23 | P1: Requisição vira trace | Specify | Pending |
 | TEL-24 | P1: Requisição vira trace | Specify | Pending |
@@ -309,8 +309,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-29 | P1: Requisição vira trace | Execute | Done |
 | TEL-30 | P1: Requisição vira trace | Execute | Done |
 | TEL-31 | P1: Requisição vira trace | Execute | Done |
-| TEL-32 | P1: Requisição vira trace | Specify | Pending |
-| TEL-33 | P1: Requisição vira trace | Specify | Pending |
+| TEL-32 | P1: Requisição vira trace | Execute | Done |
+| TEL-33 | P1: Requisição vira trace | Execute | Done |
 | TEL-34 | P1: Requisição vira trace | Specify | Pending |
 | TEL-35 | P1: Requisição vira trace | Execute | Done |
 | TEL-36 | P1: Logs em JSON | Execute | Done |
@@ -360,7 +360,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-80 | P2: Configuração e documentação | Execute | Done |
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |
 | TEL-82 | Edge Cases | Execute | Done |
-| TEL-83 | Edge Cases | Specify | Pending |
+| TEL-83 | Edge Cases | Execute | Done |
 | TEL-84 | Edge Cases | Specify | Pending |
 | TEL-85 | Edge Cases | Specify | Pending |
 | TEL-86 | P1: Sem dado pessoal | Execute | Done |
