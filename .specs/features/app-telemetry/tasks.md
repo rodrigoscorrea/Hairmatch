@@ -783,11 +783,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Formato `00-<32 hex>-<16 hex>-01` em minúsculas, nunca todo zero, único por chamada
-- [ ] `telemetry.web.ts` com as mesmas exportações
-- [ ] Gerador quebrado não lança
-- [ ] Nenhuma dependência nativa nova
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Formato `00-<32 hex>-<16 hex>-01` em minúsculas, nunca todo zero, único por chamada
+- [x] `telemetry.web.ts` com as mesmas exportações
+- [x] Gerador quebrado não lança
+- [x] Nenhuma dependência nativa nova
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
