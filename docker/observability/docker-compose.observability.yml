@@ -73,6 +73,7 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
       - ${OBS_DIR:-.}/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${OBS_DIR:-.}/grafana/dashboards:/etc/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - loki

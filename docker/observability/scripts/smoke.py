@@ -532,6 +532,33 @@ def section_grafana(args):
     check(lines is not None and SMOKE_LOG in lines, "OBS-17", "the trace-to-logs query returns the log of the trace",
           f"query {logql!r} -> {lines}")
 
+    # OBS-40: the dashboard lives in the Hairmatch folder, with a service variable and three panels.
+    found = wait_for(lambda: [d for d in (get_json(f"{GRAFANA}/api/search?" + urllib.parse.urlencode({"query": "API"}))[1] or [])
+                              if d.get("title") == "API \u00b7 RED" and d.get("folderTitle") == "Hairmatch"], timeout=60)
+    check(bool(found), "OBS-40", 'dashboard "API · RED" is in the folder "Hairmatch"')
+    _, dash = get_json(f"{GRAFANA}/api/dashboards/uid/{found[0]['uid']}") if found else (0, None)
+    model = (dash or {}).get("dashboard", {})
+    variables = [v.get("name") for v in model.get("templating", {}).get("list", [])]
+    var_query = next((v["query"]["query"] for v in model.get("templating", {}).get("list", []) if v.get("name") == "service"), "")
+    check(variables == ["service"] and "label_values(" in var_query and ", job)" in var_query, "OBS-40",
+          "the dashboard has the variable service, with the values of job", f"variables {variables}, query {var_query!r}")
+    panels = model.get("panels", [])
+    exprs = [p["targets"][0]["expr"] for p in panels]
+    check(len(panels) == 3 and all("http_route" in e for e in exprs), "OBS-40",
+          "the dashboard has three panels, all by http_route", f"exprs {exprs}")
+    rate, errors, p95 = (exprs + ["", "", ""])[:3]
+    check(rate.startswith("sum by (http_route) (rate(http_server_request_duration_seconds_count")
+          and 'http_response_status_code=~"5.."' not in rate
+          and 'http_response_status_code=~"5.."' in errors
+          and p95.startswith("histogram_quantile(0.95"), "OBS-40",
+          "the panels are request rate, 5xx rate and p95 duration", f"exprs {exprs}")
+
+    # OBS-41: every panel query returns a series for the smoke service ($service replaced by the smoke service.name).
+    for panel in panels:
+        expr = panel["targets"][0]["expr"].replace("$service", SERVICE)
+        result = wait_for(lambda expr=expr: prom_query(expr), timeout=30)
+        check(bool(result), "OBS-41", f"panel {panel['title']!r} returns a series for {SERVICE}", f"expr {expr}")
+
 
 SECTIONS = {
     "ready": section_ready,

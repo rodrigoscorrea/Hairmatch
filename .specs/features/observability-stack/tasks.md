@@ -371,10 +371,10 @@ O `datasources.yaml` traz os quatro data sources com UIDs fixos, `editable: fals
 - Skill: NONE
 
 **Done when**:
-- [ ] O dashboard existe na pasta "Hairmatch", com a variável `service` e três painéis.
-- [ ] Cada uma das três consultas devolve ao menos uma série para o serviço do smoke.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] O dashboard existe na pasta "Hairmatch", com a variável `service` e três painéis.
+- [x] Cada uma das três consultas devolve ao menos uma série para o serviço do smoke.
+- [x] Gate check passes: Full.
+- [x] Test count: 104 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`, 19 de `grafana`) e 10 do lint. O ponto de 5xx e os dois pontos por série (para o `rate`) já saem de `ensure_signals`.
 
 **Tests**: integration
 **Gate**: full
