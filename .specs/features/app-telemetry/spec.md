@@ -291,7 +291,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-11 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-12 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-13 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-14 | P1: Não depende da telemetria | Specify | Pending |
+| TEL-14 | P1: Não depende da telemetria | Execute | Done |
 | TEL-15 | P1: Não depende da telemetria | Execute | Done |
 | TEL-16 | P1: Requisição vira trace | Specify | Pending |
 | TEL-17 | P1: Requisição vira trace | Specify | Pending |
@@ -352,7 +352,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-72 | P2: App propaga o trace | Specify | Pending |
 | TEL-73 | P2: App propaga o trace | Specify | Pending |
 | TEL-74 | P2: App propaga o trace | Specify | Pending |
-| TEL-75 | P2: App propaga o trace | Specify | Pending |
+| TEL-75 | P2: App propaga o trace | Execute | Done |
 | TEL-76 | P2: App propaga o trace | Specify | Pending |
 | TEL-77 | P2: Configuração e documentação | Specify | Pending |
 | TEL-78 | P2: Configuração e documentação | Specify | Pending |

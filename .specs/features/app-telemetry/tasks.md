@@ -183,11 +183,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Handler de stdout JSON com redação e contexto de trace no root (INFO)
-- [ ] Logger `opentelemetry` só no stdout, sem propagar
-- [ ] `django.server` no mesmo formato
-- [ ] `traceparent` em `CORS_ALLOW_HEADERS` e preflight com o header devolve 200
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Handler de stdout JSON com redação e contexto de trace no root (INFO)
+- [x] Logger `opentelemetry` só no stdout, sem propagar
+- [x] `django.server` no mesmo formato
+- [x] `traceparent` em `CORS_ALLOW_HEADERS` e preflight com o header devolve 200
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
