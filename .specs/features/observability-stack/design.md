@@ -123,10 +123,10 @@ O postgres-exporter (9187) e a porta interna de OTLP do Tempo (4318) não são p
 - **Processors** (a mesma ordem para qualquer destino):
   1. `memory_limiter`: `check_interval: 1s`, `limit_mib: 200`, `spike_limit_mib: 50`.
   2. `attributes/pii`: `delete` de `url.query`, `url.full`, `http.url` e `http.target`. Entra nas três pipelines.
-  3. `transform/pii`: só nas pipelines de logs e traces. Aplica as regras abaixo, na ordem:
+  3. `transform/pii`: nas três pipelines. Em logs e traces aplica as regras abaixo, na ordem; em métricas, só nos atributos de resource (que viram rótulos de `target_info`), porque os atributos do ponto são os rótulos de baixa cardinalidade da série e ficam fora da redação. Regras:
      - no corpo de log string (`where IsString(body)`);
      - nos valores do primeiro nível de um corpo de log map (`where IsMap(body)`, com `replace_all_patterns`);
-     - nos atributos de log, de span e de resource (`replace_all_patterns(attributes, "value", …)`).
+     - nos atributos de log, de span e de resource, inclusive o de métricas (`replace_all_patterns(attributes, "value", …)`).
   4. `batch`.
 - **Regras de redação** (RE2, sem lookaround):
 
@@ -338,6 +338,7 @@ N/A: não há modelo de dados. Os "contratos" são os nomes de métrica e de ró
 - **Grafana 13.2.5.** Instala os plugins dos data sources centrais em segundo plano na primeira subida, com acesso à internet. Nessa janela, o health do Prometheus responde `Plugin not registered`. O volume `hairmatch_obs_grafana` guarda os plugins. Os placeholders do `tracesToLogsV2` (`${__span.tags["service.name"]}` e `${__trace.traceId}`) funcionam, desde que o provisionamento os escape com `$$`.
 - **Faro no Alloy 1.21.3.** O payload segue as structs de `internal/component/faro/receiver/internal/payload/payload.go` (só `timestamp` é obrigatório). Log e exceção chegam ao Loki como linhas logfmt (`kind=log` e `kind=exception`), sem `service.name`, então a consulta usa `{service_name=~".+"} |= "<marcador>"`. O preflight de uma origem fora da lista não recebe `Access-Control-Allow-Origin`.
 - **Receivers de infra no 0.164.** O receiver se chama `host_metrics` (`hostmetrics` é um alias obsoleto). Com `api_version: "1.44"`, o `docker_stats` funciona com o Docker 29.1.3. A série de memória é `container_memory_usage_total_bytes{container_name=…}`, sem rótulo `job`, e o nome do container do Collector é `hairmatch_obs_otel_collector`.
+- **Revisão do Verifier (rodada 1).** A redação não cobria os atributos de resource das métricas (o valor aparecia em `target_info{pii_resource=…}`). O `transform/pii` agora também roda na pipeline de métricas, com `metric_statements` em `context: resource`. Os atributos de ponto de dados seguem fora. Sem a redação nesse ponto, a mutação derruba 10 checagens do smoke.
 - **Variável vazia.** As `OBS_*` definidas e vazias resolvem para o mesmo ambiente que as ausentes, e o Compose nem recria o container.
 
 > Decisão de projeto registrada como **AD-015** em `.specs/STATE.md`.

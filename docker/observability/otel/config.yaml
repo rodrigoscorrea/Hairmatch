@@ -50,9 +50,9 @@ processors:
       - {key: url.full, action: delete}
       - {key: http.url, action: delete}
       - {key: http.target, action: delete}
-  # Masks personal data in string values (OBS-22 to OBS-29). The rule order matters: the JWT first (it contains
-  # pieces that look like e-mail and numbers), the CNPJ before the CPF (so a 14-digit CNPJ is not cut at 11),
-  # and the phone last. Patterns are RE2; in OTTL a literal backslash is written twice.
+  # Masks personal data in string values (OBS-22 to OBS-29). Rule order follows the spec: JWT first (it contains
+  # pieces that look like e-mail and numbers), then e-mail, CNPJ, CPF and phone last. The \b anchors already keep
+  # the CPF pattern from matching inside a 14-digit CNPJ. Patterns are RE2; in OTTL a literal backslash is written twice.
   # Not covered on purpose (OBS-59): non-string values and maps nested inside a map body.
   # error_mode stays at the default (propagate): if a statement fails, the batch is dropped, not exported unredacted.
   transform/pii:
@@ -102,7 +102,16 @@ processors:
           - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
           - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
           - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
-
+    metric_statements:
+      - context: resource
+        statements:
+          # Resource attributes of metrics (they become target_info labels in Prometheus).
+          # Data point attributes are not masked: they are the low-cardinality labels of the series.
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
   # Must stay last in every pipeline.
   batch: {}
 
@@ -133,7 +142,7 @@ service:
       exporters: [otlp_http]
     metrics:
       receivers: [otlp, host_metrics, docker_stats, prometheus]
-      processors: [memory_limiter, attributes/pii, batch]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
       exporters: [otlp_http]
     logs:
       receivers: [otlp]

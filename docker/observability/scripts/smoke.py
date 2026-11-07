@@ -331,6 +331,16 @@ def section_signals(args):
     check(ok, "OBS-32", "every pipeline starts with memory_limiter and ends with batch", f"pipelines: {pipes}")
     check(len(pipes) == 3, "OBS-32", "the Collector has traces, metrics and logs pipelines", f"pipelines: {sorted(pipes)}")
 
+    # OBS-36: a bounded queue on disk and retries, so an unreachable destination cannot grow memory or kill the process.
+    exporter = COLLECTOR_CONFIG.read_text().split("\n  otlp_http:", 1)[1].split("\nservice:", 1)[0]
+    queue = re.search(r"sending_queue:\n((?:      .*\n)+)", exporter)
+    size = re.search(r"queue_size: (\d+)", queue.group(1)) if queue else None
+    check(bool(queue) and "enabled: true" in queue.group(1) and "storage: file_storage" in queue.group(1)
+          and size is not None and 0 < int(size.group(1)) <= 10000, "OBS-36",
+          "the exporter has an enabled sending_queue on file_storage with a bounded queue_size", f"queue: {queue and queue.group(1)}")
+    check(re.search(r"retry_on_failure:\n(?:      .*\n)*?      enabled: true", exporter) is not None, "OBS-36",
+          "the exporter retries on failure")
+
 
 # ---------------------------------------------------------------------------
 # redaction
@@ -389,6 +399,9 @@ def section_redaction(args):
         send_traces(service=RED_SERVICE, trace_id=uuid.uuid4().hex[:31] + format(i, "x"), span_id=uuid.uuid4().hex[:16],
                     name=f"case-{i}", span_attrs={"pii": text, "smoke.case": f"t{i}"},
                     resource_attrs={"pii.resource": text})
+    # Metric resource attributes (OBS-28): they end up as labels of target_info.
+    for i, (_, text, _, _) in enumerate(REDACTION_CASES):
+        send_histogram(service=f"{RED_SERVICE}-m{i}", resource_attrs={"pii.resource": text})
     # Non-string values are not redacted (OBS-59), and the URL keys are removed from log and span.
     url_attrs = {**{k: URL_VALUE for k in URL_KEYS}, "smoke.keep": "yes", "smoke.case": "url"}
     send_logs([{"body": "url keys case", "attributes": url_attrs}], service=RED_SERVICE)
@@ -426,6 +439,13 @@ def section_redaction(args):
         judge("OBS-29", f"map body {text!r}", msg, expected, forbidden)
         _, labels = logs.get(f"r{i}", (None, {}))
         judge("OBS-28", f"resource attribute {text!r}", labels.get("pii_resource"), expected, forbidden)
+
+    for i, (req, text, expected, forbidden) in enumerate(REDACTION_CASES):
+        def target_label(i=i):
+            res = prom_query(f'target_info{{job="{RED_SERVICE}-m{i}"}}')
+            return res[0]["metric"].get("pii_resource") if res else None
+        got = wait_for(target_label, timeout=30)
+        judge("OBS-28", f"metric resource attribute {text!r}", got, expected, forbidden)
 
     # Spans: look the traces up by their span name through the TraceQL search API.
     for i, (req, text, expected, forbidden) in enumerate(REDACTION_CASES):
@@ -479,8 +499,8 @@ def section_redaction(args):
     # OBS-31: redaction runs before the exporter, with the same processors whatever the destination.
     pipes = collector_pipelines()
     order = ["memory_limiter", "attributes/pii", "transform/pii", "batch"]
-    want = {"traces": order, "logs": order, "metrics": [p for p in order if p != "transform/pii"]}
-    check(pipes == want, "OBS-31", "attributes/pii and transform/pii run between memory_limiter and batch", f"pipelines: {pipes}")
+    want = {"traces": order, "logs": order, "metrics": order}
+    check(pipes == want, "OBS-31", "attributes/pii and transform/pii run between memory_limiter and batch, on every pipeline", f"pipelines: {pipes}")
 
 
 # ---------------------------------------------------------------------------
@@ -531,12 +551,13 @@ def section_grafana(args):
           "Prometheus exemplar trace_id opens in Tempo", f"got {dests}")
     fields = grafana_ds("loki").get("jsonData", {}).get("derivedFields", [])
     check(any(f.get("name") == "trace_id" and f.get("datasourceUid") == "tempo" and f.get("matcherRegex") == "trace_id"
-              and f.get("matcherType") == "label" for f in fields), "OBS-20",
+              and f.get("matcherType") == "label" and f.get("url") == "${__value.raw}" for f in fields), "OBS-20",
           "Loki derived field turns trace_id into a Tempo link", f"got {fields}")
     tempo_cfg = grafana_ds("tempo").get("jsonData", {}).get("tracesToLogsV2", {})
     query = tempo_cfg.get("query", "")
-    check(tempo_cfg.get("datasourceUid") == "loki" and "service_name" in query and "trace_id" in query, "OBS-19",
-          "Tempo trace-to-logs points at Loki, filtering by service_name and trace_id", f"got {tempo_cfg}")
+    exact = '{service_name="${__span.tags["service.name"]}"} | trace_id="${__trace.traceId}"'
+    check(tempo_cfg.get("datasourceUid") == "loki" and query == exact, "OBS-19",
+          "Tempo trace-to-logs points at Loki and filters by exactly service_name and trace_id", f"got {tempo_cfg}")
 
     # OBS-17: run the LogQL that Tempo generates, with the placeholders filled by the smoke span.
     logql = query.replace('${__span.tags["service.name"]}', SERVICE).replace("${__trace.traceId}", TRACE_ID)
@@ -550,6 +571,13 @@ def section_grafana(args):
     lines = wait_for(trace_logs, timeout=30)
     check(lines is not None and SMOKE_LOG in lines, "OBS-17", "the trace-to-logs query returns the log of the trace",
           f"query {logql!r} -> {lines}")
+    # The trace_id filter must select: the same service with another trace_id returns nothing.
+    other = query.replace('${__span.tags["service.name"]}', SERVICE).replace("${__trace.traceId}", "0" * 32)
+    now = time.time_ns()
+    qs = urllib.parse.urlencode({"query": other, "start": now - 3_600_000_000_000, "end": now + 60_000_000_000})
+    _, body = get_json(f"{GRAFANA}/api/datasources/proxy/uid/loki/loki/api/v1/query_range?{qs}")
+    check(body is not None and body.get("data", {}).get("result") == [], "OBS-17",
+          "the trace-to-logs query returns nothing for another trace_id", f"got {body}")
 
     # OBS-40: the dashboard lives in the Hairmatch folder, with a service variable and three panels.
     found = wait_for(lambda: [d for d in (get_json(f"{GRAFANA}/api/search?" + urllib.parse.urlencode({"query": "API"}))[1] or [])
@@ -636,12 +664,14 @@ COLLECTOR_CONTAINER = "hairmatch_obs_otel_collector"
 def section_infra(args):
     # OBS-45: host memory and disk, within 60 s of the stack coming up.
     for metric in ("system_memory_usage_bytes", "system_filesystem_usage_bytes"):
-        series = wait_for(lambda m=metric: prom_query(m), timeout=60, interval=3)
-        check(bool(series), "OBS-45", f"Prometheus has {metric}")
+        # timestamp() > time() - 75: a sample from the last scrape interval, not a leftover from an earlier run.
+        series = wait_for(lambda m=metric: prom_query(f"timestamp({m}) > time() - 75"), timeout=60, interval=3)
+        check(bool(series), "OBS-45", f"Prometheus has a fresh {metric}")
 
     # OBS-46: a memory series per container, labelled with the container name, the Collector's included.
     def container_names():
-        names = {r["metric"].get("container_name") for r in prom_query("container_memory_usage_total_bytes")}
+        names = {r["metric"].get("container_name")
+                 for r in prom_query("timestamp(container_memory_usage_total_bytes) > time() - 75")}
         return names if COLLECTOR_CONTAINER in names else None
     names = wait_for(container_names, timeout=60, interval=3)
     check(names is not None, "OBS-46", f"container_memory_usage_total_bytes{{container_name={COLLECTOR_CONTAINER!r}}} exists",
@@ -657,8 +687,8 @@ def section_infra(args):
     req = "OBS-43" if args.mode == "combined" else "OBS-44"
 
     def pg_up():
-        # The latest sample, polled until it shows the expected value (a stale one from the other mode differs).
-        res = prom_query('pg_up{job="postgres"}')
+        # The value of a sample from the last scrape interval, polled until it shows the expected value.
+        res = prom_query('(pg_up{job="postgres"} + 0) and on() (timestamp(pg_up{job="postgres"}) > time() - 75)')
         return float(res[0]["value"][1]) if res else None
     value = wait_for(lambda: pg_up() == want and want + 1, timeout=60, interval=3)
     check(value, req, f"Prometheus has pg_up == {int(want)} ({args.mode} mode)", f"pg_up is {pg_up()}")

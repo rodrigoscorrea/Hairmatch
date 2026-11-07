@@ -144,6 +144,7 @@ Depois de subir a stack do zero, o `smoke.py` leva alguns minutos, em boa parte 
 ## Limitações conhecidas
 
 - **Valores não string não são redigidos** (OBS-59). Um telefone enviado como inteiro passa. A #194 proíbe dado pessoal na origem, e a redação é a terceira camada de defesa.
+- **Atributos de ponto de dados das métricas não são redigidos.** Os atributos de resource das métricas são. Os de ponto viram os rótulos da série e devem ser de baixa cardinalidade (rota, status); nunca ponha dado pessoal neles.
 - **Mapas aninhados não são redigidos.** Num corpo de log map, só os valores string do primeiro nível passam pela redação.
 - **Falsos positivos.** Uma sequência de 10 a 14 dígitos numa string é redigida, mesmo quando não é dado pessoal (ID de conta da AWS num ARN, timestamp em ms). Redigir a mais é o lado seguro.
 - **Número de 11 dígitos sem máscara** vira `[cpf]`, seja CPF ou celular: os dois são indistinguíveis.
