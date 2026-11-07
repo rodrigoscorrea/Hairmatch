@@ -313,9 +313,161 @@ def section_signals(args):
     check(len(pipes) == 3, "OBS-32", "the Collector has traces, metrics and logs pipelines", f"pipelines: {sorted(pipes)}")
 
 
+# ---------------------------------------------------------------------------
+# redaction
+# ---------------------------------------------------------------------------
+
+# Exact inputs and outputs from the spec (reference table under the redaction stories).
+# (input, expected output, extra rule); the extra rule is a regex that must NOT appear in the stored value.
+REDACTION_CASES = [
+    ("OBS-22", "contato joao.silva@example.com", "contato [email]", None),
+    ("OBS-23", "token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl", "token [jwt]", None),
+    ("OBS-24", "cpf 123.456.789-09", "cpf [cpf]", r"123\.456\.789-09"),
+    ("OBS-25", "cnpj 12.345.678/0001-95", "cnpj [cnpj]", r"\d{3}"),
+    ("OBS-25", "cnpj 12345678000195", "cnpj [cnpj]", r"\d{3}"),
+    ("OBS-26", "tel +55 (92) 99123-4567", "tel [telefone]", None),
+    ("OBS-26", "tel (92) 99123-4567", "tel [telefone]", None),
+    ("OBS-27", "doc 12345678909", "doc [cpf]", r"\d{4}"),
+    # The label may be [email]; the requirement is only that no 4-digit run survives.
+    ("OBS-27", "jid 5592991234567@s.whatsapp.net", None, r"\d{4}"),
+    # Control: text without personal data must arrive untouched.
+    ("control", "pedido 42 ok", "pedido 42 ok", None),
+]
+URL_KEYS = ["url.query", "url.full", "http.url", "http.target"]
+URL_VALUE = "q=redaction-marker"
+RED_SERVICE = f"{SERVICE}-red"
+
+
+def attr_map(attrs):
+    """OTLP/JSON attribute list -> {key: python value}."""
+    out = {}
+    for a in attrs or []:
+        v = a["value"]
+        out[a["key"]] = v.get("stringValue", v.get("intValue", v.get("doubleValue", v.get("boolValue", v))))
+    return out
+
+
+def judge(req, label, got, expected, forbidden):
+    if expected is not None:
+        ok = got == expected
+        detail = f"got {got!r}, want {expected!r}"
+    else:
+        ok, detail = got is not None, f"got {got!r}"
+    if ok and forbidden and re.search(forbidden, got):
+        ok, detail = False, f"{got!r} still matches /{forbidden}/"
+    check(ok, req, f"{label}: " + (f"stored {got!r}" if expected is None else f"-> {expected!r}"), detail)
+
+
+def section_redaction(args):
+    # One request per case and place: string body + log attribute, map body, resource attribute, span.
+    for i, (_, text, _, _) in enumerate(REDACTION_CASES):
+        send_logs([
+            {"body": text, "attributes": {"smoke.case": f"s{i}", "pii": text}},
+            {"body": {"msg": text, "count": 7}, "attributes": {"smoke.case": f"m{i}"}},
+        ], service=RED_SERVICE)
+        send_logs([{"body": f"resource case {i}", "attributes": {"smoke.case": f"r{i}"}}],
+                  service=RED_SERVICE, resource_attrs={"pii.resource": text})
+        send_traces(service=RED_SERVICE, trace_id=uuid.uuid4().hex[:31] + format(i, "x"), span_id=uuid.uuid4().hex[:16],
+                    name=f"case-{i}", span_attrs={"pii": text, "smoke.case": f"t{i}"},
+                    resource_attrs={"pii.resource": text})
+    # Non-string values are not redacted (OBS-59), and the URL keys are removed from log and span.
+    url_attrs = {**{k: URL_VALUE for k in URL_KEYS}, "smoke.keep": "yes", "smoke.case": "url"}
+    send_logs([{"body": "url keys case", "attributes": url_attrs}], service=RED_SERVICE)
+    url_trace = uuid.uuid4().hex
+    send_traces(service=RED_SERVICE, trace_id=url_trace, name="url-case", span_attrs={**url_attrs, "smoke.case": "url"})
+    int_trace = uuid.uuid4().hex
+    send_traces(service=RED_SERVICE, trace_id=int_trace, name="int-case", span_attrs={"phone.int": 5592991234567})
+    # Metric points: the same four keys must not become labels.
+    metric_service = f"{SERVICE}-url"
+    now = time.time_ns()
+    for n, ts in ((1, now - 30_000_000_000), (3, now)):
+        send_histogram(service=metric_service, count=n, at_ns=ts, route="/url-case",
+                       point_attrs={**{k: URL_VALUE for k in URL_KEYS}, "smoke.keep": "yes"})
+
+    def stored_logs():
+        lines = loki_query(f'{{service_name="{RED_SERVICE}"}}', limit=500)
+        found = {}
+        for stream in lines:
+            for value in stream["values"]:
+                found[stream["stream"].get("smoke_case")] = (value[1], stream["stream"])
+        return found if len(found) >= 3 * len(REDACTION_CASES) + 1 else None
+
+    logs = wait_for(stored_logs, timeout=45) or {}
+    check(bool(logs), "OBS-15", "Loki stored every redaction log", f"stored {len(logs)}")
+
+    for i, (req, text, expected, forbidden) in enumerate(REDACTION_CASES):
+        line, labels = logs.get(f"s{i}", (None, {}))
+        judge(req, f"string body {text!r}", line, expected, forbidden)
+        judge("OBS-28", f"log attribute {text!r}", labels.get("pii"), expected, forbidden)
+        line, _ = logs.get(f"m{i}", (None, {}))
+        try:
+            msg = json.loads(line)["msg"]
+        except (TypeError, ValueError, KeyError):
+            msg = line
+        judge("OBS-29", f"map body {text!r}", msg, expected, forbidden)
+        _, labels = logs.get(f"r{i}", (None, {}))
+        judge("OBS-28", f"resource attribute {text!r}", labels.get("pii_resource"), expected, forbidden)
+
+    # Spans: look the traces up by their span name through the TraceQL search API.
+    for i, (req, text, expected, forbidden) in enumerate(REDACTION_CASES):
+        def span_attrs_for(i=i):
+            qs = urllib.parse.urlencode({"q": f'{{ resource.service.name = "{RED_SERVICE}" && name = "case-{i}" }}'})
+            _, body = get_json(f"{TEMPO}/api/search?{qs}")
+            traces = (body or {}).get("traces", [])
+            if not traces:
+                return None
+            trace = tempo_trace(traces[0]["traceID"])
+            for rs in (trace or {}).get("batches", []):
+                for ss in rs.get("scopeSpans", []):
+                    for s in ss.get("spans", []):
+                        return attr_map(s.get("attributes")), attr_map(rs.get("resource", {}).get("attributes"))
+            return None
+        found = wait_for(span_attrs_for, timeout=30)
+        span_a, res_a = found if found else ({}, {})
+        judge("OBS-28", f"span attribute {text!r}", span_a.get("pii"), expected, forbidden)
+        judge("OBS-28", f"span resource attribute {text!r}", res_a.get("pii.resource"), expected, forbidden)
+
+    # OBS-30: the four URL keys are gone from the log, the span and the metric series; other attributes stay.
+    _, labels = logs.get("url", (None, {}))
+    leaked = [k for k in URL_KEYS if k.replace(".", "_") in labels]
+    check(not leaked and labels.get("smoke_keep") == "yes", "OBS-30", "the url.* and http.* keys are gone from the log",
+          f"labels: {sorted(labels)}")
+
+    def url_span():
+        qs = urllib.parse.urlencode({"q": f'{{ resource.service.name = "{RED_SERVICE}" && name = "url-case" }}'})
+        _, body = get_json(f"{TEMPO}/api/search?{qs}")
+        traces = (body or {}).get("traces", [])
+        trace = tempo_trace(traces[0]["traceID"]) if traces else None
+        spans = [s for rs in (trace or {}).get("batches", []) for ss in rs.get("scopeSpans", []) for s in ss.get("spans", [])]
+        return attr_map(spans[0].get("attributes")) if spans else None
+    span_a = wait_for(url_span, timeout=30) or {}
+    leaked = [k for k in URL_KEYS if k in span_a]
+    check(bool(span_a) and not leaked and span_a.get("smoke.keep") == "yes", "OBS-30",
+          "the url.* and http.* keys are gone from the span", f"attributes: {sorted(span_a)}")
+
+    series = wait_for(lambda: prom_query(f'http_server_request_duration_seconds_count{{job="{metric_service}"}}'), timeout=30)
+    metric = (series or [{}])[0].get("metric", {})
+    leaked = [k for k in URL_KEYS if k.replace(".", "_") in metric]
+    check(bool(series) and not leaked and metric.get("smoke_keep") == "yes", "OBS-30",
+          "the url.* and http.* keys are gone from the metric series", f"labels: {sorted(metric)}")
+
+    # OBS-59: a personal number sent as an integer is not redacted (accepted, documented limitation).
+    int_span = wait_for(lambda: tempo_trace(int_trace), timeout=30)
+    spans = [s for rs in (int_span or {}).get("batches", []) for ss in rs.get("scopeSpans", []) for s in ss.get("spans", [])]
+    value = attr_map(spans[0].get("attributes")).get("phone.int") if spans else None
+    check(str(value) == "5592991234567", "OBS-59", "an integer attribute is left as it was", f"got {value!r}")
+
+    # OBS-31: redaction runs before the exporter, with the same processors whatever the destination.
+    pipes = collector_pipelines()
+    order = ["memory_limiter", "attributes/pii", "transform/pii", "batch"]
+    want = {"traces": order, "logs": order, "metrics": [p for p in order if p != "transform/pii"]}
+    check(pipes == want, "OBS-31", "attributes/pii and transform/pii run between memory_limiter and batch", f"pipelines: {pipes}")
+
+
 SECTIONS = {
     "ready": section_ready,
     "signals": section_signals,
+    "redaction": section_redaction,
 }
 
 

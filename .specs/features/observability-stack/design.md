@@ -76,7 +76,7 @@ Fatos conferidos em 2026-11-07, com o Docker 29.1.3 e o Compose 2.40.3, em proje
 | Backend Django (#194) | `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318`, só no modo combinado. Esta feature não muda o backend. |
 | Postgres do compose principal | O postgres-exporter conecta em `db:5432` pela `app_network`. Sozinha, a stack não alcança o banco, e o exporter reporta `pg_up 0`. |
 | Docker do host | O `docker_stats` lê `/var/run/docker.sock` (read-only), com `api_version: "1.44"`. |
-| Grafana Cloud (futuro) | O mesmo `otlphttp`, com `OBS_*_ENDPOINT` apontando para o OTLP gateway e `OBS_OTLP_AUTH_HEADER=Basic <base64(instanceID:token)>`. |
+| Grafana Cloud (futuro) | O mesmo `otlp_http`, com `OBS_*_ENDPOINT` apontando para o OTLP gateway e `OBS_OTLP_AUTH_HEADER=Basic <base64(instanceID:token)>`. |
 
 ---
 
@@ -139,7 +139,7 @@ O postgres-exporter (9187) e a porta interna de OTLP do Tempo (4318) não são p
   | 5 | Telefone | `(\+?55\s?)?\(?\b\d{2}\)?\s?9?\d{4}-?\d{4}\b` | `[telefone]` |
 
   O JID do WhatsApp (`<dígitos>@s.whatsapp.net`) cai na regra de e-mail.
-- **Exporter**: um único `otlphttp`.
+- **Exporter**: um único `otlp_http`. O nome `otlphttp` é um alias que o 0.164 avisa estar obsoleto.
   - Endpoints por sinal, sem padrão no YAML:
     - `traces_endpoint: ${env:OBS_TRACES_ENDPOINT}`;
     - `metrics_endpoint: ${env:OBS_METRICS_ENDPOINT}`;
@@ -293,7 +293,7 @@ N/A: não há modelo de dados. Os "contratos" são os nomes de métrica e de ró
 
 | Error Scenario | Handling | User Impact |
 | --- | --- | --- |
-| Loki, Tempo ou Prometheus fora | O `otlphttp` tenta de novo, com a fila em disco. Os outros sinais seguem. | Lacuna só no sinal afetado enquanto o destino estiver fora. |
+| Loki, Tempo ou Prometheus fora | O `otlp_http` tenta de novo, com a fila em disco. Os outros sinais seguem. | Lacuna só no sinal afetado enquanto o destino estiver fora. |
 | Grafana Cloud fora ou credencial errada | O mesmo: retry e fila limitada. Quando a fila enche, descarta. O Collector não cai. | Telemetria perdida depois que a fila enche. O app não é afetado (#194). |
 | Banco inacessível | O postgres-exporter responde `pg_up 0`. | O painel do banco fica vazio. |
 | Collector perto do limite de memória | O `memory_limiter` recusa dados novos (o cliente recebe erro e descarta), em vez de o processo morrer por OOM. | Perda de dados durante o pico. |
@@ -327,5 +327,14 @@ N/A: não há modelo de dados. Os "contratos" são os nomes de métrica e de ró
 | Faro passa pelo Collector | Alloy → OTLP → Collector | Uma redação só para todos os sinais. No Grafana Cloud, o Faro do navegador vai direto ao endpoint de Frontend Observability, e o README registra a diferença. |
 | Pyroscope fora do Collector | O SDK manda direto ao Pyroscope (futuro) | Profiles no OTel estão em alpha. O estudo usa o SDK do Pyroscope. |
 | Gate de teste | Scripts em Python, só com a biblioteca padrão, rodando no host | O host tem `python3`, e os scripts não exigem venv nem dependência nova. |
+
+### Fatos conferidos no Execute
+
+- **OTTL no 0.164.** `context: log` com `body`, `attributes` e `context: resource` com `attributes` funcionam. `replace_all_patterns(body, "value", …) where IsMap(body)` é aceito e redige o primeiro nível do corpo map. A barra invertida de uma regex se escreve duas vezes no OTTL e fica literal no YAML entre aspas simples.
+- **Prometheus 3.15.1.** O receiver OTLP grava exemplars, e `query_exemplars` devolve o `trace_id`. Ele imprime a retenção `7d` como `1w`.
+- **Loki 3.7.9.** Imprime `168h` como `1w` em `/config`. Na consulta, o structured metadata (`trace_id`, `span_id` e os atributos de log) volta misturado com os rótulos do stream.
+- **Tempo 2.10.10.** `/status/config` também mostra `block_retention: 336h` para `backend_scheduler` e `backend_worker`, que não são usados. Vale o da seção `compactor`.
+- **Pyroscope 2.4.3.** Responde 503 em `/ready` por cerca de 15 s depois de subir.
+- **Exemplar com variável vazia.** As `OBS_*` definidas e vazias resolvem para o mesmo ambiente que as ausentes, e o Compose nem recria o container.
 
 > Decisão de projeto registrada como **AD-015** em `.specs/STATE.md`.

@@ -267,7 +267,7 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 O `config.yaml` traz:
 - o receiver `otlp`, só HTTP;
 - `memory_limiter` e `batch`;
-- o `otlphttp` com os endpoints por sinal e os padrões locais;
+- o `otlp_http` com os endpoints por sinal e os padrões locais;
 - o `Authorization` por variável;
 - `file_storage` e `sending_queue`.
 
@@ -309,11 +309,11 @@ Acrescentar ao smoke a seção `signals`. Ela manda um span, um log com o mesmo 
 - Skill: NONE
 
 **Done when**:
-- [ ] Para cada linha da tabela de referência, o valor gravado no Loki e no Tempo é igual à saída esperada. Para OBS-25 e OBS-27, nenhum trecho de 3 ou mais (CNPJ) e de 4 ou mais (11 dígitos e JID) dígitos do valor original aparece.
-- [ ] As quatro chaves `url.*`/`http.*` não aparecem no span, no log nem na série da métrica.
-- [ ] Um texto sem PII (`pedido 42 ok`) chega intacto, o que prova que a redação não apaga tudo. A outra direção (a redação desligada deixa o teste vermelho) é coberta pelo sensor de mutação do Verifier.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] Para cada linha da tabela de referência, o valor gravado no Loki e no Tempo é igual à saída esperada. Para OBS-25 e OBS-27, nenhum trecho de 3 ou mais (CNPJ) e de 4 ou mais (11 dígitos e JID) dígitos do valor original aparece.
+- [x] As quatro chaves `url.*`/`http.*` não aparecem no span, no log nem na série da métrica.
+- [x] Um texto sem PII (`pedido 42 ok`) chega intacto, o que prova que a redação não apaga tudo. A outra direção (a redação desligada deixa o teste vermelho) é coberta pelo sensor de mutação do Verifier.
+- [x] Gate check passes: Full.
+- [x] Test count: 85 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`) e 10 do lint. A seção cobre OBS-22 a OBS-31 nos quatro lugares (corpo string, corpo map, atributo de log, atributo de span e de resource) e o controle `pedido 42 ok`.
 
 **Tests**: integration
 **Gate**: full

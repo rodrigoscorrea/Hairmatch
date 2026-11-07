@@ -17,12 +17,72 @@ processors:
     check_interval: 1s
     limit_mib: 200
     spike_limit_mib: 50
+  # Removes URL parts that can carry personal data, on every signal (OBS-30).
+  attributes/pii:
+    actions:
+      - {key: url.query, action: delete}
+      - {key: url.full, action: delete}
+      - {key: http.url, action: delete}
+      - {key: http.target, action: delete}
+  # Masks personal data in string values (OBS-22 to OBS-29). The rule order matters: the JWT first (it contains
+  # pieces that look like e-mail and numbers), the CNPJ before the CPF (so a 14-digit CNPJ is not cut at 11),
+  # and the phone last. Patterns are RE2; in OTTL a literal backslash is written twice.
+  # Not covered on purpose (OBS-59): non-string values and maps nested inside a map body.
+  # error_mode stays at the default (propagate): if a statement fails, the batch is dropped, not exported unredacted.
+  transform/pii:
+    log_statements:
+      - context: log
+        statements:
+          # String body
+          - 'replace_pattern(body, "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]") where IsString(body)'
+          - 'replace_pattern(body, "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]") where IsString(body)'
+          - 'replace_pattern(body, "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]") where IsString(body)'
+          - 'replace_pattern(body, "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]") where IsString(body)'
+          - 'replace_pattern(body, "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]") where IsString(body)'
+          # Map body: each string value of the first level
+          - 'replace_all_patterns(body, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]") where IsMap(body)'
+          # Log attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+      - context: resource
+        statements:
+          # Resource attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+    trace_statements:
+      - context: span
+        statements:
+          # Span attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+      - context: resource
+        statements:
+          # Resource attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+
   # Must stay last in every pipeline.
   batch: {}
 
 exporters:
   # One exporter, one endpoint per signal. Grafana Cloud's gateway and the local backends use different paths.
-  otlphttp:
+  otlp_http:
     traces_endpoint: ${env:OBS_TRACES_ENDPOINT}
     metrics_endpoint: ${env:OBS_METRICS_ENDPOINT}
     logs_endpoint: ${env:OBS_LOGS_ENDPOINT}
@@ -43,13 +103,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlphttp]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
+      exporters: [otlp_http]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlphttp]
+      processors: [memory_limiter, attributes/pii, batch]
+      exporters: [otlp_http]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlphttp]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
+      exporters: [otlp_http]
