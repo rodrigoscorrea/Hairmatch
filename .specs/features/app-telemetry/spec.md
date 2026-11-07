@@ -286,9 +286,9 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-06 | P1: Não depende da telemetria | Execute | Done |
 | TEL-07 | P1: Não depende da telemetria | Execute | Done |
 | TEL-08 | P1: Não depende da telemetria | Execute | Done |
-| TEL-09 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-10 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-11 | P1: Não depende da telemetria | Specify | Pending |
+| TEL-09 | P1: Não depende da telemetria | Execute | Done |
+| TEL-10 | P1: Não depende da telemetria | Execute | Done |
+| TEL-11 | P1: Não depende da telemetria | Execute | Done |
 | TEL-12 | P1: Não depende da telemetria | Execute | Done |
 | TEL-13 | P1: Não depende da telemetria | Execute | Done |
 | TEL-14 | P1: Não depende da telemetria | Execute | Done |
@@ -361,7 +361,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-81 | P2: Configuração e documentação | Specify | Pending |
 | TEL-82 | Edge Cases | Execute | Done |
 | TEL-83 | Edge Cases | Execute | Done |
-| TEL-84 | Edge Cases | Specify | Pending |
+| TEL-84 | Edge Cases | Execute | Done |
 | TEL-85 | Edge Cases | Specify | Pending |
 | TEL-86 | P1: Sem dado pessoal | Execute | Done |
 

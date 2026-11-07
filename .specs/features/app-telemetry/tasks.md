@@ -732,11 +732,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Conexão recusada, nome que não resolve e IP sem resposta: mesmo status e corpo; p95 dentro de 50 ms
-- [ ] Desligamento em até 5 s
-- [ ] No máximo 1 linha de erro por sinal a cada 60 s
-- [ ] Volta a exportar quando o Collector volta
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Conexão recusada, nome que não resolve e IP sem resposta: mesmo status e corpo; p95 dentro de 50 ms
+- [x] Desligamento em até 5 s
+- [x] No máximo 1 linha de erro por sinal a cada 60 s
+- [x] Volta a exportar quando o Collector volta
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
