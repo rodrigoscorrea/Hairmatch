@@ -204,6 +204,22 @@
 - **Date**: 2026-11-07
 - **Status**: active
 
+### AD-016
+- **Decision**: O backend emite telemetria por OpenTelemetry sem depender dela.
+  - **Ponto único.** O código de negócio só chama os helpers de `hairmatch/telemetry.py` (`count_*`, `span`, `set_span_attributes`), que usam só a API do OTel e nunca lançam. Só `hairmatch/otel.py` conhece o SDK, e só o `hairmatch/wsgi.py` o inicia (`init_telemetry`, idempotente, chamável do `post_fork` do Gunicorn). Comandos do `manage.py` e o test runner não iniciam o SDK. Sem `OTEL_EXPORTER_OTLP_ENDPOINT`, os providers continuam no-op.
+  - **Saneamento na cadeia.** Todo span passa por `SanitizingSpanProcessor` antes do exportador, em produção e nos testes: remove `url.*`, `client.address`, `messaging.*` e cabeçalhos, troca ARN por `[arn]`, redige atributos, eventos de exceção e a descrição do status com as regex do Collector (`hairmatch/redaction.py`). O `LOGGING` aplica a mesma redação no stdout (JSON) e no handler OTLP.
+  - **Limites.** Cada envio desiste em 2 s, fila de 2048 itens que descarta, desligamento em até 5 s, métricas a cada 15 s, 100% dos traces com decisão do pai (`ParentBased`).
+  - **Convenções.** `OTEL_SEMCONV_STABILITY_OPT_IN=http` é definido no `init` (métrica `http.server.request.duration`). A extensão `sns` do botocore é removida antes de instrumentar (ela põe o ARN no span e `MessageAttributes` no pedido). O upload ao S3 usa `use_threads=False` para o `PutObject` herdar o trace. Rótulos de métrica de negócio têm conjuntos fechados; um valor fora do conjunto não é registrado.
+- **Reason**: A #194 exige que Collector, Grafana ou Grafana Cloud fora do ar não mudem nenhuma resposta, e que nenhum dado pessoal saia do processo. Um ponto único de saneamento, o mesmo nos testes e em produção, é o que torna a promessa verificável. O AD-015 manda tudo ao Collector, que redige de novo.
+- **Trade-off**:
+  - Depende de duas APIs internas do pacote pinado (`_BOTOCORE_EXTENSIONS` e o construtor de `ReadableSpan`), por isso as versões são exatas e há teste que falha se mudarem.
+  - A instrumentação 0.x é beta. Uma troca de versão exige reconferir os testes de privacidade.
+  - A redação por regex tem falsos positivos (sequências de 10 a 14 dígitos).
+  - O `print()` está proibido no backend (teste de AST).
+- **Scope**: `backend/hairmatch` (telemetry, otel, redaction, logs, health), `settings.py` (`LOGGING`, CORS), `wsgi.py`, `test_runner.py`, os pontos de evento de `reserve`, `notifications`, `users`, `review` e `chatbot`, e o app (`utils/telemetry.ts`, `axios-instance.ts`). Todo sinal novo do backend usa os helpers; nenhuma view importa o SDK.
+- **Date**: 2026-11-07
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `app-telemetry` (issue #194, depende da #193).
