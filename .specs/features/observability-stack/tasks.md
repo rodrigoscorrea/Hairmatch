@@ -169,10 +169,10 @@ Estender o `lint_compose.py` para checar a OBS-37: as cinco variáveis estão pr
 - Skill: NONE
 
 **Done when**:
-- [ ] `smoke.py --only ready` passa para o Loki.
-- [ ] `GET /config` do Loki mostra `retention_period: 168h` (checado no smoke).
-- [ ] Gate check passes: Full.
-- [ ] Test count: registrar os `PASS` do smoke.
+- [x] `smoke.py --only ready` passa para o Loki.
+- [x] `GET /config` do Loki mostra `retention_period: 168h` (checado no smoke).
+- [x] Gate check passes: Full.
+- [x] Test count: 3 `PASS` do `smoke.py --only ready` (Loki ready, retenção de 7 dias, compactor com retenção) e 10 do lint. O Loki imprime `168h` como `1w` no `/config`, e o smoke aceita as duas formas.
 
 **Tests**: integration
 **Gate**: full
