@@ -80,6 +80,17 @@ class ScrubTests(SimpleTestCase):
     def test_url_without_path_is_unchanged(self):
         self.assertEqual(scrub_urls('call to http://localstack:4566 refused'), 'call to http://localstack:4566 refused')
 
+    def test_the_bare_path_of_a_urllib3_connection_error_is_dropped(self):
+        text = (
+            "HTTPSConnectionPool(host='viacep.com.br', port=443): Max retries exceeded with url: /ws/69000000/json/ "
+            "(Caused by NewConnectionError('x'))"
+        )
+        self.assertEqual(
+            scrub_urls(text),
+            "HTTPSConnectionPool(host='viacep.com.br', port=443): Max retries exceeded with url: /[path] "
+            "(Caused by NewConnectionError('x'))",
+        )
+
     def test_arn_is_replaced(self):
         self.assertEqual(
             scrub_arns("No endpoint for 'arn:aws:sns:us-east-2:000000000000:endpoint/GCM/app/abc-123'"),

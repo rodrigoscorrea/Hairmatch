@@ -4,6 +4,8 @@ import re
 import requests
 from django.core.cache import cache
 
+from hairmatch import telemetry
+
 logger = logging.getLogger(__name__)
 
 VIACEP_URL = 'https://viacep.com.br/ws/{cep}/json/'
@@ -39,7 +41,8 @@ def _get_json(url, ok_statuses=(200,)):
     except requests.Timeout as err:
         raise _ProviderUnavailable('timeout') from err
     except requests.RequestException as err:
-        raise _ProviderUnavailable(f'connection error: {err}') from err
+        # The type only: the text of a requests error carries the URL, and the URL carries the CEP.
+        raise _ProviderUnavailable(f'connection error: {type(err).__name__}') from err
 
     if response.status_code not in ok_statuses:
         raise _ProviderUnavailable(f'unexpected status {response.status_code}')
@@ -90,6 +93,7 @@ def lookup_cep(raw_cep):
     cache_key = f'cep:{digits}'
     cached = cache.get(cache_key)
     if cached is not None:
+        telemetry.count_cep_lookup('cache')
         return cached
 
     not_found = False
@@ -104,8 +108,11 @@ def lookup_cep(raw_cep):
             continue
         result = {'postal_code': digits, **address}
         cache.set(cache_key, result, CACHE_TTL_SECONDS)
+        telemetry.count_cep_lookup(name)
         return result
 
     if not_found:
+        telemetry.count_cep_lookup('not_found')
         raise CepNotFound(digits)
+    telemetry.count_cep_lookup('unavailable')
     raise CepServiceUnavailable(digits)

@@ -24,6 +24,8 @@ REPLACEMENTS = tuple(
 )
 
 _URL = re.compile(r'(https?://[^/\s\'"<>]+)(/[^\s\'"<>]*)?')
+# urllib3 words a connection error as "... Max retries exceeded with url: /ws/69000000/json/ (Caused by ...)": a bare path.
+_URL_PATH = re.compile(r'(\burl: )(/[^\s\'"<>)]*)')
 _ARN = re.compile(r'arn:aws[\w-]*:[^\s\'",]+')
 
 
@@ -36,7 +38,8 @@ def redact(text):
 
 def scrub_urls(text):
     """Keeps the scheme and the host of every URL in `text` and drops the path and the query string (a CEP lives in a path)."""
-    return _URL.sub(lambda match: match.group(1) + ('/[path]' if match.group(2) else ''), text)
+    text = _URL.sub(lambda match: match.group(1) + ('/[path]' if match.group(2) else ''), text)
+    return _URL_PATH.sub(r'\1/[path]', text)
 
 
 def scrub_arns(text):

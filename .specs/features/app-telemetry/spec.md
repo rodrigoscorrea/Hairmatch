@@ -296,7 +296,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-16 | P1: Requisição vira trace | Execute | Done |
 | TEL-17 | P1: Requisição vira trace | Execute | Done |
 | TEL-18 | P1: Requisição vira trace | Execute | Done |
-| TEL-19 | P1: Requisição vira trace | Specify | Pending |
+| TEL-19 | P1: Requisição vira trace | Execute | Done |
 | TEL-20 | P1: Requisição vira trace | Execute | Done |
 | TEL-21 | P1: Requisição vira trace | Execute | Done |
 | TEL-22 | P1: Requisição vira trace | Execute | Done |
@@ -334,7 +334,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-54 | P1: Métricas de negócio | Execute | Done |
 | TEL-55 | P1: Métricas de negócio | Execute | Done |
 | TEL-56 | P1: Métricas de negócio | Execute | Done |
-| TEL-57 | P1: Métricas de negócio | Specify | Pending |
+| TEL-57 | P1: Métricas de negócio | Execute | Done |
 | TEL-58 | P1: Métricas de negócio | Specify | Pending |
 | TEL-59 | P1: Métricas de negócio | Specify | Pending |
 | TEL-60 | P1: Métricas de negócio | Execute | Done |

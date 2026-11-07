@@ -535,10 +535,10 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `cep.lookups` com `cache`, `viacep`, `brasilapi`, `not_found`, `unavailable`
-- [ ] Span HTTP com método, host e status, sem o CEP
-- [ ] Log de falha do provedor sem a URL
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `cep.lookups` com `cache`, `viacep`, `brasilapi`, `not_found`, `unavailable`
+- [x] Span HTTP com método, host e status, sem o CEP
+- [x] Log de falha do provedor sem a URL
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
