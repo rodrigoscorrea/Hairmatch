@@ -178,7 +178,52 @@
 - **Date**: 2026-10-11
 - **Status**: active
 
+### AD-015
+- **Decision**: Toda telemetria do Hairmatch entra por um único OTel Collector (contrib). O Collector redige dado pessoal antes de qualquer exporter e exporta por um `otlphttp` com um endpoint por sinal.
+  - **Destino.** Os endpoints vêm de `OBS_TRACES_ENDPOINT`, `OBS_METRICS_ENDPOINT` e `OBS_LOGS_ENDPOINT`, e o header `Authorization` de `OBS_OTLP_AUTH_HEADER`. Sem as variáveis, o destino é a stack local (Tempo, Prometheus, Loki). Com elas, é o OTLP gateway do Grafana Cloud. A pipeline nunca muda entre destinos.
+  - **Métricas.** O armazenamento é o Prometheus, com receiver OTLP e exemplars. Não há Mimir.
+  - **Faro.** Passa pelo Alloy (`faro.receiver`) e pelo mesmo Collector.
+  - **Onde mora.** A stack fica em `docker/observability/docker-compose.observability.yml`, que nunca declara `name:` e usa `${OBS_DIR:-.}` em todo bind mount.
+  - **Como sobe junto do app.** Com os dois `-f` no mesmo comando. O compose principal nunca referencia a stack.
+- **Reason**:
+  - A issue #193 e o estudo de observabilidade pedem que a stack local seja a referência da implantação no Grafana Cloud, trocando só o destino.
+  - Um Collector único concentra a redação (a terceira camada de defesa da LGPD) e torna o backend trocável.
+  - Conferido em 2026-11-07 (Docker 29.1.3, Compose 2.40.3):
+    - dois projetos dividindo uma rede de nome fixo quebram nas duas ordens de subida;
+    - no modo combinado, os caminhos relativos partem do diretório do primeiro arquivo;
+    - o `name:` do último arquivo renomearia o projeto e os volumes do banco.
+- **Trade-off**:
+  - O backend só alcança o Collector no modo combinado.
+  - A stack sozinha e a combinada não rodam ao mesmo tempo.
+  - O `docker/.env` precisa de `OBS_DIR=./observability`.
+  - A redação por regex tem falsos positivos (sequências de 10 a 14 dígitos) e não cobre valores não string nem mapas aninhados.
+  - O Collector local roda como root, com o `docker.sock`.
+- **Scope**: `docker/observability/`, `docker/.env.example`, `docs/observability/` e a #194, que aponta o SDK para `http://otel-collector:4318`. Todo sinal novo do lado do servidor (backend, cron do host) entra pelo Collector, e nenhum serviço exporta direto para o Grafana Cloud. Há duas exceções:
+  - o SDK do Pyroscope, enquanto profiles no OTel estiverem em alpha;
+  - o Faro do navegador. Ele roda no aparelho do usuário: no ambiente local passa pelo Alloy e pelo Collector, e em produção vai direto ao Frontend Observability do Grafana Cloud.
+- **Date**: 2026-11-07
+- **Status**: active
+
 ## Handoff
+
+- **Feature**: `observability-stack` (issue #193, bloqueia a #194).
+- **Phase / Task**: Specify, Design e Tasks concluídos em 2026-11-07, na branch `193-infra-de-observabilidade`, criada a partir de `origin/develop` em `7f004d9`.
+  - Arquivos: `spec.md` (OBS-01 a OBS-60), `context.md`, `design.md` e `tasks.md` (T1 a T16, em 4 fases).
+  - `validate_spec.py` com exit 0. `validate_tasks.py` com exit 0 e 6 avisos, justificados na Task Granularity Check: `Where` com o teste co-locado e `Tests: none` do README.
+  - O Execute não começou e aguarda a aprovação das tasks.
+- **Completed**:
+  - Decisões do usuário:
+    - só Prometheus (sem Mimir);
+    - Faro via Alloy;
+    - sem Synthetic Monitoring local;
+    - postgres-exporter, `hostmetrics` e `docker_stats` incluídos.
+  - O estudo "Observabilidade Hairmatch" (artifact GFDsHBv9zK8q3jDtJyu2tu) foi atualizado: Mimir virou Prometheus no diagrama, no chip e no card de sinal.
+  - AD-015.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. O usuário revisa e aprova as specs. Os arquivos de `.specs/features/observability-stack/` e o `STATE.md` ainda não foram commitados.
+  2. No Execute, oferecer sub-agentes (3 lotes). O T14 e o T15 param o compose principal e só rodam com o aval do usuário.
+  3. Conferir no Execute os fatos marcados como não verificados no `design.md` (Risks & Concerns).
 
 - **Feature**: `hairdresser-reviews` (issue #189, épico #188). A #182 já está na `develop` (PR #190).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `189-avaliacoes-recebidas-cabeleireiro`: T1 a T7 feitas, com commits atômicos. O T8 (UAT) está parcial.
