@@ -661,8 +661,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Linha no `CATALOG`, no catálogo do spec `api-problem-details` e em `frontend-mobile/utils/api-problem.ts`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Linha no `CATALOG`, no catálogo do spec `api-problem-details` e em `frontend-mobile/utils/api-problem.ts`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick
