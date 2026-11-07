@@ -321,9 +321,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `PutObject` é filho do span da requisição (mesmo `trace_id`, pai = requisição)
-- [ ] Comportamento do upload igual (content type, chave)
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `PutObject` é filho do span da requisição (mesmo `trace_id`, pai = requisição)
+- [x] Comportamento do upload igual (content type, chave)
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick

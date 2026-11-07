@@ -3,6 +3,7 @@ import mimetypes
 from urllib.parse import quote
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -45,8 +46,10 @@ class S3MediaStorage(Storage):
     def _save(self, name, content):
         content.seek(0)
         content_type = mimetypes.guess_type(name)[0] or 'application/octet-stream'
+        # In the calling thread: boto3 would hand the PutObject to a pool thread, which does not inherit the trace
+        # context, and the S3 span would start a trace of its own instead of joining the request's (TEL-23).
         self.client.upload_fileobj(
-            content, self.bucket, name, ExtraArgs={'ContentType': content_type}
+            content, self.bucket, name, ExtraArgs={'ContentType': content_type}, Config=TransferConfig(use_threads=False),
         )
         return name
 
