@@ -652,6 +652,30 @@ def section_infra(args):
     bad = [l for l in logs.splitlines() if re.search(r"(client version|API version|too old)", l, re.I) and re.search(r"error|fail", l, re.I)]
     check(code == 0 and not bad, "OBS-46", "the Collector log has no Docker API version error", f"{bad[:2]}")
 
+    # OBS-44 (standalone) / OBS-43 (combined): pg_up says whether the exporter reaches the app's Postgres.
+    want = 1.0 if args.mode == "combined" else 0.0
+    req = "OBS-43" if args.mode == "combined" else "OBS-44"
+
+    def pg_up():
+        # The latest sample, polled until it shows the expected value (a stale one from the other mode differs).
+        res = prom_query('pg_up{job="postgres"}')
+        return float(res[0]["value"][1]) if res else None
+    value = wait_for(lambda: pg_up() == want and want + 1, timeout=60, interval=3)
+    check(value, req, f"Prometheus has pg_up == {int(want)} ({args.mode} mode)", f"pg_up is {pg_up()}")
+
+    if args.mode == "standalone":
+        # The exporter must survive without a database: running, and never restarted, after a full minute.
+        code, out = docker("inspect", "hairmatch_obs_postgres_exporter", "--format",
+                           "{{.State.Running}} {{.RestartCount}} {{.State.StartedAt}}")
+        running, restarts, started = (out.split() + ["", "", ""])[:3]
+        age = time.time() - time.mktime(time.strptime(started[:19], "%Y-%m-%dT%H:%M:%S")) + time.timezone if started else 0
+        if 0 < age < 60:
+            time.sleep(60 - age)
+            code, out = docker("inspect", "hairmatch_obs_postgres_exporter", "--format", "{{.State.Running}} {{.RestartCount}}")
+            running, restarts = out.split()[:2]
+        check(code == 0 and running == "true" and restarts == "0", "OBS-44",
+              "the postgres-exporter is still running, with no restarts, after 60 s", f"inspect: {out}")
+
 
 SECTIONS = {
     "ready": section_ready,

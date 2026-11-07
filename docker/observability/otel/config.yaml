@@ -27,6 +27,15 @@ receivers:
     # Docker Engine 29 refuses API versions below 1.44, and the receiver's default is older.
     api_version: "1.44"
     collection_interval: 30s
+  # Postgres metrics, scraped from the postgres-exporter and sent through the same pipeline as everything else.
+  # Without the app's Postgres on the network (standalone mode) the exporter just reports pg_up 0.
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: postgres
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["postgres-exporter:9187"]
 
 processors:
   # Must stay first in every pipeline: it refuses new data before the process hits the container limit.
@@ -123,7 +132,7 @@ service:
       processors: [memory_limiter, attributes/pii, transform/pii, batch]
       exporters: [otlp_http]
     metrics:
-      receivers: [otlp, host_metrics, docker_stats]
+      receivers: [otlp, host_metrics, docker_stats, prometheus]
       processors: [memory_limiter, attributes/pii, batch]
       exporters: [otlp_http]
     logs:

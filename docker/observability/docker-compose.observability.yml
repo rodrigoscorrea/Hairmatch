@@ -60,6 +60,7 @@ services:
       - loki
       - tempo
       - prometheus
+      - postgres-exporter
     networks:
       - app_network
     logging: *default-logging
@@ -104,6 +105,20 @@ services:
       - ${OBS_DIR:-.}/alloy/config.alloy:/etc/alloy/config.alloy:ro
     depends_on:
       - otel-collector
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Reaches the app's Postgres by the service name "db", so it only sees a database in the combined mode.
+  # Standalone it keeps running and reports pg_up 0. Dev credentials; on a server use a pg_monitor role.
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: hairmatch_obs_postgres_exporter
+    environment:
+      DATA_SOURCE_URI: db:5432/${POSTGRES_DB:-hairmatch}?sslmode=disable
+      DATA_SOURCE_USER: ${POSTGRES_USER:-hairmatch}
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:-hairmatch}
     networks:
       - app_network
     logging: *default-logging

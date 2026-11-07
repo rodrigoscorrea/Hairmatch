@@ -458,10 +458,10 @@ Acrescentar ao `config.yaml` o receiver `prometheus` (job `postgres`, alvo `post
 - Skill: NONE
 
 **Done when**:
-- [ ] Com a stack sozinha, `pg_up == 0`, e o `postgres-exporter` segue `running` depois de 60 s, sem reinícios (`RestartCount` 0).
-- [ ] A checagem `pg_up == 1` existe no modo `combined`. Ela é provada no T14.
-- [ ] Gate check passes: Full.
-- [ ] Test count: os `PASS` anteriores + os novos.
+- [x] Com a stack sozinha, `pg_up == 0`, e o `postgres-exporter` segue `running` depois de 60 s, sem reinícios (`RestartCount` 0).
+- [x] A checagem `pg_up == 1` existe no modo `combined`. Ela é provada no T14.
+- [x] Gate check passes: Full.
+- [x] Test count: 115 `PASS` do smoke inteiro (12 de `ready`, 7 de `signals`, 66 de `redaction`, 19 de `grafana`, 6 de `infra`, 5 de `faro`) e 10 do lint. A checagem `pg_up == 1` (OBS-43) existe em `--mode combined` e é provada no T14.
 
 **Tests**: integration
 **Gate**: full
