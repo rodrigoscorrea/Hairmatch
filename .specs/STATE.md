@@ -206,6 +206,32 @@
 
 ## Handoff
 
+- **Feature**: `app-telemetry` (issue #194, depende da #193).
+- **Phase / Task**: Specify concluído em 2026-11-07, na branch `194-integracao-telemetria`. A branch saiu de `193-infra-de-observabilidade` em `b2145f4` (PR #195, ainda fora da `develop`).
+  - Arquivos: `spec.md` (TEL-01 a TEL-86) e `context.md`. `validate_spec.py` com exit 0.
+  - Design e Tasks não começaram.
+- **Completed**:
+  - Decisões do usuário:
+    - 9 contadores de negócio, os 10 do estudo menos `chatbot.messages` (chatbot deprecado);
+    - `traceparent` na web e no Android, atrás de `EXPO_PUBLIC_TRACE_PROPAGATION`, com `traceparent` no `CORS_ALLOW_HEADERS`.
+  - Divergências entre a issue e o código, registradas em Assumptions:
+    - a reserva não toca o S3, e o S3 é provado pelo upload de foto;
+    - o Gemini usa `google.generativeai`, sem httpx, então o span é manual.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. O usuário revisa e aprova o `spec.md`. Os arquivos de `.specs/features/app-telemetry/` e este `STATE.md` ainda não foram commitados.
+  2. No Design:
+     - fixar as versões do OpenTelemetry compatíveis com o Django 5.2, o Python 3.12 e o psycopg2;
+     - escolher o gancho de inicialização no `runserver`, respeitando TEL-04 e TEL-05;
+     - conferir se o span do `on_commit` cai no trace da requisição;
+     - conferir que atributos a instrumentação do botocore põe no span do SNS (TEL-48);
+     - conferir que nome a instrumentação do Django dá a um preflight `OPTIONS` sem rota resolvida (TEL-49);
+     - conferir na versão fixada que o histograma HTTP do Django recebe exemplar (TEL-33). Se não receber, o TEL-33 sai do P1 e vira Assumption, nunca uma meia implementação;
+     - planejar um gate de Jest que rode uma vez só. O script atual é `jest --watchAll`, e o app ainda não tem testes;
+     - registrar o AD-016.
+  3. Quando o PR #195 entrar na `develop`, rebasear a 194 sobre a `develop`.
+  4. As mudanças não commitadas de `frontend-mobile/` (eslint, log do refresh no `axios-instance.ts`) vieram da sessão anterior e não entram nos commits da 194.
+
 - **Feature**: `observability-stack` (issue #193, bloqueia a #194).
 - **Phase / Task**: Execute concluído em 2026-11-07, na branch `193-infra-de-observabilidade`: T1 a T16 feitas, com commits atômicos, e duas correções da rodada 1 do Verifier.
   - O Verifier independente rodou duas vezes. Rodada 1: FAIL (a redação não cobria os atributos de resource das métricas, e 6 mutantes sobreviveram). Rodada 2: PASS, 15 mutantes injetados e 15 mortos. `validation.md` e `validate_state.py` com exit 0.
