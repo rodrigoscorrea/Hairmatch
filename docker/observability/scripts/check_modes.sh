@@ -115,10 +115,16 @@ wait_main_ready() {
 main_services_unchanged() { # compares against a snapshot taken by snapshot_main
   [ "$(main_states_core)" = "$(cat "$WORK/core_snapshot.txt")" ]
 }
-main_states_core() { docker ps --filter name=hairmatch_db --filter name=hairmatch_localstack --filter name=hairmatch_ministack --filter name=hairmatch_backend --format '{{.Names}} {{.Status}}' | sed -E 's/Up [^(]*(\(.*\))?/Up \1/' | sort; }
+# Identity of the app containers: id, state, start time and restart count. A container that was recreated or
+# restarted changes this line; "Up 3 minutes" style text would hide it.
+main_states_core() {
+  for c in hairmatch_db hairmatch_localstack hairmatch_ministack hairmatch_backend; do
+    docker inspect -f '{{.Name}} {{.Id}} {{.State.Status}} {{.State.StartedAt}} {{.RestartCount}}' "$c" 2>/dev/null
+  done | sort
+}
 
-marker_py() { # marker_py write|verify
-  PYTHONPATH="$SCRIPTS" python3 - "$1" "$WORK/marker.json" <<'EOF'
+marker_py() { # marker_py write|verify <marker file>
+  PYTHONPATH="$SCRIPTS" python3 - "$1" "$2" <<'EOF'
 import json, sys, time, uuid, urllib.parse
 import smoke
 action, path = sys.argv[1], sys.argv[2]
@@ -162,7 +168,7 @@ if wait_obs_running "$OBS"; then pass OBS-01 "the 8 services are running within 
 sleep 20
 check OBS-01 "no service is restarting" no_restarts "$OBS"
 check OBS-13 "the Collector accepts OTLP from the host (127.0.0.1:4318)" python3 "$SCRIPTS/smoke.py" --mode standalone --only signals
-if marker_py write; then pass OBS-10 "a marker (trace, log, metric, Grafana folder) is stored in standalone mode"; else fail OBS-10 "the marker was not stored in standalone mode"; fi
+if marker_py write "$WORK/marker.json"; then pass OBS-10 "a marker (trace, log, metric, Grafana folder) is stored in standalone mode"; else fail OBS-10 "the marker was not stored in standalone mode"; fi
 
 # --- 2. main compose alone (OBS-03) --------------------------------------------------------------------------------
 
@@ -213,7 +219,10 @@ smoke_rc=$?
 grep -E '^(FAIL|smoke:)' "$WORK/smoke_combined.txt" | sed 's/^/    | /'
 if [ $smoke_rc -eq 0 ]; then pass OBS-43 "smoke.py --mode combined passes (pg_up == 1 included)"; else fail OBS-43 "smoke.py --mode combined failed"; fi
 
-if marker_py verify; then pass OBS-10 "the standalone marker is still in Prometheus, Loki, Tempo and Grafana after the switch"; else fail OBS-10 "data from standalone mode is missing in combined mode"; fi
+if marker_py verify "$WORK/marker.json"; then pass OBS-10 "the standalone marker is still in Prometheus, Loki, Tempo and Grafana after the switch to combined"; else fail OBS-10 "data from standalone mode is missing in combined mode"; fi
+
+# The reverse direction of OBS-10: data written in combined mode must survive the switch back to standalone.
+if marker_py write "$WORK/marker2.json"; then pass OBS-10 "a second marker is stored in combined mode"; else fail OBS-10 "the marker was not stored in combined mode"; fi
 
 # --- 4. removing the stack leaves the app alone (OBS-05) -----------------------------------------------------------
 
@@ -230,7 +239,14 @@ echo "== 5. both modes at once"
 q $BOTH up -d
 wait_obs_running "$BOTH" >/dev/null
 main_states_core >"$WORK/core_snapshot.txt"
-if $OBS up -d >"$WORK/dup1.out" 2>&1; then fail OBS-60 "standalone up succeeded while the combined mode was running"; else pass OBS-60 "standalone up fails while the combined mode is running"; fi
+CONFLICT='already in use|conflict|already allocated|address already in use'
+if $OBS up -d >"$WORK/dup1.out" 2>&1; then
+  fail OBS-60 "standalone up succeeded while the combined mode was running"
+elif grep -qiE "$CONFLICT" "$WORK/dup1.out"; then
+  pass OBS-60 "standalone up fails with a name or port conflict while the combined mode is running"
+else
+  fail OBS-60 "standalone up failed, but not because of a conflict"; tail -3 "$WORK/dup1.out" | sed 's/^/    | /'
+fi
 if wait_obs_running "$BOTH" && main_services_unchanged; then pass OBS-60 "the combined mode keeps running after the failed standalone up"; else fail OBS-60 "the failed standalone up disturbed the combined mode"; fi
 
 q $BOTH down --remove-orphans
@@ -238,14 +254,22 @@ q $OBS down
 q $MAIN down
 q $OBS up -d
 wait_obs_running "$OBS" >/dev/null
-if $BOTH up -d >"$WORK/dup2.out" 2>&1; then fail OBS-60 "combined up succeeded while the standalone mode was running"; else pass OBS-60 "combined up fails while the standalone mode is running"; fi
+if $BOTH up -d >"$WORK/dup2.out" 2>&1; then
+  fail OBS-60 "combined up succeeded while the standalone mode was running"
+elif grep -qiE "$CONFLICT" "$WORK/dup2.out"; then
+  pass OBS-60 "combined up fails with a name or port conflict while the standalone mode is running"
+else
+  fail OBS-60 "combined up failed, but not because of a conflict"; tail -3 "$WORK/dup2.out" | sed 's/^/    | /'
+fi
+if marker_py verify "$WORK/marker2.json"; then pass OBS-10 "the combined-mode marker is in Prometheus, Loki, Tempo and Grafana after the switch to standalone"; else fail OBS-10 "data from combined mode is missing in standalone mode"; fi
 if wait_obs_running "$OBS" && no_restarts "$OBS"; then pass OBS-60 "the standalone mode keeps running after the failed combined up"; else fail OBS-60 "the failed combined up disturbed the standalone mode"; fi
 
 # Clean up the marker folder, then the EXIT trap restores the main compose.
-python3 - "$WORK/marker.json" <<'EOF' 2>/dev/null
+python3 - "$WORK/marker.json" "$WORK/marker2.json" <<'EOF' 2>/dev/null
 import json, sys
 sys.path.insert(0, "docker/observability/scripts")
 import smoke
-m = json.load(open(sys.argv[1]))
-smoke.http("DELETE", f'{smoke.GRAFANA}/api/folders/{m["folder"]}')
+for path in sys.argv[1:]:
+    m = json.load(open(path))
+    smoke.http("DELETE", f'{smoke.GRAFANA}/api/folders/{m["folder"]}')
 EOF

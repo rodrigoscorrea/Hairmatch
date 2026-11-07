@@ -24,6 +24,7 @@ OBS_COMPOSE = ROOT / "docker/observability/docker-compose.observability.yml"
 MAIN_COMPOSE = ROOT / "docker/docker-compose.yml"
 ENV_EXAMPLE = ROOT / "docker/.env.example"
 OBS_DIR = ROOT / "docker/observability"
+COLLECTOR_CONFIG = ROOT / "docker/observability/otel/config.yaml"
 
 # Names the main compose must never mention (OBS-02).
 STACK_NAMES = [
@@ -105,6 +106,22 @@ def lint_obs_compose(path):
         if (src.startswith(".") or src.startswith("$")) and not src.startswith("${OBS_DIR:-.}/"):
             bad.append(src)
     report(not bad, "OBS-12", "every relative bind mount starts with ${OBS_DIR:-.}/" + (f"; bad: {', '.join(bad)}" if bad else ""))
+
+
+def lint_collector_config(path):
+    """OBS-35: the destination lives only in OBS_* variables; the config has no hard-coded endpoint."""
+    code = strip_comments(path.read_text())
+    urls = re.findall(r"https?://[^\s'\"]+", code)
+    report(not urls, "OBS-35", "otel/config.yaml has no hard-coded URL" + (f"; found: {', '.join(urls)}" if urls else ""))
+    wanted = {
+        "traces_endpoint": "${env:OBS_TRACES_ENDPOINT}",
+        "metrics_endpoint": "${env:OBS_METRICS_ENDPOINT}",
+        "logs_endpoint": "${env:OBS_LOGS_ENDPOINT}",
+        "Authorization": "${env:OBS_OTLP_AUTH_HEADER}",
+    }
+    bad = [k for k, v in wanted.items() if not re.search(rf"^\s+{re.escape(k)}: {re.escape(v)}\s*$", code, re.M)]
+    report(not bad, "OBS-35", "the exporter endpoints and Authorization header come from OBS_* variables"
+           + (f"; not from a variable: {', '.join(bad)}" if bad else ""))
 
 
 def lint_main_compose(path):
@@ -199,6 +216,22 @@ SELF_TEST_ENV_MUTATIONS = [
 ]
 
 
+SELF_TEST_COLLECTOR = """\
+exporters:
+  otlp_http:
+    traces_endpoint: ${env:OBS_TRACES_ENDPOINT}
+    metrics_endpoint: ${env:OBS_METRICS_ENDPOINT}
+    logs_endpoint: ${env:OBS_LOGS_ENDPOINT}
+    headers:
+      Authorization: ${env:OBS_OTLP_AUTH_HEADER}
+"""
+
+SELF_TEST_COLLECTOR_MUTATIONS = [
+    ("a hard-coded traces endpoint", lambda t: t.replace("${env:OBS_TRACES_ENDPOINT}", "http://tempo:4318/v1/traces")),
+    ("a literal Authorization header", lambda t: t.replace("${env:OBS_OTLP_AUTH_HEADER}", "Basic abc")),
+]
+
+
 def self_test():
     """Prove the lint discriminates: the base passes, each mutation fails the expected check."""
     ok_all = True
@@ -218,6 +251,21 @@ def self_test():
             good = req in failed_checks(mutate(SELF_TEST_BASE))
             ok_all &= good
             print(f"{'PASS' if good else 'FAIL'} self-test: {label} makes {req} fail")
+
+        def collector_failures(text):
+            results.clear()
+            path = Path(tmp) / "otel.yaml"
+            path.write_text(text)
+            lint_collector_config(path)
+            return [req for ok, req, _ in results if not ok]
+
+        base_failed = collector_failures(SELF_TEST_COLLECTOR)
+        ok_all &= not base_failed
+        print(f"{'PASS' if not base_failed else 'FAIL'} self-test: a Collector config driven by variables passes OBS-35")
+        for label, mutate in SELF_TEST_COLLECTOR_MUTATIONS:
+            good = "OBS-35" in collector_failures(mutate(SELF_TEST_COLLECTOR))
+            ok_all &= good
+            print(f"{'PASS' if good else 'FAIL'} self-test: {label} makes OBS-35 fail")
 
         def env_failures(text, credential=None):
             results.clear()
@@ -259,6 +307,7 @@ def main():
 
     lint_obs_compose(args.compose)
     lint_main_compose(args.main)
+    lint_collector_config(COLLECTOR_CONFIG)
     lint_env_example(args.env_example, args.obs_dir)
     for ok, req, message in results:
         print(f"{'PASS' if ok else 'FAIL'} {req}: {message}")

@@ -68,7 +68,14 @@ sys.exit(0 if statuses == [200, 200, 200] else 1)
 PY
 }
 
+# sha256 of the config file the running Collector uses (the image has no shell: copy it out).
+container_config_sha() {
+  local tmp; tmp=$(mktemp)
+  docker cp "$COLLECTOR":/etc/otelcol/config.yaml "$tmp" >/dev/null 2>&1 && sha256sum "$tmp" | cut -d' ' -f1
+  rm -f "$tmp"
+}
 config_before=$(sha256sum "$CONFIG" | cut -d' ' -f1)
+SHAS_SEEN=""
 
 echo "== 0. standalone with the local destination"
 if ! q $OBS up -d; then fail setup "the standalone stack did not come up (is the combined mode still running?)"; exit 1; fi
@@ -90,6 +97,7 @@ if OBS_TRACES_ENDPOINT=http://otlp-capture:8080/t/v1/traces \
    OBS_OTLP_AUTH_HEADER="$AUTH" q $OBS --profile verify up -d otlp-capture otel-collector \
    && wait_running "$COLLECTOR" 60 && wait_running "$CAPTURE" 60; then
   sleep 3
+  SHAS_SEEN="$SHAS_SEEN $(container_config_sha)"
   send_all "obs-dest-$RANDOM" || fail OBS-34 "the Collector refused the test signals"
   sleep 12   # the batch processor flushes within seconds
   captured=$(docker logs "$CAPTURE" 2>&1)
@@ -116,6 +124,7 @@ if OBS_TRACES_ENDPOINT=http://nao-existe.invalid/v1/traces \
    OBS_LOGS_ENDPOINT=http://nao-existe.invalid/v1/logs \
    OBS_OTLP_AUTH_HEADER="$AUTH" q $OBS up -d otel-collector && wait_running "$COLLECTOR" 60; then
   sleep 3
+  SHAS_SEEN="$SHAS_SEEN $(container_config_sha)"
   send_all "obs-dest-bad-$RANDOM" || fail OBS-36 "the Collector refused signals while the destination is down"
   start=$SECONDS
   alive=1
@@ -129,6 +138,16 @@ if OBS_TRACES_ENDPOINT=http://nao-existe.invalid/v1/traces \
   else
     fail OBS-36 "the Collector did not survive an unreachable destination (running=$alive, restarts=$restarts)"
   fi
+  # The unsent data is held in the persistent queue (file_storage), one queue file per signal.
+  qdir=$(mktemp -d)
+  docker cp "$COLLECTOR":/var/lib/otelcol/queue "$qdir/" >/dev/null 2>&1
+  queued=$(find "$qdir" -type f -size +0 | wc -l)
+  rm -rf "$qdir"
+  if [ "$queued" -ge 3 ]; then
+    pass OBS-36 "the unsent data sits in the on-disk queue ($queued queue files, one per signal)"
+  else
+    fail OBS-36 "the on-disk queue has $queued non-empty files, expected at least 3"
+  fi
   collector_log=$(docker logs "$COLLECTOR" 2>&1)   # a variable, not a pipe: grep -q would SIGPIPE docker under pipefail
   if grep -qi 'will retry' <<<"$collector_log"; then
     pass OBS-36 "the Collector logs that it will retry the failed export"
@@ -141,54 +160,66 @@ fi
 
 echo "== 4. one backend down, the others keep working (OBS-57)"
 q $OBS --profile verify rm -sf otlp-capture
-if q $OBS up -d otel-collector && wait_running "$COLLECTOR" 60 && q $OBS stop loki; then
+q $OBS up -d otel-collector && wait_running "$COLLECTOR" 60
+SHAS_SEEN="$SHAS_SEEN $(container_config_sha)"
+
+# backend_down <loki|tempo|prometheus>: stop it, send all three signals, check the two other backends receive theirs,
+# then start it again and check what was sent while it was down is delivered (retry).
+backend_down() {
+  local backend="$1" svc="obs-dest-$1-down-$RANDOM" trace log_trace
+  trace=$(python3 -c 'import uuid; print(uuid.uuid4().hex)'); log_trace=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
+  if ! q $OBS stop "$backend"; then fail OBS-57 "could not stop $backend"; return; fi
   sleep 3
-  svc="obs-dest-loki-down-$RANDOM"
-  py - "$svc" <<'PY'
-import sys, uuid, time
-import smoke
-service = sys.argv[1]
-trace = uuid.uuid4().hex
-log_trace = uuid.uuid4().hex
-ok = smoke.send_traces(service=service, trace_id=trace)[0] == 200
-ok &= smoke.send_logs([{"body": f"sent while loki is down {service}", "trace_id": log_trace}], service=service)[0] == 200
-ok &= smoke.send_histogram(service=service)[0] == 200
-tempo = bool(smoke.wait_for(lambda: smoke.tempo_trace(trace), 30))
-prom = bool(smoke.wait_for(lambda: smoke.prom_query(f'http_server_request_duration_seconds_count{{job="{service}"}}'), 30))
-print(f"accepted={ok} tempo={tempo} prometheus={prom}")
-sys.exit(0 if ok and tempo and prom else 1)
-PY
-  if [ $? -eq 0 ]; then
-    pass OBS-57 "with the Loki stopped, a new span reaches Tempo and a new metric reaches Prometheus"
-  else
-    fail OBS-57 "traces or metrics stopped arriving while the Loki was down"
-  fi
-  if [ "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$COLLECTOR")" = "running 0" ]; then
-    pass OBS-57 "the Collector kept running, with no restarts, while the Loki was down"
-  else
-    fail OBS-57 "the Collector restarted or stopped while the Loki was down"
-  fi
-  # The log sent while the Loki was down is retried and lands once it is back.
-  q $OBS start loki
-  if py - "$svc" <<'PY'
+  py - "$svc" "$trace" "$log_trace" "$backend" send <<'PY'
 import sys
 import smoke
-service = sys.argv[1]
-found = smoke.wait_for(lambda: [x for x in smoke.loki_lines(f'{{service_name="{service}"}}') if x[0].startswith("sent while loki is down")], 120, 3)
-sys.exit(0 if found else 1)
+service, trace, log_trace, backend, phase = sys.argv[1:6]
+ok = smoke.send_traces(service=service, trace_id=trace)[0] == 200
+ok &= smoke.send_logs([{"body": f"sent while {backend} is down {service}", "trace_id": log_trace}], service=service)[0] == 200
+ok &= smoke.send_histogram(service=service)[0] == 200
+seen = {
+    "tempo": lambda: smoke.tempo_trace(trace),
+    "loki": lambda: smoke.loki_lines(f'{{service_name="{service}"}}'),
+    "prometheus": lambda: smoke.prom_query(f'http_server_request_duration_seconds_count{{job="{service}"}}'),
+}
+others = {k: bool(smoke.wait_for(fn, 30)) for k, fn in seen.items() if k != backend}
+print(f"accepted={ok} others={others}")
+sys.exit(0 if ok and all(others.values()) else 1)
 PY
-  then
-    pass OBS-57 "the log sent while the Loki was down arrives after the Loki is back (retry)"
+  if [ $? -eq 0 ]; then
+    pass OBS-57 "with $backend stopped, the other two backends still receive their new signals"
   else
-    fail OBS-57 "the log sent while the Loki was down never arrived"
+    fail OBS-57 "signals for the other backends stopped arriving while $backend was down"
   fi
-else
-  fail OBS-57 "could not stop the Loki"
-fi
+  if [ "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$COLLECTOR")" = "running 0" ]; then
+    pass OBS-57 "the Collector kept running, with no restarts, while $backend was down"
+  else
+    fail OBS-57 "the Collector restarted or stopped while $backend was down"
+  fi
+  q $OBS start "$backend"
+  py - "$svc" "$trace" "$backend" <<'PY'
+import sys
+import smoke
+service, trace, backend = sys.argv[1:4]
+seen = {
+    "tempo": lambda: smoke.tempo_trace(trace),
+    "loki": lambda: [x for x in smoke.loki_lines(f'{{service_name="{service}"}}') if x[0].startswith("sent while")],
+    "prometheus": lambda: smoke.prom_query(f'http_server_request_duration_seconds_count{{job="{service}"}}'),
+}
+sys.exit(0 if smoke.wait_for(seen[backend], 150, 3) else 1)
+PY
+  if [ $? -eq 0 ]; then
+    pass OBS-57 "what was sent while $backend was down is delivered after it is back (retry)"
+  else
+    fail OBS-57 "what was sent while $backend was down never arrived"
+  fi
+}
+for backend in loki tempo prometheus; do backend_down "$backend"; done
 
 config_after=$(sha256sum "$CONFIG" | cut -d' ' -f1)
-if [ "$config_before" = "$config_after" ]; then
-  pass OBS-35 "otel/config.yaml has the same sha256 before and after every scenario ($config_before)"
+distinct=$(printf '%s\n' $SHAS_SEEN | sort -u | tr '\n' ' ')
+if [ "$config_before" = "$config_after" ] && [ "$distinct" = "$config_before " ] && [ "$(printf '%s\n' $SHAS_SEEN | wc -l)" -ge 3 ]; then
+  pass OBS-35 "the Collector ran the same config.yaml ($config_before) in the capture, bad-destination and backend-down scenarios"
 else
-  fail OBS-35 "otel/config.yaml changed during the scenarios"
+  fail OBS-35 "the Collector config differed between scenarios (repo $config_before, containers: $distinct)"
 fi

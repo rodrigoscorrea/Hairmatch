@@ -9,7 +9,8 @@
 #   - Every bind mount starts with ${OBS_DIR:-.}/. In the combined mode Compose resolves relative paths from
 #     docker/, so docker/.env sets OBS_DIR=./observability; standalone, the default "." applies.
 #   - Every image has an exact version tag, every published port is bound to 127.0.0.1,
-#     every service rotates its logs, and every volume has a fixed name shared by both modes.
+#     and every service rotates its logs.
+#   - Every volume has a fixed `name:` (hairmatch_obs_*), so both modes share the data. Review-enforced, not linted.
 
 x-logging: &default-logging
   driver: json-file
@@ -36,7 +37,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.164.0
     container_name: hairmatch_obs_otel_collector
     command: --config=/etc/otelcol/config.yaml
-    # Root, so it can write the disk queue volume (and, later, read docker.sock and the host filesystem).
+    # Root, so it can write the disk queue volume and read docker.sock and the host filesystem.
     user: "0:0"
     # memory_limiter stops at 200 MiB; this is the hard ceiling above it.
     mem_limit: 300m
