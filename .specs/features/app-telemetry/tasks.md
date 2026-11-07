@@ -211,11 +211,11 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Sem SDK, todo helper roda sem exceção
-- [ ] Exceção do SDK dentro do helper não sobe
-- [ ] Rótulo fora do conjunto fechado não é registrado
-- [ ] Nove contadores com os nomes e rótulos do spec
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Sem SDK, todo helper roda sem exceção
+- [x] Exceção do SDK dentro do helper não sobe
+- [x] Rótulo fora do conjunto fechado não é registrado
+- [x] Nove contadores com os nomes e rótulos do spec
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: unit
 **Gate**: quick

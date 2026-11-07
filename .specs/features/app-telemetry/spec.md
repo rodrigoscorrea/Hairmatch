@@ -289,8 +289,8 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-09 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-10 | P1: Não depende da telemetria | Specify | Pending |
 | TEL-11 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-12 | P1: Não depende da telemetria | Specify | Pending |
-| TEL-13 | P1: Não depende da telemetria | Specify | Pending |
+| TEL-12 | P1: Não depende da telemetria | Execute | Done |
+| TEL-13 | P1: Não depende da telemetria | Execute | Done |
 | TEL-14 | P1: Não depende da telemetria | Execute | Done |
 | TEL-15 | P1: Não depende da telemetria | Execute | Done |
 | TEL-16 | P1: Requisição vira trace | Specify | Pending |
@@ -337,7 +337,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-57 | P1: Métricas de negócio | Specify | Pending |
 | TEL-58 | P1: Métricas de negócio | Specify | Pending |
 | TEL-59 | P1: Métricas de negócio | Specify | Pending |
-| TEL-60 | P1: Métricas de negócio | Specify | Pending |
+| TEL-60 | P1: Métricas de negócio | Execute | Done |
 | TEL-61 | P2: Rota de saúde | Specify | Pending |
 | TEL-62 | P2: Rota de saúde | Specify | Pending |
 | TEL-63 | P2: Rota de saúde | Specify | Pending |
