@@ -6,6 +6,8 @@ from django.db import models
 from django.db.models.fields.files import ImageFieldFile
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from . import telemetry
+
 MAX_SIDE = 1080
 WEBP_QUALITY = 80
 
@@ -32,6 +34,16 @@ def _rgb_icc_profile(info):
 
 def to_webp(content):
     """Convert an uploaded image into a static WebP of at most MAX_SIDE px."""
+    # The span says how big the conversion was, and nothing about what the image shows (TEL-24).
+    with telemetry.span('image.to_webp'):
+        content.seek(0, os.SEEK_END)
+        telemetry.set_span_attributes(**{'image.bytes_in': content.tell()})
+        converted = _convert(content)
+        telemetry.set_span_attributes(**{'image.bytes_out': converted.size})
+        return converted
+
+
+def _convert(content):
     content.seek(0)
     try:
         with Image.open(content) as original:

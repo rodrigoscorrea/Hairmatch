@@ -120,3 +120,15 @@ class TelemetryMixin:
 
     def points(self, name):
         return points(name)
+
+
+def stubbed_client(service, **kwargs):
+    """A real boto3 client of `service` with botocore's Stubber (not activated: use it as a context manager). The calls go through the instrumentation."""
+    import boto3
+    from botocore.stub import Stubber
+
+    client = boto3.client(
+        service, region_name='us-east-2', aws_access_key_id='test', aws_secret_access_key='test',
+        endpoint_url='http://localhost:4566', **kwargs,
+    )
+    return client, Stubber(client)

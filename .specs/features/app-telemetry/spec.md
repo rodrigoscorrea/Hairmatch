@@ -301,7 +301,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-21 | P1: Requisição vira trace | Execute | Done |
 | TEL-22 | P1: Requisição vira trace | Specify | Pending |
 | TEL-23 | P1: Requisição vira trace | Execute | Done |
-| TEL-24 | P1: Requisição vira trace | Specify | Pending |
+| TEL-24 | P1: Requisição vira trace | Execute | Done |
 | TEL-25 | P1: Requisição vira trace | Specify | Pending |
 | TEL-26 | P1: Requisição vira trace | Specify | Pending |
 | TEL-27 | P1: Requisição vira trace | Specify | Pending |

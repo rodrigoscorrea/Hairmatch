@@ -345,9 +345,9 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] Span `image.to_webp` com `image.bytes_in` e `image.bytes_out` inteiros e nenhum outro dado
-- [ ] Upload de foto da galeria gera `image.to_webp` e `S3.PutObject` no mesmo trace
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] Span `image.to_webp` com `image.bytes_in` e `image.bytes_out` inteiros e nenhum outro dado
+- [x] Upload de foto da galeria gera `image.to_webp` e `S3.PutObject` no mesmo trace
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full
