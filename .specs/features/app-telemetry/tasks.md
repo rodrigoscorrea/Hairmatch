@@ -684,8 +684,8 @@ T30 → T31 → T32
 
 **Done when**:
 
-- [ ] `GET health` no `ROUTE_TABLE` e RT-105 no spec `api-restful-routes`
-- [ ] Gate passes; no test deleted, skipped or weakened
+- [x] `GET health` no `ROUTE_TABLE` e RT-105 no spec `api-restful-routes`
+- [x] Gate passes; no test deleted, skipped or weakened
 
 **Tests**: integration
 **Gate**: full

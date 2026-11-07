@@ -343,7 +343,7 @@ A #193 deixou a stack local pronta para receber os sinais. Falta ligar a aplica�
 | TEL-63 | P2: Rota de saúde | Execute | Done |
 | TEL-64 | P2: Rota de saúde | Execute | Done |
 | TEL-65 | P2: Rota de saúde | Execute | Done |
-| TEL-66 | P2: Rota de saúde | Specify | Pending |
+| TEL-66 | P2: Rota de saúde | Execute | Done |
 | TEL-67 | P2: Rota de saúde | Execute | Done |
 | TEL-68 | P2: App propaga o trace | Specify | Pending |
 | TEL-69 | P2: App propaga o trace | Specify | Pending |
