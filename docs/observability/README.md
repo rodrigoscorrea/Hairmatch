@@ -1,6 +1,6 @@
 # Hairmatch — Stack de observabilidade local
 
-Issue [#193](https://github.com/rodrigoscorrea/Hairmatch/issues/193). A stack mora em `docker/observability/` e é o destino local da telemetria que a #194 vai gerar no backend. Ela também é o ensaio da implantação no Grafana Cloud: o mesmo Collector e a mesma configuração, trocando só variáveis de ambiente.
+Issue [#193](https://github.com/rodrigoscorrea/Hairmatch/issues/193). A stack mora em `docker/observability/` e é o destino local da telemetria que o backend e o app geram desde a #194. Ela também é o ensaio da implantação no Grafana Cloud: o mesmo Collector e a mesma configuração, trocando só variáveis de ambiente.
 
 ```
 app / navegador ──OTLP/HTTP──▶ OTel Collector ──▶ Tempo      (traces)
@@ -48,6 +48,56 @@ docker compose -f docker/docker-compose.yml -f docker/observability/docker-compo
 Os dados ficam em volumes nomeados `hairmatch_obs_*`, iguais nos dois modos. Trocar de modo mantém métricas, logs, traces e o estado do Grafana. Nunca use `down -v` se quiser guardá-los.
 
 Na primeira subida, o Grafana 13 baixa os plugins dos data sources em segundo plano e precisa de internet. Nesse intervalo o data source do Prometheus pode responder `Plugin not registered`. Os plugins ficam no volume.
+
+## Ligar o backend e o app (#194)
+
+O backend e o app emitem telemetria por padrão **desligada**. Sem as variáveis abaixo, nada sai do processo e nenhuma resposta muda.
+
+### 1. Backend
+
+1. Suba no **modo combinado** (o backend só alcança o Collector por ele; veja acima).
+2. No `docker/.env`, defina:
+
+   ```
+   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+   # opcionais: vazio usa hairmatch-api e "dev"
+   OTEL_SERVICE_NAME=
+   OTEL_RESOURCE_ATTRIBUTES=
+   ```
+
+3. Recrie o backend para ler o `.env`:
+
+   ```bash
+   docker compose -f docker/docker-compose.yml -f docker/observability/docker-compose.observability.yml up -d django
+   ```
+
+4. Confira: `docker exec hairmatch_backend env | grep OTEL` mostra o endpoint, e o log do container sai em JSON, uma linha por evento.
+
+O serviço aparece como `hairmatch-api`. Se o Collector estiver fora do ar, o backend segue respondendo igual: cada envio desiste em 2 s, a fila descarta o excesso e há no máximo uma linha de aviso por sinal a cada 60 s.
+
+### 2. App
+
+No `frontend-mobile/.env`, defina `EXPO_PUBLIC_TRACE_PROPAGATION=true` e reinicie o Metro (variáveis `EXPO_PUBLIC_*` são lidas na hora do bundle). Cada requisição passa a levar um cabeçalho W3C `traceparent` (`00-<trace_id>-<id do span>-01`), e o trace do backend começa nesse `trace_id`. Vazio, ou qualquer valor diferente de `true`, não envia nada. O refresh de sessão (401, `POST /api/auth/refresh` e nova tentativa) gera três `traceparent` distintos.
+
+Na web, o `trace_id` é o segundo trecho do cabeçalho `traceparent` da requisição, visível na aba Network do navegador. No Android o app não mostra o cabeçalho: ache o trace pela rota, como no passo 3.
+
+### 3. Achar o trace e os logs de uma reserva
+
+1. Faça uma reserva no app (ou `POST /api/reservations` com um cabeçalho `traceparent` seu).
+2. Abra o Grafana em <http://localhost:3000> → **Explore** → data source **Tempo**.
+3. Busque pelo `trace_id` (tipo de consulta *TraceID*) ou, sem ele, em *TraceQL* por `{ name = "POST api/reservations" }`. O trace mostra, nesta ordem de aninhamento:
+   - o span `POST api/reservations` (SERVER), com `hairmatch.reserve_id` e `hairmatch.hairdresser_id`;
+   - as queries do banco, sem valores (`WHERE id = %s`);
+   - `SNS.Publish`, quando o cabeleireiro tem um aparelho registrado.
+4. Do span, o botão **Logs for this span** abre o Loki nos logs do mesmo `trace_id`. No caminho inverso, em **Explore → Loki**, `{service_name="hairmatch-api"} | trace_id="<trace_id>"` lista os logs do trace, e o campo `trace_id` vira link para o Tempo.
+5. Os contadores de negócio ficam no **Prometheus**: `hairmatch_reserves_created_total{channel="app"}`, `hairmatch_push_results_total`, `hairmatch_problems_total`, `hairmatch_auth_rejections_total`, `hairmatch_signup_events_total`, `hairmatch_uploads_total`, `hairmatch_cep_lookups_total`, `hairmatch_ai_requests_total` e `hairmatch_ai_tokens_total`. O dashboard **API · RED** usa `http_server_request_duration_seconds` com `job="hairmatch-api"`, e os exemplares do histograma levam ao trace.
+
+Dois limites para não estranhar:
+
+- Um log só carrega `trace_id` se foi escrito **dentro** do span da requisição. O log de acesso do servidor (`django.server`) e o `django.request` ("Not Found: …") são escritos depois que o span fecha, por isso não têm `trace_id`. Uma reserva bem-sucedida não escreve log nenhum; o log aparece quando algo falha dentro dela (por exemplo, o SNS fora do ar).
+- Dados chegam ao Tempo cerca de 15 s depois da requisição (o ingester espera esse tempo para ficar pronto).
+
+Nenhum e-mail, telefone, CPF, CEP, token ou ARN deve aparecer em span, métrica ou log. Se aparecer, é um defeito: o teste `hairmatch/test_telemetry_privacy.py` cobre os fluxos principais.
 
 ## Portas
 
@@ -151,7 +201,7 @@ Depois de subir a stack do zero, o `smoke.py` leva alguns minutos, em boa parte 
 - **Número de 11 dígitos sem máscara** vira `[cpf]`, seja CPF ou celular: os dois são indistinguíveis.
 - **O JID do WhatsApp** (`<dígitos>@s.whatsapp.net`) vira `[email]`.
 - **Chaves de URL.** `url.query`, `url.full`, `http.url` e `http.target` são apagadas em spans, logs e métricas.
-- **Sem dados até a #194.** Pyroscope, o receiver do Faro e o dashboard "API · RED" sobem vazios para o backend e só foram testados com dados sintéticos.
+- **Pyroscope e Faro seguem sem dados reais.** O backend envia traces, métricas e logs (e o dashboard "API · RED" mostra as rotas dele), mas nada alimenta o Pyroscope nem o receiver do Faro; os dois só foram testados com dados sintéticos.
 - **O Collector roda como root e monta o `docker.sock`** (somente leitura) para ler as métricas dos containers. Quem controla o Collector controla o Docker do host. É uma conveniência local.
 - **Grafana anônimo com Admin**, sem login. Só é seguro porque a porta fica em `127.0.0.1`.
 
