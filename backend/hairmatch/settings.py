@@ -212,7 +212,9 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    "ngrok-skip-browser-warning"
+    "ngrok-skip-browser-warning",
+    # W3C trace context sent by the app (#194). Without it the browser preflight fails and every call from the web build breaks.
+    'traceparent',
 ]
 
 REST_FRAMEWORK = {
@@ -231,4 +233,48 @@ CACHES = {
         # The default of 300 entries would evict the throttle counters under load, and the CEP cache shares the table.
         'OPTIONS': {'MAX_ENTRIES': 100000},
     }
+}
+
+# One JSON line per record on stdout (#194), the same in every environment. The redaction runs here and again
+# in the OTLP handler that hairmatch.otel adds to the root logger when the telemetry is on; the Collector is the third barrier.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'trace_context': {'()': 'hairmatch.logs.TraceContextFilter'},
+        'redact': {'()': 'hairmatch.logs.RedactionFilter'},
+        'export_rate_limit': {'()': 'hairmatch.logs.ExportErrorRateLimit'},
+        'strip_query': {'()': 'hairmatch.logs.StripQueryString'},
+    },
+    'formatters': {
+        'json': {'()': 'hairmatch.logs.JsonFormatter'},
+    },
+    'handlers': {
+        'stdout': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
+            'formatter': 'json',
+            'filters': ['trace_context', 'redact'],
+        },
+        # Records to the Collector (TEL-39): an OTLP handler when the telemetry is on, a null handler otherwise.
+        # The filter redacts before the record leaves the process (TEL-46).
+        'otlp': {'()': 'hairmatch.logs.otlp_handler', 'filters': ['redact']},
+        # The loggers of the OpenTelemetry SDK and of the HTTP client under it go only here, never to the OTLP handler:
+        # a failed export that is logged and exported again would feed itself.
+        'telemetry_stdout': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
+            'formatter': 'json',
+            'filters': ['export_rate_limit', 'trace_context', 'redact'],
+        },
+    },
+    'root': {'handlers': ['stdout', 'otlp'], 'level': 'INFO'},
+    'loggers': {
+        'opentelemetry': {'handlers': ['telemetry_stdout'], 'level': 'INFO', 'propagate': False},
+        'urllib3': {'handlers': ['telemetry_stdout'], 'level': 'WARNING', 'propagate': False},
+        # Django's own console handler is text and only in DEBUG; the root handler already prints its records as JSON.
+        'django': {'handlers': [], 'level': 'INFO', 'propagate': True},
+        # The access log of runserver, without the query string, through the root handlers.
+        'django.server': {'handlers': [], 'filters': ['strip_query'], 'level': 'INFO', 'propagate': True},
+    },
 }

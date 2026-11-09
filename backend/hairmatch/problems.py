@@ -16,6 +16,8 @@ from django.http import Http404, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import exceptions
 
+from . import telemetry
+
 logger = logging.getLogger(__name__)
 
 PROBLEM_CONTENT_TYPE = 'application/problem+json'
@@ -64,6 +66,7 @@ CATALOG = {
     'postal-code-service-unavailable': (503, 'Postal code service unavailable'),
     'ai-service-unavailable': (503, 'AI service unavailable'),
     'push-unavailable': (503, 'Push service unavailable'),
+    'service-unavailable': (503, 'Service unavailable'),
 }
 
 
@@ -94,6 +97,7 @@ def problem_response(request, slug, detail, errors=None, headers=None, status=No
     if errors is not None:
         body['errors'] = errors
     response = JsonResponse(body, status=body['status'], content_type=PROBLEM_CONTENT_TYPE)
+    telemetry.count_problem(slug, body['status'])
     for name, value in (headers or {}).items():
         response[name] = value
     return response

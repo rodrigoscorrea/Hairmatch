@@ -6,11 +6,13 @@ from django.utils import timezone
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 
+from hairmatch import telemetry
 from hairmatch.images import InvalidImage
 from hairmatch.problems import (
     body_error,
     json_object,
     missing_field_errors,
+    Problem,
     problem_response,
     request_data,
     validation_problem,
@@ -69,6 +71,12 @@ def _rating_error(value):
 
 
 # 2 - Cookie-based views (authenticated user)
+def _count_failed_upload(files, exc):
+    """A request with pictures that dies of anything but a refusal by the rules (a `Problem`) is a failed upload."""
+    if files and not isinstance(exc, Problem):
+        telemetry.count_upload('review', 'failed')
+
+
 class CreateReview(APIView):
     # Add parsers to handle multipart/form-data
     parser_classes = (MultiPartParser, FormParser)
@@ -132,11 +140,15 @@ class CreateReview(APIView):
                 notify(review_created(new_review), actor=session.user)
         except InvalidImage:
             delete_stored_files(saved_names)
+            telemetry.count_upload('review', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
-        except BaseException:
+        except BaseException as exc:
             delete_stored_files(saved_names)
+            _count_failed_upload(files, exc)
             raise
 
+        if files:
+            telemetry.count_upload('review', 'stored')
         return JsonResponse({'message': "Review registered successfully"}, status=201)
 
 
@@ -235,11 +247,14 @@ class ReviewPictureCollection(APIView):
                 add_review_pictures(review, files, saved_names)
         except InvalidImage:
             delete_stored_files(saved_names)
+            telemetry.count_upload('review', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_REVIEW_PICTURE_DETAIL)
-        except BaseException:
+        except BaseException as exc:
             delete_stored_files(saved_names)
+            _count_failed_upload(files, exc)
             raise
 
+        telemetry.count_upload('review', 'stored')
         return JsonResponse({'data': ReviewPictureSerializer(review.pictures.all(), many=True).data}, status=201)
 
 

@@ -68,6 +68,11 @@ services:
       - COGNITO_APP_CLIENT_ID=${COGNITO_APP_CLIENT_ID:-}
       # Empty in dev: the backend looks up the hairmatch-dev-fcm platform application by name.
       - SNS_PLATFORM_APPLICATION_ARN=${SNS_PLATFORM_APPLICATION_ARN:-}
+      # Telemetry (#194). Empty keeps it off and the backend does not touch the network for it.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-}
+      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES:-}
+      - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-}
     restart: always
     networks:
       - app_network

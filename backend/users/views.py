@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import User, Customer, Hairdresser, GalleryPhoto, GALLERY_MAX_PHOTOS
+from hairmatch import telemetry
 from hairmatch.images import InvalidImage
 from hairmatch.storage import delete_stored_files
 from notifications.dispatch import delete_endpoints
@@ -318,7 +319,15 @@ class LoginThrottle(AnonRateThrottle):
 
 
 # 1 - The following views are related to user authentication procedures
-class RegisterView(APIView):
+class CountsThrottledSignupStep:
+    """Counts the 429 of a sign-up route (TEL-55); DRF calls `throttled` when one of the throttle classes refuses."""
+
+    def throttled(self, request, wait):
+        telemetry.count_signup('throttled')
+        super().throttled(request, wait)
+
+
+class RegisterView(CountsThrottledSignupStep, APIView):
     parser_classes = (MultiPartParser, FormParser)
     # Per IP against sweeps, per e-mail against spam to one inbox: each sign-up sends a verification e-mail.
     throttle_classes = [RegisterThrottle, RegisterEmailThrottle]
@@ -392,6 +401,7 @@ class RegisterView(APIView):
             logger.exception('E-mail sign-up failed')
             failure = problem_response(request, 'internal-error', ACCOUNT_NOT_CREATED_DETAIL)
         else:
+            telemetry.count_signup('created')
             return JsonResponse(
                 {'message': f"{role} user registered successfully", 'confirmation_required': True}, status=201
             )
@@ -571,7 +581,7 @@ class LoginView(APIView):
         return response
 
 
-class EmailConfirmationView(APIView):
+class EmailConfirmationView(CountsThrottledSignupStep, APIView):
     throttle_classes = [ConfirmIpThrottle, ConfirmEmailThrottle]
 
     def post(self, request):
@@ -607,10 +617,11 @@ class EmailConfirmationView(APIView):
 
         user.is_active = True
         user.save(update_fields=['is_active'])
+        telemetry.count_signup('confirmed')
         return confirmed
 
 
-class ConfirmationCodeView(APIView):
+class ConfirmationCodeView(CountsThrottledSignupStep, APIView):
     throttle_classes = [ResendCodeIpThrottle, ResendCodeEmailThrottle]
 
     def post(self, request):
@@ -637,6 +648,8 @@ class ConfirmationCodeView(APIView):
                     raise CognitoUnavailable('ResendRejected')
                 user.is_active = True
                 user.save(update_fields=['is_active'])
+            else:
+                telemetry.count_signup('resent')
         except CognitoError as err:
             return _cognito_error_response(request, err)
         return accepted
@@ -854,6 +867,7 @@ class ProfilePictureView(APIView):
             raise validation_problem([body_error('profile_picture', 'This field is required.')])
         # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
         if picture.size > IMAGE_UPLOAD_MAX_SIZE:
+            telemetry.count_upload('profile', 'invalid_image')
             raise validation_problem([body_error('profile_picture', 'The profile picture must have at most 5 MB.')])
 
         user = session.user
@@ -868,8 +882,13 @@ class ProfilePictureView(APIView):
                     transaction.on_commit(lambda: delete_stored_files([old_name]))
         except InvalidImage:
             # The conversion fails before the upload, so the old picture and its file are untouched.
+            telemetry.count_upload('profile', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_PROFILE_PICTURE_DETAIL)
+        except Exception:
+            telemetry.count_upload('profile', 'failed')
+            raise
 
+        telemetry.count_upload('profile', 'stored')
         return JsonResponse({'profile_picture': UserSerializer(user).data['profile_picture']}, status=200)
 
     def delete(self, request):
@@ -907,6 +926,7 @@ class GalleryPhotoCollection(APIView):
             raise validation_problem([body_error('image', 'This field is required.')])
         # Checked before the image is opened: the WebP conversion runs in this request (AD-003).
         if image.size > IMAGE_UPLOAD_MAX_SIZE:
+            telemetry.count_upload('gallery', 'invalid_image')
             raise validation_problem([body_error('image', 'The photo must have at most 5 MB.')])
 
         try:
@@ -924,8 +944,15 @@ class GalleryPhotoCollection(APIView):
                     delete_stored_files([photo.image.name])
                     raise
         except InvalidImage:
+            telemetry.count_upload('gallery', 'invalid_image')
             return problem_response(request, 'invalid-image', INVALID_GALLERY_PHOTO_DETAIL)
+        except Problem:
+            raise  # a full gallery is a refusal by the rules, not an upload that failed: it shows in hairmatch.problems
+        except Exception:
+            telemetry.count_upload('gallery', 'failed')
+            raise
 
+        telemetry.count_upload('gallery', 'stored')
         return JsonResponse({'data': GalleryPhotoSerializer(photo).data}, status=201)
 
 

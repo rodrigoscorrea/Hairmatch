@@ -34,8 +34,12 @@ def handle(exc, path='/api/anything', method='GET'):
 class CatalogTest(TestCase):
     """PD-01 to PD-05: the shape every problem shares."""
 
-    def test_catalog_has_the_42_slugs_of_the_spec(self):
-        self.assertEqual(len(CATALOG), 42)
+    def test_catalog_has_the_43_slugs_of_the_spec(self):
+        self.assertEqual(len(CATALOG), 43)
+
+    def test_service_unavailable_is_a_503_with_the_title_of_the_spec(self):
+        """TEL-67"""
+        self.assertEqual(CATALOG['service-unavailable'], (503, 'Service unavailable'))
 
     def test_push_unavailable_is_a_503_with_the_title_of_the_spec(self):
         """NOTIF-06"""

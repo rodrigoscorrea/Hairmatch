@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import json
+import logging
 import re
 from django.http import HttpResponse, JsonResponse
 from users.models import User, Customer, Hairdresser
@@ -18,8 +19,11 @@ from django.utils.dateparse import parse_datetime
 from hairmatch.problems import body_error, json_object, missing_field_errors, problem_response, query_error, validation_problem
 from users.authentication import authenticated_user, authenticated_customer, forbidden
 from hairmatch.local_time import LOCAL_TIMEZONE, make_local_aware, local_day_bounds, local_today
+from hairmatch import telemetry
 from notifications.dispatch import notify
 from notifications.messages import reservation_created
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 # What the API answers, in English, and what the WhatsApp chatbot tells the customer, in Portuguese.
@@ -149,7 +153,10 @@ class CreateReserve(APIView):
                 service=service_instance
             )
             notify(reservation_created(reserve), actor=session.user)
+            # Counted only if the transaction commits; a rollback drops the callback with it.
+            transaction.on_commit(lambda: telemetry.count_reserve_created('app'), robust=True)
 
+        telemetry.set_span_attributes(**{'hairmatch.reserve_id': reserve.pk, 'hairmatch.hairdresser_id': hairdresser_instance.pk})
         return JsonResponse({'message': 'Reserve created successfully'}, status=201)
 
 class ListReserve(APIView):
@@ -409,6 +416,7 @@ def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
                 service=service_instance
             )
             notify(reservation_created(reserve), actor=customer_instance.user)
+            transaction.on_commit(lambda: telemetry.count_reserve_created('whatsapp'), robust=True)
 
         return {'success': True, 'reserve': reserve}
     except Customer.DoesNotExist:
@@ -419,7 +427,8 @@ def create_new_reserve(customer_id, service_id, hairdresser_id, start_time_dt):
         return {'error': 'Hairdresser not found'}
     except Exception as e:
         # Catch any other unexpected errors
-        print(f"An unexpected error occurred in create_new_reserve: {e}")
+        # Only the type: the message of the exception can carry a name or a phone number.
+        logger.error('create_new_reserve failed: %s', type(e).__name__)
         return {'error': 'Ocorreu um erro inesperado ao tentar criar a reserva.'}
 
 

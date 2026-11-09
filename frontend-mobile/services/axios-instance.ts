@@ -1,6 +1,7 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
-import { REFRESH_PATH, isRefreshExcluded } from './auth-routes';
+import { REFRESH_PATH, isRefreshExcluded, pathnameOf } from './auth-routes';
+import { traceHeaders } from '../utils/telemetry';
 
 const API_BACKEND_URL = process.env.EXPO_PUBLIC_API_BACKEND_URL;
 
@@ -39,7 +40,15 @@ const refreshSession = (): Promise<void> => {
 
 axiosInstance.interceptors.request.use(
   (config) => {
-
+    // With EXPO_PUBLIC_TRACE_PROPAGATION=true each request, the refresh and the retry after it included, carries a
+    // traceparent of its own, so the backend continues the trace the app started (#194). A failure sends it without.
+    try {
+      for (const [name, value] of Object.entries(traceHeaders())) {
+        config.headers.set(name, value);
+      }
+    } catch {
+      // The request goes out as it would with the flag off.
+    }
     return config;
   },
   (error) => {
@@ -73,12 +82,16 @@ axiosInstance.interceptors.response.use(
       return axiosInstance(config);
     }
 
-    console.error('Response error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      data: error.response?.data,
-      platform: Platform.OS
-    });
+    // A 401 from the refresh only means there is no session to restore (first visit, logout, expired refresh token).
+    const noSessionToRestore = error.response?.status === 401 && pathnameOf(config?.url) === REFRESH_PATH;
+    if (!noSessionToRestore) {
+      console.error('Response error:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        data: error.response?.data,
+        platform: Platform.OS
+      });
+    }
     return Promise.reject(error);
   }
 );

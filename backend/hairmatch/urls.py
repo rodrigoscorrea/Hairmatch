@@ -17,6 +17,7 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, re_path, include
+from hairmatch.health import HealthView
 from hairmatch.problems import api_not_found
 
 urlpatterns = [
@@ -30,6 +31,7 @@ urlpatterns = [
     path('api/', include('favorite.urls')),
     path('api/', include('notifications.urls')),
     path('api/chatbot/', include('chatbot.urls')),
+    path('api/health', HealthView.as_view(), name='health'),
     # Must stay last: a URL under /api/ that no route matched.
     re_path(r'^api(?:/|$)', api_not_found),
 ]

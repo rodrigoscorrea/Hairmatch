@@ -19,7 +19,8 @@ from reserve.models import Reserve
 from reserve.views import get_available_slots, create_new_reserve
 from hairmatch.local_time import make_local_aware
 from availability.views import get_hairdresser_availability
-from .ai_utils import AiUtils
+from hairmatch import telemetry
+from .ai_utils import AiUtils, GEMINI_MODEL
 from .response_messages import ResponseMessage
 from .templates import Templates
 from hairmatch.problems import Problem, json_object, problem_response
@@ -75,10 +76,12 @@ class EvolutionApi(APIView):
                             if matching_hairdressers:
                                 recommendation_model = AiUtils.create_gemini_model_for_recommendation(matching_hairdressers)
                                 recommendation_chat = recommendation_model.start_chat(history=[])
-                                recommendation_response = recommendation_chat.send_message(
-                                    f"Com base na nossa conversa, preciso de recomendações de cabeleireiros. "
-                                    f"Minhas preferências incluem: {', '.join(preferences)}" 
-                                )  
+                                with telemetry.gemini_call('chatbot', GEMINI_MODEL) as call:
+                                    recommendation_response = recommendation_chat.send_message(
+                                        f"Com base na nossa conversa, preciso de recomendações de cabeleireiros. "
+                                        f"Minhas preferências incluem: {', '.join(preferences)}" 
+                                    )
+                                    call.record_usage(recommendation_response)
                                 formatted_answer,names, ids = AiUtils.format_hairdresser(recommendation_response.text)
                                 recommended_or_searched_hairdressers[sender_number] = ids
                                 response_message = f"Com base no que você me contou, encontrei alguns profissionais perfeitos para você:\n {formatted_answer}"
@@ -144,14 +147,17 @@ class EvolutionApi(APIView):
                         user_states[sender_number] = 'main_menu'
                     else:
                         try:
-                            gemini_response = chat_session.send_message(incoming_text)
+                            with telemetry.gemini_call('chatbot', GEMINI_MODEL) as call:
+                                gemini_response = chat_session.send_message(incoming_text)
+                                call.record_usage(gemini_response)
                             response_message = gemini_response.text
                             
                             if len(chat_session.history) > 3:  # After some conversation
                                 response_message = ResponseMessage.I_COLLECTED_ENOUGH_DATA_RECOMMEND
                                 
                         except Exception as e:
-                            print(f"Error calling Gemini API: {e}")
+                            # Only the type: the text of the error can quote the conversation.
+                            logger.warning('Gemini chat failed: %s', type(e).__name__)
                             response_message = ResponseMessage.PROBLEM_WHILE_PROCESSING_OPERATION
                 
                 elif current_state == 'find_specific_hairdresser':
@@ -193,7 +199,7 @@ class EvolutionApi(APIView):
                         else:
                             response_message = f"Não encontrei nenhum cabeleireiro com o nome '{hairdresser_name}'. Gostaria de tentar outro nome ou receber recomendações baseadas em suas preferências?"
                     except Exception as e:
-                        print(f"Error searching for specific hairdresser: {e}")
+                        logger.warning('hairdresser search failed: %s', type(e).__name__)
                         response_message = "Erro ao buscar o cabeleireiro. Tente novamente."
                 elif current_state == 'hairdresser_service_selection':
                     try:
@@ -236,14 +242,12 @@ class EvolutionApi(APIView):
                     except ValueError:
                         response_message = "Por favor, digite um número."
                     except Exception as e:
-                        print(
-                            f"Error in hairdresser_service_selection: {e}")
+                        logger.warning('hairdresser selection failed: %s', type(e).__name__)
                         response_message = "Ocorreu um erro ao selecionar o profissional. Tente novamente."
                         user_states[sender_number] = 'main_menu'
                 
                 elif current_state == 'service_booking_selection':
                     choice = int(incoming_text)
-                    print(choice)
                     services_list = show_services[sender_number] 
                     if choice == len(services_list)+1:
                         user_states[sender_number] = 'collecting_preferences'
@@ -358,7 +362,7 @@ class EvolutionApi(APIView):
                     except Customer.DoesNotExist:
                         response_message = "Seu perfil de cliente não foi encontrado. Por favor, complete seu registro no nosso site."
                     except Exception as e:
-                        print(f"Error in 'confirm_booking': {e}")
+                        logger.warning('booking confirmation failed: %s', type(e).__name__)
                         response_message = "Ocorreu um erro crítico ao confirmar seu agendamento. Tente novamente."
                         user_states[sender_number] = 'main_menu' 
                 AiUtils.send_whatsapp_message(sender_number,response_message)
