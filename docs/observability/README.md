@@ -99,6 +99,29 @@ Dois limites para não estranhar:
 
 Nenhum e-mail, telefone, CPF, CEP, token ou ARN deve aparecer em span, métrica ou log. Se aparecer, é um defeito: o teste `hairmatch/test_telemetry_privacy.py` cobre os fluxos principais.
 
+### 4. Dashboards do Grafana
+
+Na pasta **Hairmatch** (<http://localhost:3000/dashboards>) ficam oito dashboards, todos provisionados por `docker/observability/grafana/dashboards/` e não editáveis pela interface. Cada sinal coletado tem um:
+
+| Dashboard | Fonte | O que mostra |
+| --- | --- | --- |
+| **API · RED** | Prometheus | Taxa, 5xx e p95 por rota. |
+| **App · Negócio** | Prometheus | Os nove contadores `hairmatch_*`, o HTTP do servidor (status, latência) e do cliente (Gemini, ViaCEP, SNS...) e o `target_info` de cada instância. |
+| **Host** | Prometheus (`system_*`) | CPU por estado, load contra os CPUs, memória, disco e inodes por ponto de montagem, rede e conexões TCP. |
+| **Containers** | Prometheus (`container_*`) | Resumo por container e CPU, memória contra o limite, rede e block I/O. Variável `container`. |
+| **Postgres** | Prometheus (`pg_*`) | Conexões, locks, transações, cache hit, WAL, tabelas, saúde do exporter e, numa seção recolhida, as 270 configurações (`pg_settings_*`). |
+| **Logs** | Loki | Volume por nível, serviço e origem, erros e avisos, e todos os logs com filtro por nível e busca por regex. |
+| **Traces** | Tempo | Traces recentes, com erro, lentos e de banco, e a latência do servidor. |
+| **Profiles** | Pyroscope | Flame graph de CPU do backend. |
+
+Painéis de eventos que nunca aconteceram (Gemini, CEP, push, uploads, 5xx) mostram "No data" até o primeiro evento. Isso não é defeito.
+
+`python3 docker/observability/scripts/check_dashboards.py --live` roda a consulta de cada painel pelo Grafana e falha em qualquer erro.
+
+### 5. Profiling do backend (Pyroscope)
+
+Defina `PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040` no `docker/.env` e recrie o backend (`docker compose -f docker/docker-compose.yml -f docker/observability/docker-compose.observability.yml up -d --build django`; é preciso reconstruir a imagem na primeira vez, por causa do `pyroscope-io`). O agente roda dentro do processo que atende as requisições e envia os profiles direto ao Pyroscope, sem passar pelo Collector. O serviço aparece como `hairmatch-api` (o mesmo nome da telemetria), com a tag `env`. Vazio, não faz nada: nada é importado, nenhuma thread sobe e nenhuma conexão abre. Uma falha ao iniciar vira um único WARNING e o app segue sem profiling.
+
 ## Portas
 
 Todas publicadas só em `127.0.0.1`.
@@ -201,7 +224,10 @@ Depois de subir a stack do zero, o `smoke.py` leva alguns minutos, em boa parte 
 - **Número de 11 dígitos sem máscara** vira `[cpf]`, seja CPF ou celular: os dois são indistinguíveis.
 - **O JID do WhatsApp** (`<dígitos>@s.whatsapp.net`) vira `[email]`.
 - **Chaves de URL.** `url.query`, `url.full`, `http.url` e `http.target` são apagadas em spans, logs e métricas.
-- **Pyroscope e Faro seguem sem dados reais.** O backend envia traces, métricas e logs (e o dashboard "API · RED" mostra as rotas dele), mas nada alimenta o Pyroscope nem o receiver do Faro; os dois só foram testados com dados sintéticos.
+- **O Faro segue sem dados reais.** Nada no app alimenta o receiver do Faro; ele só foi testado com dados sintéticos. O Pyroscope recebe os profiles do backend quando `PYROSCOPE_SERVER_ADDRESS` está definido.
+- **Profiling sem autenticação.** O SDK só fala com o Pyroscope local. Enviar ao Grafana Cloud Profiles exige usuário e senha do Basic Auth, que ainda não têm variável.
+- **Logs de acesso sem `trace_id`.** Veja "Dois limites" acima: o painel "Com trace_id" do dashboard Logs conta só os logs escritos dentro de um span.
+- **Sem métricas do próprio Collector e do Alloy.** Nenhum dashboard os mostra porque nada os coleta; só o consumo dos containers deles (dashboard Containers).
 - **O Collector roda como root e monta o `docker.sock`** (somente leitura) para ler as métricas dos containers. Quem controla o Collector controla o Docker do host. É uma conveniência local.
 - **Grafana anônimo com Admin**, sem login. Só é seguro porque a porta fica em `127.0.0.1`.
 

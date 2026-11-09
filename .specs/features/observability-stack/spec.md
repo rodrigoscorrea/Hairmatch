@@ -25,7 +25,7 @@ A #194 vai instrumentar o backend com OpenTelemetry e precisa de um destino loca
 | Feature | Reason |
 | ------- | ------ |
 | Instrumentar o backend e o app (SDK OTel, `LOGGING` em JSON, `traceparent`, `GET /api/health`) | Card #194. |
-| Profiling contínuo no backend (SDK do Pyroscope) | Fora da #194 também. O servidor Pyroscope sobe vazio até um card futuro. |
+| ~~Profiling contínuo no backend (SDK do Pyroscope)~~ | Feito depois da #194 (OBS-61 a OBS-63). Autenticação do Pyroscope no Grafana Cloud segue fora. |
 | Faro no app web (SDK `@grafana/faro-web-sdk`) | Fase 1 do estudo. O receiver local do Faro sobe e é testado com um payload sintético. |
 | Crashlytics (Android) | Fora do escopo da issue. |
 | Mimir | Decisão do usuário: só Prometheus, tanto no ambiente local quanto no estudo. |
@@ -67,7 +67,7 @@ A #194 vai instrumentar o backend com OpenTelemetry e precisa de um destino loca
 | Credencial do postgres-exporter | O usuário e a senha do banco de dev (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` do `docker/.env`). | Em dev, o banco só tem esse usuário. A documentação manda usar um papel `pg_monitor` na VPS. | n |
 | Docker API do `docker_stats` | `api_version: "1.44"` explícito. | O Docker Engine 29 (o local é o 29.1.3) recusa APIs abaixo de 1.44. | n |
 | Versões das imagens | `otel/opentelemetry-collector-contrib:0.164.0`, `grafana/loki:3.7.9`, `grafana/tempo:2.10.10`, `prom/prometheus:v3.15.1`, `grafana/pyroscope:2.4.3`, `grafana/alloy:v1.21.3`, `grafana/grafana:13.2.5`, `prometheuscommunity/postgres-exporter:v0.20.1`. O serviço de teste `otlp-capture` usa `python:3.12.15-alpine`. | O último patch de cada linha, conferido no Docker Hub em 2026-11-07. Fica de fora só o que saiu no próprio dia (Collector 0.165.0, Loki 3.6.20). O Tempo fica na linha 2.10, porque a 3.x mudou a arquitetura e a configuração não foi verificada. | n |
-| Sem dados até a #194 | Pyroscope, o receiver do Faro e o dashboard RED sobem vazios para o backend. Eles só são testados com dados sintéticos. | A instrumentação está fora do escopo. | n |
+| Sem dados até a #194 | Pyroscope, o receiver do Faro e o dashboard RED sobem vazios para o backend. Eles só são testados com dados sintéticos. | A instrumentação está fora do escopo. Depois dela, o Pyroscope recebe o backend (OBS-62); o Faro continua vazio. | n |
 | Gate de teste | O repositório não tem testes de infra. O gate desta feature são scripts versionados em `docker/observability/scripts/`, que sobem a stack, mandam dados sintéticos e consultam as APIs. | Segue a postura das features anteriores: o critério é provado por execução, não por leitura. | n |
 
 **Open questions:** none. Todas foram resolvidas ou registradas acima.
@@ -197,6 +197,11 @@ Os exemplos usam os valores da tabela de entradas abaixo. "Gravado" é o que o L
 
 **Independent Test**: subir a stack, consultar a API do Grafana pelos data sources e pelo dashboard e rodar as consultas dos painéis depois do smoke.
 
+**Dashboards de cada sinal** (adicionados depois, para que tudo o que é coletado fique visível):
+
+6. **OBS-61** WHEN o Grafana sobe THEN ele SHALL ter, na pasta "Hairmatch", os dashboards `host`, `containers`, `postgres`, `logs`, `traces`, `profiles` e `app-business`, além do "API · RED", lidos de `docker/observability/grafana/dashboards/` e não editáveis. Cobrem todas as métricas `system_*`, `container_*`, `pg_*`, `hairmatch_*`, `http_*` e `target_info`, os logs do Loki, os traces do Tempo e os profiles do Pyroscope.
+7. **OBS-63** WHEN `check_dashboards.py --live` roda com a stack no ar THEN nenhuma consulta de nenhum painel SHALL devolver erro pelo Grafana; painéis de eventos que ainda não ocorreram podem vir sem dados.
+
 ---
 
 ### P2: Pyroscope, Faro e métricas de infra
@@ -212,6 +217,7 @@ Os exemplos usam os valores da tabela de entradas abaixo. "Gravado" é o que o L
 3. **OBS-45** WHEN a stack sobe THEN o Prometheus SHALL ter, em até 60 s, as séries de memória do host (`system_memory_usage_bytes`) e de uso de disco por sistema de arquivos (`system_filesystem_usage_bytes`).
 4. **OBS-46** WHEN a stack sobe THEN o Prometheus SHALL ter, em até 60 s, uma série de memória por container com o nome do container como rótulo, incluindo o do Collector.
 5. **OBS-47** WHEN a stack sobe THEN o `GET /ready` do Pyroscope SHALL responder 200.
+   **OBS-62** WHEN o backend roda com `PYROSCOPE_SERVER_ADDRESS` definido THEN o Pyroscope SHALL listar o serviço `hairmatch-api` com profile de CPU; sem a variável, o backend SHALL não importar o SDK, não abrir conexão nem criar thread, e uma falha ao iniciar SHALL virar um WARNING com o tipo da exceção e nada mais (`test_profiling.py`).
 6. **OBS-48** WHEN um payload do Faro com um log e uma exceção é enviado por `POST` a `http://127.0.0.1:12347/collect` THEN o log SHALL aparecer no Loki em até 30 s, depois de passar pelo Collector, com um e-mail da mensagem trocado por `[email]`.
 7. **OBS-49** WHEN um preflight `OPTIONS` chega ao receiver do Faro com `Origin: http://localhost:8081` THEN a resposta SHALL trazer `Access-Control-Allow-Origin: http://localhost:8081`.
 8. **OBS-50** IF o preflight chega com outra origem THEN a resposta SHALL não trazer `Access-Control-Allow-Origin` com essa origem.
@@ -313,6 +319,9 @@ Os exemplos usam os valores da tabela de entradas abaixo. "Gravado" é o que o L
 | OBS-57 | Edge cases | Tasks | Verified |
 | OBS-58 | Edge cases | Tasks | Verified |
 | OBS-59 | Edge cases | Tasks | Verified |
+| OBS-61 | P2: Grafana provisionado | check_dashboards.py | Verified (consultas; visual pendente) |
+| OBS-62 | P2: Pyroscope, Faro e infra | test_profiling.py + flame graph | Verified |
+| OBS-63 | P2: Grafana provisionado | check_dashboards.py --live | Verified |
 | OBS-60 | Edge cases | Tasks | Verified |
 
 **ID format:** `OBS-NN`.
