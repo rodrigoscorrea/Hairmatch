@@ -12,11 +12,11 @@ REPORT_PREFIX = 'REPORT '
 def run_python(code, env=None, timeout=120):
     """
     Runs `code` in a fresh interpreter from the backend directory, with the real settings and
-    without `OTEL_EXPORTER_OTLP_ENDPOINT` unless `env` sets it. Returns (report, log lines, stderr),
+    without `OTEL_EXPORTER_OTLP_ENDPOINT` and `PYROSCOPE_SERVER_ADDRESS` unless `env` sets it. Returns (report, log lines, stderr),
     where `report` is the JSON the code printed with `print('REPORT ' + json.dumps(...))`.
     """
     full_env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'hairmatch.settings'}
-    for name in ('OTEL_EXPORTER_OTLP_ENDPOINT', 'OTEL_SERVICE_NAME', 'OTEL_RESOURCE_ATTRIBUTES'):
+    for name in ('OTEL_EXPORTER_OTLP_ENDPOINT', 'OTEL_SERVICE_NAME', 'OTEL_RESOURCE_ATTRIBUTES', 'PYROSCOPE_SERVER_ADDRESS'):
         full_env.pop(name, None)
     full_env.update(env or {})
     done = subprocess.run(

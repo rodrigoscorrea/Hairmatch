@@ -30,4 +30,7 @@ opentelemetry-instrumentation-psycopg2==0.66b2
 opentelemetry-instrumentation-botocore==0.66b2
 opentelemetry-instrumentation-requests==0.66b2
 opentelemetry-propagator-aws-xray==1.0.2
+
+# Continuous profiling (Pyroscope). Optional at run time: it only starts with PYROSCOPE_SERVER_ADDRESS.
+pyroscope-io==1.4.0
 python-json-logger==4.2.0
