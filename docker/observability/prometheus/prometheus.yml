@@ -1,0 +1,17 @@
+# Prometheus as an OTLP-only store: no scrape_configs. Everything arrives through the Collector
+# (POST /api/v1/otlp/v1/metrics), the same shape the Grafana Cloud gateway has.
+global:
+  evaluation_interval: 1m
+
+storage:
+  tsdb:
+    # OTLP batches arrive out of order; without this window Prometheus rejects the older samples.
+    out_of_order_time_window: 30m
+
+otlp:
+  # By default only service.name/namespace/instance.id become labels. These also become labels so a series
+  # can be tied to its container and host (OBS-46) without joining target_info.
+  promote_resource_attributes:
+    - service.instance.id
+    - container.name
+    - host.name

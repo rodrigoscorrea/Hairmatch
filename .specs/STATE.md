@@ -178,7 +178,46 @@
 - **Date**: 2026-10-11
 - **Status**: active
 
+### AD-015
+- **Decision**: Toda telemetria do Hairmatch entra por um único OTel Collector (contrib). O Collector redige dado pessoal antes de qualquer exporter e exporta por um `otlphttp` com um endpoint por sinal.
+  - **Destino.** Os endpoints vêm de `OBS_TRACES_ENDPOINT`, `OBS_METRICS_ENDPOINT` e `OBS_LOGS_ENDPOINT`, e o header `Authorization` de `OBS_OTLP_AUTH_HEADER`. Sem as variáveis, o destino é a stack local (Tempo, Prometheus, Loki). Com elas, é o OTLP gateway do Grafana Cloud. A pipeline nunca muda entre destinos.
+  - **Métricas.** O armazenamento é o Prometheus, com receiver OTLP e exemplars. Não há Mimir.
+  - **Faro.** Passa pelo Alloy (`faro.receiver`) e pelo mesmo Collector.
+  - **Onde mora.** A stack fica em `docker/observability/docker-compose.observability.yml`, que nunca declara `name:` e usa `${OBS_DIR:-.}` em todo bind mount.
+  - **Como sobe junto do app.** Com os dois `-f` no mesmo comando. O compose principal nunca referencia a stack.
+- **Reason**:
+  - A issue #193 e o estudo de observabilidade pedem que a stack local seja a referência da implantação no Grafana Cloud, trocando só o destino.
+  - Um Collector único concentra a redação (a terceira camada de defesa da LGPD) e torna o backend trocável.
+  - Conferido em 2026-11-07 (Docker 29.1.3, Compose 2.40.3):
+    - dois projetos dividindo uma rede de nome fixo quebram nas duas ordens de subida;
+    - no modo combinado, os caminhos relativos partem do diretório do primeiro arquivo;
+    - o `name:` do último arquivo renomearia o projeto e os volumes do banco.
+- **Trade-off**:
+  - O backend só alcança o Collector no modo combinado.
+  - A stack sozinha e a combinada não rodam ao mesmo tempo.
+  - O `docker/.env` precisa de `OBS_DIR=./observability`.
+  - A redação por regex tem falsos positivos (sequências de 10 a 14 dígitos) e não cobre valores não string nem mapas aninhados.
+  - O Collector local roda como root, com o `docker.sock`.
+- **Scope**: `docker/observability/`, `docker/.env.example`, `docs/observability/` e a #194, que aponta o SDK para `http://otel-collector:4318`. Todo sinal novo do lado do servidor (backend, cron do host) entra pelo Collector, e nenhum serviço exporta direto para o Grafana Cloud. Há duas exceções:
+  - o SDK do Pyroscope, enquanto profiles no OTel estiverem em alpha;
+  - o Faro do navegador. Ele roda no aparelho do usuário: no ambiente local passa pelo Alloy e pelo Collector, e em produção vai direto ao Frontend Observability do Grafana Cloud.
+- **Date**: 2026-11-07
+- **Status**: active
+
 ## Handoff
+
+- **Feature**: `observability-stack` (issue #193, bloqueia a #194).
+- **Phase / Task**: Execute concluído em 2026-11-07, na branch `193-infra-de-observabilidade`: T1 a T16 feitas, com commits atômicos, e duas correções da rodada 1 do Verifier.
+  - O Verifier independente rodou duas vezes. Rodada 1: FAIL (a redação não cobria os atributos de resource das métricas, e 6 mutantes sobreviveram). Rodada 2: PASS, 15 mutantes injetados e 15 mortos. `validation.md` e `validate_state.py` com exit 0.
+  - Gates: lint 12 PASS (19 no `--self-test`), `smoke.py` 128 PASS (standalone) e 127 (combined), `check_destination.sh` 19 PASS, `check_modes.sh` 20 PASS. Do zero (volumes `hairmatch_obs_*` apagados), o smoke passa em 104 s.
+- **Completed**:
+  - Stack em `docker/observability/`, variáveis `OBS_*` no `docker/.env.example`, `docs/observability/README.md`.
+  - Fatos de API conferidos e registrados no `design.md`: nomes `otlp_http` e `host_metrics` no Collector 0.164, exemplars via OTLP no Prometheus 3.15.1, plugins do Grafana 13 instalados na primeira subida.
+- **In-progress** (file:line): none
+- **Next step**:
+  1. Decidir se a redação passa a cobrir eventos de span (`exception.message`), nome e `status.message` do span, atributos de escopo e valores em arrays ou mapas aninhados. É o vazamento mais provável quando a #194 ligar a instrumentação Django (ver `context.md`, Deferred Ideas).
+  2. A #194 aponta o SDK para `http://otel-collector:4318` no modo combinado.
+  3. O `docker/.env` de cada pessoa precisa de `OBS_DIR=./observability`.
 
 - **Feature**: `hairdresser-reviews` (issue #189, épico #188). A #182 já está na `develop` (PR #190).
 - **Phase / Task**: Execute concluído em 2026-10-11, na branch `189-avaliacoes-recebidas-cabeleireiro`: T1 a T7 feitas, com commits atômicos. O T8 (UAT) está parcial.

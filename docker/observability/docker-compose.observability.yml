@@ -1,0 +1,204 @@
+# Local observability stack (issue #193). Everything the app sends goes to the OTel Collector over OTLP/HTTP.
+#
+# Two ways to bring it up (one at a time, both publish the same host ports):
+#   Standalone: docker compose -f docker/observability/docker-compose.observability.yml up -d
+#   Combined:   docker compose -f docker/docker-compose.yml -f docker/observability/docker-compose.observability.yml up -d
+#
+# Rules this file keeps (checked by docker/observability/scripts/lint_compose.py):
+#   - No top-level `name:`. In the combined mode the last file's name wins and would rename the app project.
+#   - Every bind mount starts with ${OBS_DIR:-.}/. In the combined mode Compose resolves relative paths from
+#     docker/, so docker/.env sets OBS_DIR=./observability; standalone, the default "." applies.
+#   - Every image has an exact version tag, every published port is bound to 127.0.0.1,
+#     and every service rotates its logs.
+#   - Every volume has a fixed `name:` (hairmatch_obs_*), so both modes share the data. Review-enforced, not linted.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  loki:
+    image: grafana/loki:3.7.9
+    container_name: hairmatch_obs_loki
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ${OBS_DIR:-.}/loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.164.0
+    container_name: hairmatch_obs_otel_collector
+    command: --config=/etc/otelcol/config.yaml
+    # Root, so it can write the disk queue volume and read docker.sock and the host filesystem.
+    user: "0:0"
+    # memory_limiter stops at 200 MiB; this is the hard ceiling above it.
+    mem_limit: 300m
+    ports:
+      - "127.0.0.1:4318:4318"
+    environment:
+      # Local defaults live here, not in config.yaml: Compose treats an empty variable as unset, so an
+      # empty OBS_* in docker/.env still lands on the local backends.
+      OBS_TRACES_ENDPOINT: ${OBS_TRACES_ENDPOINT:-http://tempo:4318/v1/traces}
+      OBS_METRICS_ENDPOINT: ${OBS_METRICS_ENDPOINT:-http://prometheus:9090/api/v1/otlp/v1/metrics}
+      OBS_LOGS_ENDPOINT: ${OBS_LOGS_ENDPOINT:-http://loki:3100/otlp/v1/logs}
+      OBS_OTLP_AUTH_HEADER: ${OBS_OTLP_AUTH_HEADER:-}
+    volumes:
+      - ${OBS_DIR:-.}/otel/config.yaml:/etc/otelcol/config.yaml:ro
+      - otel_queue:/var/lib/otelcol/queue
+      # hostmetrics reads the host through /hostfs; docker_stats talks to the Docker API. Both read-only.
+      # The socket gives this container control of the host's Docker, so it is a local-only convenience.
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+      - postgres-exporter
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.2.5
+    container_name: hairmatch_obs_grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Local only: anonymous Admin, no login screen. Never carry this to a server (see docs/observability).
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ${OBS_DIR:-.}/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${OBS_DIR:-.}/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+      - pyroscope
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Faro receiver for the browser. Only /collect is published; Alloy's own UI (12345) stays inside the network.
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: hairmatch_obs_alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:12347:12347"
+    volumes:
+      - ${OBS_DIR:-.}/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    depends_on:
+      - otel-collector
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Reaches the app's Postgres by the service name "db", so it only sees a database in the combined mode.
+  # Standalone it keeps running and reports pg_up 0. Dev credentials; on a server use a pg_monitor role.
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: hairmatch_obs_postgres_exporter
+    environment:
+      DATA_SOURCE_URI: db:5432/${POSTGRES_DB:-hairmatch}?sslmode=disable
+      DATA_SOURCE_USER: ${POSTGRES_USER:-hairmatch}
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:-hairmatch}
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Test double for the destination: logs the path and Authorization of each request. Only starts with
+  # `--profile verify` (check_destination.sh); it is never part of the stack.
+  otlp-capture:
+    image: python:3.12.15-alpine
+    container_name: hairmatch_obs_otlp_capture
+    profiles: [verify]
+    command: python /capture/otlp_capture.py 8080
+    volumes:
+      - ${OBS_DIR:-.}/scripts/otlp_capture.py:/capture/otlp_capture.py:ro
+    networks:
+      - app_network
+    logging: *default-logging
+
+  tempo:
+    image: grafana/tempo:2.10.10
+    container_name: hairmatch_obs_tempo
+    command: -config.file=/etc/tempo/config.yaml
+    ports:
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - ${OBS_DIR:-.}/tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/var/tempo
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: hairmatch_obs_prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      # OTLP in, as the Collector sends it; exemplars keep the trace_id of a metric point.
+      - --web.enable-otlp-receiver
+      - --enable-feature=exemplar-storage
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ${OBS_DIR:-.}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Starts empty: the backend SDK that pushes profiles (a future card) talks to it directly, not through the Collector.
+  pyroscope:
+    image: grafana/pyroscope:2.4.3
+    container_name: hairmatch_obs_pyroscope
+    ports:
+      - "127.0.0.1:4040:4040"
+    volumes:
+      - pyroscope_data:/data
+    networks:
+      - app_network
+    logging: *default-logging
+    restart: unless-stopped
+
+networks:
+  # Standalone this is observability_app_network; combined it is the app's hairmatch_app_network.
+  app_network: {}
+
+volumes:
+  loki_data:
+    name: hairmatch_obs_loki
+  tempo_data:
+    name: hairmatch_obs_tempo
+  prometheus_data:
+    name: hairmatch_obs_prometheus
+  pyroscope_data:
+    name: hairmatch_obs_pyroscope
+  otel_queue:
+    name: hairmatch_obs_otel_queue
+  grafana_data:
+    name: hairmatch_obs_grafana

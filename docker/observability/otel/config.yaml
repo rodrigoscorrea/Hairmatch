@@ -1,0 +1,150 @@
+# OTel Collector: the single entry point for telemetry. The same file serves the local stack and Grafana Cloud;
+# only the OBS_* environment variables change the destination (the compose file sets the local defaults).
+extensions:
+  # Keeps the exporter queue on disk, so a restart or a long outage does not lose queued data.
+  file_storage:
+    directory: /var/lib/otelcol/queue
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Host CPU, memory, load, disk and network. The container sees the host through /hostfs (mounted read-only).
+  host_metrics:
+    root_path: /hostfs
+    collection_interval: 30s
+    scrapers:
+      cpu: {}
+      memory: {}
+      load: {}
+      filesystem: {}
+      network: {}
+  # One set of metrics per running container, read from the Docker API (docker.sock, read-only).
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    # Docker Engine 29 refuses API versions below 1.44, and the receiver's default is older.
+    api_version: "1.44"
+    collection_interval: 30s
+  # Postgres metrics, scraped from the postgres-exporter and sent through the same pipeline as everything else.
+  # Without the app's Postgres on the network (standalone mode) the exporter just reports pg_up 0.
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: postgres
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["postgres-exporter:9187"]
+
+processors:
+  # Must stay first in every pipeline: it refuses new data before the process hits the container limit.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+    spike_limit_mib: 50
+  # Removes URL parts that can carry personal data, on every signal (OBS-30).
+  attributes/pii:
+    actions:
+      - {key: url.query, action: delete}
+      - {key: url.full, action: delete}
+      - {key: http.url, action: delete}
+      - {key: http.target, action: delete}
+  # Masks personal data in string values (OBS-22 to OBS-29). Rule order follows the spec: JWT first (it contains
+  # pieces that look like e-mail and numbers), then e-mail, CNPJ, CPF and phone last. The \b anchors already keep
+  # the CPF pattern from matching inside a 14-digit CNPJ. Patterns are RE2; in OTTL a literal backslash is written twice.
+  # Not covered on purpose (OBS-59): non-string values and maps nested inside a map body.
+  # error_mode stays at the default (propagate): if a statement fails, the batch is dropped, not exported unredacted.
+  transform/pii:
+    log_statements:
+      - context: log
+        statements:
+          # String body
+          - 'replace_pattern(body, "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]") where IsString(body)'
+          - 'replace_pattern(body, "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]") where IsString(body)'
+          - 'replace_pattern(body, "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]") where IsString(body)'
+          - 'replace_pattern(body, "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]") where IsString(body)'
+          - 'replace_pattern(body, "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]") where IsString(body)'
+          # Map body: each string value of the first level
+          - 'replace_all_patterns(body, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]") where IsMap(body)'
+          - 'replace_all_patterns(body, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]") where IsMap(body)'
+          # Log attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+      - context: resource
+        statements:
+          # Resource attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+    trace_statements:
+      - context: span
+        statements:
+          # Span attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+      - context: resource
+        statements:
+          # Resource attributes
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+    metric_statements:
+      - context: resource
+        statements:
+          # Resource attributes of metrics (they become target_info labels in Prometheus).
+          # Data point attributes are not masked: they are the low-cardinality labels of the series.
+          - 'replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[jwt]")'
+          - 'replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b", "[cnpj]")'
+          - 'replace_all_patterns(attributes, "value", "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b", "[cpf]")'
+          - 'replace_all_patterns(attributes, "value", "(\\+?55\\s?)?\\(?\\b\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}\\b", "[telefone]")'
+  # Must stay last in every pipeline.
+  batch: {}
+
+exporters:
+  # One exporter, one endpoint per signal. Grafana Cloud's gateway and the local backends use different paths.
+  otlp_http:
+    traces_endpoint: ${env:OBS_TRACES_ENDPOINT}
+    metrics_endpoint: ${env:OBS_METRICS_ENDPOINT}
+    logs_endpoint: ${env:OBS_LOGS_ENDPOINT}
+    headers:
+      Authorization: ${env:OBS_OTLP_AUTH_HEADER}
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
+      exporters: [otlp_http]
+    metrics:
+      receivers: [otlp, host_metrics, docker_stats, prometheus]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
+      exporters: [otlp_http]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/pii, transform/pii, batch]
+      exporters: [otlp_http]

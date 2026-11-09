@@ -1,0 +1,11 @@
+# Loads the dashboards in grafana/dashboards/ into the "Hairmatch" folder.
+apiVersion: 1
+
+providers:
+  - name: hairmatch
+    folder: Hairmatch
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

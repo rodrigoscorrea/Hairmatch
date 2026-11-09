@@ -1,0 +1,33 @@
+// Receives Faro telemetry from the browser (the Faro SDK is a later card) and forwards it to the Collector as
+// OTLP, so browser logs and traces go through the same redaction as everything else.
+
+faro.receiver "default" {
+  server {
+    listen_address       = "0.0.0.0"
+    listen_port          = 12347
+    // Metro, the web dev server. Any other origin gets no Access-Control-Allow-Origin.
+    cors_allowed_origins = ["http://localhost:8081"]
+  }
+
+  output {
+    logs   = [otelcol.receiver.loki.default.receiver]
+    traces = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// Faro logs leave the receiver as Loki entries; this converts them to OTLP logs.
+otelcol.receiver.loki "default" {
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+otelcol.exporter.otlphttp "collector" {
+  client {
+    endpoint = "http://otel-collector:4318"
+
+    tls {
+      insecure = true
+    }
+  }
+}
